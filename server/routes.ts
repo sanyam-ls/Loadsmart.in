@@ -190,8 +190,16 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Only shippers can post loads" });
       }
 
+      const body = { ...req.body };
+      if (body.pickupDate && typeof body.pickupDate === 'string') {
+        body.pickupDate = new Date(body.pickupDate);
+      }
+      if (body.deliveryDate && typeof body.deliveryDate === 'string') {
+        body.deliveryDate = new Date(body.deliveryDate);
+      }
+
       const data = insertLoadSchema.parse({
-        ...req.body,
+        ...body,
         shipperId: user.id,
       });
 
@@ -222,7 +230,15 @@ export async function registerRoutes(
 
   app.patch("/api/loads/:id", requireAuth, async (req, res) => {
     try {
-      const load = await storage.updateLoad(req.params.id, req.body);
+      const body = { ...req.body };
+      if (body.pickupDate && typeof body.pickupDate === 'string') {
+        body.pickupDate = new Date(body.pickupDate);
+      }
+      if (body.deliveryDate && typeof body.deliveryDate === 'string') {
+        body.deliveryDate = new Date(body.deliveryDate);
+      }
+      
+      const load = await storage.updateLoad(req.params.id, body);
       res.json(load);
     } catch (error) {
       console.error("Update load error:", error);
@@ -291,8 +307,29 @@ export async function registerRoutes(
       const user = await storage.getUser(req.session.userId!);
       if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-      const bidsList = await storage.getBidsByCarrier(user.id);
-      res.json(bidsList);
+      let bidsList;
+      if (user.role === "carrier") {
+        bidsList = await storage.getBidsByCarrier(user.id);
+      } else if (user.role === "shipper") {
+        const shipperLoads = await storage.getLoadsByShipper(user.id);
+        const allBids = await Promise.all(
+          shipperLoads.map(load => storage.getBidsByLoad(load.id))
+        );
+        bidsList = allBids.flat();
+      } else {
+        bidsList = await storage.getAllBids();
+      }
+      
+      const bidsWithDetails = await Promise.all(
+        bidsList.map(async (bid) => {
+          const carrier = await storage.getUser(bid.carrierId);
+          const load = await storage.getLoad(bid.loadId);
+          const { password: _, ...carrierWithoutPassword } = carrier || {};
+          return { ...bid, carrier: carrierWithoutPassword, load };
+        })
+      );
+
+      res.json(bidsWithDetails);
     } catch (error) {
       console.error("Get bids error:", error);
       res.status(500).json({ error: "Internal server error" });

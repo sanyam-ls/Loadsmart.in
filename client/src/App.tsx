@@ -18,10 +18,12 @@ import SettingsPage from "@/pages/settings";
 import ShipperDashboard from "@/pages/shipper/dashboard";
 import PostLoadPage from "@/pages/shipper/post-load";
 import ShipperLoadsPage from "@/pages/shipper/loads";
+import LoadDetailPage from "@/pages/shipper/load-detail";
 import NegotiationsPage from "@/pages/shipper/negotiations";
 import TrackingPage from "@/pages/shipper/tracking";
 import CarriersPage from "@/pages/shipper/carriers";
 import ShipperDocumentsPage from "@/pages/shipper/documents";
+import SpendAnalyticsPage from "@/pages/shipper/spend";
 
 import CarrierDashboard from "@/pages/carrier/dashboard";
 import AddTruckPage from "@/pages/carrier/add-truck";
@@ -93,7 +95,8 @@ function AppContent() {
               <Route path="/shipper" component={ShipperDashboard} />
               <Route path="/shipper/post-load" component={PostLoadPage} />
               <Route path="/shipper/loads" component={ShipperLoadsPage} />
-              <Route path="/shipper/loads/:id" component={ShipperLoadsPage} />
+              <Route path="/shipper/loads/:id" component={LoadDetailPage} />
+              <Route path="/shipper/spend" component={SpendAnalyticsPage} />
               <Route path="/shipper/negotiations" component={NegotiationsPage} />
               <Route path="/shipper/tracking" component={TrackingPage} />
               <Route path="/shipper/carriers" component={CarriersPage} />

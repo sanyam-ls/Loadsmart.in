@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Package, DollarSign, Truck, Clock, TrendingUp, AlertTriangle, Plus, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatCard } from "@/components/stat-card";
 import { LoadCard } from "@/components/load-card";
 import { useAuth } from "@/lib/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Load, Bid, Notification } from "@shared/schema";
 import { 
   AreaChart, 
   Area, 
@@ -17,44 +19,6 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from "recharts";
-
-const mockStats = {
-  activeLoads: 8,
-  pendingBids: 12,
-  inTransit: 5,
-  monthlySpend: 45200,
-};
-
-const mockActiveLoads = [
-  {
-    id: "1",
-    shipperId: "s1",
-    pickupAddress: "123 Industrial Way",
-    pickupCity: "Los Angeles, CA",
-    dropoffAddress: "456 Commerce St",
-    dropoffCity: "Phoenix, AZ",
-    weight: "15000",
-    weightUnit: "lbs",
-    estimatedPrice: "2500",
-    status: "bidding" as const,
-    pickupDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2),
-    bidCount: 4,
-  },
-  {
-    id: "2",
-    shipperId: "s1",
-    pickupAddress: "789 Warehouse Blvd",
-    pickupCity: "San Francisco, CA",
-    dropoffAddress: "321 Distribution Center",
-    dropoffCity: "Denver, CO",
-    weight: "22000",
-    weightUnit: "lbs",
-    estimatedPrice: "4200",
-    status: "in_transit" as const,
-    pickupDate: new Date(),
-    bidCount: 0,
-  },
-];
 
 const mockNearbyTrucks = [
   { id: "t1", type: "Dry Van", distance: 12, available: true },
@@ -69,12 +33,6 @@ const mockTopCarriers = [
   { id: "c3", name: "Premier Freight", rating: 4.7, deliveries: 156 },
 ];
 
-const mockAlerts = [
-  { id: "a1", type: "delay", message: "Load #1234 experiencing 2-hour delay", time: "10 mins ago" },
-  { id: "a2", type: "document", message: "Insurance expires in 5 days", time: "1 hour ago" },
-  { id: "a3", type: "bid", message: "New bid received for Load #1235", time: "2 hours ago" },
-];
-
 const mockSpendData = [
   { month: "Jan", amount: 32000 },
   { month: "Feb", amount: 38000 },
@@ -87,6 +45,68 @@ const mockSpendData = [
 export default function ShipperDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+
+  const { data: loads = [], isLoading: loadsLoading } = useQuery<Load[]>({
+    queryKey: ["/api/loads"],
+  });
+
+  const { data: bids = [], isLoading: bidsLoading } = useQuery<Bid[]>({
+    queryKey: ["/api/bids"],
+  });
+
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+  });
+
+  const activeLoads = loads.filter(l => ["posted", "bidding", "assigned"].includes(l.status || ""));
+  const inTransitLoads = loads.filter(l => l.status === "in_transit");
+  const pendingBids = bids.filter(b => b.status === "pending");
+  
+  const monthlySpend = loads
+    .filter(l => l.status === "delivered" && l.finalPrice)
+    .reduce((sum, l) => sum + Number(l.finalPrice || 0), 0);
+
+  const recentLoads = loads.slice(0, 2);
+
+  const alerts = notifications
+    .filter(n => !n.isRead)
+    .slice(0, 5)
+    .map(n => ({
+      id: n.id,
+      type: n.type as string,
+      message: n.message,
+      time: formatTimeAgo(new Date(n.createdAt!)),
+    }));
+
+  function formatTimeAgo(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  }
+
+  if (loadsLoading) {
+    return (
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96 mt-2" />
+          </div>
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -106,27 +126,35 @@ export default function ShipperDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Active Loads"
-          value={mockStats.activeLoads}
+          value={activeLoads.length}
           icon={Package}
           trend={{ value: 12, isPositive: true }}
+          onClick={() => navigate("/shipper/loads?status=active")}
+          testId="stat-active-loads"
         />
         <StatCard
           title="Pending Bids"
-          value={mockStats.pendingBids}
+          value={pendingBids.length}
           icon={Clock}
           subtitle="Awaiting your response"
+          onClick={() => navigate("/shipper/loads?status=bidding")}
+          testId="stat-pending-bids"
         />
         <StatCard
           title="In Transit"
-          value={mockStats.inTransit}
+          value={inTransitLoads.length}
           icon={Truck}
           trend={{ value: 8, isPositive: true }}
+          onClick={() => navigate("/shipper/in-transit")}
+          testId="stat-in-transit"
         />
         <StatCard
           title="Monthly Spend"
-          value={`$${mockStats.monthlySpend.toLocaleString()}`}
+          value={`$${monthlySpend.toLocaleString()}`}
           icon={DollarSign}
           trend={{ value: 5, isPositive: false }}
+          onClick={() => navigate("/shipper/spend")}
+          testId="stat-monthly-spend"
         />
       </div>
 
@@ -178,31 +206,35 @@ export default function ShipperDashboard() {
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
             <CardTitle className="text-lg">Alerts</CardTitle>
             <Badge variant="destructive" className="no-default-hover-elevate no-default-active-elevate">
-              {mockAlerts.length}
+              {alerts.length || 0}
             </Badge>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-64">
               <div className="space-y-3">
-                {mockAlerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                    data-testid={`alert-${alert.id}`}
-                  >
-                    <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                      alert.type === "delay" 
-                        ? "text-red-500" 
-                        : alert.type === "document" 
-                          ? "text-amber-500" 
-                          : "text-blue-500"
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">{alert.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
+                {alerts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No new alerts</p>
+                ) : (
+                  alerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                      data-testid={`alert-${alert.id}`}
+                    >
+                      <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                        alert.type === "delay" 
+                          ? "text-red-500" 
+                          : alert.type === "document" 
+                            ? "text-amber-500" 
+                            : "text-blue-500"
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm">{alert.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </ScrollArea>
           </CardContent>
@@ -219,16 +251,26 @@ export default function ShipperDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockActiveLoads.map((load) => (
-                <LoadCard
-                  key={load.id}
-                  load={load as any}
-                  variant="shipper"
-                  onViewDetails={() => navigate(`/shipper/loads/${load.id}`)}
-                />
-              ))}
-            </div>
+            {recentLoads.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">No active loads yet</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/shipper/post-load")}>
+                  Post Your First Load
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentLoads.map((load) => (
+                  <LoadCard
+                    key={load.id}
+                    load={load as any}
+                    variant="shipper"
+                    onViewDetails={() => navigate(`/shipper/loads/${load.id}`)}
+                  />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

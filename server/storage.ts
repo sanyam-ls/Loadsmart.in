@@ -44,6 +44,7 @@ export interface IStorage {
   getBid(id: string): Promise<Bid | undefined>;
   getBidsByLoad(loadId: string): Promise<Bid[]>;
   getBidsByCarrier(carrierId: string): Promise<Bid[]>;
+  getAllBids(): Promise<Bid[]>;
   createBid(bid: InsertBid): Promise<Bid>;
   updateBid(id: string, updates: Partial<Bid>): Promise<Bid | undefined>;
 
@@ -183,6 +184,10 @@ export class DatabaseStorage implements IStorage {
 
   async getBidsByCarrier(carrierId: string): Promise<Bid[]> {
     return db.select().from(bids).where(eq(bids.carrierId, carrierId)).orderBy(desc(bids.createdAt));
+  }
+
+  async getAllBids(): Promise<Bid[]> {
+    return db.select().from(bids).orderBy(desc(bids.createdAt));
   }
 
   async createBid(bid: InsertBid): Promise<Bid> {

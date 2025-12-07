@@ -177,3 +177,78 @@ Preferred communication style: Simple, everyday language.
 - **DATABASE_URL**: PostgreSQL connection string (required)
 - **SESSION_SECRET**: Session encryption key (defaults to development value)
 - **REPL_ID**: Replit environment detection for dev plugins
+
+## Vehicle Telematics System (Shipper Portal Exclusive)
+
+The CAN-Bus GPS + Telematics system is available ONLY in the Shipper Portal. It is NOT available in the Admin Console or Carrier Portal.
+
+### Telematics Features
+
+**In-Transit Dashboard** (`/shipper/in-transit`)
+- Live GPS positioning with heading indicator
+- Real-time CAN-Bus diagnostics: speed, RPM, fuel level, engine temp, battery voltage
+- Vehicle selection panel with status indicators (Moving/Stopped)
+- Fleet Overview with aggregated metrics (moving count, stopped count, low fuel alerts, high temp alerts)
+- Active Alerts panel showing critical vehicle issues
+
+**ETA Prediction Engine**
+- AI-powered arrival time estimates
+- Traffic and weather condition monitoring
+- Delay risk assessment (low/medium/high)
+- Better route suggestions with time savings
+- Distance remaining with real-time updates
+
+**Driver Behavior Insights**
+- Overall driver safety score (0-100)
+- Harsh braking event tracking
+- Sudden acceleration monitoring
+- Overspeed incident logging
+- Idle time analysis
+
+**AI Concierge Integration**
+The AI Concierge responds to telemetry-related queries:
+- "Fleet status" - Shows live vehicle health and GPS summary
+- "Vehicle alerts" - Lists current critical alerts (fuel, temperature, etc.)
+- "ETA" / "When will" - Provides arrival predictions with delay analysis
+- "Driver behavior" - Shows driver safety scores and recommendations
+
+### Telematics API Endpoints
+
+All endpoints require authentication (`requireAuth` middleware):
+
+- `GET /api/telemetry/vehicles` - All active vehicles telemetry
+- `GET /api/telemetry/vehicles/:vehicleId` - Single vehicle telemetry
+- `GET /api/telemetry/vehicle-ids` - List of active vehicle IDs
+- `GET /api/telemetry/eta/:loadId` - ETA prediction for a load
+- `GET /api/telemetry/breadcrumbs/:vehicleId` - GPS trail (last 10 minutes)
+- `GET /api/telemetry/driver-behavior/:driverId` - Driver behavior score
+- `GET /api/telemetry/alerts` - All current fleet alerts
+- `GET /api/telemetry/alerts/:vehicleId` - Alerts for specific vehicle
+
+### Telemetry Data Types
+
+**LiveTelemetryData**: Real-time vehicle state
+- GPS coordinates (lat/lng), heading, speed, RPM
+- Fuel level, engine temperature, battery voltage
+- Odometer, load weight, ignition status
+
+**EtaPrediction**: AI-powered arrival estimates
+- Current ETA, original ETA, delay minutes
+- Delay risk level, traffic condition, weather
+- Better route availability with time savings
+
+### Demo Vehicles
+
+5 simulated vehicles for development:
+- TRK-1024 (Route: Delhi → Mumbai)
+- TRK-2048 (Route: Bangalore → Chennai)
+- TRK-3072 (Route: Kolkata → Delhi)
+- TRK-4096 (Route: Delhi → Mumbai)
+- TRK-5120 (Route: Bangalore → Chennai)
+
+### Implementation Notes
+
+- REST API polling (5-second intervals) for reliability
+- Telemetry simulation engine updates every 1 second
+- No telematics data in Admin Console or Carrier Portal
+- Test users: shipper/admin123 (shipper role), admin/admin123 (admin role)

@@ -18,6 +18,8 @@ const quickActions = [
   { label: "View nearby trucks", action: "nearby_trucks" },
   { label: "Check my bids", action: "check_bids" },
   { label: "Track shipments", action: "track_shipments" },
+  { label: "Fleet status", action: "fleet_status" },
+  { label: "Vehicle alerts", action: "vehicle_alerts" },
 ];
 
 const aiResponses: Record<string, string[]> = {
@@ -38,8 +40,20 @@ const aiResponses: Record<string, string[]> = {
   track_shipments: [
     "Here's your shipment status summary:\n\n- 2 shipments in transit (on schedule)\n- 1 shipment at pickup point\n- 3 shipments delivered this week\n\nWould you like detailed tracking for any specific shipment?",
   ],
+  fleet_status: [
+    "Live Fleet Telematics Dashboard:\n\n5 vehicles currently active:\n- 4 vehicles moving (avg 58 km/h)\n- 1 vehicle stopped (low fuel)\n\nVehicle Health:\n- TRK-4096: Engine temp 102C (warning)\n- TRK-5120: Fuel at 8% (critical)\n\nAll other vehicles operating normally. Visit the In-Transit page for real-time GPS tracking and CAN-Bus diagnostics!",
+  ],
+  vehicle_alerts: [
+    "Current Fleet Alerts:\n\n1. TRK-4096: Vehicle overheating (102C)\n   Action: Recommend driver rest stop\n\n2. TRK-5120: Critical fuel level (8%)\n   Action: Nearest fuel station 12km ahead\n\n3. TRK-1024: ETA delay risk HIGH\n   Heavy traffic on Route 1\n\nTip: Enable push notifications to receive real-time alerts on your mobile device!",
+  ],
+  eta: [
+    "ETA Prediction Analysis:\n\nI'm analyzing traffic patterns, weather, and driver behavior...\n\nCurrent Predictions:\n- TRK-1024: Arriving 3:45 PM (15 min delay - heavy traffic)\n- TRK-2048: Arriving 5:20 PM (on schedule)\n- TRK-3072: Arriving tomorrow 8:00 AM (on schedule)\n\nWould you like me to suggest alternate routes for delayed shipments?",
+  ],
+  driver_behavior: [
+    "Driver Behavior Insights:\n\nTop Performers:\n- DRV-221: Score 94/100 (Excellent)\n- DRV-554: Score 87/100 (Good)\n\nNeeds Attention:\n- DRV-889: Score 65/100\n  3 harsh braking events, 5 overspeed incidents\n\nRecommendation: Consider scheduling a safety refresher for DRV-889. Fleet average score: 82/100.",
+  ],
   help: [
-    "I can help you with:\n\n- Posting and managing loads\n- Finding reliable carriers\n- Tracking your shipments\n- Managing documents\n- Understanding platform features\n\nJust ask or select a quick action below!",
+    "I can help you with:\n\n- Posting and managing loads\n- Finding reliable carriers\n- Tracking your shipments\n- Managing documents\n- Fleet telematics & GPS tracking\n- ETA predictions & route optimization\n- Driver behavior insights\n\nJust ask or select a quick action below!",
   ],
   default: [
     "I understand you're asking about that. Let me help you navigate to the right section.",
@@ -53,6 +67,18 @@ function getAIResponse(input: string, role?: string): string {
   
   if (lowerInput.includes("hello") || lowerInput.includes("hi") || lowerInput.includes("hey")) {
     return aiResponses.greeting[Math.floor(Math.random() * aiResponses.greeting.length)];
+  }
+  if (lowerInput.includes("fleet") || lowerInput.includes("telematics") || lowerInput.includes("vehicle health") || lowerInput.includes("gps")) {
+    return aiResponses.fleet_status[0];
+  }
+  if (lowerInput.includes("alert") || lowerInput.includes("warning") || lowerInput.includes("fuel") || lowerInput.includes("temperature") || lowerInput.includes("overheat")) {
+    return aiResponses.vehicle_alerts[0];
+  }
+  if (lowerInput.includes("eta") || lowerInput.includes("arrival") || lowerInput.includes("when will") || lowerInput.includes("delay")) {
+    return aiResponses.eta[0];
+  }
+  if (lowerInput.includes("driver") || lowerInput.includes("behavior") || lowerInput.includes("safety") || lowerInput.includes("score")) {
+    return aiResponses.driver_behavior[0];
   }
   if (lowerInput.includes("post") || lowerInput.includes("load") || lowerInput.includes("shipment")) {
     return aiResponses.post_load[0];
@@ -131,6 +157,8 @@ export function AIConcierge() {
       nearby_trucks: aiResponses.nearby_trucks[0],
       check_bids: aiResponses.check_bids[0],
       track_shipments: aiResponses.track_shipments[0],
+      fleet_status: aiResponses.fleet_status[0],
+      vehicle_alerts: aiResponses.vehicle_alerts[0],
     };
 
     const actionLabel = quickActions.find((a) => a.action === action)?.label || action;

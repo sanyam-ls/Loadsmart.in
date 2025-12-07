@@ -24,8 +24,22 @@ import {
   Box,
   User,
   RefreshCw,
+  Target,
+  Cloud,
+  Car,
+  Route,
+  Brain,
+  ShieldCheck,
 } from "lucide-react";
-import type { LiveTelemetryData } from "@shared/schema";
+import type { LiveTelemetryData, EtaPrediction } from "@shared/schema";
+
+interface DriverBehavior {
+  overallScore: number;
+  harshBrakingEvents: number;
+  suddenAccelerationEvents: number;
+  overspeedEvents: number;
+  idleTimeMinutes: number;
+}
 
 export default function InTransit() {
   const [selectedVehicle, setSelectedVehicle] = useState<LiveTelemetryData | null>(null);
@@ -39,6 +53,18 @@ export default function InTransit() {
   const { data: alertsData = [] } = useQuery<{ vehicleId: string; alert: string }[]>({
     queryKey: ["/api/telemetry/alerts"],
     refetchInterval: 5000,
+  });
+
+  const { data: etaPrediction } = useQuery<EtaPrediction>({
+    queryKey: ["/api/telemetry/eta", selectedVehicle?.loadId],
+    enabled: !!selectedVehicle?.loadId,
+    refetchInterval: 10000,
+  });
+
+  const { data: driverBehavior } = useQuery<DriverBehavior>({
+    queryKey: ["/api/telemetry/driver-behavior", selectedVehicle?.driverId],
+    enabled: !!selectedVehicle?.driverId,
+    refetchInterval: 15000,
   });
 
   useEffect(() => {
@@ -466,6 +492,166 @@ export default function InTransit() {
                           <span className="font-medium">
                             {new Date(selectedVehicle.timestamp).toLocaleTimeString()}
                           </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {etaPrediction && (
+                  <Card data-testid="card-eta-prediction">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-primary" />
+                        ETA Prediction
+                      </CardTitle>
+                      <CardDescription>AI-powered arrival estimates</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="text-center p-4 bg-muted/30 rounded-md">
+                          <p className="text-xs text-muted-foreground uppercase mb-1">Estimated Arrival</p>
+                          <p className="text-2xl font-bold">
+                            {new Date(etaPrediction.currentEta).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(etaPrediction.currentEta).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Route className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-muted-foreground">Distance</p>
+                              <p className="font-medium">{etaPrediction.distanceRemaining} {etaPrediction.distanceUnit}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-muted-foreground">Delay Risk</p>
+                              <Badge
+                                variant={
+                                  etaPrediction.delayRisk === "high" ? "destructive" :
+                                  etaPrediction.delayRisk === "medium" ? "secondary" : "default"
+                                }
+                                className="text-xs"
+                              >
+                                {etaPrediction.delayRisk}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <Separator />
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Car className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-muted-foreground">Traffic</p>
+                              <p className="font-medium capitalize">{etaPrediction.trafficCondition}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Cloud className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-muted-foreground">Weather</p>
+                              <p className="font-medium capitalize">{etaPrediction.weatherCondition}</p>
+                            </div>
+                          </div>
+                        </div>
+                        {etaPrediction.betterRouteAvailable && (
+                          <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-md">
+                            <div className="flex items-center gap-2">
+                              <Route className="w-4 h-4 text-green-500" />
+                              <div>
+                                <p className="text-sm font-medium">Better Route Available</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Save {etaPrediction.betterRouteSavingsMinutes} minutes
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {etaPrediction.delayMinutes > 0 && (
+                          <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                              <div>
+                                <p className="text-sm font-medium">Potential Delay</p>
+                                <p className="text-xs text-muted-foreground">
+                                  +{etaPrediction.delayMinutes} minutes expected
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {driverBehavior && (
+                  <Card data-testid="card-driver-behavior">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Brain className="w-5 h-5 text-primary" />
+                        Driver Behavior
+                      </CardTitle>
+                      <CardDescription>Safety and efficiency scoring</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="text-center p-4 bg-muted/30 rounded-md">
+                          <div className="relative inline-flex items-center justify-center">
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center ${
+                              driverBehavior.overallScore >= 80 ? "bg-green-500/20" :
+                              driverBehavior.overallScore >= 60 ? "bg-yellow-500/20" : "bg-red-500/20"
+                            }`}>
+                              <span className={`text-3xl font-bold ${
+                                driverBehavior.overallScore >= 80 ? "text-green-500" :
+                                driverBehavior.overallScore >= 60 ? "text-yellow-500" : "text-red-500"
+                              }`}>
+                                {driverBehavior.overallScore}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">Overall Score</p>
+                          <Badge
+                            variant={
+                              driverBehavior.overallScore >= 80 ? "default" :
+                              driverBehavior.overallScore >= 60 ? "secondary" : "destructive"
+                            }
+                            className="mt-2"
+                          >
+                            <ShieldCheck className="w-3 h-3 mr-1" />
+                            {driverBehavior.overallScore >= 80 ? "Excellent" :
+                             driverBehavior.overallScore >= 60 ? "Good" : "Needs Improvement"}
+                          </Badge>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Harsh Braking</span>
+                            <Badge variant={driverBehavior.harshBrakingEvents > 3 ? "destructive" : "secondary"} className="text-xs">
+                              {driverBehavior.harshBrakingEvents} events
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Sudden Acceleration</span>
+                            <Badge variant={driverBehavior.suddenAccelerationEvents > 2 ? "destructive" : "secondary"} className="text-xs">
+                              {driverBehavior.suddenAccelerationEvents} events
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Overspeed</span>
+                            <Badge variant={driverBehavior.overspeedEvents > 5 ? "destructive" : "secondary"} className="text-xs">
+                              {driverBehavior.overspeedEvents} events
+                            </Badge>
+                          </div>
+                          <Separator />
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Idle Time</span>
+                            <span className="font-medium">{driverBehavior.idleTimeMinutes} min</span>
+                          </div>
                         </div>
                       </div>
                     </CardContent>

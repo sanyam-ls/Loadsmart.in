@@ -4,6 +4,16 @@ import session from "express-session";
 import { storage } from "./storage";
 import { insertUserSchema, insertLoadSchema, insertTruckSchema, insertBidSchema } from "@shared/schema";
 import { z } from "zod";
+import { setupTelemetryWebSocket } from "./websocket-telemetry";
+import {
+  getAllVehiclesTelemetry,
+  getVehicleTelemetry,
+  getEtaPrediction,
+  getGpsBreadcrumbs,
+  getDriverBehaviorScore,
+  checkTelemetryAlerts,
+  getActiveVehicleIds,
+} from "./telemetry-simulator";
 
 const hashPassword = async (password: string): Promise<string> => {
   const encoder = new TextEncoder();
@@ -714,6 +724,122 @@ export async function registerRoutes(
       res.status(500).json({ error: "Internal server error" });
     }
   });
+
+  // ============================================
+  // TELEMETRY API ROUTES (CAN-Bus / Vehicle Tracking)
+  // ============================================
+
+  // Get all active vehicles telemetry
+  app.get("/api/telemetry/vehicles", requireAuth, async (req, res) => {
+    try {
+      const telemetry = getAllVehiclesTelemetry();
+      res.json(telemetry);
+    } catch (error) {
+      console.error("Get telemetry error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get single vehicle telemetry
+  app.get("/api/telemetry/vehicles/:vehicleId", requireAuth, async (req, res) => {
+    try {
+      const telemetry = getVehicleTelemetry(req.params.vehicleId);
+      if (!telemetry) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+      res.json(telemetry);
+    } catch (error) {
+      console.error("Get vehicle telemetry error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get vehicle list
+  app.get("/api/telemetry/vehicle-ids", requireAuth, async (req, res) => {
+    try {
+      const vehicleIds = getActiveVehicleIds();
+      res.json(vehicleIds);
+    } catch (error) {
+      console.error("Get vehicle IDs error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get ETA prediction for a load
+  app.get("/api/telemetry/eta/:loadId", requireAuth, async (req, res) => {
+    try {
+      const eta = getEtaPrediction(req.params.loadId);
+      if (!eta) {
+        return res.status(404).json({ error: "Load not found or not in transit" });
+      }
+      res.json(eta);
+    } catch (error) {
+      console.error("Get ETA error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get GPS breadcrumbs for a vehicle
+  app.get("/api/telemetry/breadcrumbs/:vehicleId", requireAuth, async (req, res) => {
+    try {
+      const minutes = parseInt(req.query.minutes as string) || 10;
+      const breadcrumbs = getGpsBreadcrumbs(req.params.vehicleId, minutes);
+      res.json(breadcrumbs);
+    } catch (error) {
+      console.error("Get breadcrumbs error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get driver behavior score
+  app.get("/api/telemetry/driver-behavior/:driverId", requireAuth, async (req, res) => {
+    try {
+      const behavior = getDriverBehaviorScore(req.params.driverId);
+      res.json(behavior);
+    } catch (error) {
+      console.error("Get driver behavior error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get all current alerts (must be before /:vehicleId route)
+  app.get("/api/telemetry/alerts", requireAuth, async (req, res) => {
+    try {
+      const allTelemetry = getAllVehiclesTelemetry();
+      const allAlerts = allTelemetry.flatMap(t => {
+        const alerts = checkTelemetryAlerts(t);
+        return alerts.map(alert => ({
+          vehicleId: t.vehicleId,
+          loadId: t.loadId,
+          driverId: t.driverId,
+          alert,
+          timestamp: new Date().toISOString(),
+        }));
+      });
+      res.json(allAlerts);
+    } catch (error) {
+      console.error("Get all alerts error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get alerts for a specific vehicle
+  app.get("/api/telemetry/alerts/:vehicleId", requireAuth, async (req, res) => {
+    try {
+      const telemetry = getVehicleTelemetry(req.params.vehicleId);
+      if (!telemetry) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+      const alerts = checkTelemetryAlerts(telemetry);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Get alerts error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Setup WebSocket for real-time telemetry
+  setupTelemetryWebSocket(httpServer);
 
   return httpServer;
 }

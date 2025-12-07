@@ -36,6 +36,7 @@ import AdminUsersPage from "@/pages/admin/users";
 import AdminLoadsPage from "@/pages/admin/loads";
 import AdminCarriersPage from "@/pages/admin/carriers";
 import AdminVolumeAnalytics from "@/pages/admin/volume-analytics";
+import InTransitPage from "@/pages/in-transit";
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -116,6 +117,8 @@ function AppContent() {
               <Route path="/admin/volume" component={AdminVolumeAnalytics} />
               <Route path="/admin/verification" component={AdminCarriersPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
+              
+              <Route path="/shipper/in-transit" component={InTransitPage} />
               
               <Route path="/settings" component={SettingsPage} />
               

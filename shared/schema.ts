@@ -28,6 +28,10 @@ export type TruckType = typeof truckTypes[number];
 export const documentTypes = ["pod", "invoice", "rc", "insurance", "fitness", "license", "other"] as const;
 export type DocumentType = typeof documentTypes[number];
 
+// Alert types enum
+export const alertTypes = ["overheating", "low_fuel", "overspeed", "low_battery", "harsh_brake", "sudden_acceleration", "route_deviation", "unexpected_stop", "idle_time"] as const;
+export type AlertType = typeof alertTypes[number];
+
 // Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -194,6 +198,95 @@ export const ratings = pgTable("ratings", {
   onTimeDelivery: integer("on_time_delivery").notNull(),
   comment: text("comment"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Vehicle Telemetry table (CAN-Bus data)
+export const vehicleTelemetry = pgTable("vehicle_telemetry", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vehicleId: varchar("vehicle_id").notNull(),
+  truckId: varchar("truck_id").references(() => trucks.id),
+  loadId: varchar("load_id").references(() => loads.id),
+  driverId: varchar("driver_id").references(() => users.id),
+  lat: decimal("lat", { precision: 10, scale: 7 }).notNull(),
+  lng: decimal("lng", { precision: 10, scale: 7 }).notNull(),
+  speed: integer("speed").default(0),
+  rpm: integer("rpm").default(0),
+  fuelLevel: integer("fuel_level").default(100),
+  engineTemp: integer("engine_temp").default(80),
+  batteryVoltage: decimal("battery_voltage", { precision: 4, scale: 1 }).default("12.6"),
+  odometer: decimal("odometer", { precision: 12, scale: 1 }).default("0"),
+  loadWeight: decimal("load_weight", { precision: 10, scale: 2 }),
+  maxCapacity: decimal("max_capacity", { precision: 10, scale: 2 }),
+  heading: integer("heading").default(0),
+  altitude: integer("altitude").default(0),
+  isIgnitionOn: boolean("is_ignition_on").default(true),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// Driver Behavior Events table
+export const driverBehaviorEvents = pgTable("driver_behavior_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  driverId: varchar("driver_id").notNull().references(() => users.id),
+  truckId: varchar("truck_id").references(() => trucks.id),
+  loadId: varchar("load_id").references(() => loads.id),
+  eventType: text("event_type").notNull(),
+  severity: text("severity").default("low"),
+  lat: decimal("lat", { precision: 10, scale: 7 }),
+  lng: decimal("lng", { precision: 10, scale: 7 }),
+  speed: integer("speed"),
+  accelerationG: decimal("acceleration_g", { precision: 4, scale: 2 }),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Telematics Alerts table
+export const telematicsAlerts = pgTable("telematics_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vehicleId: varchar("vehicle_id").notNull(),
+  loadId: varchar("load_id").references(() => loads.id),
+  driverId: varchar("driver_id").references(() => users.id),
+  alertType: text("alert_type").notNull(),
+  severity: text("severity").default("warning"),
+  message: text("message").notNull(),
+  lat: decimal("lat", { precision: 10, scale: 7 }),
+  lng: decimal("lng", { precision: 10, scale: 7 }),
+  value: decimal("value", { precision: 10, scale: 2 }),
+  threshold: decimal("threshold", { precision: 10, scale: 2 }),
+  isAcknowledged: boolean("is_acknowledged").default(false),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// GPS Breadcrumb Trail table
+export const gpsBreadcrumbs = pgTable("gps_breadcrumbs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vehicleId: varchar("vehicle_id").notNull(),
+  loadId: varchar("load_id").references(() => loads.id),
+  lat: decimal("lat", { precision: 10, scale: 7 }).notNull(),
+  lng: decimal("lng", { precision: 10, scale: 7 }).notNull(),
+  speed: integer("speed"),
+  heading: integer("heading"),
+  isRiskySegment: boolean("is_risky_segment").default(false),
+  riskReason: text("risk_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Route ETA Predictions table
+export const routeEtaPredictions = pgTable("route_eta_predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  vehicleId: varchar("vehicle_id").notNull(),
+  distanceRemaining: decimal("distance_remaining", { precision: 10, scale: 2 }),
+  distanceUnit: text("distance_unit").default("km"),
+  currentEta: timestamp("current_eta"),
+  originalEta: timestamp("original_eta"),
+  delayMinutes: integer("delay_minutes").default(0),
+  delayRisk: text("delay_risk").default("low"),
+  trafficCondition: text("traffic_condition").default("normal"),
+  weatherCondition: text("weather_condition").default("clear"),
+  betterRouteAvailable: boolean("better_route_available").default(false),
+  betterRouteSavingsMinutes: integer("better_route_savings_minutes"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Relations
@@ -363,6 +456,11 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export const insertDocumentSchema = createInsertSchema(documents).omit({ id: true, createdAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export const insertRatingSchema = createInsertSchema(ratings).omit({ id: true, createdAt: true });
+export const insertVehicleTelemetrySchema = createInsertSchema(vehicleTelemetry).omit({ id: true });
+export const insertDriverBehaviorEventSchema = createInsertSchema(driverBehaviorEvents).omit({ id: true, createdAt: true });
+export const insertTelematicsAlertSchema = createInsertSchema(telematicsAlerts).omit({ id: true, createdAt: true });
+export const insertGpsBreadcrumbSchema = createInsertSchema(gpsBreadcrumbs).omit({ id: true, createdAt: true });
+export const insertRouteEtaPredictionSchema = createInsertSchema(routeEtaPredictions).omit({ id: true });
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -387,3 +485,61 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertRating = z.infer<typeof insertRatingSchema>;
 export type Rating = typeof ratings.$inferSelect;
+export type InsertVehicleTelemetry = z.infer<typeof insertVehicleTelemetrySchema>;
+export type VehicleTelemetry = typeof vehicleTelemetry.$inferSelect;
+export type InsertDriverBehaviorEvent = z.infer<typeof insertDriverBehaviorEventSchema>;
+export type DriverBehaviorEvent = typeof driverBehaviorEvents.$inferSelect;
+export type InsertTelematicsAlert = z.infer<typeof insertTelematicsAlertSchema>;
+export type TelematicsAlert = typeof telematicsAlerts.$inferSelect;
+export type InsertGpsBreadcrumb = z.infer<typeof insertGpsBreadcrumbSchema>;
+export type GpsBreadcrumb = typeof gpsBreadcrumbs.$inferSelect;
+export type InsertRouteEtaPrediction = z.infer<typeof insertRouteEtaPredictionSchema>;
+export type RouteEtaPrediction = typeof routeEtaPredictions.$inferSelect;
+
+// Live telemetry data type (for WebSocket streaming)
+export interface LiveTelemetryData {
+  vehicleId: string;
+  gps: { lat: number; lng: number };
+  speed: number;
+  rpm: number;
+  fuelLevel: number;
+  engineTemp: number;
+  batteryVoltage: number;
+  odometer: number;
+  driverId: string;
+  loadId: string;
+  heading: number;
+  loadWeight?: number;
+  maxCapacity?: number;
+  isIgnitionOn: boolean;
+  timestamp: string;
+}
+
+// Driver behavior score type
+export interface DriverBehaviorScore {
+  driverId: string;
+  overallScore: number;
+  harshBrakingEvents: number;
+  suddenAccelerationEvents: number;
+  overspeedEvents: number;
+  idleTimeMinutes: number;
+  totalTrips: number;
+  averageSpeed: number;
+  fuelEfficiency: number;
+}
+
+// ETA prediction type
+export interface EtaPrediction {
+  loadId: string;
+  vehicleId: string;
+  currentEta: string;
+  originalEta: string;
+  delayMinutes: number;
+  delayRisk: "low" | "medium" | "high";
+  distanceRemaining: number;
+  distanceUnit: string;
+  trafficCondition: string;
+  weatherCondition: string;
+  betterRouteAvailable: boolean;
+  betterRouteSavingsMinutes?: number;
+}

@@ -1,0 +1,165 @@
+Build a fully interactive Shipper Dashboard with deep drill-downs for every metric tile (Active Loads, Pending Bids, In Transit, Monthly Spend). Every panel must open into a rich data module containing detailed information, CRUD actions, analytics, and real-time simulations. All data must be stored in a backend (or simulated API) and must update the dashboard instantly. Dark/Light mode toggle included.
+
+⸻
+
+🔵 GLOBAL REQUIREMENTS
+	1.	Every number, tile, and widget must be clickable → opens a detailed view.
+	2.	All modules must support Create, Read, Update, Delete (CRUD).
+	3.	Dashboard updates instantly when new data is added.
+	4.	Simulate real-time features where needed (ETA, routing updates, bid status).
+	5.	Keep theme clean, white + blue with dark-mode toggle like the screenshot.
+	6.	AI Concierge button in corner → user can ask questions like:
+	•	“Show me highest spend loads this month.”
+	•	“Which carrier gave the lowest bids last quarter?”
+
+⸻
+
+🟦 1. ACTIVE LOADS — DEEP INTERACTION MODULE
+
+When user clicks “Active Loads (8)”, open a full management page containing:
+
+Data Table
+	•	Load ID
+	•	Pickup → Drop
+	•	Load Type
+	•	Weight + Dimensions
+	•	Assigned Carrier
+	•	Status (Live, Assigned, At Pickup, Loaded, En Route)
+	•	ETA
+	•	Price
+	•	Last Updated
+
+Functions
+	•	Post New Load (form) → instantly appears in Active Loads
+	•	Edit Load (route, weight, timing, carrier)
+	•	Assign Carrier manually or auto-match
+	•	Duplicate load
+	•	Cancel load
+	•	Track shipment map view
+
+Real-Time Simulation
+	•	Auto-update ETA every 15 seconds (simulated)
+	•	Show “Better Route Found” banner when simulated routing improves
+	•	Track events timeline (Loaded, Departed, Arrived)
+
+⸻
+
+🟩 2. PENDING BIDS — COMPLETE NEGOTIATION BREAKDOWN
+
+Clicking “Pending Bids (12)” opens:
+
+Bid Table
+	•	Bid ID
+	•	Carrier Name
+	•	Load ID
+	•	Bid Price
+	•	Carrier ETA
+	•	Their previous bid history
+	•	Rating
+	•	Status (Pending, Declined, Accepted)
+
+Deep Functions
+	•	Accept bid
+	•	Decline bid
+	•	Counter-offer
+	•	Chat with carrier inside bid panel
+	•	Compare bids side-by-side
+	•	See why it is pending (waiting for carrier reply, waiting for shipper reply)
+
+Insights
+	•	Lowest bid
+	•	Average bid
+	•	Best carrier match
+	•	Time left before bid expiry
+
+⸻
+
+🟦 3. IN TRANSIT — LIVE SHIPMENT MONITORING
+
+Click “In Transit (5)” to open:
+
+Shipment Cards
+	•	Current location (simulated map)
+	•	Next stop
+	•	Estimated delivery time
+	•	Delay risk indicator
+	•	Driver details
+	•	Carrier name
+	•	Load ID
+
+Advanced Features
+	•	“Optimize Route” → triggers simulated route refresh
+	•	“Notify Carrier”
+	•	“Mark as Delivered”
+	•	Shipment timeline with statuses
+	•	Document uploads (POD, invoice, photos)
+
+AI Simulation
+	•	Auto-updates based on fictional GPS
+	•	Alerts: delay detected, early arrival predicted
+
+⸻
+
+🟥 4. MONTHLY SPEND — DEEP FINANCIAL ANALYTICS PANEL
+
+When clicking “Monthly Spend ($45,200)” open a financial dashboard:
+
+Breakdown Categories
+	•	Spend by Load
+	•	Spend by Carrier
+	•	Spend by Route
+	•	Spend by Load Type
+	•	Spend by Week
+	•	Spend by Team Member (if applicable)
+
+Detailed Table
+	•	Load ID
+	•	Route
+	•	Carrier
+	•	Bid Price
+	•	Taxes/Extras
+	•	Total Cost
+	•	Payment Status
+
+Charts
+	•	12-month spend trend
+	•	Carrier spend pie chart
+	•	Route spend bar chart
+	•	Top 5 most expensive loads
+
+Advanced Interactions
+	•	Export to CSV/PDF
+	•	Filter by date range
+	•	Detect abnormal spending (AI flag)
+
+⸻
+
+🔄 5. EVERYTHING MUST SYNC
+	•	Posting a new load → increases Active Loads
+	•	Accepting a bid → moves load to In Transit
+	•	Marking Delivered → moves load to Completed + affects Monthly Spend
+	•	Changing a bid → updates analytics
+	•	Carrier assignments → reflect instantly
+
+No static numbers — dynamic system.
+
+⸻
+
+⚠️ 6. OPTIONAL BUT HIGHLY RECOMMENDED
+
+Add a Notifications Center
+	•	Bid received
+	•	Carrier responded
+	•	ETA updated
+	•	Shipment delivered
+	•	Document uploaded
+
+Add a Global Search Bar
+
+Search loads, carriers, bids, docs.
+
+⸻
+
+🧨 FINAL INSTRUCTION TO REPLIT AI
+
+Generate the complete Shipper Dashboard with all interactive modules described above. Make sure every action is functional (or realistically simulated), all data syncs across the dashboard, and the UI matches the clean blue/white style with dark mode toggle. The dashboard should feel like a live operational control system similar to Uber Freight or Flexport Shipper Portal.

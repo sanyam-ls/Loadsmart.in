@@ -13,6 +13,7 @@ import {
   Route,
   Gavel,
   Shield,
+  Radio,
 } from "lucide-react";
 import {
   Sidebar,
@@ -36,6 +37,7 @@ const shipperItems = [
   { title: "My Loads", url: "/shipper/loads", icon: Package },
   { title: "Negotiations", url: "/shipper/negotiations", icon: MessageSquare },
   { title: "Track Shipments", url: "/shipper/tracking", icon: MapPin },
+  { title: "In-Transit", url: "/shipper/in-transit", icon: Radio },
   { title: "Carriers", url: "/shipper/carriers", icon: Truck },
   { title: "Documents", url: "/shipper/documents", icon: FileText },
 ];

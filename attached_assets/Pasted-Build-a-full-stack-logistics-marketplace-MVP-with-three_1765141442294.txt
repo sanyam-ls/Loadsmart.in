@@ -1,0 +1,221 @@
+Build a full-stack logistics marketplace MVP with three roles (Shipper, Carrier, Admin). The platform must include simulated functionality where backend APIs are not yet implemented, ensuring every button, view, and flow works. The UI must be clean, modern, blue–white themed, with a Day/Night mode toggle and an AI Concierge assistant. Use Next.js or React for the frontend, Node.js or Python FastAPI for the backend, and PostgreSQL/Supabase for the database.
+
+⸻
+
+🎯 PRODUCT PURPOSE
+
+Create a digital freight marketplace where:
+	•	Shippers: post loads, negotiate, track shipments, manage documents
+	•	Carriers: list trucks, bid, update trip statuses
+	•	Admin: oversees platform operations
+
+All flows must be functional — either fully implemented or meaningfully simulated.
+
+⸻
+
+🧩 ROLE-BASED ACCESS
+
+Use JWT auth + middleware to restrict:
+	•	Shippers → dashboard, loads, bids, tracking
+	•	Carriers → dashboard, trucks, bidding, trips
+	•	Admins → global monitoring
+
+⸻
+
+🎨 UI REQUIREMENTS
+	•	Blue + white theme (enterprise lean)
+	•	Optional grayscale accents
+	•	Advanced but minimalistic
+	•	Day/Night theme toggle globally
+	•	AI Concierge button fixed bottom-right (chat UI pop-up)
+
+AI concierge can use scripted responses + simulated logic.
+
+⸻
+
+🤖 AI Concierge Requirements
+
+This is NOT full AI — for MVP, simulate intelligence:
+	•	Help user navigate the app
+	•	Suggest actions (“Post a new load”, “View nearby trucks”)
+	•	Summarize current shipments
+	•	Offer tips (“Try sending your load to top-rated carriers”)
+	•	Appear in chat-like floating widget
+
+Trigger via bottom-right “AI Assistant” button.
+
+⸻
+
+📦 CORE FEATURES – MUST BE BUILT/SIMULATED
+
+⸻
+
+1️⃣ Smart Load Posting (Shipper) — Intelligent Form
+
+Enhancements:
+	•	Auto-Fill pickup/drop (Google Maps or placeholder mock)
+	•	Auto-distance calculation
+	•	Estimated pricing formula
+	•	Suggested truck type
+	•	Saved templates (CRUD)
+	•	Real-time preview: “X trucks available nearby” (simulate with mock data)
+
+Save all loads to database or simulated JSON store.
+
+⸻
+
+2️⃣ Real-Time Truck Availability (Carrier Side)
+
+Carrier UI must be lean and instructional, featuring:
+	•	Map + List toggle
+	•	Simulated live truck positions
+	•	Filters (type, capacity, distance)
+	•	“Match Score” tag (simple logic)
+	•	Quick actions: Quote, Chat, Request Docs
+
+All actions must open working screens, even if data is mock.
+
+⸻
+
+3️⃣ Negotiation Hub (Chat + Bidding Sync)
+
+Requirements:
+	•	Chat UI with WebSocket or simulated WebSocket
+	•	Bids appear inside chat automatically
+	•	Counter-offer buttons for shippers
+	•	Profit calculation for carriers
+	•	ETA + pickup-time generator
+	•	Message tags (“Rate Confirmed”)
+
+Even if backend isn’t ready, simulate responses.
+
+⸻
+
+4️⃣ Shipment Tracking Timeline
+
+Every shipment must show:
+	•	Timeline steps
+	•	Map view
+	•	ETA calculation (fake algorithm allowed)
+	•	Carrier check-in buttons
+	•	Document upload at each stage
+
+Buttons must update UI state—even if simulated.
+
+⸻
+
+5️⃣ Carrier Profile Cards (Trust Layer)
+
+Carrier details must include:
+	•	Badge
+	•	Fleet size
+	•	Service zones
+	•	Reliability score (formula)
+	•	Document vault (upload + view)
+	•	Performance summary
+
+Use mock data if necessary.
+
+⸻
+
+6️⃣ Shipper Dashboard (Advanced View)
+
+Widgets:
+	•	Pending Bids
+	•	Active Loads with real-time status
+	•	Nearby Trucks (using simulated live positions)
+	•	Monthly Spend (chart)
+	•	Top Carriers (ranked)
+	•	Alerts: delays, expiring docs
+
+All cards must link to functional or simulated pages.
+
+⸻
+
+7️⃣ Workflow Automations (Simulated AI Rules Engine)
+
+Rules to implement (simulate allowed):
+	•	Auto-suggest carriers
+	•	Auto-send loads to nearest trucks
+	•	Auto-notify carriers to update status
+	•	Auto-close expired bids
+	•	Auto-generate ETAs
+
+Use cron job or timed simulation.
+
+⸻
+
+8️⃣ Secure Document Exchange
+
+Support uploads for:
+	•	POD
+	•	Invoice
+	•	RC, Insurance, Fitness
+
+Documents must display in UI (even if mock).
+
+⸻
+
+9️⃣ Guided Empty States
+
+Replace all blank pages with instructive guides:
+
+Examples:
+	•	“No messages yet — negotiations will appear here.”
+	•	“Add your first truck to get load recommendations.”
+
+⸻
+
+🔟 Rating System
+
+Lightweight rating model:
+	•	Reliability
+	•	Communication
+	•	On-Time Delivery
+
+Update carrier score on backend or simulated data.
+
+⸻
+
+1️⃣1️⃣ Unified Notification System
+
+In-app notifications for:
+	•	New bids
+	•	Rate confirmed
+	•	Shipment updates
+	•	Document uploads
+
+Simulated notifications are acceptable.
+
+⸻
+
+1️⃣2️⃣ Fully Connected Navigation
+
+Shipper includes:
+Dashboard → Post Load → My Loads → Negotiation → Carriers → Documents → Account
+
+Carrier includes:
+Dashboard → Add Truck → Available Routes → Bidding → Trips → Documents → Account
+
+Admin includes:
+Overview → Users → Loads → Carriers → Reports
+
+All routes MUST be functional.
+
+⸻
+
+🛠️ TECH STACK INSTRUCTION
+
+Frontend: Next.js or React + Tailwind
+Backend: Node.js (Express) or FastAPI
+Database: PostgreSQL/Supabase
+Live Location: Leaflet.js or mocked data
+WebSockets: Socket.io or simulated loops
+Theme system: Tailwind dark mode toggle
+AI Concierge: Client-side simulated intelligence
+
+⸻
+
+🧨 FINAL DIRECTIVE TO REPLIT AI
+
+Generate a fully functional logistics MVP where every button works, every flow is connected, and any missing backend actions must be simulated meaningfully. The UI must be clean blue–white, enterprise-grade, minimalistic but advanced, with both Day and Night modes and a built-in AI Concierge assistant. Ensure synchronicity between loads, trucks, bids, chat, notifications, and tracking. Carrier experience must be lean; shipper experience must feel like a powerful dashboard.

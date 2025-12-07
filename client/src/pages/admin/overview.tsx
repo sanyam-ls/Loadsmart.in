@@ -1,11 +1,10 @@
-import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
+import { useLocation } from "wouter";
+import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { StatCard } from "@/components/stat-card";
+import { Button } from "@/components/ui/button";
+import { TransactionVolumeChart } from "@/components/transaction-volume-chart";
 import { 
-  AreaChart, 
-  Area, 
   BarChart,
   Bar,
   XAxis, 
@@ -17,6 +16,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useTheme } from "@/lib/theme-provider";
 
 const mockStats = {
   totalUsers: 1247,
@@ -24,15 +24,6 @@ const mockStats = {
   verifiedCarriers: 89,
   monthlyVolume: 2450000,
 };
-
-const mockVolumeData = [
-  { month: "Jan", volume: 1800000 },
-  { month: "Feb", volume: 2100000 },
-  { month: "Mar", volume: 1950000 },
-  { month: "Apr", volume: 2300000 },
-  { month: "May", volume: 2500000 },
-  { month: "Jun", volume: 2450000 },
-];
 
 const mockUserGrowth = [
   { month: "Jan", shippers: 180, carriers: 45 },
@@ -57,88 +48,117 @@ const mockRecentActivity = [
   { id: "a5", type: "load", message: "New load posted: LA to Phoenix", time: "2 hours ago" },
 ];
 
+interface ClickableStatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  trend?: { value: number; isPositive: boolean };
+  subtitle?: string;
+  href: string;
+  testId: string;
+}
+
+function ClickableStatCard({ title, value, icon: Icon, trend, subtitle, href, testId }: ClickableStatCardProps) {
+  const [, setLocation] = useLocation();
+  
+  return (
+    <Card 
+      className="cursor-pointer transition-all hover-elevate group"
+      onClick={() => setLocation(href)}
+      data-testid={testId}
+    >
+      <CardContent className="pt-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Icon className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{title}</p>
+              <p className="text-2xl font-bold">{value}</p>
+              {trend && (
+                <Badge 
+                  variant="secondary" 
+                  className={`mt-1 text-xs ${trend.isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                >
+                  <TrendingUp className={`h-3 w-3 mr-1 ${!trend.isPositive ? "rotate-180" : ""}`} />
+                  {trend.isPositive ? "+" : ""}{trend.value}%
+                </Badge>
+              )}
+              {subtitle && (
+                <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              )}
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminOverview() {
+  const [, setLocation] = useLocation();
+  const { theme } = useTheme();
+
+  const chartAxisColor = theme === "dark" ? "hsl(220, 10%, 65%)" : "hsl(220, 12%, 35%)";
+  const chartGridColor = theme === "dark" ? "hsl(220, 12%, 18%)" : "hsl(220, 12%, 92%)";
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Platform overview and key metrics.</p>
+        <p className="text-muted-foreground">Platform overview and key metrics. Click any tile to manage.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
+        <ClickableStatCard
           title="Total Users"
           value={mockStats.totalUsers.toLocaleString()}
           icon={Users}
           trend={{ value: 12, isPositive: true }}
+          href="/admin/users"
+          testId="card-total-users"
         />
-        <StatCard
+        <ClickableStatCard
           title="Active Loads"
           value={mockStats.activeLoads}
           icon={Package}
           trend={{ value: 8, isPositive: true }}
+          href="/admin/loads"
+          testId="card-active-loads"
         />
-        <StatCard
+        <ClickableStatCard
           title="Verified Carriers"
           value={mockStats.verifiedCarriers}
           icon={Truck}
           subtitle="94% verification rate"
+          href="/admin/carriers"
+          testId="card-verified-carriers"
         />
-        <StatCard
+        <ClickableStatCard
           title="Monthly Volume"
           value={`$${(mockStats.monthlyVolume / 1000000).toFixed(1)}M`}
           icon={DollarSign}
           trend={{ value: 15, isPositive: true }}
+          href="/admin/volume"
+          testId="card-monthly-volume"
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Transaction Volume</CardTitle>
-            <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +15% vs last month
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockVolumeData}>
-                  <defs>
-                    <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(217, 91%, 48%)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(217, 91%, 48%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" tickFormatter={(value) => `$${value / 1000000}M`} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                    formatter={(value: number) => [`$${(value / 1000000).toFixed(2)}M`, "Volume"]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="volume"
-                    stroke="hsl(217, 91%, 48%)"
-                    fillOpacity={1}
-                    fill="url(#colorVolume)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <TransactionVolumeChart />
 
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate"
+          onClick={() => setLocation("/admin/loads")}
+          data-testid="card-load-status"
+        >
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Load Status</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Load Status</CardTitle>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-48">
@@ -159,8 +179,8 @@ export default function AdminOverview() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: theme === "dark" ? "hsl(220, 14%, 10%)" : "hsl(0, 0%, 100%)",
+                      border: `1px solid ${chartGridColor}`,
                       borderRadius: "8px",
                     }}
                   />
@@ -183,21 +203,37 @@ export default function AdminOverview() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate"
+          onClick={() => setLocation("/admin/users")}
+          data-testid="card-user-growth"
+        >
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">User Growth</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">User Growth</CardTitle>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={mockUserGrowth}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} vertical={false} />
+                  <XAxis 
+                    dataKey="month" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: chartAxisColor, fontSize: 12 }}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: chartAxisColor, fontSize: 12 }}
+                  />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: theme === "dark" ? "hsl(220, 14%, 10%)" : "hsl(0, 0%, 100%)",
+                      border: `1px solid ${chartGridColor}`,
                       borderRadius: "8px",
                     }}
                   />
@@ -209,14 +245,28 @@ export default function AdminOverview() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="card-recent-activity">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Recent Activity</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Recent Activity</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => setLocation("/admin/users")}>
+                View All
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {mockRecentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
+                <div 
+                  key={activity.id} 
+                  className="flex items-start gap-3 cursor-pointer p-2 -mx-2 rounded-lg hover-elevate"
+                  onClick={() => {
+                    if (activity.type === "user") setLocation("/admin/users");
+                    else if (activity.type === "load") setLocation("/admin/loads");
+                    else setLocation("/admin/carriers");
+                  }}
+                  data-testid={`activity-${activity.id}`}
+                >
                   <div className={`flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0 ${
                     activity.type === "alert" 
                       ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"

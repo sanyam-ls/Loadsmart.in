@@ -479,5 +479,241 @@ export async function registerRoutes(
     }
   });
 
+  // Admin routes
+  const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    next();
+  };
+
+  // Admin: Get platform stats
+  app.get("/api/admin/stats", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const allUsers = await storage.getAllUsers();
+      const allLoads = await storage.getAllLoads();
+      const carriers = allUsers.filter(u => u.role === "carrier");
+      const verifiedCarriers = carriers.filter(u => u.isVerified);
+
+      const activeLoads = allLoads.filter(l => 
+        ["posted", "bidding", "assigned", "in_transit"].includes(l.status || "")
+      );
+
+      const deliveredLoads = allLoads.filter(l => l.status === "delivered");
+      const totalVolume = deliveredLoads.reduce((sum, l) => 
+        sum + parseFloat(l.finalPrice?.toString() || l.estimatedPrice?.toString() || "0"), 0
+      );
+
+      res.json({
+        totalUsers: allUsers.length,
+        totalShippers: allUsers.filter(u => u.role === "shipper").length,
+        totalCarriers: carriers.length,
+        verifiedCarriers: verifiedCarriers.length,
+        activeLoads: activeLoads.length,
+        completedLoads: deliveredLoads.length,
+        totalLoads: allLoads.length,
+        monthlyVolume: totalVolume,
+      });
+    } catch (error) {
+      console.error("Get admin stats error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Update user
+  app.patch("/api/admin/users/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const updated = await storage.updateUser(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { password: _, ...userWithoutPassword } = updated;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Create user (for admin to add users manually)
+  app.post("/api/admin/users", requireAuth, async (req, res) => {
+    try {
+      const adminUser = await storage.getUser(req.session.userId!);
+      if (!adminUser || adminUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const data = insertUserSchema.parse(req.body);
+      const hashedPassword = await hashPassword(data.password);
+      const newUser = await storage.createUser({
+        ...data,
+        password: hashedPassword,
+      });
+
+      if (newUser.role === "carrier") {
+        await storage.createCarrierProfile({
+          userId: newUser.id,
+          fleetSize: 1,
+          serviceZones: [],
+          reliabilityScore: "0",
+          communicationScore: "0",
+          onTimeScore: "0",
+          totalDeliveries: 0,
+          badgeLevel: "bronze",
+          bio: null,
+        });
+      }
+
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Admin create user error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Get all loads with shipper info
+  app.get("/api/admin/loads", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const allLoads = await storage.getAllLoads();
+      
+      const loadsWithDetails = await Promise.all(
+        allLoads.map(async (load) => {
+          const shipper = await storage.getUser(load.shipperId);
+          const carrier = load.assignedCarrierId ? await storage.getUser(load.assignedCarrierId) : null;
+          const loadBids = await storage.getBidsByLoad(load.id);
+          
+          return {
+            ...load,
+            shipper: shipper ? { username: shipper.username, companyName: shipper.companyName } : null,
+            carrier: carrier ? { username: carrier.username, companyName: carrier.companyName } : null,
+            bidCount: loadBids.length,
+          };
+        })
+      );
+
+      res.json(loadsWithDetails);
+    } catch (error) {
+      console.error("Get admin loads error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Create load
+  app.post("/api/admin/loads", requireAuth, async (req, res) => {
+    try {
+      const adminUser = await storage.getUser(req.session.userId!);
+      if (!adminUser || adminUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const data = insertLoadSchema.parse(req.body);
+      const load = await storage.createLoad(data);
+      res.json(load);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Admin create load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Update load (with carrier assignment)
+  app.patch("/api/admin/loads/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const updated = await storage.updateLoad(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Admin update load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Get carriers with profiles
+  app.get("/api/admin/carriers", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const allUsers = await storage.getAllUsers();
+      const carriers = allUsers.filter(u => u.role === "carrier");
+      
+      const carriersWithDetails = await Promise.all(
+        carriers.map(async (carrier) => {
+          const profile = await storage.getCarrierProfile(carrier.id);
+          const carrierBids = await storage.getBidsByCarrier(carrier.id);
+          const documents = await storage.getDocumentsByUser(carrier.id);
+          
+          const { password: _, ...carrierWithoutPassword } = carrier;
+          return {
+            ...carrierWithoutPassword,
+            profile,
+            bidCount: carrierBids.length,
+            documentCount: documents.length,
+          };
+        })
+      );
+
+      res.json(carriersWithDetails);
+    } catch (error) {
+      console.error("Get admin carriers error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Verify/unverify carrier
+  app.patch("/api/admin/carriers/:id/verify", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { isVerified } = req.body;
+      const updated = await storage.updateUser(req.params.id, { isVerified });
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Carrier not found" });
+      }
+
+      const { password: _, ...carrierWithoutPassword } = updated;
+      res.json(carrierWithoutPassword);
+    } catch (error) {
+      console.error("Verify carrier error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }

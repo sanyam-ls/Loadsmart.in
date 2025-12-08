@@ -9,6 +9,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationPanel } from "@/components/notification-panel";
+import { GlobalSearch } from "@/components/global-search";
 import { AIConcierge } from "@/components/ai-concierge";
 import NotFound from "@/pages/not-found";
 
@@ -82,6 +83,9 @@ function AppContent() {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-4 p-3 border-b border-border sticky top-0 z-50 bg-background">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <div className="flex-1 flex justify-center">
+              <GlobalSearch />
+            </div>
             <div className="flex items-center gap-2">
               <NotificationPanel />
               <ThemeToggle />

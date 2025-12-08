@@ -38,16 +38,16 @@ function generateId(prefix: string): string {
 }
 
 const zones = [
-  ["California", "Arizona", "Nevada", "Utah"],
-  ["Texas", "Oklahoma", "Louisiana", "Arkansas"],
-  ["Washington", "Oregon", "Idaho"],
-  ["Florida", "Georgia", "Alabama"],
-  ["New York", "New Jersey", "Pennsylvania", "Connecticut"],
-  ["Illinois", "Indiana", "Ohio", "Michigan"],
-  ["Colorado", "Kansas", "Nebraska", "Wyoming"],
-  ["North Carolina", "South Carolina", "Virginia", "Tennessee"],
-  ["Massachusetts", "Rhode Island", "New Hampshire", "Vermont"],
-  ["Minnesota", "Wisconsin", "Iowa", "North Dakota"],
+  ["North India", "Delhi NCR", "Punjab", "Haryana"],
+  ["West India", "Mumbai", "Gujarat", "Maharashtra"],
+  ["South India", "Chennai", "Bangalore", "Hyderabad"],
+  ["East India", "Kolkata", "Bihar", "Odisha"],
+  ["North India", "Uttar Pradesh", "Rajasthan", "Madhya Pradesh"],
+  ["Pan India", "North India", "South India", "West India"],
+  ["West India", "Pune", "Goa", "Mumbai"],
+  ["South India", "Kerala", "Tamil Nadu", "Karnataka"],
+  ["East India", "West Bengal", "Jharkhand", "Assam"],
+  ["Pan India", "Delhi NCR", "Mumbai", "Bangalore", "Chennai"],
 ];
 
 const companyNames = [
@@ -84,16 +84,16 @@ const truckTypes = ["Dry Van", "Flatbed", "Refrigerated", "Tanker", "Container",
 const badgeLevels = ["platinum", "gold", "silver", "bronze"] as const;
 
 const preferredRoutesList = [
-  ["LA to Phoenix", "SF to Denver", "Seattle to Portland"],
-  ["Dallas to Houston", "Austin to San Antonio", "Oklahoma City to Tulsa"],
-  ["Portland to Seattle", "Boise to Spokane", "Eugene to Tacoma"],
-  ["Miami to Atlanta", "Tampa to Jacksonville", "Orlando to Savannah"],
-  ["NYC to Boston", "Philly to DC", "Newark to Baltimore"],
-  ["Chicago to Detroit", "Indy to Columbus", "Cleveland to Cincinnati"],
-  ["Denver to KC", "Omaha to Lincoln", "Cheyenne to Casper"],
-  ["Charlotte to Raleigh", "Nashville to Memphis", "Richmond to Norfolk"],
-  ["Boston to Providence", "Hartford to Springfield", "Manchester to Burlington"],
-  ["Minneapolis to Milwaukee", "Des Moines to Madison", "Fargo to Sioux Falls"],
+  ["Delhi to Mumbai", "Delhi to Jaipur", "Delhi to Chandigarh"],
+  ["Mumbai to Pune", "Mumbai to Ahmedabad", "Mumbai to Goa"],
+  ["Bangalore to Chennai", "Bangalore to Hyderabad", "Bangalore to Mysore"],
+  ["Kolkata to Patna", "Kolkata to Bhubaneswar", "Kolkata to Guwahati"],
+  ["Delhi to Lucknow", "Delhi to Agra", "Jaipur to Udaipur"],
+  ["Mumbai to Delhi", "Chennai to Mumbai", "Bangalore to Mumbai"],
+  ["Pune to Mumbai", "Pune to Bangalore", "Pune to Hyderabad"],
+  ["Chennai to Coimbatore", "Chennai to Madurai", "Bangalore to Kochi"],
+  ["Kolkata to Ranchi", "Kolkata to Siliguri", "Guwahati to Shillong"],
+  ["Delhi to Bangalore", "Mumbai to Chennai", "Hyderabad to Kolkata"],
 ];
 
 function generateFleetBreakdown(fleetSize: number): FleetBreakdown[] {

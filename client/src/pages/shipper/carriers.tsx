@@ -32,12 +32,27 @@ export default function CarriersPage() {
   const allZones = getAllZones();
 
   const filteredAndSortedCarriers = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    
     let result = mockCarriers.filter((carrier) => {
-      const matchesSearch =
-        carrier.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        carrier.carrierProfile?.serviceZones?.some((z: string) =>
-          z.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+      if (!query) {
+        const matchesZone =
+          zoneFilter === "all" ||
+          carrier.carrierProfile?.serviceZones?.includes(zoneFilter);
+        const matchesBadge =
+          badgeFilter === "all" || carrier.carrierProfile?.badgeLevel === badgeFilter;
+        return matchesZone && matchesBadge;
+      }
+      
+      const matchesName = carrier.companyName?.toLowerCase().includes(query);
+      const matchesZoneSearch = carrier.carrierProfile?.serviceZones?.some((z: string) =>
+        z.toLowerCase().includes(query)
+      );
+      const matchesRoutes = carrier.extendedProfile?.preferredRoutes?.some((r: string) =>
+        r.toLowerCase().includes(query)
+      );
+      
+      const matchesSearch = matchesName || matchesZoneSearch || matchesRoutes;
       const matchesZone =
         zoneFilter === "all" ||
         carrier.carrierProfile?.serviceZones?.includes(zoneFilter);

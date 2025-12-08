@@ -42,6 +42,7 @@ import AdminCarriersPage from "@/pages/admin/carriers";
 import AdminVolumeAnalytics from "@/pages/admin/volume-analytics";
 import InTransitPage from "@/pages/in-transit";
 import { MockDataProvider } from "@/lib/mock-data-store";
+import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import PendingBidsPage from "@/pages/shipper/pending-bids";
 
 function AppContent() {
@@ -150,10 +151,12 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <MockDataProvider>
-            <TooltipProvider>
-              <AppContent />
-              <Toaster />
-            </TooltipProvider>
+            <DocumentVaultProvider>
+              <TooltipProvider>
+                <AppContent />
+                <Toaster />
+              </TooltipProvider>
+            </DocumentVaultProvider>
           </MockDataProvider>
         </AuthProvider>
       </ThemeProvider>

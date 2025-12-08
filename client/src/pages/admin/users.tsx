@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Users, 
   Plus, 
@@ -18,7 +17,8 @@ import {
   Mail,
   Phone,
   Shield,
-  Loader2,
+  Building,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,77 +56,33 @@ import {
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { User } from "@shared/schema";
-
-type UserWithoutPassword = Omit<User, "password">;
+import { useAdminData, type AdminUser } from "@/lib/admin-data-store";
+import { formatDistanceToNow, format } from "date-fns";
 
 export default function AdminUsersPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { users, addUser, updateUser, suspendUser, activateUser, deleteUser, refreshFromShipperPortal } = useAdminData();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<keyof UserWithoutPassword>("createdAt");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<keyof AdminUser>("dateJoined");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState<UserWithoutPassword | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    username: "",
+    name: "",
     email: "",
     phone: "",
-    role: "shipper",
-    companyName: "",
-    password: "",
+    role: "shipper" as "shipper" | "carrier" | "admin",
+    company: "",
+    status: "active" as "active" | "suspended" | "pending",
   });
   const itemsPerPage = 10;
-
-  const { data: users = [], isLoading, error } = useQuery<UserWithoutPassword[]>({
-    queryKey: ["/api/users"],
-  });
-
-  const createUserMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      return apiRequest("/api/admin/users", { method: "POST", body: JSON.stringify(data) });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "User Created", description: "New user has been created successfully" });
-      setIsAddModalOpen(false);
-      resetForm();
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to create user", variant: "destructive" });
-    },
-  });
-
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<User> }) => {
-      return apiRequest(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(data) });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "User Updated", description: "User details have been updated" });
-      setIsEditModalOpen(false);
-      setSelectedUser(null);
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to update user", variant: "destructive" });
-    },
-  });
-
-  const resetForm = () => {
-    setFormData({
-      username: "",
-      email: "",
-      phone: "",
-      role: "shipper",
-      companyName: "",
-      password: "",
-    });
-  };
 
   const filteredUsers = useMemo(() => {
     let result = [...users];
@@ -134,9 +90,9 @@ export default function AdminUsersPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(user => 
-        user.username?.toLowerCase().includes(query) ||
+        user.name?.toLowerCase().includes(query) ||
         user.email?.toLowerCase().includes(query) ||
-        user.companyName?.toLowerCase().includes(query)
+        user.company?.toLowerCase().includes(query)
       );
     }
     
@@ -144,17 +100,28 @@ export default function AdminUsersPage() {
       result = result.filter(user => user.role === roleFilter);
     }
     
+    if (statusFilter !== "all") {
+      result = result.filter(user => user.status === statusFilter);
+    }
+    
     result.sort((a, b) => {
-      const aVal = a[sortField] || "";
-      const bVal = b[sortField] || "";
+      const aVal = a[sortField];
+      const bVal = b[sortField];
       const direction = sortDirection === "asc" ? 1 : -1;
-      if (aVal < bVal) return -1 * direction;
-      if (aVal > bVal) return 1 * direction;
+      
+      if (aVal instanceof Date && bVal instanceof Date) {
+        return (aVal.getTime() - bVal.getTime()) * direction;
+      }
+      
+      const aStr = String(aVal || "");
+      const bStr = String(bVal || "");
+      if (aStr < bStr) return -1 * direction;
+      if (aStr > bStr) return 1 * direction;
       return 0;
     });
     
     return result;
-  }, [users, searchQuery, roleFilter, sortField, sortDirection]);
+  }, [users, searchQuery, roleFilter, statusFilter, sortField, sortDirection]);
 
   const paginatedUsers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -163,7 +130,7 @@ export default function AdminUsersPage() {
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
-  const handleSort = (field: keyof UserWithoutPassword) => {
+  const handleSort = (field: keyof AdminUser) => {
     if (sortField === field) {
       setSortDirection(prev => prev === "asc" ? "desc" : "asc");
     } else {
@@ -172,25 +139,46 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleResetPassword = (user: UserWithoutPassword) => {
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      role: "shipper",
+      company: "",
+      status: "active",
+    });
+  };
+
+  const handleResetPassword = (user: AdminUser) => {
     toast({
       title: "Password Reset",
       description: `Password reset email sent to ${user.email}`,
     });
   };
 
-  const handleToggleStatus = (user: UserWithoutPassword) => {
-    updateUserMutation.mutate({
-      id: user.id,
-      data: { isVerified: !user.isVerified },
-    });
+  const handleToggleStatus = (user: AdminUser) => {
+    if (user.status === "active") {
+      suspendUser(user.userId);
+      toast({
+        title: "User Suspended",
+        description: `${user.name} has been suspended`,
+      });
+    } else {
+      activateUser(user.userId);
+      toast({
+        title: "User Activated",
+        description: `${user.name} has been activated`,
+      });
+    }
   };
 
   const handleDeleteUser = () => {
     if (selectedUser) {
+      deleteUser(selectedUser.userId);
       toast({
-        title: "User Deactivated",
-        description: `${selectedUser.username} has been deactivated`,
+        title: "User Deleted",
+        description: `${selectedUser.name} has been removed`,
       });
       setIsDeleteModalOpen(false);
       setSelectedUser(null);
@@ -198,33 +186,53 @@ export default function AdminUsersPage() {
   };
 
   const handleCreateUser = () => {
-    createUserMutation.mutate(formData);
+    const newUser = addUser({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      role: formData.role,
+      company: formData.company,
+      status: formData.status,
+      isVerified: formData.status === "active",
+    });
+    
+    toast({
+      title: "User Created",
+      description: `${formData.name} has been added successfully`,
+    });
+    setIsAddModalOpen(false);
+    resetForm();
   };
 
   const handleUpdateUser = () => {
     if (selectedUser) {
-      updateUserMutation.mutate({
-        id: selectedUser.id,
-        data: {
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-          role: formData.role,
-          companyName: formData.companyName,
-        },
+      updateUser(selectedUser.userId, {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+        company: formData.company,
+        status: formData.status,
       });
+      
+      toast({
+        title: "User Updated",
+        description: `${formData.name}'s details have been updated`,
+      });
+      setIsEditModalOpen(false);
+      setSelectedUser(null);
     }
   };
 
-  const openEditModal = (user: UserWithoutPassword) => {
+  const openEditModal = (user: AdminUser) => {
     setSelectedUser(user);
     setFormData({
-      username: user.username || "",
+      name: user.name || "",
       email: user.email || "",
       phone: user.phone || "",
-      role: user.role || "shipper",
-      companyName: user.companyName || "",
-      password: "",
+      role: user.role,
+      company: user.company || "",
+      status: user.status,
     });
     setIsEditModalOpen(true);
   };
@@ -238,30 +246,14 @@ export default function AdminUsersPage() {
     }
   };
 
-  const formatDate = (dateStr: string | Date | null) => {
-    if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active": return <Badge className="bg-green-600">Active</Badge>;
+      case "suspended": return <Badge variant="destructive">Suspended</Badge>;
+      case "pending": return <Badge variant="secondary">Pending</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="text-center text-destructive">Failed to load users. Please try again.</div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -280,10 +272,71 @@ export default function AdminUsersPage() {
           </div>
           <p className="text-muted-foreground ml-10">Manage all platform users ({users.length} total)</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsAddModalOpen(true); }} data-testid="button-add-user">
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={refreshFromShipperPortal} data-testid="button-sync-users">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sync
+          </Button>
+          <Button onClick={() => { resetForm(); setIsAddModalOpen(true); }} data-testid="button-add-user">
+            <Plus className="h-4 w-4 mr-2" />
+            Add User
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-4">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Users</p>
+                <p className="text-xl font-bold">{users.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                <UserCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active</p>
+                <p className="text-xl font-bold">{users.filter(u => u.status === "active").length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-xl font-bold">{users.filter(u => u.status === "pending").length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
+                <UserX className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Suspended</p>
+                <p className="text-xl font-bold">{users.filter(u => u.status === "suspended").length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -301,7 +354,7 @@ export default function AdminUsersPage() {
             </div>
             <div className="flex items-center gap-2">
               <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-[140px]" data-testid="select-role-filter">
+                <SelectTrigger className="w-[130px]" data-testid="select-role-filter">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Role" />
                 </SelectTrigger>
@@ -310,6 +363,17 @@ export default function AdminUsersPage() {
                   <SelectItem value="shipper">Shipper</SelectItem>
                   <SelectItem value="carrier">Carrier</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[130px]" data-testid="select-status-filter">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -325,8 +389,8 @@ export default function AdminUsersPage() {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 -ml-3"
-                      onClick={() => handleSort("username")}
-                      data-testid="button-sort-username"
+                      onClick={() => handleSort("name")}
+                      data-testid="button-sort-name"
                     >
                       User
                       <ArrowUpDown className="ml-2 h-3 w-3" />
@@ -351,10 +415,10 @@ export default function AdminUsersPage() {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 -ml-3"
-                      onClick={() => handleSort("createdAt")}
+                      onClick={() => handleSort("dateJoined")}
                       data-testid="button-sort-created"
                     >
-                      Created
+                      Joined
                       <ArrowUpDown className="ml-2 h-3 w-3" />
                     </Button>
                   </TableHead>
@@ -371,9 +435,9 @@ export default function AdminUsersPage() {
                 ) : (
                   paginatedUsers.map((user) => (
                     <TableRow 
-                      key={user.id} 
+                      key={user.userId} 
                       className="cursor-pointer"
-                      data-testid={`row-user-${user.id}`}
+                      data-testid={`row-user-${user.userId}`}
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -381,19 +445,22 @@ export default function AdminUsersPage() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <div>
-                            <div className="font-medium flex items-center gap-2" data-testid={`text-username-${user.id}`}>
-                              {user.username}
+                            <div className="font-medium flex items-center gap-2" data-testid={`text-username-${user.userId}`}>
+                              {user.name}
                               {user.isVerified && (
                                 <Shield className="h-3 w-3 text-primary" />
                               )}
                             </div>
-                            <div className="text-sm text-muted-foreground">{user.companyName || "No company"}</div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Building className="h-3 w-3" />
+                              {user.company || "No company"}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm" data-testid={`text-email-${user.id}`}>
+                          <div className="flex items-center gap-2 text-sm" data-testid={`text-email-${user.userId}`}>
                             <Mail className="h-3 w-3 text-muted-foreground" />
                             {user.email}
                           </div>
@@ -404,26 +471,20 @@ export default function AdminUsersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getRoleBadgeVariant(user.role || "")} className="capitalize" data-testid={`badge-role-${user.id}`}>
+                        <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize" data-testid={`badge-role-${user.userId}`}>
                           {user.role}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={user.isVerified ? "default" : "secondary"}
-                          className={user.isVerified ? "bg-green-600" : ""}
-                          data-testid={`badge-status-${user.id}`}
-                        >
-                          {user.isVerified ? "Verified" : "Unverified"}
-                        </Badge>
+                      <TableCell data-testid={`badge-status-${user.userId}`}>
+                        {getStatusBadge(user.status)}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground" data-testid={`text-created-${user.id}`}>
-                        {formatDate(user.createdAt)}
+                      <TableCell className="text-sm text-muted-foreground" data-testid={`text-created-${user.userId}`}>
+                        {format(user.dateJoined, "MMM d, yyyy")}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" data-testid={`button-user-actions-${user.id}`}>
+                            <Button variant="ghost" size="icon" data-testid={`button-user-actions-${user.userId}`}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -431,30 +492,30 @@ export default function AdminUsersPage() {
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               openEditModal(user);
-                            }} data-testid={`menu-edit-${user.id}`}>
+                            }} data-testid={`menu-edit-${user.userId}`}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit User
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               handleResetPassword(user);
-                            }} data-testid={`menu-reset-password-${user.id}`}>
+                            }} data-testid={`menu-reset-password-${user.userId}`}>
                               <Key className="h-4 w-4 mr-2" />
                               Reset Password
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               handleToggleStatus(user);
-                            }} data-testid={`menu-toggle-status-${user.id}`}>
-                              {user.isVerified ? (
+                            }} data-testid={`menu-toggle-status-${user.userId}`}>
+                              {user.status === "active" ? (
                                 <>
                                   <UserX className="h-4 w-4 mr-2" />
-                                  Unverify
+                                  Suspend
                                 </>
                               ) : (
                                 <>
                                   <UserCheck className="h-4 w-4 mr-2" />
-                                  Verify
+                                  Activate
                                 </>
                               )}
                             </DropdownMenuItem>
@@ -466,7 +527,7 @@ export default function AdminUsersPage() {
                                 setSelectedUser(user);
                                 setIsDeleteModalOpen(true);
                               }}
-                              data-testid={`menu-delete-${user.id}`}
+                              data-testid={`menu-delete-${user.userId}`}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete User
@@ -523,12 +584,12 @@ export default function AdminUsersPage() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="add-username">Username</Label>
+                <Label htmlFor="add-name">Full Name</Label>
                 <Input 
-                  id="add-username" 
-                  value={formData.username}
-                  onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                  data-testid="input-add-username"
+                  id="add-name" 
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  data-testid="input-add-name"
                 />
               </div>
               <div className="space-y-2">
@@ -554,7 +615,7 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="add-role">Role</Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v }))}>
+                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "admin" }))}>
                   <SelectTrigger data-testid="select-add-role">
                     <SelectValue />
                   </SelectTrigger>
@@ -566,37 +627,36 @@ export default function AdminUsersPage() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-company">Company Name</Label>
-              <Input 
-                id="add-company" 
-                value={formData.companyName}
-                onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
-                data-testid="input-add-company"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-password">Password</Label>
-              <Input 
-                id="add-password" 
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="Enter initial password"
-                data-testid="input-add-password"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-company">Company Name</Label>
+                <Input 
+                  id="add-company" 
+                  value={formData.company}
+                  onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                  data-testid="input-add-company"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="add-status">Status</Label>
+                <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v as "active" | "suspended" | "pending" }))}>
+                  <SelectTrigger data-testid="select-add-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)} data-testid="button-cancel-add">
               Cancel
             </Button>
-            <Button 
-              onClick={handleCreateUser} 
-              disabled={createUserMutation.isPending}
-              data-testid="button-save-user"
-            >
-              {createUserMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button onClick={handleCreateUser} data-testid="button-save-user">
               Create User
             </Button>
           </DialogFooter>
@@ -607,17 +667,17 @@ export default function AdminUsersPage() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>Update user information</DialogDescription>
+            <DialogDescription>Update user details. Changes sync immediately.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-username">Username</Label>
+                <Label htmlFor="edit-name">Full Name</Label>
                 <Input 
-                  id="edit-username" 
-                  value={formData.username}
-                  onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                  data-testid="input-edit-username"
+                  id="edit-name" 
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  data-testid="input-edit-name"
                 />
               </div>
               <div className="space-y-2">
@@ -643,7 +703,7 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Role</Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v }))}>
+                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "admin" }))}>
                   <SelectTrigger data-testid="select-edit-role">
                     <SelectValue />
                   </SelectTrigger>
@@ -655,27 +715,37 @@ export default function AdminUsersPage() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-company">Company Name</Label>
-              <Input 
-                id="edit-company" 
-                value={formData.companyName}
-                onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
-                data-testid="input-edit-company"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-company">Company Name</Label>
+                <Input 
+                  id="edit-company" 
+                  value={formData.company}
+                  onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                  data-testid="input-edit-company"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v as "active" | "suspended" | "pending" }))}>
+                  <SelectTrigger data-testid="select-edit-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsEditModalOpen(false); setSelectedUser(null); }} data-testid="button-cancel-edit">
               Cancel
             </Button>
-            <Button 
-              onClick={handleUpdateUser} 
-              disabled={updateUserMutation.isPending}
-              data-testid="button-update-user"
-            >
-              {updateUserMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Update User
+            <Button onClick={handleUpdateUser} data-testid="button-update-user">
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -686,7 +756,7 @@ export default function AdminUsersPage() {
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {selectedUser?.username}? This action cannot be undone.
+              Are you sure you want to delete {selectedUser?.name}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -694,7 +764,7 @@ export default function AdminUsersPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteUser} data-testid="button-confirm-delete">
-              Delete User
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

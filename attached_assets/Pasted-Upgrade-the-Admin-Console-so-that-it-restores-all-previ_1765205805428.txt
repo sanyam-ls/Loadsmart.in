@@ -1,0 +1,217 @@
+Upgrade the Admin Console so that it restores all previous mock datasets and also pulls and synchronizes live data from the Shipper Portal’s mock database.
+The Admin Console must act as the “single source of truth” for all data — users, loads, carriers, bids, documents, and transactions.
+
+⸻
+
+🔵 1. Restore All Previous Admin Mock Data
+
+Rebuild and restore the following admin datasets:
+
+Users dataset
+	•	userId
+	•	name
+	•	role (shipper/carrier/admin)
+	•	email
+	•	company
+	•	status
+	•	dateJoined
+
+Loads dataset
+	•	loadId
+	•	shipperId
+	•	pickup → drop
+	•	weight/type
+	•	status
+	•	assignedCarrier
+	•	createdDate
+	•	ETA
+	•	spending
+
+Carriers dataset
+	•	carrierId
+	•	company name
+	•	verification status
+	•	fleet size
+	•	service zones
+	•	activity level
+	•	rating
+
+Verification queue dataset
+	•	pending carriers
+	•	pending shippers
+	•	pending documents
+
+Reports dataset
+	•	monthly volume
+	•	transaction volume history
+	•	user growth
+	•	load status distribution
+
+All previous data must be rebuilt, restored, and functional.
+
+⸻
+
+🔵 2. Synchronize Admin Console With Shipper Portal (Unified Database Simulation)
+
+Create an internal shared mock data store that both portals pull from and update:
+
+When Shipper Portal updates:
+	•	New load posted
+	•	Load updated / cancelled
+	•	Document uploaded
+	•	Bid created
+	•	Negotiation exchanged
+	•	Shipment moved to “In Transit”
+	•	Shipment completed
+
+Admin Console must instantly reflect the change.
+
+When Admin updates:
+	•	Edit load
+	•	Assign carrier
+	•	Verify carrier
+	•	Approve document
+	•	Update user status
+
+Shipper Portal must immediately reflect the change.
+
+This creates a fully synchronized ecosystem.
+
+⸻
+
+🔵 3. Admin Console Must Fetch the Following From Shipper Portal
+
+Loads (active, pending, completed)
+	•	Pull complete load dataset
+	•	Pull status updates
+	•	Pull ETA data
+	•	Pull spending totals
+
+Bids / Negotiations
+	•	Show all bids created by shippers
+	•	Show carrier responses
+	•	Show negotiation history
+
+Documents
+	•	Pull all uploaded documents
+	•	Pull expiry statuses
+	•	Pull linked load IDs
+
+Carriers
+	•	Pull carrier profiles
+	•	Pull service zones
+	•	Pull verification info
+	•	Pull ratings
+
+Users
+	•	Pull shipper and carrier accounts
+	•	Pull login activity (mock)
+	•	Pull account status
+
+Admin Console becomes the monitoring brain for the entire system.
+
+⸻
+
+🔵 4. Admin Dashboard Must Use These Synced Data Sources
+
+Total Users
+
+Count shipper + carrier accounts from shared data.
+
+Active Loads
+
+Pull from unified loads dataset.
+
+Verified Carriers
+
+Count carriers with status = “Verified”.
+
+Monthly Volume
+
+Use shared transaction dataset, updated when loads complete or bids are accepted.
+
+Transaction Volume Chart
+
+Use the restored transaction history + new generated values.
+
+Load Status Chart
+
+Breakdown:
+	•	Completed
+	•	In Transit
+	•	Pending
+
+Must reflect real-time data from shipper portal actions.
+
+⸻
+
+🔵 5. Admin Management Pages Must Be Fully Functional
+
+Users Page
+	•	View all users (shipper, carrier, admin)
+	•	Edit user status
+	•	Suspend/activate users
+	•	Changes sync to Shipper Portal immediately
+
+All Loads Page
+	•	View every load with full metadata
+	•	Reassign carrier
+	•	Force-update status (Pending → Active → Transit → Completed)
+	•	Changes reflect instantly in Shipper Portal
+
+Carriers Page
+	•	Approve verification
+	•	Edit fleet size
+	•	Edit service zones
+	•	Manage ratings
+	•	Add new carriers (auto-show in Shipper Portal)
+
+Verification Page
+	•	Approve/Reject compliance documents
+	•	Review uploaded PDFs
+	•	Sync approval results back to Shipper Portal
+
+Reports Page
+	•	Pull combined data from loads + spending + users
+	•	View charts by year, month, and carrier
+
+⸻
+
+🔵 6. Live Sync Behavior (Simulation)
+
+Use a mock subscription system where both portals “listen” to the same data store.
+
+Example:
+
+Shipper posts a new load →
+Admin Console immediately displays it in All Loads + Active Load count increases.
+
+Admin verifies a document →
+Shipper Console document status becomes “Approved”.
+
+Carrier submits a simulated bid →
+Admin sees the bid in the Bids dataset.
+Shipper sees it in Negotiations.
+
+This is complete two-way synchronization.
+
+⸻
+
+🔵 7. Error Handling + Permissions
+
+Admin can edit everything
+
+Shippers can edit only their data
+
+Carriers can only update what belongs to them
+
+Add simulated alerts such as:
+	•	“Permission denied — admin only.”
+	•	“Data updated successfully.”
+	•	“Record synced with Shipper Portal.”
+
+⸻
+
+🔥 FINAL INSTRUCTION FOR REPLIT AI
+
+Rebuild the Admin Console with restored mock data and connect it to a shared mock data source used by the Shipper Portal. All user, load, document, carrier, verification, bidding, and transaction data must synchronize in real time across both portals. The Admin Console must function as the authoritative backend, and all dashboards must update dynamically based on the shared data. No hardcoded numbers — everything is derived from the unified dataset.

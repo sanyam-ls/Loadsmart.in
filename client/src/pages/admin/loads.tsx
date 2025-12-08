@@ -1,9 +1,7 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Package, 
-  Plus, 
   Search, 
   Filter, 
   MoreHorizontal, 
@@ -11,14 +9,17 @@ import {
   Trash2, 
   Copy,
   UserPlus,
-  Eye,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
   MapPin,
   Truck,
   Weight,
-  Loader2,
+  RefreshCw,
+  DollarSign,
+  Clock,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,66 +56,35 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Load } from "@shared/schema";
-
-interface LoadWithDetails extends Load {
-  shipper?: { username: string; companyName: string | null } | null;
-  carrier?: { username: string; companyName: string | null } | null;
-  bidCount: number;
-}
+import { useAdminData, type AdminLoad, type AdminCarrier } from "@/lib/admin-data-store";
+import { format } from "date-fns";
 
 export default function AdminLoadsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { loads, carriers, updateLoad, assignCarrier, updateLoadStatus, refreshFromShipperPortal, addActivity } = useAdminData();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<keyof Load>("createdAt");
+  const [sortField, setSortField] = useState<keyof AdminLoad>("createdDate");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedLoad, setSelectedLoad] = useState<LoadWithDetails | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedLoad, setSelectedLoad] = useState<AdminLoad | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    pickupCity: "",
-    pickupAddress: "",
-    dropoffCity: "",
-    dropoffAddress: "",
+    pickup: "",
+    drop: "",
     weight: "",
-    requiredTruckType: "dry_van",
-    estimatedPrice: "",
-    pickupDate: "",
-    deliveryDate: "",
-    status: "draft",
-    cargoDescription: "",
+    type: "Dry Van",
+    status: "Active" as AdminLoad["status"],
   });
+  const [selectedCarrierId, setSelectedCarrierId] = useState<string>("");
   const itemsPerPage = 10;
-
-  const { data: loads = [], isLoading, error } = useQuery<LoadWithDetails[]>({
-    queryKey: ["/api/admin/loads"],
-  });
-
-  const { data: carriers = [] } = useQuery<any[]>({
-    queryKey: ["/api/admin/carriers"],
-  });
-
-  const updateLoadMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Load> }) => {
-      return apiRequest(`/api/admin/loads/${id}`, { method: "PATCH", body: JSON.stringify(data) });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/loads"] });
-      toast({ title: "Load Updated", description: "Load details have been updated" });
-      setIsEditModalOpen(false);
-      setSelectedLoad(null);
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to update load", variant: "destructive" });
-    },
-  });
 
   const filteredLoads = useMemo(() => {
     let result = [...loads];
@@ -122,10 +92,11 @@ export default function AdminLoadsPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(load => 
-        load.id?.toLowerCase().includes(query) ||
-        load.pickupCity?.toLowerCase().includes(query) ||
-        load.dropoffCity?.toLowerCase().includes(query) ||
-        load.shipper?.companyName?.toLowerCase().includes(query)
+        load.loadId?.toLowerCase().includes(query) ||
+        load.pickup?.toLowerCase().includes(query) ||
+        load.drop?.toLowerCase().includes(query) ||
+        load.shipperName?.toLowerCase().includes(query) ||
+        load.assignedCarrier?.toLowerCase().includes(query)
       );
     }
     
@@ -134,11 +105,18 @@ export default function AdminLoadsPage() {
     }
     
     result.sort((a, b) => {
-      const aVal = a[sortField] || "";
-      const bVal = b[sortField] || "";
+      const aVal = a[sortField];
+      const bVal = b[sortField];
       const direction = sortDirection === "asc" ? 1 : -1;
-      if (aVal < bVal) return -1 * direction;
-      if (aVal > bVal) return 1 * direction;
+      
+      if (aVal instanceof Date && bVal instanceof Date) {
+        return (aVal.getTime() - bVal.getTime()) * direction;
+      }
+      
+      const aStr = String(aVal || "");
+      const bStr = String(bVal || "");
+      if (aStr < bStr) return -1 * direction;
+      if (aStr > bStr) return 1 * direction;
       return 0;
     });
     
@@ -152,7 +130,7 @@ export default function AdminLoadsPage() {
 
   const totalPages = Math.ceil(filteredLoads.length / itemsPerPage);
 
-  const handleSort = (field: keyof Load) => {
+  const handleSort = (field: keyof AdminLoad) => {
     if (sortField === field) {
       setSortDirection(prev => prev === "asc" ? "desc" : "asc");
     } else {
@@ -161,18 +139,25 @@ export default function AdminLoadsPage() {
     }
   };
 
-  const handleDuplicateLoad = (load: LoadWithDetails) => {
+  const handleDuplicateLoad = (load: AdminLoad) => {
     toast({
       title: "Load Duplicated",
-      description: `Created a copy of load`,
+      description: `Created a copy of load ${load.loadId}`,
+    });
+    addActivity({
+      type: "load",
+      message: `Load ${load.loadId} duplicated`,
+      entityId: load.loadId,
+      severity: "info",
     });
   };
 
   const handleDeleteLoad = () => {
     if (selectedLoad) {
+      updateLoadStatus(selectedLoad.loadId, "Cancelled");
       toast({
-        title: "Load Deleted",
-        description: `Load has been deleted`,
+        title: "Load Cancelled",
+        description: `Load ${selectedLoad.loadId} has been cancelled`,
       });
       setIsDeleteModalOpen(false);
       setSelectedLoad(null);
@@ -181,95 +166,81 @@ export default function AdminLoadsPage() {
 
   const handleUpdateLoad = () => {
     if (selectedLoad) {
-      updateLoadMutation.mutate({
-        id: selectedLoad.id,
-        data: {
-          pickupCity: formData.pickupCity,
-          pickupAddress: formData.pickupAddress,
-          dropoffCity: formData.dropoffCity,
-          dropoffAddress: formData.dropoffAddress,
-          weight: formData.weight,
-          requiredTruckType: formData.requiredTruckType,
-          estimatedPrice: formData.estimatedPrice,
-          status: formData.status,
-          cargoDescription: formData.cargoDescription,
-        },
+      updateLoad(selectedLoad.loadId, {
+        pickup: formData.pickup,
+        drop: formData.drop,
+        weight: parseInt(formData.weight) || selectedLoad.weight,
+        type: formData.type,
+        status: formData.status,
       });
+      
+      toast({
+        title: "Load Updated",
+        description: `Load ${selectedLoad.loadId} has been updated`,
+      });
+      setIsEditModalOpen(false);
+      setSelectedLoad(null);
     }
   };
 
-  const handleAssignCarrier = (carrierId: string) => {
-    if (selectedLoad) {
-      updateLoadMutation.mutate({
-        id: selectedLoad.id,
-        data: { 
-          assignedCarrierId: carrierId,
-          status: "assigned",
-        },
-      });
+  const handleAssignCarrier = () => {
+    if (selectedLoad && selectedCarrierId) {
+      const carrier = carriers.find(c => c.carrierId === selectedCarrierId);
+      if (carrier) {
+        assignCarrier(selectedLoad.loadId, carrier.carrierId, carrier.companyName);
+        toast({
+          title: "Carrier Assigned",
+          description: `${carrier.companyName} assigned to load ${selectedLoad.loadId}`,
+        });
+      }
       setIsAssignModalOpen(false);
+      setSelectedLoad(null);
+      setSelectedCarrierId("");
     }
   };
 
-  const openEditModal = (load: LoadWithDetails) => {
+  const handleStatusChange = (newStatus: AdminLoad["status"]) => {
+    if (selectedLoad) {
+      updateLoadStatus(selectedLoad.loadId, newStatus);
+      toast({
+        title: "Status Updated",
+        description: `Load ${selectedLoad.loadId} is now ${newStatus}`,
+      });
+      setIsStatusModalOpen(false);
+      setSelectedLoad(null);
+    }
+  };
+
+  const openEditModal = (load: AdminLoad) => {
     setSelectedLoad(load);
     setFormData({
-      pickupCity: load.pickupCity || "",
-      pickupAddress: load.pickupAddress || "",
-      dropoffCity: load.dropoffCity || "",
-      dropoffAddress: load.dropoffAddress || "",
+      pickup: load.pickup || "",
+      drop: load.drop || "",
       weight: load.weight?.toString() || "",
-      requiredTruckType: load.requiredTruckType || "dry_van",
-      estimatedPrice: load.estimatedPrice?.toString() || "",
-      pickupDate: load.pickupDate ? new Date(load.pickupDate).toISOString().split("T")[0] : "",
-      deliveryDate: load.deliveryDate ? new Date(load.deliveryDate).toISOString().split("T")[0] : "",
-      status: load.status || "draft",
-      cargoDescription: load.cargoDescription || "",
+      type: load.type || "Dry Van",
+      status: load.status,
     });
     setIsEditModalOpen(true);
   };
 
-  const getStatusBadgeColor = (status: string | null) => {
+  const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case "delivered": return "bg-green-600";
-      case "in_transit": return "bg-blue-600";
-      case "assigned": return "bg-purple-600";
-      case "bidding": return "bg-amber-600";
-      case "posted": return "bg-cyan-600";
-      case "cancelled": return "bg-red-600";
+      case "Delivered": return "bg-green-600";
+      case "En Route": return "bg-blue-600";
+      case "Assigned": return "bg-purple-600";
+      case "Bidding": return "bg-amber-600";
+      case "Active": return "bg-cyan-600";
+      case "Cancelled": return "bg-red-600";
+      case "Pending": return "bg-gray-600";
       default: return "";
     }
   };
 
-  const formatDate = (dateStr: string | Date | null) => {
-    if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
   };
 
-  const formatCurrency = (value: string | number | null) => {
-    if (!value) return "$0";
-    const numValue = typeof value === "string" ? parseFloat(value) : value;
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(numValue);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="text-center text-destructive">Failed to load data. Please try again.</div>
-      </div>
-    );
-  }
+  const verifiedCarriers = carriers.filter(c => c.verificationStatus === "verified");
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -288,10 +259,78 @@ export default function AdminLoadsPage() {
           </div>
           <p className="text-muted-foreground ml-10">Manage all platform loads ({loads.length} total)</p>
         </div>
-        <Button onClick={() => setIsAddModalOpen(true)} data-testid="button-add-load">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Load
+        <Button variant="outline" onClick={refreshFromShipperPortal} data-testid="button-sync-loads">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Sync from Portal
         </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-5">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-xl font-bold">{loads.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active</p>
+                <p className="text-xl font-bold">{loads.filter(l => ["Active", "Bidding"].includes(l.status)).length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                <Truck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">In Transit</p>
+                <p className="text-xl font-bold">{loads.filter(l => l.status === "En Route").length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Delivered</p>
+                <p className="text-xl font-bold">{loads.filter(l => l.status === "Delivered").length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Revenue</p>
+                <p className="text-xl font-bold">${(loads.reduce((sum, l) => sum + l.spending, 0) / 1000).toFixed(0)}K</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -300,7 +339,7 @@ export default function AdminLoadsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by Load ID, route, or shipper..."
+                placeholder="Search by Load ID, route, shipper, or carrier..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -314,13 +353,12 @@ export default function AdminLoadsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="posted">Posted</SelectItem>
-                <SelectItem value="bidding">Bidding</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="in_transit">In Transit</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Bidding">Bidding</SelectItem>
+                <SelectItem value="Assigned">Assigned</SelectItem>
+                <SelectItem value="En Route">In Transit</SelectItem>
+                <SelectItem value="Delivered">Delivered</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -330,12 +368,12 @@ export default function AdminLoadsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[120px]">
+                  <TableHead className="w-[100px]">
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       className="h-8 -ml-3"
-                      onClick={() => handleSort("id")}
+                      onClick={() => handleSort("loadId")}
                       data-testid="button-sort-id"
                     >
                       Load ID
@@ -363,7 +401,7 @@ export default function AdminLoadsPage() {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 -ml-3"
-                      onClick={() => handleSort("estimatedPrice")}
+                      onClick={() => handleSort("spending")}
                       data-testid="button-sort-price"
                     >
                       Price
@@ -383,63 +421,86 @@ export default function AdminLoadsPage() {
                 ) : (
                   paginatedLoads.map((load) => (
                     <TableRow 
-                      key={load.id} 
+                      key={load.loadId} 
                       className="cursor-pointer"
-                      data-testid={`row-load-${load.id}`}
+                      data-testid={`row-load-${load.loadId}`}
                     >
-                      <TableCell className="font-mono font-medium" data-testid={`text-load-id-${load.id}`}>
-                        {load.id.slice(0, 8)}...
+                      <TableCell className="font-mono font-medium" data-testid={`text-load-id-${load.loadId}`}>
+                        {load.loadId}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium" data-testid={`text-shipper-${load.id}`}>
-                            {load.shipper?.companyName || "Unknown"}
+                          <div className="font-medium" data-testid={`text-shipper-${load.loadId}`}>
+                            {load.shipperName}
                           </div>
-                          <div className="text-muted-foreground">{load.shipper?.username}</div>
+                          <div className="text-muted-foreground text-xs">
+                            {format(load.createdDate, "MMM d, yyyy")}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2" data-testid={`text-route-${load.id}`}>
+                        <div className="flex items-center gap-2" data-testid={`text-route-${load.loadId}`}>
                           <MapPin className="h-3 w-3 text-green-500" />
-                          <span className="text-sm">{load.pickupCity}</span>
-                          <span className="text-muted-foreground">→</span>
+                          <span className="text-sm">{load.pickup}</span>
+                          <span className="text-muted-foreground">-</span>
                           <MapPin className="h-3 w-3 text-red-500" />
-                          <span className="text-sm">{load.dropoffCity}</span>
+                          <span className="text-sm">{load.drop}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm space-y-1">
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Weight className="h-3 w-3" />
-                            {load.weight} {load.weightUnit || "tons"}
+                            {load.weight?.toLocaleString()} {load.weightUnit}
                           </div>
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Truck className="h-3 w-3" />
-                            {load.requiredTruckType || "Any"}
+                            {load.type}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`${getStatusBadgeColor(load.status)} capitalize`} data-testid={`badge-status-${load.id}`}>
-                          {load.status?.replace("_", " ") || "draft"}
+                        <Badge 
+                          className={`${getStatusBadgeColor(load.status)} cursor-pointer`} 
+                          data-testid={`badge-status-${load.loadId}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedLoad(load);
+                            setIsStatusModalOpen(true);
+                          }}
+                        >
+                          {load.status}
                         </Badge>
                       </TableCell>
-                      <TableCell data-testid={`text-carrier-${load.id}`}>
-                        {load.carrier ? (
-                          <span className="text-sm">{load.carrier.companyName || load.carrier.username}</span>
+                      <TableCell data-testid={`text-carrier-${load.loadId}`}>
+                        {load.assignedCarrier ? (
+                          <span className="text-sm">{load.assignedCarrier}</span>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Unassigned</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLoad(load);
+                              setIsAssignModalOpen(true);
+                            }}
+                          >
+                            <UserPlus className="h-3 w-3 mr-1" />
+                            Assign
+                          </Button>
                         )}
                       </TableCell>
-                      <TableCell data-testid={`text-price-${load.id}`}>
-                        <div className="text-sm">
-                          <div className="font-medium">{formatCurrency(load.finalPrice || load.estimatedPrice)}</div>
-                        </div>
+                      <TableCell data-testid={`text-price-${load.loadId}`}>
+                        <div className="text-sm font-medium">{formatCurrency(load.spending)}</div>
+                        {load.bidCount > 0 && (
+                          <div className="text-xs text-muted-foreground">{load.bidCount} bids</div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" data-testid={`button-load-actions-${load.id}`}>
+                            <Button variant="ghost" size="icon" data-testid={`button-load-actions-${load.loadId}`}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -447,24 +508,32 @@ export default function AdminLoadsPage() {
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               openEditModal(load);
-                            }} data-testid={`menu-edit-${load.id}`}>
+                            }} data-testid={`menu-edit-${load.loadId}`}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Load
                             </DropdownMenuItem>
-                            {!load.assignedCarrierId && (
+                            {!load.assignedCarrier && (
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedLoad(load);
                                 setIsAssignModalOpen(true);
-                              }} data-testid={`menu-assign-${load.id}`}>
+                              }} data-testid={`menu-assign-${load.loadId}`}>
                                 <UserPlus className="h-4 w-4 mr-2" />
                                 Assign Carrier
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
+                              setSelectedLoad(load);
+                              setIsStatusModalOpen(true);
+                            }}>
+                              <AlertCircle className="h-4 w-4 mr-2" />
+                              Change Status
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
                               handleDuplicateLoad(load);
-                            }} data-testid={`menu-duplicate-${load.id}`}>
+                            }} data-testid={`menu-duplicate-${load.loadId}`}>
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
@@ -476,10 +545,10 @@ export default function AdminLoadsPage() {
                                 setSelectedLoad(load);
                                 setIsDeleteModalOpen(true);
                               }}
-                              data-testid={`menu-delete-${load.id}`}
+                              data-testid={`menu-delete-${load.loadId}`}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Load
+                              Cancel Load
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -525,51 +594,33 @@ export default function AdminLoadsPage() {
       </Card>
 
       <Dialog open={isEditModalOpen} onOpenChange={(open) => { if (!open) { setIsEditModalOpen(false); setSelectedLoad(null); } }}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit Load</DialogTitle>
-            <DialogDescription>Update load information</DialogDescription>
+            <DialogDescription>Update load information. Changes sync to Shipper Portal.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Pickup City</Label>
+                <Label>Pickup Location</Label>
                 <Input 
-                  value={formData.pickupCity}
-                  onChange={(e) => setFormData(prev => ({ ...prev, pickupCity: e.target.value }))}
-                  data-testid="input-pickup-city" 
+                  value={formData.pickup}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pickup: e.target.value }))}
+                  data-testid="input-pickup" 
                 />
               </div>
               <div className="space-y-2">
-                <Label>Dropoff City</Label>
+                <Label>Drop Location</Label>
                 <Input 
-                  value={formData.dropoffCity}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dropoffCity: e.target.value }))}
-                  data-testid="input-dropoff-city" 
+                  value={formData.drop}
+                  onChange={(e) => setFormData(prev => ({ ...prev, drop: e.target.value }))}
+                  data-testid="input-drop" 
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Pickup Address</Label>
-                <Input 
-                  value={formData.pickupAddress}
-                  onChange={(e) => setFormData(prev => ({ ...prev, pickupAddress: e.target.value }))}
-                  data-testid="input-pickup-address" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Dropoff Address</Label>
-                <Input 
-                  value={formData.dropoffAddress}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dropoffAddress: e.target.value }))}
-                  data-testid="input-dropoff-address" 
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Weight</Label>
+                <Label>Weight (lbs)</Label>
                 <Input 
                   type="number" 
                   value={formData.weight}
@@ -579,43 +630,34 @@ export default function AdminLoadsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Truck Type</Label>
-                <Select value={formData.requiredTruckType} onValueChange={(v) => setFormData(prev => ({ ...prev, requiredTruckType: v }))}>
+                <Select value={formData.type} onValueChange={(v) => setFormData(prev => ({ ...prev, type: v }))}>
                   <SelectTrigger data-testid="select-truck-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="flatbed">Flatbed</SelectItem>
-                    <SelectItem value="dry_van">Dry Van</SelectItem>
-                    <SelectItem value="refrigerated">Refrigerated</SelectItem>
-                    <SelectItem value="tanker">Tanker</SelectItem>
-                    <SelectItem value="container">Container</SelectItem>
+                    <SelectItem value="Dry Van">Dry Van</SelectItem>
+                    <SelectItem value="Flatbed">Flatbed</SelectItem>
+                    <SelectItem value="Refrigerated">Refrigerated</SelectItem>
+                    <SelectItem value="Tanker">Tanker</SelectItem>
+                    <SelectItem value="Container">Container</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Estimated Price</Label>
-                <Input 
-                  type="number" 
-                  value={formData.estimatedPrice}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedPrice: e.target.value }))}
-                  data-testid="input-price" 
-                />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v }))}>
+              <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v as AdminLoad["status"] }))}>
                 <SelectTrigger data-testid="select-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="posted">Posted</SelectItem>
-                  <SelectItem value="bidding">Bidding</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="in_transit">In Transit</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Bidding">Bidding</SelectItem>
+                  <SelectItem value="Assigned">Assigned</SelectItem>
+                  <SelectItem value="En Route">In Transit</SelectItem>
+                  <SelectItem value="Delivered">Delivered</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -624,63 +666,115 @@ export default function AdminLoadsPage() {
             <Button variant="outline" onClick={() => { setIsEditModalOpen(false); setSelectedLoad(null); }} data-testid="button-cancel-edit">
               Cancel
             </Button>
-            <Button 
-              onClick={handleUpdateLoad} 
-              disabled={updateLoadMutation.isPending}
-              data-testid="button-save-load"
-            >
-              {updateLoadMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Update Load
+            <Button onClick={handleUpdateLoad} data-testid="button-save-load">
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+      <Dialog open={isAssignModalOpen} onOpenChange={(open) => { if (!open) { setIsAssignModalOpen(false); setSelectedLoad(null); setSelectedCarrierId(""); } }}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Assign Carrier</DialogTitle>
             <DialogDescription>
-              Assign a carrier to this load
+              Select a verified carrier to assign to load {selectedLoad?.loadId}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Label>Select Carrier</Label>
-            <Select onValueChange={(v) => handleAssignCarrier(v)}>
-              <SelectTrigger className="mt-2" data-testid="select-carrier">
-                <SelectValue placeholder="Choose a carrier" />
-              </SelectTrigger>
-              <SelectContent>
-                {carriers.map((carrier: any) => (
-                  <SelectItem key={carrier.id} value={carrier.id}>
-                    {carrier.companyName || carrier.username}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label>Select Carrier</Label>
+              <Select value={selectedCarrierId} onValueChange={setSelectedCarrierId}>
+                <SelectTrigger data-testid="select-carrier">
+                  <SelectValue placeholder="Choose a carrier..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {verifiedCarriers.map((carrier) => (
+                    <SelectItem key={carrier.carrierId} value={carrier.carrierId}>
+                      <div className="flex items-center justify-between w-full gap-4">
+                        <span>{carrier.companyName}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {carrier.rating.toFixed(1)} rating
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedCarrierId && (
+              <div className="mt-4 p-3 bg-muted rounded-lg">
+                {(() => {
+                  const carrier = carriers.find(c => c.carrierId === selectedCarrierId);
+                  return carrier ? (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Fleet Size</span>
+                        <span className="font-medium">{carrier.fleetSize} trucks</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">On-Time</span>
+                        <span className="font-medium">{carrier.onTimePercent}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Deliveries</span>
+                        <span className="font-medium">{carrier.totalDeliveries}</span>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignModalOpen(false)} data-testid="button-cancel-assign">
+            <Button variant="outline" onClick={() => { setIsAssignModalOpen(false); setSelectedLoad(null); setSelectedCarrierId(""); }}>
               Cancel
             </Button>
+            <Button onClick={handleAssignCarrier} disabled={!selectedCarrierId} data-testid="button-confirm-assign">
+              Assign Carrier
+            </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isStatusModalOpen} onOpenChange={(open) => { if (!open) { setIsStatusModalOpen(false); setSelectedLoad(null); } }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Change Load Status</DialogTitle>
+            <DialogDescription>
+              Update status for load {selectedLoad?.loadId}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            {(["Pending", "Active", "Bidding", "Assigned", "En Route", "Delivered", "Cancelled"] as AdminLoad["status"][]).map((status) => (
+              <Button
+                key={status}
+                variant={selectedLoad?.status === status ? "default" : "outline"}
+                className="w-full justify-start"
+                onClick={() => handleStatusChange(status)}
+              >
+                <Badge className={`${getStatusBadgeColor(status)} mr-2`}>{status}</Badge>
+                {status === selectedLoad?.status && "(Current)"}
+              </Button>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Delete Load</DialogTitle>
+            <DialogTitle>Cancel Load</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this load? This action cannot be undone.
+              Are you sure you want to cancel load {selectedLoad?.loadId}? This will update the status to Cancelled.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)} data-testid="button-cancel-delete">
-              Cancel
+              Keep Load
             </Button>
             <Button variant="destructive" onClick={handleDeleteLoad} data-testid="button-confirm-delete">
-              Delete Load
+              Cancel Load
             </Button>
           </DialogFooter>
         </DialogContent>

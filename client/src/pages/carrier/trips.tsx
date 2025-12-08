@@ -1,60 +1,65 @@
-import { useState } from "react";
-import { MapPin, Truck, Clock, CheckCircle, Upload, Navigation } from "lucide-react";
+import { useState, useMemo } from "react";
+import { 
+  MapPin, Truck, Clock, CheckCircle, Upload, Navigation, Fuel, User, 
+  AlertTriangle, TrendingUp, Route, Calendar, Timer, Shield, Gauge,
+  ArrowRight, Package, Building2, PlayCircle, PauseCircle, Coffee
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/empty-state";
+import { StatCard } from "@/components/stat-card";
 import { useToast } from "@/hooks/use-toast";
+import { useCarrierData, type CarrierTrip } from "@/lib/carrier-data-store";
+import { format } from "date-fns";
 
-const mockTrips = [
-  {
-    id: "trip1",
-    loadId: "l3",
-    route: "San Francisco, CA → Denver, CO",
-    status: "in_transit",
-    progress: 65,
-    currentLocation: "Salt Lake City, UT",
-    eta: new Date(Date.now() + 1000 * 60 * 60 * 8),
-    rate: 4200,
-    steps: [
-      { id: "s1", label: "Picked Up", completed: true, time: "Yesterday, 8:00 AM" },
-      { id: "s2", label: "In Transit", completed: true, time: "Yesterday, 9:30 AM" },
-      { id: "s3", label: "Checkpoint (SLC)", completed: true, time: "Today, 6:00 AM" },
-      { id: "s4", label: "Out for Delivery", completed: false },
-      { id: "s5", label: "Delivered", completed: false },
-    ],
-  },
-  {
-    id: "trip2",
-    loadId: "l5",
-    route: "Chicago, IL → Detroit, MI",
-    status: "picked_up",
-    progress: 25,
-    currentLocation: "Chicago, IL",
-    eta: new Date(Date.now() + 1000 * 60 * 60 * 5),
-    rate: 1800,
-    steps: [
-      { id: "s6", label: "Picked Up", completed: true, time: "Today, 10:00 AM" },
-      { id: "s7", label: "In Transit", completed: false },
-      { id: "s8", label: "Delivered", completed: false },
-    ],
-  },
-];
+function formatCurrency(amount: number): string {
+  if (amount >= 100000) {
+    return `Rs. ${(amount / 100000).toFixed(1)}L`;
+  }
+  return `Rs. ${amount.toLocaleString()}`;
+}
+
+const statusConfig: Record<CarrierTrip["status"], { label: string; color: string }> = {
+  awaiting_pickup: { label: "Awaiting Pickup", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  picked_up: { label: "Picked Up", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  in_transit: { label: "In Transit", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  at_checkpoint: { label: "At Checkpoint", color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400" },
+  out_for_delivery: { label: "Out for Delivery", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+  delivered: { label: "Delivered", color: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400" },
+};
 
 export default function TripsPage() {
   const { toast } = useToast();
-  const [selectedTrip, setSelectedTrip] = useState(mockTrips[0] || null);
+  const { activeTrips, updateTripStatus } = useCarrierData();
+  const [selectedTrip, setSelectedTrip] = useState<CarrierTrip | null>(activeTrips[0] || null);
+  const [detailTab, setDetailTab] = useState("overview");
 
-  const updateStatus = (newStatus: string) => {
+  const stats = useMemo(() => {
+    const inTransit = activeTrips.filter(t => t.status === "in_transit").length;
+    const pickingUp = activeTrips.filter(t => t.status === "awaiting_pickup" || t.status === "picked_up").length;
+    const delivering = activeTrips.filter(t => t.status === "out_for_delivery").length;
+    const totalRevenue = activeTrips.reduce((sum, t) => sum + t.rate, 0);
+    const avgProgress = activeTrips.length > 0 
+      ? Math.round(activeTrips.reduce((sum, t) => sum + t.progress, 0) / activeTrips.length)
+      : 0;
+    
+    return { inTransit, pickingUp, delivering, totalRevenue, avgProgress };
+  }, [activeTrips]);
+
+  const handleStatusUpdate = (newStatus: CarrierTrip["status"]) => {
+    if (!selectedTrip) return;
+    updateTripStatus(selectedTrip.tripId, newStatus);
     toast({
-      title: "Status updated",
-      description: `Trip status updated to "${newStatus.replace("_", " ")}"`,
+      title: "Status Updated",
+      description: `Trip status updated to "${statusConfig[newStatus].label}"`,
     });
   };
 
-  if (mockTrips.length === 0) {
+  if (activeTrips.length === 0) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Active Trips</h1>
@@ -68,43 +73,87 @@ export default function TripsPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Active Trips</h1>
-        <p className="text-muted-foreground">Manage and update your current shipments.</p>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold" data-testid="text-trips-title">Trip Intelligence</h1>
+          <p className="text-muted-foreground">Manage your {activeTrips.length} active trips</p>
+        </div>
+      </div>
+      
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard
+          title="Active Trips"
+          value={activeTrips.length}
+          icon={Truck}
+          subtitle="In progress"
+          testId="stat-active-trips"
+        />
+        <StatCard
+          title="In Transit"
+          value={stats.inTransit}
+          icon={Route}
+          subtitle="On the road"
+          testId="stat-in-transit"
+        />
+        <StatCard
+          title="Picking Up"
+          value={stats.pickingUp}
+          icon={Package}
+          subtitle="At origin"
+          testId="stat-picking-up"
+        />
+        <StatCard
+          title="Delivering"
+          value={stats.delivering}
+          icon={MapPin}
+          subtitle="Near destination"
+          testId="stat-delivering"
+        />
+        <StatCard
+          title="Trip Revenue"
+          value={formatCurrency(stats.totalRevenue)}
+          icon={TrendingUp}
+          subtitle="All active trips"
+          testId="stat-revenue"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Current Trips</CardTitle>
+            <CardTitle className="text-base">Current Trips ({activeTrips.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-300px)]">
+            <ScrollArea className="h-[calc(100vh-420px)]">
               <div className="p-3 space-y-2">
-                {mockTrips.map((trip) => (
+                {activeTrips.map((trip) => (
                   <div
-                    key={trip.id}
+                    key={trip.tripId}
                     className={`p-4 rounded-lg cursor-pointer hover-elevate ${
-                      selectedTrip?.id === trip.id ? "bg-primary/10 border border-primary/20" : "bg-muted/50"
+                      selectedTrip?.tripId === trip.tripId ? "bg-primary/10 border border-primary/20" : "bg-muted/50"
                     }`}
                     onClick={() => setSelectedTrip(trip)}
-                    data-testid={`trip-item-${trip.id}`}
+                    data-testid={`trip-item-${trip.tripId}`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-muted-foreground">Load #{trip.loadId}</span>
-                      <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-xs no-default-hover-elevate no-default-active-elevate">
-                        {trip.progress}%
+                      <span className="text-xs text-muted-foreground">{trip.loadId}</span>
+                      <Badge className={`${statusConfig[trip.status].color} text-xs no-default-hover-elevate no-default-active-elevate`}>
+                        {statusConfig[trip.status].label}
                       </Badge>
                     </div>
-                    <p className="font-medium text-sm mb-2">{trip.route}</p>
+                    <div className="flex items-center gap-1 text-sm mb-2">
+                      <span className="font-medium truncate max-w-[80px]">{trip.pickup}</span>
+                      <ArrowRight className="h-3 w-3 flex-shrink-0" />
+                      <span className="font-medium truncate max-w-[80px]">{trip.dropoff}</span>
+                    </div>
                     <Progress value={trip.progress} className="h-2 mb-2" />
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {trip.currentLocation}
+                        <span className="truncate max-w-[100px]">{trip.currentLocation}</span>
                       </span>
-                      <span className="font-medium text-foreground">${trip.rate.toLocaleString()}</span>
+                      <span className="font-medium text-foreground">{formatCurrency(trip.rate)}</span>
                     </div>
                   </div>
                 ))}
@@ -119,112 +168,337 @@ export default function TripsPage() {
               <CardHeader className="pb-3 border-b border-border">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div>
-                    <CardTitle className="text-lg">{selectedTrip.route}</CardTitle>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <span>Load #{selectedTrip.loadId}</span>
-                      <span className="font-medium text-foreground">${selectedTrip.rate.toLocaleString()}</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-lg">{selectedTrip.pickup} to {selectedTrip.dropoff}</CardTitle>
+                      <Badge className={`${statusConfig[selectedTrip.status].color} no-default-hover-elevate no-default-active-elevate`}>
+                        {statusConfig[selectedTrip.status].label}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                      <span>{selectedTrip.loadId}</span>
+                      <span className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {selectedTrip.shipperName}
+                      </span>
+                      <span className="font-medium text-foreground">{formatCurrency(selectedTrip.rate)}</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">ETA</p>
                     <p className="font-semibold">
-                      {selectedTrip.eta.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {format(new Date(selectedTrip.eta), "MMM d, h:mm a")}
                     </p>
                   </div>
                 </div>
-                <Progress value={selectedTrip.progress} className="mt-4" />
+                <div className="flex items-center gap-4 mt-3">
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>{selectedTrip.completedDistance} km</span>
+                      <span>{selectedTrip.totalDistance} km</span>
+                    </div>
+                    <Progress value={selectedTrip.progress} />
+                  </div>
+                  <span className="font-bold text-lg">{selectedTrip.progress}%</span>
+                </div>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <div>
-                    <h3 className="font-semibold mb-4">Trip Progress</h3>
-                    <div className="space-y-4">
-                      {selectedTrip.steps.map((step, index) => {
-                        const isLast = index === selectedTrip.steps.length - 1;
-                        return (
-                          <div key={step.id} className="flex gap-4">
-                            <div className="relative flex flex-col items-center">
-                              <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                                step.completed 
+              
+              <CardContent className="p-0">
+                <Tabs value={detailTab} onValueChange={setDetailTab}>
+                  <TabsList className="w-full justify-start rounded-none border-b px-4">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="fuel">Fuel</TabsTrigger>
+                    <TabsTrigger value="driver">Driver</TabsTrigger>
+                    <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                  </TabsList>
+                  
+                  <div className="p-4">
+                    <TabsContent value="overview" className="mt-0 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <Card>
+                          <CardContent className="pt-4 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Load Type</span>
+                              <span className="font-medium">{selectedTrip.loadType}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Weight</span>
+                              <span className="font-medium">{selectedTrip.weight} Tons</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Driver</span>
+                              <span className="font-medium">{selectedTrip.driverAssigned}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Truck</span>
+                              <span className="font-medium">{selectedTrip.truckAssigned}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card>
+                          <CardContent className="pt-4 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Profitability</span>
+                              <span className="font-medium text-green-600">{formatCurrency(selectedTrip.profitabilityEstimate)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Total Distance</span>
+                              <span className="font-medium">{selectedTrip.totalDistance} km</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Stops</span>
+                              <span className="font-medium">{selectedTrip.allStops.length}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Started</span>
+                              <span className="font-medium">{format(new Date(selectedTrip.startDate), "MMM d")}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium mb-3">Route Stops</h4>
+                        <div className="space-y-2">
+                          {selectedTrip.allStops.map((stop, idx) => (
+                            <div key={stop.stopId} className="flex items-center gap-3 p-2 rounded-md bg-muted/50">
+                              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                                stop.status === "completed" 
                                   ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" 
-                                  : "bg-muted text-muted-foreground"
+                                  : "bg-muted"
                               }`}>
-                                {step.completed ? (
+                                {stop.status === "completed" ? (
                                   <CheckCircle className="h-4 w-4" />
                                 ) : (
-                                  <div className="h-2 w-2 rounded-full bg-current" />
+                                  <span className="text-xs font-medium">{idx + 1}</span>
                                 )}
                               </div>
-                              {!isLast && (
-                                <div className={`w-0.5 flex-1 mt-2 ${
-                                  step.completed ? "bg-green-200 dark:bg-green-800" : "bg-border"
-                                }`} />
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{stop.location}</p>
+                                <p className="text-xs text-muted-foreground capitalize">{stop.type}</p>
+                              </div>
+                              {stop.actualTime && (
+                                <span className="text-xs text-muted-foreground">
+                                  {format(new Date(stop.actualTime), "h:mm a")}
+                                </span>
                               )}
                             </div>
-                            <div className="flex-1 pt-1">
-                              <p className={`font-medium ${!step.completed && "text-muted-foreground"}`}>
-                                {step.label}
-                              </p>
-                              {step.time && (
-                                <p className="text-xs text-muted-foreground">{step.time}</p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="font-semibold mb-4">Current Location</h3>
-                      <div className="aspect-video rounded-lg bg-muted/50 flex items-center justify-center mb-4">
-                        <div className="text-center text-muted-foreground">
-                          <Navigation className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">{selectedTrip.currentLocation}</p>
+                          ))}
                         </div>
                       </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold mb-4">Quick Actions</h3>
-                      <div className="space-y-2">
-                        <Button 
-                          className="w-full justify-start" 
-                          variant="outline"
-                          onClick={() => updateStatus("at_checkpoint")}
-                          data-testid="button-update-checkpoint"
-                        >
-                          <MapPin className="h-4 w-4 mr-2" />
-                          Check-in at Location
-                        </Button>
-                        <Button 
-                          className="w-full justify-start" 
-                          variant="outline"
-                          onClick={() => updateStatus("out_for_delivery")}
-                          data-testid="button-update-delivery"
-                        >
-                          <Truck className="h-4 w-4 mr-2" />
-                          Mark Out for Delivery
-                        </Button>
-                        <Button 
-                          className="w-full justify-start"
-                          onClick={() => updateStatus("delivered")}
-                          data-testid="button-mark-delivered"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Mark as Delivered
-                        </Button>
-                        <Button 
-                          className="w-full justify-start" 
-                          variant="outline"
-                          data-testid="button-upload-pod"
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload POD
-                        </Button>
+                    </TabsContent>
+                    
+                    <TabsContent value="fuel" className="mt-0 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <Card>
+                          <CardContent className="pt-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Fuel className="h-5 w-5 text-amber-500" />
+                              <span className="font-medium">Fuel Consumed</span>
+                            </div>
+                            <p className="text-2xl font-bold">{selectedTrip.fuel.fuelConsumed} L</p>
+                            <p className="text-sm text-muted-foreground">
+                              @ Rs. {selectedTrip.fuel.costPerLiter}/L
+                            </p>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card>
+                          <CardContent className="pt-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <TrendingUp className="h-5 w-5 text-green-500" />
+                              <span className="font-medium">Fuel Cost</span>
+                            </div>
+                            <p className="text-2xl font-bold">{formatCurrency(selectedTrip.fuel.totalFuelCost)}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedTrip.fuel.fuelEfficiency} km/L efficiency
+                            </p>
+                          </CardContent>
+                        </Card>
                       </div>
-                    </div>
+                      
+                      {selectedTrip.fuel.costOverrun > 0 && (
+                        <Card className="border-amber-500">
+                          <CardContent className="pt-4">
+                            <div className="flex items-center gap-2 text-amber-600">
+                              <AlertTriangle className="h-5 w-5" />
+                              <span className="font-medium">Cost Overrun Detected</span>
+                            </div>
+                            <p className="text-lg font-bold text-amber-600 mt-1">
+                              +{formatCurrency(selectedTrip.fuel.costOverrun)}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {selectedTrip.fuel.refuelAlerts.length > 0 && (
+                        <Card className="border-red-500">
+                          <CardContent className="pt-4">
+                            <div className="flex items-center gap-2 text-red-600 mb-2">
+                              <Fuel className="h-5 w-5" />
+                              <span className="font-medium">Refuel Alerts</span>
+                            </div>
+                            {selectedTrip.fuel.refuelAlerts.map((alert, idx) => (
+                              <p key={idx} className="text-sm text-red-600">{alert}</p>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="driver" className="mt-0 space-y-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <User className="h-5 w-5" />
+                            {selectedTrip.driverInsights.driverName}
+                          </CardTitle>
+                          <CardDescription>License: {selectedTrip.driverInsights.driverLicense}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Safety Score</span>
+                            <div className="flex items-center gap-2">
+                              <Progress 
+                                value={selectedTrip.driverInsights.safetyScore} 
+                                className="w-24 h-2" 
+                              />
+                              <span className={`font-bold ${
+                                selectedTrip.driverInsights.safetyScore > 80 
+                                  ? "text-green-600" 
+                                  : selectedTrip.driverInsights.safetyScore > 60 
+                                    ? "text-amber-600" 
+                                    : "text-red-600"
+                              }`}>
+                                {selectedTrip.driverInsights.safetyScore}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 rounded-md bg-muted/50">
+                              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                                <Timer className="h-4 w-4" />
+                                <span className="text-sm">Driving Hours</span>
+                              </div>
+                              <p className="text-lg font-bold">{selectedTrip.driverInsights.drivingHoursToday}h</p>
+                            </div>
+                            
+                            <div className="p-3 rounded-md bg-muted/50">
+                              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                                <Coffee className="h-4 w-4" />
+                                <span className="text-sm">Breaks Taken</span>
+                              </div>
+                              <p className="text-lg font-bold">{selectedTrip.driverInsights.breaksTaken}</p>
+                            </div>
+                            
+                            <div className="p-3 rounded-md bg-muted/50">
+                              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                                <Gauge className="h-4 w-4" />
+                                <span className="text-sm">Speeding Alerts</span>
+                              </div>
+                              <p className={`text-lg font-bold ${selectedTrip.driverInsights.speedingAlerts > 0 ? "text-red-600" : ""}`}>
+                                {selectedTrip.driverInsights.speedingAlerts}
+                              </p>
+                            </div>
+                            
+                            <div className="p-3 rounded-md bg-muted/50">
+                              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span className="text-sm">Harsh Braking</span>
+                              </div>
+                              <p className={`text-lg font-bold ${selectedTrip.driverInsights.harshBrakingEvents > 2 ? "text-amber-600" : ""}`}>
+                                {selectedTrip.driverInsights.harshBrakingEvents}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="p-3 rounded-md bg-muted/50">
+                            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                              <PauseCircle className="h-4 w-4" />
+                              <span className="text-sm">Idle Time Today</span>
+                            </div>
+                            <p className="text-lg font-bold">{selectedTrip.driverInsights.idleTime} min</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                    
+                    <TabsContent value="timeline" className="mt-0">
+                      <ScrollArea className="h-64">
+                        <div className="space-y-4">
+                          {selectedTrip.timeline.map((event, index) => {
+                            const isLast = index === selectedTrip.timeline.length - 1;
+                            return (
+                              <div key={event.eventId} className="flex gap-4">
+                                <div className="relative flex flex-col items-center">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    {event.type === "pickup" && <Package className="h-4 w-4" />}
+                                    {event.type === "loaded" && <CheckCircle className="h-4 w-4" />}
+                                    {event.type === "en_route" && <Truck className="h-4 w-4" />}
+                                    {event.type === "checkpoint" && <MapPin className="h-4 w-4" />}
+                                    {event.type === "delivered" && <CheckCircle className="h-4 w-4" />}
+                                    {event.type === "delay" && <AlertTriangle className="h-4 w-4" />}
+                                  </div>
+                                  {!isLast && (
+                                    <div className="w-0.5 flex-1 mt-2 bg-border" />
+                                  )}
+                                </div>
+                                <div className="flex-1 pt-1 pb-4">
+                                  <p className="font-medium">{event.description}</p>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                    <span>{format(new Date(event.timestamp), "MMM d, h:mm a")}</span>
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="h-3 w-3" />
+                                      {event.location}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+                  </div>
+                </Tabs>
+                
+                <div className="border-t p-4">
+                  <h4 className="font-medium mb-3">Quick Actions</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleStatusUpdate("at_checkpoint")}
+                      disabled={selectedTrip.status === "delivered"}
+                      data-testid="button-update-checkpoint"
+                    >
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Check-in
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleStatusUpdate("out_for_delivery")}
+                      disabled={selectedTrip.status === "delivered"}
+                      data-testid="button-update-delivery"
+                    >
+                      <Truck className="h-4 w-4 mr-2" />
+                      Out for Delivery
+                    </Button>
+                    <Button 
+                      onClick={() => handleStatusUpdate("delivered")}
+                      disabled={selectedTrip.status === "delivered"}
+                      data-testid="button-mark-delivered"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark Delivered
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      data-testid="button-upload-pod"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload POD
+                    </Button>
                   </div>
                 </div>
               </CardContent>

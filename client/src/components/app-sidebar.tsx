@@ -14,6 +14,9 @@ import {
   Gavel,
   Shield,
   Radio,
+  DollarSign,
+  User,
+  History,
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,9 +50,12 @@ const carrierItems = [
   { title: "Dashboard", url: "/carrier", icon: LayoutDashboard },
   { title: "Add Truck", url: "/carrier/add-truck", icon: Plus },
   { title: "My Fleet", url: "/carrier/fleet", icon: Truck },
+  { title: "Drivers", url: "/carrier/drivers", icon: User },
   { title: "Available Loads", url: "/carrier/loads", icon: Route },
   { title: "My Bids", url: "/carrier/bids", icon: Gavel },
   { title: "Active Trips", url: "/carrier/trips", icon: MapPin },
+  { title: "Trip History", url: "/carrier/history", icon: History },
+  { title: "Revenue", url: "/carrier/revenue", icon: DollarSign },
   { title: "Documents", url: "/carrier/documents", icon: FileText },
 ];
 

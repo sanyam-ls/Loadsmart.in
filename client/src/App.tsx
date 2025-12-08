@@ -34,6 +34,9 @@ import CarrierLoadsPage from "@/pages/carrier/loads";
 import CarrierBidsPage from "@/pages/carrier/bids";
 import TripsPage from "@/pages/carrier/trips";
 import CarrierDocumentsPage from "@/pages/carrier/documents";
+import CarrierRevenuePage from "@/pages/carrier/revenue";
+import CarrierDriversPage from "@/pages/carrier/drivers";
+import CarrierHistoryPage from "@/pages/carrier/history";
 
 import AdminOverview from "@/pages/admin/overview";
 import AdminUsersPage from "@/pages/admin/users";
@@ -124,6 +127,9 @@ function AppContent() {
               <Route path="/carrier/bids" component={CarrierBidsPage} />
               <Route path="/carrier/trips" component={TripsPage} />
               <Route path="/carrier/documents" component={CarrierDocumentsPage} />
+              <Route path="/carrier/revenue" component={CarrierRevenuePage} />
+              <Route path="/carrier/drivers" component={CarrierDriversPage} />
+              <Route path="/carrier/history" component={CarrierHistoryPage} />
               
               <Route path="/admin" component={AdminOverview} />
               <Route path="/admin/users" component={AdminUsersPage} />

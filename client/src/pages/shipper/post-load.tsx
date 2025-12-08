@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useMockData } from "@/lib/mock-data-store";
 
 const loadFormSchema = z.object({
   pickupAddress: z.string().min(5, "Pickup address is required"),
@@ -45,12 +46,12 @@ const loadFormSchema = z.object({
 type LoadFormData = z.infer<typeof loadFormSchema>;
 
 const truckTypes = [
-  { value: "dry_van", label: "Dry Van", description: "Standard enclosed trailer" },
-  { value: "flatbed", label: "Flatbed", description: "Open deck for oversized loads" },
-  { value: "refrigerated", label: "Refrigerated", description: "Temperature-controlled" },
-  { value: "tanker", label: "Tanker", description: "Liquid cargo transport" },
-  { value: "container", label: "Container", description: "Intermodal shipping" },
-  { value: "open_deck", label: "Open Deck", description: "Heavy equipment & machinery" },
+  { value: "Dry Van", label: "Dry Van", description: "Standard enclosed trailer" },
+  { value: "Flatbed", label: "Flatbed", description: "Open deck for oversized loads" },
+  { value: "Refrigerated", label: "Refrigerated", description: "Temperature-controlled" },
+  { value: "Tanker", label: "Tanker", description: "Liquid cargo transport" },
+  { value: "Container", label: "Container", description: "Intermodal shipping" },
+  { value: "Open Deck", label: "Open Deck", description: "Heavy equipment & machinery" },
 ];
 
 const savedTemplates = [
@@ -72,12 +73,12 @@ function calculateDistance(from: string, to: string): number {
 function calculatePrice(distance: number, weight: number, truckType: string): number {
   const baseRate = 2.5;
   const typeMultiplier: Record<string, number> = {
-    dry_van: 1.0,
-    flatbed: 1.15,
-    refrigerated: 1.35,
-    tanker: 1.25,
-    container: 1.1,
-    open_deck: 1.2,
+    "Dry Van": 1.0,
+    "Flatbed": 1.15,
+    "Refrigerated": 1.35,
+    "Tanker": 1.25,
+    "Container": 1.1,
+    "Open Deck": 1.2,
   };
   const multiplier = typeMultiplier[truckType] || 1.0;
   const weightFactor = weight > 30000 ? 1.2 : weight > 20000 ? 1.1 : 1.0;
@@ -86,16 +87,17 @@ function calculatePrice(distance: number, weight: number, truckType: string): nu
 
 function suggestTruckType(weight: number, description: string): string {
   const desc = description.toLowerCase();
-  if (desc.includes("frozen") || desc.includes("cold") || desc.includes("perishable")) return "refrigerated";
-  if (desc.includes("liquid") || desc.includes("oil") || desc.includes("fuel")) return "tanker";
-  if (desc.includes("machine") || desc.includes("equipment") || desc.includes("vehicle")) return "flatbed";
-  if (weight > 40000) return "flatbed";
-  return "dry_van";
+  if (desc.includes("frozen") || desc.includes("cold") || desc.includes("perishable")) return "Refrigerated";
+  if (desc.includes("liquid") || desc.includes("oil") || desc.includes("fuel")) return "Tanker";
+  if (desc.includes("machine") || desc.includes("equipment") || desc.includes("vehicle")) return "Flatbed";
+  if (weight > 40000) return "Flatbed";
+  return "Dry Van";
 }
 
 export default function PostLoadPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { addLoad } = useMockData();
   const [isLoading, setIsLoading] = useState(false);
   const [estimation, setEstimation] = useState<{
     distance: number;
@@ -146,25 +148,31 @@ export default function PostLoadPage() {
 
   const handleSubmit = async (data: LoadFormData) => {
     setIsLoading(true);
+    
     try {
-      const response = await fetch("/api/loads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          ...data,
-          distance: estimation?.distance,
-          estimatedPrice: estimation?.price,
-          status: "posted",
-        }),
+      const truckType = data.requiredTruckType || estimation?.suggestedTruck || "Dry Van";
+      
+      const newLoad = addLoad({
+        pickup: data.pickupCity,
+        drop: data.dropoffCity,
+        weight: Number(data.weight),
+        weightUnit: data.weightUnit,
+        type: truckType,
+        status: "Active",
+        carrier: null,
+        eta: null,
+        estimatedPrice: estimation?.price || 2000,
+        finalPrice: null,
+        cargoDescription: data.cargoDescription || "",
+        pickupDate: new Date(data.pickupDate).toISOString(),
       });
 
-      if (response.ok) {
-        toast({ title: "Load posted!", description: "Your load is now visible to carriers." });
-        navigate("/shipper/loads");
-      } else {
-        toast({ title: "Error", description: "Failed to post load. Please try again.", variant: "destructive" });
-      }
+      toast({ 
+        title: "Load Posted Successfully!", 
+        description: `Load ${newLoad.loadId} is now visible to carriers. Dashboard updated.` 
+      });
+      
+      navigate("/shipper/loads");
     } catch (error) {
       toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
     } finally {
@@ -175,7 +183,7 @@ export default function PostLoadPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Post New Load</h1>
+        <h1 className="text-2xl font-bold" data-testid="text-page-title">Post New Load</h1>
         <p className="text-muted-foreground">Fill in the details below to post your load to the marketplace.</p>
       </div>
 
@@ -357,7 +365,7 @@ export default function PostLoadPage() {
                           {estimation?.suggestedTruck && !field.value && (
                             <FormDescription className="flex items-center gap-1 text-primary">
                               <Sparkles className="h-3 w-3" />
-                              Suggested: {truckTypes.find(t => t.value === estimation.suggestedTruck)?.label}
+                              Suggested: {estimation.suggestedTruck}
                             </FormDescription>
                           )}
                           <FormMessage />
@@ -461,7 +469,7 @@ export default function PostLoadPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Suggested Truck</span>
                     <Badge variant="secondary">
-                      {truckTypes.find(t => t.value === estimation.suggestedTruck)?.label}
+                      {estimation.suggestedTruck}
                     </Badge>
                   </div>
                 </div>

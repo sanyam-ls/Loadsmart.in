@@ -39,6 +39,8 @@ import AdminLoadsPage from "@/pages/admin/loads";
 import AdminCarriersPage from "@/pages/admin/carriers";
 import AdminVolumeAnalytics from "@/pages/admin/volume-analytics";
 import InTransitPage from "@/pages/in-transit";
+import { MockDataProvider } from "@/lib/mock-data-store";
+import PendingBidsPage from "@/pages/shipper/pending-bids";
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -97,6 +99,7 @@ function AppContent() {
               <Route path="/shipper/loads" component={ShipperLoadsPage} />
               <Route path="/shipper/loads/:id" component={LoadDetailPage} />
               <Route path="/shipper/spend" component={SpendAnalyticsPage} />
+              <Route path="/shipper/pending-bids" component={PendingBidsPage} />
               <Route path="/shipper/negotiations" component={NegotiationsPage} />
               <Route path="/shipper/tracking" component={TrackingPage} />
               <Route path="/shipper/carriers" component={CarriersPage} />
@@ -140,10 +143,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <TooltipProvider>
-            <AppContent />
-            <Toaster />
-          </TooltipProvider>
+          <MockDataProvider>
+            <TooltipProvider>
+              <AppContent />
+              <Toaster />
+            </TooltipProvider>
+          </MockDataProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

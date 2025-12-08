@@ -1,15 +1,12 @@
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { Package, DollarSign, Truck, Clock, TrendingUp, AlertTriangle, Plus, ArrowRight } from "lucide-react";
+import { Package, DollarSign, Truck, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatCard } from "@/components/stat-card";
-import { LoadCard } from "@/components/load-card";
 import { useAuth } from "@/lib/auth-context";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { Load, Bid, Notification } from "@shared/schema";
+import { useMockData } from "@/lib/mock-data-store";
 import { 
   AreaChart, 
   Area, 
@@ -33,80 +30,30 @@ const mockTopCarriers = [
   { id: "c3", name: "Premier Freight", rating: 4.7, deliveries: 156 },
 ];
 
-const mockSpendData = [
-  { month: "Jan", amount: 32000 },
-  { month: "Feb", amount: 38000 },
-  { month: "Mar", amount: 35000 },
-  { month: "Apr", amount: 42000 },
-  { month: "May", amount: 48000 },
-  { month: "Jun", amount: 45200 },
+const mockAlerts = [
+  { id: 1, type: "delay", message: "Shipment LD-T001 may be delayed by 30 mins", time: "5 mins ago" },
+  { id: 2, type: "bid", message: "New bid received for load LD-002", time: "12 mins ago" },
+  { id: 3, type: "document", message: "POD uploaded for delivery #4521", time: "1 hour ago" },
 ];
 
 export default function ShipperDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { 
+    loads, 
+    getActiveLoads, 
+    getPendingBids, 
+    getInTransitLoads, 
+    spend 
+  } = useMockData();
 
-  const { data: loads = [], isLoading: loadsLoading } = useQuery<Load[]>({
-    queryKey: ["/api/loads"],
-  });
-
-  const { data: bids = [], isLoading: bidsLoading } = useQuery<Bid[]>({
-    queryKey: ["/api/bids"],
-  });
-
-  const { data: notifications = [] } = useQuery<Notification[]>({
-    queryKey: ["/api/notifications"],
-  });
-
-  const activeLoads = loads.filter(l => ["posted", "bidding", "assigned"].includes(l.status || ""));
-  const inTransitLoads = loads.filter(l => l.status === "in_transit");
-  const pendingBids = bids.filter(b => b.status === "pending");
+  const activeLoads = getActiveLoads();
+  const pendingBids = getPendingBids();
+  const inTransitLoads = getInTransitLoads();
   
-  const monthlySpend = loads
-    .filter(l => l.status === "delivered" && l.finalPrice)
-    .reduce((sum, l) => sum + Number(l.finalPrice || 0), 0);
+  const recentLoads = activeLoads.slice(0, 3);
 
-  const recentLoads = loads.slice(0, 2);
-
-  const alerts = notifications
-    .filter(n => !n.isRead)
-    .slice(0, 5)
-    .map(n => ({
-      id: n.id,
-      type: n.type as string,
-      message: n.message,
-      time: formatTimeAgo(new Date(n.createdAt!)),
-    }));
-
-  function formatTimeAgo(date: Date): string {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 60) return `${diffMins} mins ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  }
-
-  if (loadsLoading) {
-    return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-96 mt-2" />
-          </div>
-          <Skeleton className="h-10 w-36" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const spendChange = spend.percentChange;
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -129,7 +76,7 @@ export default function ShipperDashboard() {
           value={activeLoads.length}
           icon={Package}
           trend={{ value: 12, isPositive: true }}
-          onClick={() => navigate("/shipper/loads?status=active")}
+          onClick={() => navigate("/shipper/loads")}
           testId="stat-active-loads"
         />
         <StatCard
@@ -137,7 +84,7 @@ export default function ShipperDashboard() {
           value={pendingBids.length}
           icon={Clock}
           subtitle="Awaiting your response"
-          onClick={() => navigate("/shipper/loads?status=bidding")}
+          onClick={() => navigate("/shipper/pending-bids")}
           testId="stat-pending-bids"
         />
         <StatCard
@@ -150,9 +97,9 @@ export default function ShipperDashboard() {
         />
         <StatCard
           title="Monthly Spend"
-          value={`$${monthlySpend.toLocaleString()}`}
+          value={`$${spend.totalAmount.toLocaleString()}`}
           icon={DollarSign}
-          trend={{ value: 5, isPositive: false }}
+          trend={{ value: Math.abs(spendChange), isPositive: spendChange > 0 }}
           onClick={() => navigate("/shipper/spend")}
           testId="stat-monthly-spend"
         />
@@ -163,14 +110,18 @@ export default function ShipperDashboard() {
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
             <CardTitle className="text-lg">Monthly Spend</CardTitle>
             <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +18% vs last month
+              {spendChange >= 0 ? (
+                <TrendingUp className="h-3 w-3 mr-1" />
+              ) : (
+                <TrendingDown className="h-3 w-3 mr-1" />
+              )}
+              {spendChange >= 0 ? "+" : ""}{spendChange}% vs last month
             </Badge>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockSpendData}>
+                <AreaChart data={spend.monthlyData.slice(0, 6)}>
                   <defs>
                     <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(217, 91%, 48%)" stopOpacity={0.3} />
@@ -206,35 +157,31 @@ export default function ShipperDashboard() {
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
             <CardTitle className="text-lg">Alerts</CardTitle>
             <Badge variant="destructive" className="no-default-hover-elevate no-default-active-elevate">
-              {alerts.length || 0}
+              {mockAlerts.length}
             </Badge>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-64">
               <div className="space-y-3">
-                {alerts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No new alerts</p>
-                ) : (
-                  alerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                      data-testid={`alert-${alert.id}`}
-                    >
-                      <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                        alert.type === "delay" 
-                          ? "text-red-500" 
-                          : alert.type === "document" 
-                            ? "text-amber-500" 
-                            : "text-blue-500"
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm">{alert.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
-                      </div>
+                {mockAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                    data-testid={`alert-${alert.id}`}
+                  >
+                    <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                      alert.type === "delay" 
+                        ? "text-red-500" 
+                        : alert.type === "document" 
+                          ? "text-amber-500" 
+                          : "text-blue-500"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">{alert.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
                     </div>
-                  ))
-                )}
+                  </div>
+                ))}
               </div>
             </ScrollArea>
           </CardContent>
@@ -260,14 +207,42 @@ export default function ShipperDashboard() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentLoads.map((load) => (
-                  <LoadCard
-                    key={load.id}
-                    load={load as any}
-                    variant="shipper"
-                    onViewDetails={() => navigate(`/shipper/loads/${load.id}`)}
-                  />
+                  <div
+                    key={load.loadId}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                    onClick={() => navigate(`/shipper/loads/${load.loadId}`)}
+                    data-testid={`load-card-${load.loadId}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">{load.loadId}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {load.type}
+                        </Badge>
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-xs ${
+                            load.status === "Active" 
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                              : load.status === "Bidding" 
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          }`}
+                        >
+                          {load.status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {load.pickup} → {load.drop}
+                      </p>
+                    </div>
+                    <div className="text-right ml-4">
+                      <p className="font-medium">${load.estimatedPrice.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{load.weight.toLocaleString()} {load.weightUnit}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -335,7 +310,7 @@ export default function ShipperDashboard() {
                       <span className="font-medium">{carrier.name}</span>
                     </div>
                     <div className="flex items-center gap-3 text-sm">
-                      <span className="text-amber-500">★ {carrier.rating}</span>
+                      <span className="text-amber-500">* {carrier.rating}</span>
                       <span className="text-muted-foreground">{carrier.deliveries} trips</span>
                     </div>
                   </div>

@@ -1,17 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
-  ChevronLeft, MapPin, ArrowRight, Package, Calendar, DollarSign, Truck, Clock,
-  Users, Edit, Copy, X, CheckCircle, AlertCircle, MessageSquare, FileText,
-  RefreshCw, Navigation, Phone, Star
+  ChevronLeft, MapPin, Package, Calendar, DollarSign, Truck, 
+  Users, Edit, Copy, X, CheckCircle, AlertCircle, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -29,35 +25,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Load, Bid, User } from "@shared/schema";
+import { useMockData } from "@/lib/mock-data-store";
 
 function getStatusColor(status: string | null) {
   switch (status) {
-    case "draft": return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
-    case "posted": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
-    case "bidding": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-    case "assigned": return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
-    case "in_transit": return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400";
-    case "delivered": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-    case "cancelled": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+    case "Active": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+    case "Bidding": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+    case "Assigned": return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+    case "En Route": return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400";
+    case "Delivered": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    case "Cancelled": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
     default: return "bg-muted text-muted-foreground";
   }
 }
 
 function getBidStatusColor(status: string | null) {
   switch (status) {
-    case "pending": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-    case "accepted": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-    case "declined": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-    case "countered": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+    case "Pending": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+    case "Accepted": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    case "Rejected": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
     default: return "bg-muted text-muted-foreground";
   }
-}
-
-function formatStatus(status: string | null) {
-  if (!status) return "Draft";
-  return status.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
 function formatDate(date: Date | string | null) {
@@ -89,129 +77,51 @@ export default function LoadDetailPage() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
   const [cancelDialog, setCancelDialog] = useState(false);
-  const [acceptBidDialog, setAcceptBidDialog] = useState<{ open: boolean; bid: Bid | null }>({ open: false, bid: null });
-  const [simulatedEta, setSimulatedEta] = useState<string>("");
+  const [acceptBidDialog, setAcceptBidDialog] = useState<{ open: boolean; bidId: string | null }>({ open: false, bidId: null });
 
-  const { data: loadData, isLoading: loadLoading } = useQuery<Load & { bids?: Bid[] }>({
-    queryKey: [`/api/loads/${params.id}`],
-    enabled: !!params.id,
-  });
+  const { 
+    getLoadById, 
+    getBidsForLoad, 
+    cancelLoad, 
+    duplicateLoad, 
+    acceptBid, 
+    rejectBid 
+  } = useMockData();
 
-  const load = loadData;
-  const bids = loadData?.bids || [];
-  const bidsLoading = loadLoading;
+  const load = getLoadById(params.id || "");
+  const bids = getBidsForLoad(params.id || "");
 
-  const { data: carriers = [] } = useQuery<User[]>({
-    queryKey: ["/api/carriers"],
-  });
-
-  useEffect(() => {
-    if (load?.status === "in_transit") {
-      const updateEta = () => {
-        const baseHours = 4 + Math.random() * 2;
-        const eta = new Date(Date.now() + baseHours * 60 * 60 * 1000);
-        setSimulatedEta(eta.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
-      };
-      updateEta();
-      const interval = setInterval(updateEta, 15000);
-      return () => clearInterval(interval);
-    }
-  }, [load?.status]);
-
-  const cancelMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("PATCH", `/api/loads/${params.id}`, { status: "cancelled" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/loads/${params.id}`] });
+  const handleCancel = () => {
+    if (params.id) {
+      cancelLoad(params.id);
       toast({ title: "Load cancelled", description: "The load has been cancelled successfully." });
       setCancelDialog(false);
       navigate("/shipper/loads");
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to cancel load", variant: "destructive" });
-    },
-  });
-
-  const acceptBidMutation = useMutation({
-    mutationFn: async (bidId: string) => {
-      await apiRequest("PATCH", `/api/bids/${bidId}`, { status: "accepted" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/loads/${params.id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
-      toast({ title: "Bid accepted", description: "The carrier has been notified and assigned to this load." });
-      setAcceptBidDialog({ open: false, bid: null });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to accept bid", variant: "destructive" });
-    },
-  });
-
-  const declineBidMutation = useMutation({
-    mutationFn: async (bidId: string) => {
-      await apiRequest("PATCH", `/api/bids/${bidId}`, { status: "rejected" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/loads/${params.id}`] });
-      toast({ title: "Bid declined" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to decline bid", variant: "destructive" });
-    },
-  });
-
-  const duplicateMutation = useMutation({
-    mutationFn: async () => {
-      if (!load) return;
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const newLoad = {
-        pickupAddress: load.pickupAddress,
-        pickupCity: load.pickupCity,
-        dropoffAddress: load.dropoffAddress,
-        dropoffCity: load.dropoffCity,
-        weight: String(load.weight),
-        weightUnit: load.weightUnit || "tons",
-        cargoDescription: load.cargoDescription || "",
-        requiredTruckType: load.requiredTruckType || "dry_van",
-        estimatedPrice: String(load.estimatedPrice || 0),
-        pickupDate: tomorrow.toISOString(),
-        status: "draft",
-      };
-      await apiRequest("POST", "/api/loads", newLoad);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
-      toast({ title: "Load duplicated", description: "A new draft load has been created." });
-      navigate("/shipper/loads");
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to duplicate load", variant: "destructive" });
-    },
-  });
-
-  const getCarrierName = (carrierId: string) => {
-    const carrier = carriers.find(c => c.id === carrierId);
-    return carrier?.companyName || carrier?.username || "Unknown Carrier";
+    }
   };
 
-  if (loadLoading) {
-    return (
-      <div className="p-6 max-w-6xl mx-auto">
-        <Skeleton className="h-10 w-48 mb-6" />
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            <Skeleton className="h-64" />
-            <Skeleton className="h-96" />
-          </div>
-          <Skeleton className="h-80" />
-        </div>
-      </div>
-    );
-  }
+  const handleDuplicate = () => {
+    if (params.id) {
+      const newLoad = duplicateLoad(params.id);
+      if (newLoad) {
+        toast({ title: "Load duplicated", description: `Created new load ${newLoad.loadId}` });
+        navigate("/shipper/loads");
+      }
+    }
+  };
+
+  const handleAcceptBid = () => {
+    if (acceptBidDialog.bidId) {
+      acceptBid(acceptBidDialog.bidId);
+      toast({ title: "Bid accepted", description: "The carrier has been notified and assigned to this load." });
+      setAcceptBidDialog({ open: false, bidId: null });
+    }
+  };
+
+  const handleRejectBid = (bidId: string) => {
+    rejectBid(bidId);
+    toast({ title: "Bid declined" });
+  };
 
   if (!load) {
     return (
@@ -220,15 +130,15 @@ export default function LoadDetailPage() {
           <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">Load not found</h2>
           <p className="text-muted-foreground mb-4">The load you're looking for doesn't exist or has been removed.</p>
-          <Button onClick={() => navigate("/shipper/loads")}>Back to Loads</Button>
+          <Button onClick={() => navigate("/shipper/loads")} data-testid="button-back-to-loads">Back to Loads</Button>
         </div>
       </div>
     );
   }
 
-  const pendingBids = bids.filter(b => b.status === "pending");
-  const lowestBid = pendingBids.length > 0 ? Math.min(...pendingBids.map(b => Number(b.amount))) : null;
-  const avgBid = pendingBids.length > 0 ? pendingBids.reduce((sum, b) => sum + Number(b.amount), 0) / pendingBids.length : null;
+  const pendingBids = bids.filter(b => b.status === "Pending");
+  const lowestBid = pendingBids.length > 0 ? Math.min(...pendingBids.map(b => b.bidPrice)) : null;
+  const avgBid = pendingBids.length > 0 ? pendingBids.reduce((sum, b) => sum + b.bidPrice, 0) / pendingBids.length : null;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -238,9 +148,9 @@ export default function LoadDetailPage() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">Load #{load.id.slice(0, 8)}</h1>
+            <h1 className="text-2xl font-bold" data-testid="text-load-id">Load #{load.loadId}</h1>
             <Badge className={`${getStatusColor(load.status)} no-default-hover-elevate no-default-active-elevate`}>
-              {formatStatus(load.status)}
+              {load.status}
             </Badge>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
@@ -248,15 +158,11 @@ export default function LoadDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => duplicateMutation.mutate()} data-testid="button-duplicate">
+          <Button variant="outline" size="sm" onClick={handleDuplicate} data-testid="button-duplicate">
             <Copy className="h-4 w-4 mr-2" />
             Duplicate
           </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/shipper/loads/${load.id}/edit`)} data-testid="button-edit">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          {load.status !== "cancelled" && load.status !== "delivered" && (
+          {load.status !== "Cancelled" && load.status !== "Delivered" && (
             <Button variant="destructive" size="sm" onClick={() => setCancelDialog(true)} data-testid="button-cancel-load">
               <X className="h-4 w-4 mr-2" />
               Cancel
@@ -285,8 +191,7 @@ export default function LoadDetailPage() {
                 <div className="flex-1 space-y-8">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">PICKUP</p>
-                    <p className="font-semibold">{load.pickupCity}</p>
-                    <p className="text-sm text-muted-foreground">{load.pickupAddress}</p>
+                    <p className="font-semibold" data-testid="text-pickup">{load.pickup}</p>
                     <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
@@ -296,31 +201,16 @@ export default function LoadDetailPage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">DELIVERY</p>
-                    <p className="font-semibold">{load.dropoffCity}</p>
-                    <p className="text-sm text-muted-foreground">{load.dropoffAddress}</p>
-                    {load.deliveryDate && (
+                    <p className="font-semibold" data-testid="text-drop">{load.drop}</p>
+                    {load.eta && (
                       <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3.5 w-3.5" />
-                          {formatDate(load.deliveryDate)}
+                          ETA: {load.eta}
                         </span>
                       </div>
                     )}
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Distance</p>
-                  <p className="text-2xl font-bold">{Number(load.distance || 0).toLocaleString()} mi</p>
-                  {load.status === "in_transit" && simulatedEta && (
-                    <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                      <p className="text-xs text-muted-foreground">ETA</p>
-                      <p className="font-semibold text-blue-600 dark:text-blue-400">{simulatedEta}</p>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <RefreshCw className="h-3 w-3 animate-spin" />
-                        Live tracking
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </CardContent>
@@ -337,17 +227,13 @@ export default function LoadDetailPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Avg:</span>
-                    <span className="font-semibold ml-1">${avgBid?.toLocaleString()}</span>
+                    <span className="font-semibold ml-1">${Math.round(avgBid || 0).toLocaleString()}</span>
                   </div>
                 </div>
               )}
             </CardHeader>
             <CardContent>
-              {bidsLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}
-                </div>
-              ) : bids.length === 0 ? (
+              {bids.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                   <p className="text-sm text-muted-foreground">No bids yet</p>
@@ -367,14 +253,14 @@ export default function LoadDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {bids.map((bid) => (
-                      <TableRow key={bid.id} data-testid={`row-bid-${bid.id}`}>
+                      <TableRow key={bid.bidId} data-testid={`row-bid-${bid.bidId}`}>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-sm">
-                              {getCarrierName(bid.carrierId).charAt(0)}
+                              {bid.carrierName.charAt(0)}
                             </div>
                             <div>
-                              <p className="font-medium text-sm">{getCarrierName(bid.carrierId)}</p>
+                              <p className="font-medium text-sm">{bid.carrierName}</p>
                               <div className="flex items-center gap-1 text-xs text-amber-500">
                                 <Star className="h-3 w-3 fill-current" />
                                 4.8
@@ -383,31 +269,31 @@ export default function LoadDetailPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="font-semibold">${Number(bid.amount).toLocaleString()}</span>
-                          {bid.counterAmount && (
-                            <span className="text-xs text-muted-foreground ml-1">
-                              (Counter: ${Number(bid.counterAmount).toLocaleString()})
-                            </span>
+                          <span className={`font-semibold ${bid.bidPrice === lowestBid ? "text-green-600" : ""}`}>
+                            ${bid.bidPrice.toLocaleString()}
+                          </span>
+                          {bid.bidPrice === lowestBid && (
+                            <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                              Best
+                            </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {bid.estimatedPickup ? formatDate(bid.estimatedPickup) : "Not specified"}
-                        </TableCell>
+                        <TableCell className="text-sm">{bid.eta}</TableCell>
                         <TableCell>
                           <Badge className={`${getBidStatusColor(bid.status)} no-default-hover-elevate no-default-active-elevate`}>
-                            {formatStatus(bid.status)}
+                            {bid.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {formatTimeAgo(bid.createdAt)}
                         </TableCell>
                         <TableCell>
-                          {bid.status === "pending" && (
+                          {bid.status === "Pending" && (
                             <div className="flex items-center gap-2">
                               <Button 
                                 size="sm" 
-                                onClick={() => setAcceptBidDialog({ open: true, bid })}
-                                data-testid={`button-accept-bid-${bid.id}`}
+                                onClick={() => setAcceptBidDialog({ open: true, bidId: bid.bidId })}
+                                data-testid={`button-accept-bid-${bid.bidId}`}
                               >
                                 <CheckCircle className="h-4 w-4 mr-1" />
                                 Accept
@@ -415,8 +301,8 @@ export default function LoadDetailPage() {
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => declineBidMutation.mutate(bid.id)}
-                                data-testid={`button-decline-bid-${bid.id}`}
+                                onClick={() => handleRejectBid(bid.bidId)}
+                                data-testid={`button-decline-bid-${bid.bidId}`}
                               >
                                 Decline
                               </Button>
@@ -430,37 +316,6 @@ export default function LoadDetailPage() {
               )}
             </CardContent>
           </Card>
-
-          {load.status === "in_transit" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Shipment Timeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { status: "Pickup confirmed", time: "2 hours ago", icon: CheckCircle, active: true },
-                    { status: "In transit", time: "1 hour ago", icon: Truck, active: true },
-                    { status: "Delivery pending", time: "ETA: " + simulatedEta, icon: MapPin, active: false },
-                  ].map((event, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0 ${
-                        event.active ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"
-                      }`}>
-                        <event.icon className={`h-4 w-4 ${
-                          event.active ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                        }`} />
-                      </div>
-                      <div className="flex-1">
-                        <p className={`font-medium ${event.active ? "" : "text-muted-foreground"}`}>{event.status}</p>
-                        <p className="text-sm text-muted-foreground">{event.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <div className="space-y-6">
@@ -471,19 +326,19 @@ export default function LoadDetailPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Weight</span>
-                <span className="font-medium">{load.weight} {load.weightUnit}</span>
+                <span className="font-medium">{load.weight.toLocaleString()} {load.weightUnit}</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Truck Type</span>
                 <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate">
-                  {load.requiredTruckType || "Any"}
+                  {load.type || "Any"}
                 </Badge>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Estimated Price</span>
-                <span className="font-semibold text-lg">${Number(load.estimatedPrice || 0).toLocaleString()}</span>
+                <span className="font-semibold text-lg">${load.estimatedPrice.toLocaleString()}</span>
               </div>
               {load.finalPrice && (
                 <>
@@ -491,7 +346,7 @@ export default function LoadDetailPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Final Price</span>
                     <span className="font-semibold text-lg text-green-600 dark:text-green-400">
-                      ${Number(load.finalPrice).toLocaleString()}
+                      ${load.finalPrice.toLocaleString()}
                     </span>
                   </div>
                 </>
@@ -508,60 +363,27 @@ export default function LoadDetailPage() {
             </CardContent>
           </Card>
 
-          {load.assignedCarrierId && (
+          {load.carrier && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Assigned Carrier</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                    {getCarrierName(load.assignedCarrierId).charAt(0)}
+                    {load.carrier.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-semibold">{getCarrierName(load.assignedCarrierId)}</p>
+                    <p className="font-semibold" data-testid="text-carrier">{load.carrier}</p>
                     <div className="flex items-center gap-1 text-sm text-amber-500">
                       <Star className="h-3.5 w-3.5 fill-current" />
                       4.8 rating
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Phone className="h-4 w-4 mr-2" />
-                    Call
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Message
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Bill of Lading</span>
-                  <Badge variant="outline" className="ml-auto no-default-hover-elevate no-default-active-elevate">Pending</Badge>
-                </div>
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Proof of Delivery</span>
-                  <Badge variant="outline" className="ml-auto no-default-hover-elevate no-default-active-elevate">Pending</Badge>
-                </div>
-              </div>
-              <Button variant="outline" size="sm" className="w-full mt-4">
-                Upload Document
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -570,38 +392,34 @@ export default function LoadDetailPage() {
           <DialogHeader>
             <DialogTitle>Cancel Load</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this load? This action cannot be undone and any pending bids will be declined.
+              Are you sure you want to cancel this load? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelDialog(false)}>Keep Load</Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => cancelMutation.mutate()}
-              disabled={cancelMutation.isPending}
-            >
-              {cancelMutation.isPending ? "Cancelling..." : "Cancel Load"}
+            <Button variant="outline" onClick={() => setCancelDialog(false)}>
+              Keep Load
+            </Button>
+            <Button variant="destructive" onClick={handleCancel} data-testid="button-confirm-cancel">
+              Cancel Load
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={acceptBidDialog.open} onOpenChange={(open) => setAcceptBidDialog({ open, bid: null })}>
+      <Dialog open={acceptBidDialog.open} onOpenChange={(open) => setAcceptBidDialog({ open, bidId: null })}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Accept Bid</DialogTitle>
             <DialogDescription>
-              You are about to accept this bid from {acceptBidDialog.bid && getCarrierName(acceptBidDialog.bid.carrierId)} 
-              for ${Number(acceptBidDialog.bid?.amount || 0).toLocaleString()}. The carrier will be notified and assigned to this load.
+              Are you sure you want to accept this bid? The carrier will be assigned to your load and all other bids will be rejected.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAcceptBidDialog({ open: false, bid: null })}>Cancel</Button>
-            <Button 
-              onClick={() => acceptBidDialog.bid && acceptBidMutation.mutate(acceptBidDialog.bid.id)}
-              disabled={acceptBidMutation.isPending}
-            >
-              {acceptBidMutation.isPending ? "Accepting..." : "Accept Bid"}
+            <Button variant="outline" onClick={() => setAcceptBidDialog({ open: false, bidId: null })}>
+              Cancel
+            </Button>
+            <Button onClick={handleAcceptBid} data-testid="button-confirm-accept">
+              Accept Bid
             </Button>
           </DialogFooter>
         </DialogContent>

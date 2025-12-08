@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -24,13 +23,11 @@ import {
   TrendingUp,
   Send,
   AlertCircle,
-  CheckCircle,
   Clock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMockData } from "@/lib/mock-data-store";
-import type { ExtendedCarrier, estimateQuotePrice } from "@/lib/carrier-data";
-import type { MockLoad } from "@/lib/mock-data-store";
+import type { ExtendedCarrier } from "@/lib/carrier-data";
 
 interface RequestQuotePanelProps {
   carrier: ExtendedCarrier | null;
@@ -40,7 +37,6 @@ interface RequestQuotePanelProps {
 
 function calculateEstimate(
   carrier: ExtendedCarrier,
-  distance: number,
   weight: number
 ): {
   baseRate: number;
@@ -48,6 +44,7 @@ function calculateEstimate(
   carrierPremium: number;
   total: number;
 } {
+  const distance = 500 + Math.random() * 500;
   const baseRate = Math.round(distance * 1.5 + weight * 10);
   const fuelSurcharge = Math.round(baseRate * 0.15);
   const premiumFactor = carrier.extendedProfile.pricingFactor - 1;
@@ -59,7 +56,7 @@ function calculateEstimate(
 
 export function RequestQuotePanel({ carrier, open, onClose }: RequestQuotePanelProps) {
   const { toast } = useToast();
-  const { loads, getActiveLoads, addBid, startNegotiation, addMessageToThread, addNotification } = useMockData();
+  const { getActiveLoads, addBid, getOrCreateNegotiation, sendNegotiationMessage, addNotification } = useMockData();
   const activeLoads = getActiveLoads();
   
   const [selectedLoadId, setSelectedLoadId] = useState<string>("");
@@ -74,8 +71,7 @@ export function RequestQuotePanel({ carrier, open, onClose }: RequestQuotePanelP
   
   const estimate = selectedLoad && carrier ? calculateEstimate(
     carrier,
-    parseFloat(selectedLoad.distance?.replace(/[^0-9.]/g, "") || "500"),
-    parseFloat(selectedLoad.weight?.replace(/[^0-9.]/g, "") || "10")
+    selectedLoad.weight
   ) : null;
 
   const handleSubmitQuote = async () => {
@@ -95,34 +91,24 @@ export function RequestQuotePanel({ carrier, open, onClose }: RequestQuotePanelP
       
       const newBid = addBid({
         loadId: selectedLoad.loadId,
-        carrier: carrier.companyName || "Unknown Carrier",
+        carrierName: carrier.companyName || "Unknown Carrier",
         carrierId: carrier.id,
-        carrierRating: parseFloat(carrier.carrierProfile?.reliabilityScore || "4.5"),
-        amount: finalAmount,
-        estimatedPickup: preferredPickupTime || "Within 24 hours",
-        estimatedDelivery: "2-3 days",
-        truckType: selectedLoad.truckType,
-        notes: notes || "Quote requested via Carrier Directory",
+        bidPrice: finalAmount,
+        eta: preferredPickupTime || "Within 24 hours",
+        status: "Pending",
       });
 
-      const thread = startNegotiation(newBid.bidId, selectedLoad.loadId);
+      const thread = getOrCreateNegotiation(newBid.bidId, selectedLoad.loadId);
       
       if (thread) {
-        setTimeout(() => {
-          addMessageToThread(
-            thread.threadId,
-            "carrier",
-            `Thank you for your quote request. I've reviewed ${selectedLoad.route} and I'm reviewing the details. My initial estimate is $${estimate?.total.toLocaleString()}. Would this work for your timeline?`
-          );
-        }, 2000);
+        const routeDisplay = `${selectedLoad.pickup} to ${selectedLoad.drop}`;
         
         setTimeout(() => {
-          addMessageToThread(
+          sendNegotiationMessage(
             thread.threadId,
-            "carrier",
-            `I can confirm pickup availability. ${preferredPickupTime ? `Your preferred time of ${preferredPickupTime} works for us.` : "Let me know your preferred pickup window."}`
+            `Requesting quote for ${routeDisplay}. ${notes ? `Notes: ${notes}` : ""}`
           );
-        }, 5000);
+        }, 500);
       }
 
       addNotification({
@@ -190,7 +176,7 @@ export function RequestQuotePanel({ carrier, open, onClose }: RequestQuotePanelP
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{load.loadId}</span>
                             <span className="text-muted-foreground">-</span>
-                            <span className="truncate">{load.route}</span>
+                            <span className="truncate">{load.pickup} to {load.drop}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -214,28 +200,28 @@ export function RequestQuotePanel({ carrier, open, onClose }: RequestQuotePanelP
                           <MapPin className="h-4 w-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">Route</p>
-                            <p className="text-sm font-medium">{selectedLoad.route}</p>
+                            <p className="text-sm font-medium">{selectedLoad.pickup} to {selectedLoad.drop}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Truck className="h-4 w-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">Truck Type</p>
-                            <p className="text-sm font-medium">{selectedLoad.truckType}</p>
+                            <p className="text-sm font-medium">{selectedLoad.type}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">Weight</p>
-                            <p className="text-sm font-medium">{selectedLoad.weight}</p>
+                            <p className="text-sm font-medium">{selectedLoad.weight} {selectedLoad.weightUnit}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">Pickup</p>
-                            <p className="text-sm font-medium">{selectedLoad.pickup}</p>
+                            <p className="text-sm font-medium">{selectedLoad.pickupDate}</p>
                           </div>
                         </div>
                       </div>

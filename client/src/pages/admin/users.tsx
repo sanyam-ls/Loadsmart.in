@@ -78,9 +78,10 @@ export default function AdminUsersPage() {
     name: "",
     email: "",
     phone: "",
-    role: "shipper" as "shipper" | "carrier" | "admin",
+    role: "shipper" as "shipper" | "carrier" | "dispatcher" | "admin",
     company: "",
     status: "active" as "active" | "suspended" | "pending",
+    region: "North India" as string,
   });
   const itemsPerPage = 10;
 
@@ -147,6 +148,7 @@ export default function AdminUsersPage() {
       role: "shipper",
       company: "",
       status: "active",
+      region: "North India",
     });
   };
 
@@ -194,6 +196,7 @@ export default function AdminUsersPage() {
       company: formData.company,
       status: formData.status,
       isVerified: formData.status === "active",
+      region: formData.region,
     });
     
     toast({
@@ -233,6 +236,7 @@ export default function AdminUsersPage() {
       role: user.role,
       company: user.company || "",
       status: user.status,
+      region: user.region || "North India",
     });
     setIsEditModalOpen(true);
   };
@@ -362,6 +366,7 @@ export default function AdminUsersPage() {
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="shipper">Shipper</SelectItem>
                   <SelectItem value="carrier">Carrier</SelectItem>
+                  <SelectItem value="dispatcher">Dispatcher</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -615,13 +620,14 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="add-role">Role</Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "admin" }))}>
+                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "dispatcher" | "admin" }))}>
                   <SelectTrigger data-testid="select-add-role">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="shipper">Shipper</SelectItem>
                     <SelectItem value="carrier">Carrier</SelectItem>
+                    <SelectItem value="dispatcher">Dispatcher</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
@@ -703,13 +709,14 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Role</Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "admin" }))}>
+                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "dispatcher" | "admin" }))}>
                   <SelectTrigger data-testid="select-edit-role">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="shipper">Shipper</SelectItem>
                     <SelectItem value="carrier">Carrier</SelectItem>
+                    <SelectItem value="dispatcher">Dispatcher</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

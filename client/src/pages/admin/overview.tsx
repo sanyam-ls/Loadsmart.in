@@ -164,9 +164,9 @@ export default function AdminOverview() {
         />
         <ClickableStatCard
           title="Monthly Volume"
-          value={`$${(stats.monthlyVolume / 1000000).toFixed(1)}M`}
+          value={`Rs. ${(stats.monthlyVolume / 100000).toFixed(1)}L`}
           icon={DollarSign}
-          trend={{ value: stats.monthlyChange, isPositive: true }}
+          trend={{ value: stats.monthlyChange, isPositive: stats.monthlyChange > 0 }}
           href="/admin/volume"
           testId="card-monthly-volume"
         />
@@ -354,7 +354,11 @@ export default function AdminOverview() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Carriers</span>
-                <span className="font-medium">{carriers.length}</span>
+                <span className="font-medium">{users.filter(u => u.role === "carrier").length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Dispatchers</span>
+                <span className="font-medium">{users.filter(u => u.role === "dispatcher").length}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Admins</span>
@@ -430,7 +434,7 @@ export default function AdminOverview() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Total Spending</span>
                   <Badge variant="secondary">
-                    ${(loads.reduce((sum, l) => sum + l.spending, 0) / 1000).toFixed(0)}K
+                    Rs. {(loads.reduce((sum, l) => sum + l.spending, 0) / 100000).toFixed(1)}L
                   </Badge>
                 </div>
               </div>

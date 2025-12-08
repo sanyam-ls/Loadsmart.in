@@ -326,7 +326,7 @@ export default function AdminLoadsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Revenue</p>
-                <p className="text-xl font-bold">${(loads.reduce((sum, l) => sum + l.spending, 0) / 1000).toFixed(0)}K</p>
+                <p className="text-xl font-bold">Rs. {(loads.reduce((sum, l) => sum + l.spending, 0) / 100000).toFixed(1)}L</p>
               </div>
             </div>
           </CardContent>

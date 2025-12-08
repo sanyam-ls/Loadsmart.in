@@ -181,10 +181,13 @@ export default function AdminVolumeAnalytics() {
   };
 
   const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `$${(value / 1000000).toFixed(2)}M`;
+    if (value >= 10000000) {
+      return `Rs. ${(value / 10000000).toFixed(2)}Cr`;
     }
-    return `$${(value / 1000).toFixed(0)}K`;
+    if (value >= 100000) {
+      return `Rs. ${(value / 100000).toFixed(1)}L`;
+    }
+    return `Rs. ${(value / 1000).toFixed(0)}K`;
   };
 
   const handleChartClick = (data: any) => {
@@ -329,7 +332,7 @@ export default function AdminVolumeAnalytics() {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: theme === "dark" ? "hsl(220, 10%, 65%)" : "hsl(220, 12%, 35%)", fontSize: 12 }}
-                    tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+                    tickFormatter={(value) => `Rs. ${(value / 10000000).toFixed(1)}Cr`}
                   />
                   <Tooltip 
                     contentStyle={{
@@ -530,7 +533,7 @@ export default function AdminVolumeAnalytics() {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: theme === "dark" ? "hsl(220, 10%, 65%)" : "hsl(220, 12%, 35%)", fontSize: 12 }}
-                    tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+                    tickFormatter={(value) => `Rs. ${(value / 10000000).toFixed(1)}Cr`}
                   />
                   <YAxis 
                     type="category" 

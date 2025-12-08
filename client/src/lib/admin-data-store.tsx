@@ -8,12 +8,13 @@ export interface AdminUser {
   name: string;
   email: string;
   company: string;
-  role: "shipper" | "carrier" | "admin";
+  role: "shipper" | "carrier" | "admin" | "dispatcher";
   status: "active" | "suspended" | "pending";
   dateJoined: Date;
   phone?: string;
   isVerified: boolean;
   lastActive?: Date;
+  region: string;
 }
 
 export interface AdminLoad {
@@ -32,6 +33,8 @@ export interface AdminLoad {
   eta: string | null;
   spending: number;
   bidCount: number;
+  distance: number;
+  dimensions: string;
 }
 
 export interface AdminCarrier {
@@ -47,6 +50,9 @@ export interface AdminCarrier {
   email: string;
   phone: string;
   dateJoined: Date;
+  reliabilityScore: number;
+  avgResponseTime: number;
+  completedShipments: number;
 }
 
 export interface VerificationRequest {
@@ -105,6 +111,9 @@ interface AdminStats {
   completedLoads: number;
   inTransitLoads: number;
   pendingLoads: number;
+  userGrowthPercent: number;
+  loadGrowthPercent: number;
+  carrierGrowthPercent: number;
 }
 
 interface AdminDataContextType {
@@ -146,313 +155,394 @@ function generateId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-const initialUsers: AdminUser[] = [
-  {
-    userId: "USR-001",
-    name: "John Anderson",
-    email: "john@globalfreight.com",
-    company: "Global Freight Solutions",
-    role: "shipper",
-    status: "active",
-    dateJoined: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000),
-    phone: "(555) 123-4567",
-    isVerified: true,
-    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  },
-  {
-    userId: "USR-002",
-    name: "Sarah Mitchell",
-    email: "sarah@acmelogistics.com",
-    company: "Acme Logistics Corp",
-    role: "shipper",
-    status: "active",
-    dateJoined: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
-    phone: "(555) 234-5678",
-    isVerified: true,
-    lastActive: new Date(Date.now() - 30 * 60 * 1000),
-  },
-  {
-    userId: "USR-003",
-    name: "Mike Chen",
-    email: "mike@swifttransport.com",
-    company: "Swift Transport Co",
-    role: "carrier",
-    status: "active",
-    dateJoined: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
-    phone: "(555) 345-6789",
-    isVerified: true,
-    lastActive: new Date(Date.now() - 1 * 60 * 60 * 1000),
-  },
-  {
-    userId: "USR-004",
-    name: "Emily Rodriguez",
-    email: "emily@fasthaul.com",
-    company: "FastHaul Logistics",
-    role: "carrier",
-    status: "active",
-    dateJoined: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
-    phone: "(555) 456-7890",
-    isVerified: true,
-    lastActive: new Date(Date.now() - 4 * 60 * 60 * 1000),
-  },
-  {
-    userId: "USR-005",
-    name: "David Kumar",
-    email: "david@newshipper.com",
-    company: "New Shipper Inc",
-    role: "shipper",
-    status: "pending",
-    dateJoined: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    phone: "(555) 567-8901",
-    isVerified: false,
-  },
-  {
-    userId: "USR-006",
-    name: "Lisa Thompson",
-    email: "lisa@premierfreight.com",
-    company: "Premier Freight",
-    role: "carrier",
-    status: "active",
-    dateJoined: new Date(Date.now() - 150 * 24 * 60 * 60 * 1000),
-    phone: "(555) 678-9012",
-    isVerified: true,
-    lastActive: new Date(Date.now() - 12 * 60 * 60 * 1000),
-  },
-  {
-    userId: "USR-007",
-    name: "Admin User",
-    email: "admin@freightflow.com",
-    company: "FreightFlow Platform",
-    role: "admin",
-    status: "active",
-    dateJoined: new Date(Date.now() - 500 * 24 * 60 * 60 * 1000),
-    phone: "(555) 000-0001",
-    isVerified: true,
-    lastActive: new Date(),
-  },
-  {
-    userId: "USR-008",
-    name: "Robert Wilson",
-    email: "robert@megahaul.com",
-    company: "MegaHaul Inc",
-    role: "carrier",
-    status: "suspended",
-    dateJoined: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
-    phone: "(555) 789-0123",
-    isVerified: false,
-  },
-  {
-    userId: "USR-009",
-    name: "Jennifer Lee",
-    email: "jennifer@titantrucking.com",
-    company: "Titan Trucking Co",
-    role: "carrier",
-    status: "active",
-    dateJoined: new Date(Date.now() - 250 * 24 * 60 * 60 * 1000),
-    phone: "(555) 890-1234",
-    isVerified: true,
-    lastActive: new Date(Date.now() - 6 * 60 * 60 * 1000),
-  },
-  {
-    userId: "USR-010",
-    name: "Mark Johnson",
-    email: "mark@blustarcarriers.com",
-    company: "BlueStar Carriers",
-    role: "carrier",
-    status: "active",
-    dateJoined: new Date(Date.now() - 300 * 24 * 60 * 60 * 1000),
-    phone: "(555) 901-2345",
-    isVerified: true,
-    lastActive: new Date(Date.now() - 8 * 60 * 60 * 1000),
-  },
+const indianFirstNames = [
+  "Rajesh", "Priya", "Amit", "Neha", "Vikram", "Sunita", "Arun", "Kavitha", "Suresh", "Deepa",
+  "Rahul", "Anjali", "Sanjay", "Meera", "Vijay", "Lakshmi", "Prakash", "Rekha", "Manoj", "Shweta",
+  "Ramesh", "Pooja", "Ashok", "Divya", "Sunil", "Ritu", "Ajay", "Preeti", "Mohan", "Swathi",
+  "Ravi", "Anita", "Kiran", "Sneha", "Gaurav", "Asha", "Naveen", "Bhavna", "Rohit", "Pallavi",
+  "Anil", "Jyoti", "Dinesh", "Sapna", "Pankaj", "Nisha", "Alok", "Vandana", "Hemant", "Rashmi"
 ];
 
-const initialVerificationQueue: VerificationRequest[] = [
-  {
-    requestId: "VER-001",
-    entityType: "carrier",
-    entityId: "carrier-11",
-    entityName: "Thunder Road Logistics",
-    submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    status: "pending",
-  },
-  {
-    requestId: "VER-002",
-    entityType: "carrier",
-    entityId: "carrier-12",
-    entityName: "Pacific Haulers Inc",
-    submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    status: "pending",
-  },
-  {
-    requestId: "VER-003",
-    entityType: "document",
-    entityId: "DOC-VER-001",
-    entityName: "Swift Transport Co",
-    documentType: "Motor Carrier Authority",
-    documentName: "MC_Authority_2024.pdf",
-    submittedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    status: "pending",
-  },
-  {
-    requestId: "VER-004",
-    entityType: "document",
-    entityId: "DOC-VER-002",
-    entityName: "FastHaul Logistics",
-    documentType: "Cargo Insurance",
-    documentName: "Cargo_Insurance_Cert.pdf",
-    submittedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
-    status: "pending",
-  },
-  {
-    requestId: "VER-005",
-    entityType: "shipper",
-    entityId: "USR-005",
-    entityName: "New Shipper Inc",
-    submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    status: "pending",
-  },
+const indianLastNames = [
+  "Sharma", "Patel", "Singh", "Kumar", "Reddy", "Rao", "Gupta", "Joshi", "Verma", "Mehta",
+  "Agarwal", "Iyer", "Nair", "Menon", "Pillai", "Bhat", "Hegde", "Kaur", "Gill", "Malhotra",
+  "Kapoor", "Khanna", "Chopra", "Tandon", "Saxena", "Tripathi", "Pandey", "Mishra", "Dubey", "Tiwari",
+  "Chauhan", "Rathore", "Shekhawat", "Bhardwaj", "Yadav", "Srivastava", "Banerjee", "Chatterjee", "Mukherjee", "Das"
 ];
 
-const initialTransactions: TransactionRecord[] = [
-  {
-    transactionId: "TXN-001",
-    loadId: "LD-003",
-    route: "Dallas, TX to Houston, TX",
-    shipperId: "USR-001",
-    shipperName: "Global Freight Solutions",
-    carrierId: "carrier-4",
-    carrierName: "FastHaul Logistics",
-    amount: 1150,
-    status: "completed",
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    transactionId: "TXN-002",
-    loadId: "LD-T001",
-    route: "New York, NY to Boston, MA",
-    shipperId: "USR-002",
-    shipperName: "Acme Logistics Corp",
-    carrierId: "carrier-4",
-    carrierName: "FastHaul Logistics",
-    amount: 2800,
-    status: "pending",
-    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    paymentMethod: "Credit Card",
-  },
-  {
-    transactionId: "TXN-003",
-    loadId: "LD-T002",
-    route: "San Francisco, CA to Los Angeles, CA",
-    shipperId: "USR-001",
-    shipperName: "Global Freight Solutions",
-    carrierId: "carrier-1",
-    carrierName: "Swift Transport Co",
-    amount: 1950,
-    status: "completed",
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    paymentMethod: "Bank Transfer",
-  },
+const companyNames = [
+  "Tata Logistics", "Reliance Transport", "Mahindra Freight", "Ashok Leyland Carriers", "Gati Express",
+  "BlueDart Cargo", "DTDC Logistics", "Delhivery Express", "Ecom Express", "Shadowfax Logistics",
+  "Rivigo Carriers", "SafeExpress", "TCI Express", "VRL Logistics", "Continental Carriers",
+  "ABT Industries", "Agarwal Packers", "Om Logistics", "Allied Logistics", "Patel Roadways",
+  "Shree Maruti Courier", "XpressBees", "FirstFlight Logistics", "Trackon Logistics", "Professional Couriers",
+  "India Post Logistics", "Raj Freight", "Bharat Transport", "National Express", "Express Roadways",
+  "Punjab Carriers", "Gujarat Freight", "Maharashtra Logistics", "Karnataka Express", "Tamil Nadu Transport",
+  "Kerala Cargo", "Bengal Logistics", "Bihar Carriers", "UP Express", "Rajasthan Roadways"
 ];
 
-const generateMonthlyReports = (): MonthlyReport[] => {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const currentMonth = new Date().getMonth();
+const regions = [
+  "North India", "South India", "West India", "East India", "Central India",
+  "Delhi NCR", "Mumbai Metropolitan", "Bangalore Urban", "Chennai Metro", "Kolkata Metro",
+  "Punjab", "Gujarat", "Maharashtra", "Karnataka", "Tamil Nadu", "Kerala", "Bengal", "UP", "Rajasthan", "MP"
+];
+
+const cities = [
+  "Delhi", "Mumbai", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Pune", "Ahmedabad",
+  "Jaipur", "Lucknow", "Kanpur", "Nagpur", "Indore", "Bhopal", "Patna", "Vadodara",
+  "Ghaziabad", "Ludhiana", "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot", "Varanasi",
+  "Srinagar", "Aurangabad", "Dhanbad", "Amritsar", "Allahabad", "Ranchi", "Coimbatore", "Jabalpur",
+  "Gwalior", "Vijayawada", "Jodhpur", "Madurai", "Raipur", "Kota", "Chandigarh", "Guwahati"
+];
+
+const loadTypes = ["Dry Van", "Refrigerated", "Flatbed", "Container", "Open Body", "Tanker", "LTL", "FTL", "Parcel", "Heavy Haul"];
+
+function randomFrom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomBetween(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateEnterpriseUsers(): AdminUser[] {
+  const users: AdminUser[] = [];
+  const totalUsers = randomBetween(350, 450);
   
-  return months.map((month, idx) => {
-    const baseVolume = 1800000 + Math.random() * 800000;
-    const loadCount = 280 + Math.floor(Math.random() * 80);
+  const roleDistribution = {
+    shipper: Math.floor(totalUsers * 0.45),
+    carrier: Math.floor(totalUsers * 0.40),
+    dispatcher: Math.floor(totalUsers * 0.10),
+    admin: Math.floor(totalUsers * 0.05),
+  };
+  
+  let userId = 1;
+  
+  for (const [role, count] of Object.entries(roleDistribution)) {
+    for (let i = 0; i < count; i++) {
+      const firstName = randomFrom(indianFirstNames);
+      const lastName = randomFrom(indianLastNames);
+      const company = role === "admin" ? "FreightFlow Platform" : randomFrom(companyNames);
+      const daysAgo = randomBetween(1, 730);
+      const isRecent = daysAgo < 30;
+      const status = isRecent && Math.random() < 0.3 ? "pending" : (Math.random() < 0.05 ? "suspended" : "active");
+      
+      users.push({
+        userId: `USR-${String(userId).padStart(4, "0")}`,
+        name: `${firstName} ${lastName}`,
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${company.toLowerCase().replace(/\s+/g, "")}.com`,
+        company,
+        role: role as AdminUser["role"],
+        status,
+        dateJoined: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000),
+        phone: `+91 ${randomBetween(70000, 99999)} ${randomBetween(10000, 99999)}`,
+        isVerified: status === "active" && Math.random() > 0.1,
+        lastActive: status === "active" ? new Date(Date.now() - randomBetween(0, 48) * 60 * 60 * 1000) : undefined,
+        region: randomFrom(regions),
+      });
+      userId++;
+    }
+  }
+  
+  return users;
+}
+
+function generateEnterpriseLoads(users: AdminUser[]): AdminLoad[] {
+  const loads: AdminLoad[] = [];
+  const totalLoads = randomBetween(180, 280);
+  const shippers = users.filter(u => u.role === "shipper");
+  
+  const statusDistribution = {
+    "Active": 0.15,
+    "Bidding": 0.20,
+    "Assigned": 0.10,
+    "En Route": 0.25,
+    "Delivered": 0.25,
+    "Cancelled": 0.03,
+    "Pending": 0.02,
+  };
+  
+  for (let i = 0; i < totalLoads; i++) {
+    const shipper = randomFrom(shippers);
+    const pickup = randomFrom(cities);
+    let drop = randomFrom(cities);
+    while (drop === pickup) drop = randomFrom(cities);
     
-    return {
-      month,
-      year: 2025,
-      totalVolume: Math.round(baseVolume * (idx <= currentMonth ? 1 : 0.8)),
-      loadCount: idx <= currentMonth ? loadCount : Math.floor(loadCount * 0.7),
+    const rand = Math.random();
+    let cumulative = 0;
+    let status: AdminLoad["status"] = "Active";
+    for (const [s, prob] of Object.entries(statusDistribution)) {
+      cumulative += prob;
+      if (rand < cumulative) {
+        status = s as AdminLoad["status"];
+        break;
+      }
+    }
+    
+    const daysAgo = randomBetween(0, 60);
+    const weight = randomBetween(500, 25000);
+    const distance = randomBetween(100, 2500);
+    const spending = Math.round(distance * randomBetween(15, 45) + weight * 0.02);
+    
+    loads.push({
+      loadId: `LD-${String(i + 1).padStart(5, "0")}`,
+      shipperId: shipper.userId,
+      shipperName: shipper.company,
+      pickup,
+      drop,
+      weight,
+      weightUnit: "kg",
+      type: randomFrom(loadTypes),
+      status,
+      assignedCarrier: ["Assigned", "En Route", "Delivered"].includes(status) ? randomFrom(companyNames) : null,
+      carrierId: ["Assigned", "En Route", "Delivered"].includes(status) ? `CAR-${randomBetween(1, 100)}` : null,
+      createdDate: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000),
+      eta: ["En Route", "Assigned"].includes(status) ? `${randomBetween(1, 5)} days` : null,
+      spending,
+      bidCount: ["Active", "Bidding"].includes(status) ? randomBetween(1, 12) : randomBetween(3, 8),
+      distance,
+      dimensions: `${randomBetween(4, 20)}ft x ${randomBetween(4, 10)}ft x ${randomBetween(4, 10)}ft`,
+    });
+  }
+  
+  return loads;
+}
+
+function generateEnterpriseCarriers(): AdminCarrier[] {
+  const carriers: AdminCarrier[] = [];
+  const totalCarriers = randomBetween(90, 130);
+  
+  for (let i = 0; i < totalCarriers; i++) {
+    const totalDeliveries = randomBetween(10, 800);
+    const isHighPerformer = totalDeliveries > 300;
+    const rating = isHighPerformer ? 4.2 + Math.random() * 0.8 : 3.5 + Math.random() * 1.0;
+    const onTimePercent = isHighPerformer ? randomBetween(88, 99) : randomBetween(70, 92);
+    const verificationStatus = Math.random() < 0.75 ? "verified" : (Math.random() < 0.6 ? "pending" : (Math.random() < 0.5 ? "rejected" : "expired"));
+    
+    const zoneCount = randomBetween(1, 5);
+    const serviceZones: string[] = [];
+    for (let j = 0; j < zoneCount; j++) {
+      const zone = randomFrom(regions);
+      if (!serviceZones.includes(zone)) serviceZones.push(zone);
+    }
+    
+    carriers.push({
+      carrierId: `CAR-${String(i + 1).padStart(4, "0")}`,
+      companyName: randomFrom(companyNames) + (i > companyNames.length ? ` ${i}` : ""),
+      verificationStatus,
+      fleetSize: randomBetween(2, 150),
+      serviceZones,
+      activityLevel: totalDeliveries > 300 ? "high" : (totalDeliveries > 80 ? "medium" : "low"),
+      rating: Math.round(rating * 10) / 10,
+      totalDeliveries,
+      onTimePercent,
+      email: `contact@carrier${i + 1}.in`,
+      phone: `+91 ${randomBetween(70000, 99999)} ${randomBetween(10000, 99999)}`,
+      dateJoined: new Date(Date.now() - randomBetween(30, 900) * 24 * 60 * 60 * 1000),
+      reliabilityScore: Math.round((rating / 5) * 100),
+      avgResponseTime: randomBetween(5, 120),
+      completedShipments: Math.floor(totalDeliveries * 0.95),
+    });
+  }
+  
+  return carriers;
+}
+
+function generateEnterpriseTransactions(loads: AdminLoad[], carriers: AdminCarrier[]): TransactionRecord[] {
+  const transactions: TransactionRecord[] = [];
+  const completedLoads = loads.filter(l => l.status === "Delivered");
+  
+  for (const load of completedLoads) {
+    const carrier = randomFrom(carriers);
+    transactions.push({
+      transactionId: `TXN-${transactions.length + 1}`.padStart(8, "0"),
+      loadId: load.loadId,
+      route: `${load.pickup} to ${load.drop}`,
+      shipperId: load.shipperId,
+      shipperName: load.shipperName,
+      carrierId: carrier.carrierId,
+      carrierName: carrier.companyName,
+      amount: load.spending,
+      status: Math.random() < 0.9 ? "completed" : (Math.random() < 0.5 ? "pending" : "refunded"),
+      date: new Date(load.createdDate.getTime() + randomBetween(1, 7) * 24 * 60 * 60 * 1000),
+      paymentMethod: randomFrom(["Bank Transfer", "UPI", "Credit Card", "Net Banking", "Wallet"]),
+    });
+  }
+  
+  const additionalTransactions = randomBetween(200, 400);
+  for (let i = 0; i < additionalTransactions; i++) {
+    const carrier = randomFrom(carriers);
+    const pickup = randomFrom(cities);
+    let drop = randomFrom(cities);
+    while (drop === pickup) drop = randomFrom(cities);
+    const daysAgo = randomBetween(1, 730);
+    
+    transactions.push({
+      transactionId: `TXN-${String(transactions.length + 1).padStart(6, "0")}`,
+      loadId: `LD-H${String(i + 1).padStart(5, "0")}`,
+      route: `${pickup} to ${drop}`,
+      shipperId: `USR-${String(randomBetween(1, 200)).padStart(4, "0")}`,
+      shipperName: randomFrom(companyNames),
+      carrierId: carrier.carrierId,
+      carrierName: carrier.companyName,
+      amount: randomBetween(5000, 150000),
+      status: "completed",
+      date: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000),
+      paymentMethod: randomFrom(["Bank Transfer", "UPI", "Credit Card", "Net Banking", "Wallet"]),
+    });
+  }
+  
+  return transactions.sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
+function generateMonthlyReports(transactions: TransactionRecord[]): MonthlyReport[] {
+  const reports: MonthlyReport[] = [];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  
+  for (let i = 0; i < 24; i++) {
+    const monthsBack = 23 - i;
+    const date = new Date(currentYear, currentMonth - monthsBack, 1);
+    const year = date.getFullYear();
+    const m = date.getMonth();
+    
+    const monthTransactions = transactions.filter(t => {
+      return t.date.getFullYear() === year && t.date.getMonth() === m;
+    });
+    
+    const baseVolume = 15000000 + Math.random() * 20000000;
+    const seasonalMultiplier = [0.8, 0.85, 0.95, 1.0, 1.05, 0.9, 0.85, 0.9, 1.1, 1.2, 1.15, 1.3][m];
+    const festivalBonus = (m === 9 || m === 10) ? 1.25 : 1;
+    const growthFactor = 1 + (i * 0.02);
+    
+    const totalVolume = monthTransactions.reduce((sum, t) => sum + t.amount, 0) || 
+      Math.round(baseVolume * seasonalMultiplier * festivalBonus * growthFactor);
+    
+    const loadCount = monthTransactions.length || randomBetween(180, 350);
+    
+    reports.push({
+      month: months[m],
+      year,
+      totalVolume,
+      loadCount,
       userGrowth: {
-        shippers: 180 + idx * 15 + Math.floor(Math.random() * 20),
-        carriers: 45 + idx * 4 + Math.floor(Math.random() * 8),
+        shippers: 150 + i * 8 + randomBetween(0, 20),
+        carriers: 40 + i * 3 + randomBetween(0, 10),
       },
       loadDistribution: {
-        completed: Math.floor(loadCount * 0.7),
+        completed: Math.floor(loadCount * 0.72),
         inTransit: Math.floor(loadCount * 0.15),
-        pending: Math.floor(loadCount * 0.1),
+        pending: Math.floor(loadCount * 0.08),
         cancelled: Math.floor(loadCount * 0.05),
       },
-    };
-  });
-};
+    });
+  }
+  
+  return reports;
+}
 
-const initialActivity: RecentActivity[] = [
-  {
-    id: "ACT-001",
-    type: "carrier",
-    message: "New carrier registered: Thunder Road Logistics",
-    entityId: "carrier-11",
-    timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    severity: "info",
-  },
-  {
-    id: "ACT-002",
-    type: "load",
-    message: "Load #LD-003 marked as delivered",
-    entityId: "LD-003",
-    timestamp: new Date(Date.now() - 12 * 60 * 1000),
-    severity: "success",
-  },
-  {
-    id: "ACT-003",
-    type: "document",
-    message: "Document verification pending: MegaHaul MC Authority",
-    entityId: "DOC-VER-001",
-    timestamp: new Date(Date.now() - 25 * 60 * 1000),
-    severity: "warning",
-  },
-  {
-    id: "ACT-004",
-    type: "user",
-    message: "New shipper registered: New Shipper Inc",
-    entityId: "USR-005",
-    timestamp: new Date(Date.now() - 60 * 60 * 1000),
-    severity: "info",
-  },
-  {
-    id: "ACT-005",
-    type: "load",
-    message: "New load posted: LA to Phoenix (15,000 lbs)",
-    entityId: "LD-001",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    severity: "info",
-  },
-  {
-    id: "ACT-006",
-    type: "transaction",
-    message: "Payment completed: $1,150 for Dallas-Houston route",
-    entityId: "TXN-001",
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    severity: "success",
-  },
-  {
-    id: "ACT-007",
-    type: "carrier",
-    message: "Carrier suspended: MegaHaul Inc - compliance issue",
-    entityId: "carrier-4",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    severity: "error",
-  },
-];
+function generateVerificationQueue(carriers: AdminCarrier[], users: AdminUser[]): VerificationRequest[] {
+  const queue: VerificationRequest[] = [];
+  
+  const pendingCarriers = carriers.filter(c => c.verificationStatus === "pending").slice(0, 15);
+  for (const carrier of pendingCarriers) {
+    queue.push({
+      requestId: `VER-C${queue.length + 1}`,
+      entityType: "carrier",
+      entityId: carrier.carrierId,
+      entityName: carrier.companyName,
+      submittedAt: new Date(Date.now() - randomBetween(1, 14) * 24 * 60 * 60 * 1000),
+      status: "pending",
+    });
+  }
+  
+  const pendingUsers = users.filter(u => u.status === "pending").slice(0, 10);
+  for (const user of pendingUsers) {
+    queue.push({
+      requestId: `VER-U${queue.length + 1}`,
+      entityType: "shipper",
+      entityId: user.userId,
+      entityName: user.company,
+      submittedAt: new Date(Date.now() - randomBetween(1, 7) * 24 * 60 * 60 * 1000),
+      status: "pending",
+    });
+  }
+  
+  const docTypes = ["Motor Carrier Authority", "Cargo Insurance", "Liability Insurance", "Driver License", "Vehicle Registration"];
+  for (let i = 0; i < 20; i++) {
+    const carrier = randomFrom(carriers);
+    queue.push({
+      requestId: `VER-D${queue.length + 1}`,
+      entityType: "document",
+      entityId: `DOC-${i + 1}`,
+      entityName: carrier.companyName,
+      documentType: randomFrom(docTypes),
+      documentName: `${randomFrom(docTypes).replace(/\s+/g, "_")}_${randomBetween(2024, 2025)}.pdf`,
+      submittedAt: new Date(Date.now() - randomBetween(0, 10) * 24 * 60 * 60 * 1000),
+      status: "pending",
+    });
+  }
+  
+  return queue;
+}
+
+function generateRecentActivity(users: AdminUser[], loads: AdminLoad[], carriers: AdminCarrier[]): RecentActivity[] {
+  const activities: RecentActivity[] = [];
+  const severityOptions: Array<"info" | "warning" | "success" | "error"> = ["info", "success", "warning"];
+  
+  const activityTemplates = [
+    { type: "user" as const, messages: ["New shipper registered: {company}", "User verified: {name}", "Account suspended: {company}"] },
+    { type: "load" as const, messages: ["New load posted: {pickup} to {drop}", "Load delivered: {loadId}", "Carrier assigned to {loadId}"] },
+    { type: "carrier" as const, messages: ["Carrier verified: {company}", "New carrier registered: {company}", "Fleet size updated: {company}"] },
+    { type: "transaction" as const, messages: ["Payment completed: {amount}", "Refund processed: {amount}", "Invoice generated: {loadId}"] },
+  ];
+  
+  for (let i = 0; i < 50; i++) {
+    const template = randomFrom(activityTemplates);
+    const messageTemplate = randomFrom(template.messages);
+    const severity = randomFrom(severityOptions);
+    
+    let message = messageTemplate;
+    if (messageTemplate.includes("{company}")) message = message.replace("{company}", randomFrom(companyNames));
+    if (messageTemplate.includes("{name}")) message = message.replace("{name}", `${randomFrom(indianFirstNames)} ${randomFrom(indianLastNames)}`);
+    if (messageTemplate.includes("{pickup}")) message = message.replace("{pickup}", randomFrom(cities));
+    if (messageTemplate.includes("{drop}")) message = message.replace("{drop}", randomFrom(cities));
+    if (messageTemplate.includes("{loadId}")) message = message.replace("{loadId}", `LD-${String(randomBetween(1, 200)).padStart(5, "0")}`);
+    if (messageTemplate.includes("{amount}")) message = message.replace("{amount}", `Rs. ${randomBetween(5000, 150000).toLocaleString()}`);
+    
+    activities.push({
+      id: `ACT-${String(i + 1).padStart(4, "0")}`,
+      type: template.type,
+      message,
+      timestamp: new Date(Date.now() - i * randomBetween(5, 60) * 60 * 1000),
+      severity,
+    });
+  }
+  
+  return activities;
+}
+
+const enterpriseUsers = generateEnterpriseUsers();
+const enterpriseLoads = generateEnterpriseLoads(enterpriseUsers);
+const enterpriseCarriers = generateEnterpriseCarriers();
+const enterpriseTransactions = generateEnterpriseTransactions(enterpriseLoads, enterpriseCarriers);
+const enterpriseReports = generateMonthlyReports(enterpriseTransactions);
+const enterpriseVerifications = generateVerificationQueue(enterpriseCarriers, enterpriseUsers);
+const enterpriseActivity = generateRecentActivity(enterpriseUsers, enterpriseLoads, enterpriseCarriers);
 
 export function AdminDataProvider({ children }: { children: ReactNode }) {
   const shipperData = useMockData();
   const documentVault = useDocumentVault();
   
-  const [users, setUsers] = useState<AdminUser[]>(initialUsers);
-  const [adminLoads, setAdminLoads] = useState<AdminLoad[]>([]);
-  const [carriers, setCarriers] = useState<AdminCarrier[]>([]);
-  const [verificationQueue, setVerificationQueue] = useState<VerificationRequest[]>(initialVerificationQueue);
-  const [transactions, setTransactions] = useState<TransactionRecord[]>(initialTransactions);
-  const [monthlyReports] = useState<MonthlyReport[]>(generateMonthlyReports());
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>(initialActivity);
+  const [users, setUsers] = useState<AdminUser[]>(enterpriseUsers);
+  const [adminLoads, setAdminLoads] = useState<AdminLoad[]>(enterpriseLoads);
+  const [carriers, setCarriers] = useState<AdminCarrier[]>(enterpriseCarriers);
+  const [verificationQueue, setVerificationQueue] = useState<VerificationRequest[]>(enterpriseVerifications);
+  const [transactions, setTransactions] = useState<TransactionRecord[]>(enterpriseTransactions);
+  const [monthlyReports] = useState<MonthlyReport[]>(enterpriseReports);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>(enterpriseActivity);
 
   const usersRef = useRef(users);
   const carriersRef = useRef(carriers);
@@ -463,38 +553,48 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => { adminLoadsRef.current = adminLoads; }, [adminLoads]);
 
   const syncCarriersFromSource = useCallback(() => {
-    const adminCarriers: AdminCarrier[] = mockCarriers.map((c) => ({
+    const sourceCarriers: AdminCarrier[] = mockCarriers.map((c, idx) => ({
       carrierId: c.id,
       companyName: c.companyName || "Unknown Carrier",
       verificationStatus: c.isVerified ? "verified" : "pending",
-      fleetSize: c.carrierProfile?.fleetSize || 0,
-      serviceZones: c.carrierProfile?.serviceZones || [],
+      fleetSize: c.carrierProfile?.fleetSize || randomBetween(5, 50),
+      serviceZones: c.carrierProfile?.serviceZones || [randomFrom(regions)],
       activityLevel: (c.carrierProfile?.totalDeliveries || 0) > 200 ? "high" : (c.carrierProfile?.totalDeliveries || 0) > 50 ? "medium" : "low",
       rating: parseFloat(c.carrierProfile?.reliabilityScore || "4.0"),
-      totalDeliveries: c.carrierProfile?.totalDeliveries || 0,
-      onTimePercent: c.extendedProfile?.onTimeDeliveryPct || 90,
-      email: c.email || "",
-      phone: c.phone || "",
-      dateJoined: c.createdAt || new Date(),
+      totalDeliveries: c.carrierProfile?.totalDeliveries || randomBetween(50, 300),
+      onTimePercent: c.extendedProfile?.onTimeDeliveryPct || randomBetween(85, 98),
+      email: c.email || `carrier${idx}@example.com`,
+      phone: c.phone || `+91 ${randomBetween(70000, 99999)} ${randomBetween(10000, 99999)}`,
+      dateJoined: c.createdAt || new Date(Date.now() - randomBetween(100, 500) * 24 * 60 * 60 * 1000),
+      reliabilityScore: Math.round(parseFloat(c.carrierProfile?.reliabilityScore || "4.0") * 20),
+      avgResponseTime: randomBetween(10, 60),
+      completedShipments: (c.carrierProfile?.totalDeliveries || 0) * 0.95,
     }));
-    setCarriers(adminCarriers);
+    
+    setCarriers(prev => {
+      const existingIds = new Set(sourceCarriers.map(c => c.carrierId));
+      const nonSourceCarriers = prev.filter(c => !existingIds.has(c.carrierId));
+      return [...sourceCarriers, ...nonSourceCarriers];
+    });
   }, []);
 
   const syncLoadsFromShipper = useCallback(() => {
     const shipperLoads = shipperData.loads;
     const shipperBids = shipperData.bids;
     
-    const adminLoadsData: AdminLoad[] = shipperLoads.map((load) => {
+    const syncedLoads: AdminLoad[] = shipperLoads.map((load) => {
       const bidsForLoad = shipperBids.filter(b => b.loadId === load.loadId);
+      const pickup = randomFrom(cities);
+      const drop = randomFrom(cities);
       return {
         loadId: load.loadId,
-        shipperId: "USR-001",
+        shipperId: "USR-0001",
         shipperName: "Demo Shipper",
-        pickup: load.pickup,
-        drop: load.drop,
-        weight: load.weight,
-        weightUnit: load.weightUnit,
-        type: load.type,
+        pickup: load.pickup || pickup,
+        drop: load.drop || drop,
+        weight: load.weight || randomBetween(1000, 15000),
+        weightUnit: load.weightUnit || "kg",
+        type: load.type || randomFrom(loadTypes),
         status: load.status as AdminLoad["status"],
         assignedCarrier: load.carrier,
         carrierId: bidsForLoad.find(b => b.status === "Accepted")?.carrierId || null,
@@ -502,30 +602,17 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         eta: load.eta,
         spending: load.finalPrice || load.estimatedPrice,
         bidCount: bidsForLoad.length,
+        distance: randomBetween(200, 1500),
+        dimensions: `${randomBetween(6, 18)}ft x ${randomBetween(6, 10)}ft x ${randomBetween(6, 10)}ft`,
       };
     });
     
-    const inTransitLoads: AdminLoad[] = shipperData.inTransit.map((t) => ({
-      loadId: t.loadId,
-      shipperId: "USR-001",
-      shipperName: "Demo Shipper",
-      pickup: t.pickup,
-      drop: t.drop,
-      weight: 0,
-      weightUnit: "lbs",
-      type: "Dry Van",
-      status: "En Route" as const,
-      assignedCarrier: t.carrier,
-      carrierId: null,
-      createdDate: new Date(Date.now() - 48 * 60 * 60 * 1000),
-      eta: t.eta,
-      spending: 2500,
-      bidCount: 0,
-    }));
-    
-    const allLoads = [...adminLoadsData, ...inTransitLoads];
-    setAdminLoads(allLoads);
-  }, [shipperData.loads, shipperData.bids, shipperData.inTransit]);
+    setAdminLoads(prev => {
+      const syncedIds = new Set(syncedLoads.map(l => l.loadId));
+      const nonSyncedLoads = prev.filter(l => !syncedIds.has(l.loadId));
+      return [...syncedLoads, ...nonSyncedLoads];
+    });
+  }, [shipperData.loads, shipperData.bids]);
 
   useEffect(() => {
     syncCarriersFromSource();
@@ -535,16 +622,22 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     syncLoadsFromShipper();
   }, [syncLoadsFromShipper]);
 
+  const currentMonth = monthlyReports[monthlyReports.length - 1];
+  const previousMonth = monthlyReports[monthlyReports.length - 2];
+  
   const stats: AdminStats = {
-    totalUsers: users.length + carriers.length,
+    totalUsers: users.length,
     activeLoads: adminLoads.filter(l => ["Active", "Bidding", "Assigned", "En Route"].includes(l.status)).length,
     verifiedCarriers: carriers.filter(c => c.verificationStatus === "verified").length,
     pendingVerifications: verificationQueue.filter(v => v.status === "pending").length,
-    monthlyVolume: monthlyReports[new Date().getMonth()]?.totalVolume || 2450000,
-    monthlyChange: 15,
+    monthlyVolume: currentMonth?.totalVolume || 4500000,
+    monthlyChange: previousMonth ? Math.round(((currentMonth?.totalVolume || 0) - previousMonth.totalVolume) / previousMonth.totalVolume * 100) : 15,
     completedLoads: adminLoads.filter(l => l.status === "Delivered").length,
     inTransitLoads: adminLoads.filter(l => l.status === "En Route").length,
     pendingLoads: adminLoads.filter(l => ["Active", "Bidding", "Pending"].includes(l.status)).length,
+    userGrowthPercent: 12 + Math.floor(Math.random() * 8),
+    loadGrowthPercent: 8 + Math.floor(Math.random() * 12),
+    carrierGrowthPercent: 5 + Math.floor(Math.random() * 10),
   };
 
   const addUser = useCallback((userData: Omit<AdminUser, "userId" | "dateJoined">): AdminUser => {
@@ -719,7 +812,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       id: generateId("ACT"),
       timestamp: new Date(),
     };
-    setRecentActivity(prev => [newActivity, ...prev].slice(0, 50));
+    setRecentActivity(prev => [newActivity, ...prev].slice(0, 100));
   }, []);
 
   const refreshFromShipperPortal = useCallback(() => {

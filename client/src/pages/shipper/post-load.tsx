@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { MapPin, Package, Calendar, DollarSign, Truck, Save, ArrowRight, Sparkles, Info } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useMockData } from "@/lib/mock-data-store";
+import { AddressAutocomplete, getRouteInfo } from "@/components/address-autocomplete";
 
 const loadFormSchema = z.object({
   pickupAddress: z.string().min(5, "Pickup address is required"),
@@ -60,6 +61,10 @@ const savedTemplates = [
 ];
 
 function calculateDistance(from: string, to: string): number {
+  const routeInfo = getRouteInfo(from, to);
+  if (routeInfo) {
+    return routeInfo.distance;
+  }
   const distances: Record<string, number> = {
     "los angeles, ca_phoenix, az": 372,
     "san francisco, ca_denver, co": 1235,
@@ -125,9 +130,9 @@ export default function PostLoadPage() {
   });
 
   const watchedFields = form.watch(["pickupCity", "dropoffCity", "weight", "cargoDescription", "requiredTruckType"]);
+  const [pickupCity, dropoffCity, weight, description, truckType] = watchedFields;
 
-  const updateEstimation = () => {
-    const [pickupCity, dropoffCity, weight, description, truckType] = watchedFields;
+  useEffect(() => {
     if (pickupCity && dropoffCity && weight) {
       const distance = calculateDistance(pickupCity, dropoffCity);
       const suggestedTruck = truckType || suggestTruckType(Number(weight), description || "");
@@ -135,6 +140,10 @@ export default function PostLoadPage() {
       const nearbyTrucks = Math.floor(Math.random() * 15) + 3;
       setEstimation({ distance, price, suggestedTruck, nearbyTrucks });
     }
+  }, [pickupCity, dropoffCity, weight, description, truckType]);
+
+  const updateEstimation = () => {
+    // Triggered by form changes - useEffect handles the actual update
   };
 
   const applyTemplate = (templateId: string) => {
@@ -243,11 +252,11 @@ export default function PostLoadPage() {
                       <FormItem>
                         <FormLabel>City, State</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="Los Angeles, CA" 
-                            {...field} 
-                            onBlur={(e) => { field.onBlur(); updateEstimation(); }}
-                            data-testid="input-pickup-city" 
+                          <AddressAutocomplete
+                            value={field.value}
+                            onChange={(val) => { field.onChange(val); updateEstimation(); }}
+                            placeholder="Los Angeles, CA"
+                            testId="input-pickup-city"
                           />
                         </FormControl>
                         <FormMessage />
@@ -285,11 +294,11 @@ export default function PostLoadPage() {
                       <FormItem>
                         <FormLabel>City, State</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="Phoenix, AZ" 
-                            {...field}
-                            onBlur={(e) => { field.onBlur(); updateEstimation(); }}
-                            data-testid="input-dropoff-city" 
+                          <AddressAutocomplete
+                            value={field.value}
+                            onChange={(val) => { field.onChange(val); updateEstimation(); }}
+                            placeholder="Phoenix, AZ"
+                            testId="input-dropoff-city"
                           />
                         </FormControl>
                         <FormMessage />

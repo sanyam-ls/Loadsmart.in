@@ -81,7 +81,7 @@ export default function DocumentsPage() {
     fileName: "",
     fileType: "pdf" as "pdf" | "image",
     category: "" as DocumentCategory | "",
-    loadId: "",
+    loadId: "none",
     notes: "",
     tags: "",
     expiryDate: "",
@@ -149,7 +149,7 @@ export default function DocumentsPage() {
       fileType: uploadForm.fileType,
       fileUrl: `/mock/${uploadForm.category}.${uploadForm.fileType === "pdf" ? "pdf" : "jpg"}`,
       category: uploadForm.category as DocumentCategory,
-      loadId: uploadForm.loadId || undefined,
+      loadId: uploadForm.loadId && uploadForm.loadId !== "none" ? uploadForm.loadId : undefined,
       uploadedBy: "You",
       expiryDate,
       notes: uploadForm.notes || undefined,
@@ -166,7 +166,7 @@ export default function DocumentsPage() {
       fileName: "",
       fileType: "pdf",
       category: "",
-      loadId: "",
+      loadId: "none",
       notes: "",
       tags: "",
       expiryDate: "",
@@ -535,7 +535,7 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Select load..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Load</SelectItem>
+                    <SelectItem value="none">No Load</SelectItem>
                     {activeLoads.map(load => (
                       <SelectItem key={load.loadId} value={load.loadId}>
                         {load.loadId} - {load.pickup} to {load.drop}

@@ -412,7 +412,8 @@ export default function AdminCarriersPage() {
                   paginatedCarriers.map((carrier) => (
                     <TableRow 
                       key={carrier.carrierId} 
-                      className="cursor-pointer"
+                      className="cursor-pointer hover-elevate"
+                      onClick={() => setLocation(`/admin/carriers/${carrier.carrierId}`)}
                       data-testid={`row-carrier-${carrier.carrierId}`}
                     >
                       <TableCell>

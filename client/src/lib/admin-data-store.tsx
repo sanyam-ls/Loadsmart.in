@@ -162,6 +162,170 @@ export interface AdminCarrier {
   completedShipments: number;
 }
 
+// Extended Carrier Intelligence Types
+export interface CarrierBasicInfo {
+  companyType: "Transporter" | "Fleet Owner" | "Logistics Company" | "Broker";
+  registeredAddress: string;
+  yearFounded: number;
+  cinRegistrationId: string;
+  gstNumber: string;
+}
+
+export interface CarrierIdentity {
+  verificationExpiryDate: Date;
+  complianceLevel: "Low" | "Medium" | "High";
+  riskScore: number;
+}
+
+export interface CarrierTruck {
+  truckId: string;
+  truckNumber: string;
+  type: "Mini-truck" | "Pickup" | "20ft Container" | "32ft Container" | "Flatbed" | "Trailer" | "Reefer" | "Tanker";
+  model: string;
+  capacity: string;
+  rcStatus: "Valid" | "Expired" | "Missing";
+  insuranceStatus: "Valid" | "Expired" | "Missing";
+  fitnessStatus: "Valid" | "Expired" | "Missing";
+  driverAssigned: string | null;
+  driverPhone: string | null;
+  isActive: boolean;
+}
+
+export interface CarrierFleetComposition {
+  miniTruck: number;
+  pickup: number;
+  container20ft: number;
+  container32ft: number;
+  flatbed: number;
+  trailer: number;
+  reefer: number;
+  tanker: number;
+}
+
+export interface CarrierFleetUtilization {
+  activePercentage: number;
+  avgTripLength: number;
+  avgLoadAcceptanceRate: number;
+}
+
+export interface CarrierPerformance {
+  onTimeDeliveryRate: number;
+  loadAcceptanceRate: number;
+  avgResponseTimeMinutes: number;
+  cancellationRate: number;
+  totalCompletedDeliveries: number;
+  performanceTrend: "up" | "down" | "stable";
+}
+
+export interface CarrierBehaviorInsights {
+  preferredLoadTypes: string[];
+  preferredRegions: string[];
+  peakOperatingHours: string;
+  repeatBusinessRatio: number;
+}
+
+export interface CarrierServiceLane {
+  origin: string;
+  destination: string;
+  frequency: number;
+  revenue: number;
+}
+
+export interface CarrierServiceZoneDetails {
+  activeStates: string[];
+  activeCities: string[];
+  highFrequencyLanes: CarrierServiceLane[];
+  coverageLevel: "Local" | "Regional" | "National" | "Pan-India";
+}
+
+export interface CarrierDocument {
+  documentId: string;
+  category: "Company" | "Fleet";
+  type: "GST Certificate" | "PAN Certificate" | "Incorporation" | "RC" | "Insurance" | "Fitness" | "Pollution" | "Driver ID";
+  name: string;
+  uploadDate: Date;
+  expiryDate: Date | null;
+  status: "Valid" | "Expired" | "Missing";
+  truckId?: string;
+  url?: string;
+}
+
+export interface CarrierFinancials {
+  totalRevenueGenerated: number;
+  last12MonthsVolume: number;
+  avgTripCost: number;
+  paymentBehavior: "Timely" | "Delayed" | "Mixed";
+  settlementCycle: number;
+  topLanesByRevenue: CarrierServiceLane[];
+}
+
+export interface CarrierAssignedLoad {
+  loadId: string;
+  shipperId: string;
+  shipperName: string;
+  status: string;
+  pickup: string;
+  drop: string;
+  earnings: number;
+  eta: string | null;
+  assignedDate: Date;
+  rating?: number;
+  deliveryPerformance?: "On-Time" | "Delayed" | "Early";
+}
+
+export interface CarrierRatingBreakdown {
+  communication: number;
+  reliability: number;
+  consistency: number;
+  overall: number;
+}
+
+export interface CarrierReview {
+  reviewId: string;
+  shipperId: string;
+  shipperName: string;
+  rating: number;
+  comment: string;
+  date: Date;
+}
+
+export interface CarrierHealthIndicators {
+  lastActiveDate: Date;
+  riskAlerts: string[];
+  churnProbability: number;
+  expiringDocuments: number;
+}
+
+export interface CarrierActivityEvent {
+  eventId: string;
+  type: "verification" | "document" | "load" | "performance" | "admin_action" | "suspension" | "reactivation";
+  description: string;
+  timestamp: Date;
+  userId?: string;
+  userName?: string;
+}
+
+export interface DetailedCarrier extends AdminCarrier {
+  basicInfo: CarrierBasicInfo;
+  identity: CarrierIdentity;
+  trucks: CarrierTruck[];
+  fleetComposition: CarrierFleetComposition;
+  fleetUtilization: CarrierFleetUtilization;
+  performance: CarrierPerformance;
+  behaviorInsights: CarrierBehaviorInsights;
+  serviceZoneDetails: CarrierServiceZoneDetails;
+  documents: CarrierDocument[];
+  financials: CarrierFinancials;
+  currentLoads: CarrierAssignedLoad[];
+  pastLoads: CarrierAssignedLoad[];
+  ratingBreakdown: CarrierRatingBreakdown;
+  reviews: CarrierReview[];
+  healthIndicators: CarrierHealthIndicators;
+  activityLog: CarrierActivityEvent[];
+  adminNotes?: string;
+  frequentShippers: { shipperId: string; shipperName: string; loadCount: number }[];
+}
+
 export interface VerificationRequest {
   requestId: string;
   entityType: "carrier" | "shipper" | "document";
@@ -251,6 +415,11 @@ interface AdminDataContextType {
   updateCarrier: (carrierId: string, updates: Partial<AdminCarrier>) => void;
   verifyCarrier: (carrierId: string) => void;
   rejectCarrier: (carrierId: string, reason?: string) => void;
+  suspendCarrier: (carrierId: string, reason?: string) => void;
+  reactivateCarrier: (carrierId: string) => void;
+  getDetailedCarrier: (carrierId: string) => DetailedCarrier | null;
+  addCarrierNote: (carrierId: string, note: string) => void;
+  invalidateCarrierDocument: (carrierId: string, documentId: string) => void;
   
   approveVerification: (requestId: string, reviewer: string) => void;
   rejectVerification: (requestId: string, reviewer: string, reason?: string) => void;
@@ -1164,6 +1333,307 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const suspendCarrier = useCallback((carrierId: string, reason?: string) => {
+    const carrier = carriersRef.current.find(c => c.carrierId === carrierId);
+    setCarriers(prev => prev.map(c => 
+      c.carrierId === carrierId ? { ...c, verificationStatus: "rejected" as const, activityLevel: "low" as const } : c
+    ));
+    if (carrier) {
+      addActivity({
+        type: "carrier",
+        message: `Carrier suspended: ${carrier.companyName}${reason ? ` - ${reason}` : ""}`,
+        entityId: carrierId,
+        severity: "warning",
+      });
+    }
+  }, []);
+
+  const reactivateCarrier = useCallback((carrierId: string) => {
+    const carrier = carriersRef.current.find(c => c.carrierId === carrierId);
+    setCarriers(prev => prev.map(c => 
+      c.carrierId === carrierId ? { ...c, verificationStatus: "verified" as const, activityLevel: "medium" as const } : c
+    ));
+    if (carrier) {
+      addActivity({
+        type: "carrier",
+        message: `Carrier reactivated: ${carrier.companyName}`,
+        entityId: carrierId,
+        severity: "success",
+      });
+    }
+  }, []);
+
+  const addCarrierNote = useCallback((carrierId: string, note: string) => {
+    const carrier = carriersRef.current.find(c => c.carrierId === carrierId);
+    addActivity({
+      type: "carrier",
+      message: `Admin note added to carrier ${carrier?.companyName || carrierId}: ${note.substring(0, 50)}...`,
+      entityId: carrierId,
+      severity: "info",
+    });
+  }, []);
+
+  const invalidateCarrierDocument = useCallback((carrierId: string, documentId: string) => {
+    const carrier = carriersRef.current.find(c => c.carrierId === carrierId);
+    addActivity({
+      type: "document",
+      message: `Document ${documentId} marked invalid for carrier ${carrier?.companyName || carrierId}`,
+      entityId: carrierId,
+      severity: "warning",
+    });
+  }, []);
+
+  const getDetailedCarrier = useCallback((carrierId: string): DetailedCarrier | null => {
+    const carrier = carriersRef.current.find(c => c.carrierId === carrierId);
+    if (!carrier) return null;
+
+    const truckTypes: CarrierTruck["type"][] = ["Mini-truck", "Pickup", "20ft Container", "32ft Container", "Flatbed", "Trailer", "Reefer", "Tanker"];
+    const truckModels = ["Tata Prima", "Ashok Leyland 2820", "Mahindra Blazo", "BharatBenz 3143", "Eicher Pro", "Volvo FM", "Scania R-Series", "MAN CLA"];
+    
+    const basicInfo: CarrierBasicInfo = {
+      companyType: randomFrom(["Transporter", "Fleet Owner", "Logistics Company", "Broker"]),
+      registeredAddress: `${randomBetween(1, 999)} ${randomFrom(["Industrial Area", "Transport Nagar", "Logistics Hub", "Commercial Complex"])}, ${randomFrom(cities)}, ${randomFrom(regions)}`,
+      yearFounded: randomBetween(1990, 2020),
+      cinRegistrationId: `U${randomBetween(10000, 99999)}${randomFrom(["MH", "DL", "KA", "TN", "GJ"])}${randomBetween(1990, 2020)}PTC${randomBetween(100000, 999999)}`,
+      gstNumber: `${randomBetween(10, 36)}${randomFrom(["AABCT", "AAACT", "AABCM", "AAACM"])}${randomBetween(1000, 9999)}${randomFrom(["A", "B", "C"])}${randomBetween(1, 9)}Z${randomBetween(1, 9)}`,
+    };
+
+    const identity: CarrierIdentity = {
+      verificationExpiryDate: new Date(Date.now() + randomBetween(30, 365) * 24 * 60 * 60 * 1000),
+      complianceLevel: carrier.reliabilityScore > 85 ? "High" : carrier.reliabilityScore > 60 ? "Medium" : "Low",
+      riskScore: Math.max(0, 100 - carrier.reliabilityScore + randomBetween(-10, 10)),
+    };
+
+    const trucks: CarrierTruck[] = [];
+    for (let i = 0; i < carrier.fleetSize; i++) {
+      const truckType = randomFrom(truckTypes);
+      const driverFirstName = randomFrom(indianFirstNames);
+      const driverLastName = randomFrom(indianLastNames);
+      const isActive = Math.random() > 0.2;
+      trucks.push({
+        truckId: `TRK-${carrierId}-${String(i + 1).padStart(3, "0")}`,
+        truckNumber: `${randomFrom(["MH", "DL", "KA", "TN", "GJ", "RJ", "UP", "MP"])} ${randomBetween(1, 99)} ${randomFrom(["AB", "CD", "EF", "GH"])} ${randomBetween(1000, 9999)}`,
+        type: truckType,
+        model: randomFrom(truckModels),
+        capacity: truckType === "Mini-truck" ? "2 tons" : truckType === "Pickup" ? "5 tons" : truckType === "Tanker" ? "20,000 L" : `${randomBetween(10, 30)} tons`,
+        rcStatus: Math.random() > 0.15 ? "Valid" : Math.random() > 0.5 ? "Expired" : "Missing",
+        insuranceStatus: Math.random() > 0.1 ? "Valid" : Math.random() > 0.5 ? "Expired" : "Missing",
+        fitnessStatus: Math.random() > 0.2 ? "Valid" : Math.random() > 0.5 ? "Expired" : "Missing",
+        driverAssigned: isActive ? `${driverFirstName} ${driverLastName}` : null,
+        driverPhone: isActive ? `+91 ${randomBetween(70000, 99999)} ${randomBetween(10000, 99999)}` : null,
+        isActive,
+      });
+    }
+
+    const fleetComposition: CarrierFleetComposition = {
+      miniTruck: trucks.filter(t => t.type === "Mini-truck").length,
+      pickup: trucks.filter(t => t.type === "Pickup").length,
+      container20ft: trucks.filter(t => t.type === "20ft Container").length,
+      container32ft: trucks.filter(t => t.type === "32ft Container").length,
+      flatbed: trucks.filter(t => t.type === "Flatbed").length,
+      trailer: trucks.filter(t => t.type === "Trailer").length,
+      reefer: trucks.filter(t => t.type === "Reefer").length,
+      tanker: trucks.filter(t => t.type === "Tanker").length,
+    };
+
+    const fleetUtilization: CarrierFleetUtilization = {
+      activePercentage: Math.round((trucks.filter(t => t.isActive).length / trucks.length) * 100),
+      avgTripLength: randomBetween(300, 1500),
+      avgLoadAcceptanceRate: randomBetween(60, 95),
+    };
+
+    const performance: CarrierPerformance = {
+      onTimeDeliveryRate: carrier.onTimePercent,
+      loadAcceptanceRate: randomBetween(65, 95),
+      avgResponseTimeMinutes: carrier.avgResponseTime,
+      cancellationRate: randomBetween(1, 8),
+      totalCompletedDeliveries: carrier.completedShipments,
+      performanceTrend: carrier.onTimePercent > 85 ? "up" : carrier.onTimePercent > 70 ? "stable" : "down",
+    };
+
+    const behaviorInsights: CarrierBehaviorInsights = {
+      preferredLoadTypes: [randomFrom(loadTypes), randomFrom(loadTypes), randomFrom(loadTypes)].filter((v, i, a) => a.indexOf(v) === i),
+      preferredRegions: carrier.serviceZones.slice(0, 3),
+      peakOperatingHours: randomFrom(["6 AM - 2 PM", "8 AM - 4 PM", "10 AM - 6 PM", "2 PM - 10 PM"]),
+      repeatBusinessRatio: randomBetween(30, 75),
+    };
+
+    const lanes: CarrierServiceLane[] = [];
+    for (let i = 0; i < 5; i++) {
+      lanes.push({
+        origin: randomFrom(cities),
+        destination: randomFrom(cities),
+        frequency: randomBetween(10, 100),
+        revenue: randomBetween(500000, 5000000),
+      });
+    }
+
+    const serviceZoneDetails: CarrierServiceZoneDetails = {
+      activeStates: carrier.serviceZones.filter(z => regions.includes(z)),
+      activeCities: [randomFrom(cities), randomFrom(cities), randomFrom(cities), randomFrom(cities), randomFrom(cities)].filter((v, i, a) => a.indexOf(v) === i),
+      highFrequencyLanes: lanes.sort((a, b) => b.frequency - a.frequency).slice(0, 5),
+      coverageLevel: carrier.serviceZones.length > 10 ? "Pan-India" : carrier.serviceZones.length > 5 ? "National" : carrier.serviceZones.length > 2 ? "Regional" : "Local",
+    };
+
+    const documents: CarrierDocument[] = [
+      { documentId: `DOC-${carrierId}-GST`, category: "Company", type: "GST Certificate", name: "GST Registration Certificate.pdf", uploadDate: new Date(Date.now() - randomBetween(30, 365) * 24 * 60 * 60 * 1000), expiryDate: null, status: "Valid" },
+      { documentId: `DOC-${carrierId}-PAN`, category: "Company", type: "PAN Certificate", name: "PAN Card.pdf", uploadDate: new Date(Date.now() - randomBetween(30, 365) * 24 * 60 * 60 * 1000), expiryDate: null, status: "Valid" },
+      { documentId: `DOC-${carrierId}-INC`, category: "Company", type: "Incorporation", name: "Company Registration.pdf", uploadDate: new Date(Date.now() - randomBetween(30, 365) * 24 * 60 * 60 * 1000), expiryDate: null, status: "Valid" },
+    ];
+    trucks.slice(0, 5).forEach((truck, idx) => {
+      documents.push(
+        { documentId: `DOC-${carrierId}-RC-${idx}`, category: "Fleet", type: "RC", name: `RC_${truck.truckNumber.replace(/\s/g, "_")}.pdf`, uploadDate: new Date(Date.now() - randomBetween(30, 180) * 24 * 60 * 60 * 1000), expiryDate: new Date(Date.now() + randomBetween(-30, 365) * 24 * 60 * 60 * 1000), status: truck.rcStatus, truckId: truck.truckId },
+        { documentId: `DOC-${carrierId}-INS-${idx}`, category: "Fleet", type: "Insurance", name: `Insurance_${truck.truckNumber.replace(/\s/g, "_")}.pdf`, uploadDate: new Date(Date.now() - randomBetween(30, 180) * 24 * 60 * 60 * 1000), expiryDate: new Date(Date.now() + randomBetween(-30, 365) * 24 * 60 * 60 * 1000), status: truck.insuranceStatus, truckId: truck.truckId }
+      );
+    });
+
+    const financials: CarrierFinancials = {
+      totalRevenueGenerated: randomBetween(5000000, 50000000),
+      last12MonthsVolume: randomBetween(1000000, 20000000),
+      avgTripCost: randomBetween(15000, 80000),
+      paymentBehavior: Math.random() > 0.3 ? "Timely" : Math.random() > 0.5 ? "Mixed" : "Delayed",
+      settlementCycle: randomFrom([7, 15, 30, 45]),
+      topLanesByRevenue: lanes.sort((a, b) => b.revenue - a.revenue).slice(0, 5),
+    };
+
+    const currentLoads: CarrierAssignedLoad[] = [];
+    const pastLoads: CarrierAssignedLoad[] = [];
+    const carrierLoads = adminLoadsRef.current.filter(l => l.carrierId === carrierId || l.assignedCarrier === carrier.companyName);
+    carrierLoads.forEach(load => {
+      const assignedLoad: CarrierAssignedLoad = {
+        loadId: load.loadId,
+        shipperId: load.shipperId,
+        shipperName: load.shipperName,
+        status: load.status,
+        pickup: load.pickup,
+        drop: load.drop,
+        earnings: load.spending,
+        eta: load.eta,
+        assignedDate: load.createdDate,
+        rating: load.status === "Delivered" ? (3.5 + Math.random() * 1.5) : undefined,
+        deliveryPerformance: load.status === "Delivered" ? randomFrom(["On-Time", "On-Time", "On-Time", "Delayed", "Early"]) : undefined,
+      };
+      if (["Active", "Bidding", "Assigned", "En Route"].includes(load.status)) {
+        currentLoads.push(assignedLoad);
+      } else {
+        pastLoads.push(assignedLoad);
+      }
+    });
+
+    for (let i = pastLoads.length; i < 20; i++) {
+      const shipper = randomFrom(usersRef.current.filter(u => u.role === "shipper"));
+      pastLoads.push({
+        loadId: `LD-HIST-${randomBetween(10000, 99999)}`,
+        shipperId: shipper?.userId || `SHP-${randomBetween(100, 999)}`,
+        shipperName: shipper?.name || randomFrom(companyNames),
+        status: "Delivered",
+        pickup: randomFrom(cities),
+        drop: randomFrom(cities),
+        earnings: randomBetween(20000, 150000),
+        eta: null,
+        assignedDate: new Date(Date.now() - randomBetween(7, 365) * 24 * 60 * 60 * 1000),
+        rating: 3.5 + Math.random() * 1.5,
+        deliveryPerformance: randomFrom(["On-Time", "On-Time", "On-Time", "Delayed", "Early"]),
+      });
+    }
+
+    const ratingBreakdown: CarrierRatingBreakdown = {
+      communication: Math.min(5, carrier.rating + (Math.random() - 0.5) * 0.5),
+      reliability: Math.min(5, carrier.rating + (Math.random() - 0.5) * 0.5),
+      consistency: Math.min(5, carrier.rating + (Math.random() - 0.5) * 0.5),
+      overall: carrier.rating,
+    };
+
+    const reviewComments = [
+      "Very professional service, always on time",
+      "Good communication throughout the delivery",
+      "Reliable carrier, will use again",
+      "Driver was courteous and careful with cargo",
+      "Excellent tracking and updates",
+      "Competitive pricing and good service",
+      "Minor delay but kept us informed",
+      "Good experience overall",
+    ];
+
+    const reviews: CarrierReview[] = [];
+    for (let i = 0; i < randomBetween(5, 15); i++) {
+      const shipper = randomFrom(usersRef.current.filter(u => u.role === "shipper"));
+      reviews.push({
+        reviewId: `REV-${carrierId}-${i + 1}`,
+        shipperId: shipper?.userId || `SHP-${randomBetween(100, 999)}`,
+        shipperName: shipper?.name || randomFrom(companyNames),
+        rating: 3 + Math.random() * 2,
+        comment: randomFrom(reviewComments),
+        date: new Date(Date.now() - randomBetween(1, 180) * 24 * 60 * 60 * 1000),
+      });
+    }
+
+    const riskAlerts: string[] = [];
+    const expiringDocs = documents.filter(d => d.expiryDate && d.expiryDate < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    if (expiringDocs.length > 0) riskAlerts.push(`${expiringDocs.length} documents expiring soon`);
+    if (carrier.rating < 3.5) riskAlerts.push("Low rating - performance review needed");
+    if (performance.cancellationRate > 5) riskAlerts.push("High cancellation rate");
+    if (fleetUtilization.activePercentage < 50) riskAlerts.push("Low fleet utilization");
+
+    const healthIndicators: CarrierHealthIndicators = {
+      lastActiveDate: new Date(Date.now() - randomBetween(0, 7) * 24 * 60 * 60 * 1000),
+      riskAlerts,
+      churnProbability: riskAlerts.length > 2 ? randomBetween(40, 70) : riskAlerts.length > 0 ? randomBetween(10, 30) : randomBetween(0, 10),
+      expiringDocuments: expiringDocs.length,
+    };
+
+    const activityLog: CarrierActivityEvent[] = [
+      { eventId: `EVT-${carrierId}-1`, type: "verification", description: "Carrier verified and approved", timestamp: carrier.dateJoined, userName: "System" },
+      { eventId: `EVT-${carrierId}-2`, type: "document", description: "GST certificate uploaded", timestamp: new Date(carrier.dateJoined.getTime() + 1 * 24 * 60 * 60 * 1000), userName: carrier.companyName },
+      { eventId: `EVT-${carrierId}-3`, type: "document", description: "PAN certificate uploaded", timestamp: new Date(carrier.dateJoined.getTime() + 2 * 24 * 60 * 60 * 1000), userName: carrier.companyName },
+    ];
+    for (let i = 0; i < randomBetween(5, 15); i++) {
+      activityLog.push({
+        eventId: `EVT-${carrierId}-${activityLog.length + 1}`,
+        type: randomFrom(["load", "performance", "document"]),
+        description: randomFrom([
+          "Completed load delivery",
+          "Accepted new bid",
+          "Updated fleet information",
+          "Driver document uploaded",
+          "Performance milestone achieved",
+          "Insurance document renewed",
+        ]),
+        timestamp: new Date(Date.now() - randomBetween(1, 180) * 24 * 60 * 60 * 1000),
+      });
+    }
+
+    const frequentShippers = usersRef.current
+      .filter(u => u.role === "shipper")
+      .slice(0, randomBetween(3, 8))
+      .map(shipper => ({
+        shipperId: shipper.userId,
+        shipperName: shipper.name,
+        loadCount: randomBetween(3, 25),
+      }));
+
+    return {
+      ...carrier,
+      basicInfo,
+      identity,
+      trucks,
+      fleetComposition,
+      fleetUtilization,
+      performance,
+      behaviorInsights,
+      serviceZoneDetails,
+      documents,
+      financials,
+      currentLoads,
+      pastLoads: pastLoads.slice(0, 20),
+      ratingBreakdown,
+      reviews,
+      healthIndicators,
+      activityLog: activityLog.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+      frequentShippers,
+    };
+  }, []);
+
   return (
     <AdminDataContext.Provider value={{
       users,
@@ -1190,6 +1660,11 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       updateCarrier,
       verifyCarrier,
       rejectCarrier,
+      suspendCarrier,
+      reactivateCarrier,
+      getDetailedCarrier,
+      addCarrierNote,
+      invalidateCarrierDocument,
       approveVerification,
       rejectVerification,
       addActivity,

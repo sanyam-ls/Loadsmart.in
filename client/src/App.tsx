@@ -40,6 +40,7 @@ import AdminUsersPage from "@/pages/admin/users";
 import AdminLoadsPage from "@/pages/admin/loads";
 import AdminLoadDetailsPage from "@/pages/admin/load-details";
 import AdminCarriersPage from "@/pages/admin/carriers";
+import CarrierProfilePage from "@/pages/admin/carrier-profile";
 import AdminVolumeAnalytics from "@/pages/admin/volume-analytics";
 import InTransitPage from "@/pages/in-transit";
 import { MockDataProvider } from "@/lib/mock-data-store";
@@ -128,7 +129,7 @@ function AppContent() {
               <Route path="/admin/loads" component={AdminLoadsPage} />
               <Route path="/admin/loads/:loadId" component={AdminLoadDetailsPage} />
               <Route path="/admin/carriers" component={AdminCarriersPage} />
-              <Route path="/admin/carriers/:id" component={AdminCarriersPage} />
+              <Route path="/admin/carriers/:carrierId" component={CarrierProfilePage} />
               <Route path="/admin/volume" component={AdminVolumeAnalytics} />
               <Route path="/admin/verification" component={AdminCarriersPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />

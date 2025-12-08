@@ -121,6 +121,79 @@ interface NearbyTruckFilters {
   availableOnly?: boolean;
 }
 
+export const shipmentStages = [
+  "load_created",
+  "carrier_assigned", 
+  "reached_pickup",
+  "loaded",
+  "in_transit",
+  "arrived_at_drop",
+  "delivered",
+  "completed"
+] as const;
+export type ShipmentStage = typeof shipmentStages[number];
+
+export const documentTemplates = [
+  { id: "pod", name: "Proof of Delivery (POD)", stages: ["delivered", "completed"], required: true },
+  { id: "invoice", name: "Invoice", stages: ["delivered", "completed"], required: true },
+  { id: "lr", name: "LR / Consignment Note", stages: ["reached_pickup", "loaded"], required: true },
+  { id: "eway_bill", name: "E-way Bill", stages: ["loaded", "in_transit"], required: true },
+  { id: "rc_insurance", name: "RC & Insurance", stages: ["carrier_assigned", "reached_pickup"], required: false },
+  { id: "driver_id", name: "Driver ID", stages: ["carrier_assigned", "reached_pickup"], required: false },
+  { id: "loading_photos", name: "Loading Photos", stages: ["reached_pickup", "loaded"], required: false },
+  { id: "delivery_photos", name: "Delivery Photos", stages: ["delivered", "completed"], required: false },
+  { id: "weight_slip", name: "Weight Slip", stages: ["loaded"], required: false },
+  { id: "inspection_photos", name: "Inspection Photos", stages: ["in_transit", "arrived_at_drop"], required: false },
+  { id: "additional", name: "Additional Notes / Attachments", stages: shipmentStages as unknown as string[], required: false },
+] as const;
+export type DocumentTemplateId = typeof documentTemplates[number]["id"];
+
+export interface ShipmentDocument {
+  docId: string;
+  shipmentId: string;
+  loadId: string;
+  templateId: DocumentTemplateId;
+  fileName: string;
+  fileType: "pdf" | "image";
+  fileUrl: string;
+  fileSize: number;
+  status: "not_uploaded" | "uploaded" | "verified";
+  uploadedAt: Date | null;
+  uploadedBy: string | null;
+  stage: ShipmentStage;
+  notes?: string;
+}
+
+export interface ShipmentStageEvent {
+  eventId: string;
+  shipmentId: string;
+  stage: ShipmentStage;
+  location: string;
+  timestamp: Date;
+  completed: boolean;
+  eta?: Date;
+  notes?: string;
+  documents: ShipmentDocument[];
+}
+
+export interface TrackedShipment {
+  shipmentId: string;
+  loadId: string;
+  route: string;
+  currentStage: ShipmentStage;
+  carrierName: string;
+  carrierId: string;
+  vehicleId: string;
+  truckInfo: string;
+  driverName: string;
+  driverPhone: string;
+  progress: number;
+  eta: Date;
+  createdAt: Date;
+  events: ShipmentStageEvent[];
+  documents: ShipmentDocument[];
+}
+
 interface MockDataContextType {
   loads: MockLoad[];
   bids: MockBid[];
@@ -129,6 +202,7 @@ interface MockDataContextType {
   notifications: MockNotification[];
   trucks: MockTruck[];
   negotiations: NegotiationThread[];
+  shipments: TrackedShipment[];
   addLoad: (load: Omit<MockLoad, "loadId" | "createdAt">) => MockLoad;
   updateLoad: (loadId: string, updates: Partial<MockLoad>) => void;
   cancelLoad: (loadId: string) => void;
@@ -158,6 +232,16 @@ interface MockDataContextType {
   acceptNegotiation: (threadId: string) => void;
   rejectNegotiation: (threadId: string) => void;
   getActiveNegotiations: () => NegotiationThread[];
+  getShipmentById: (shipmentId: string) => TrackedShipment | undefined;
+  getShipmentByLoadId: (loadId: string) => TrackedShipment | undefined;
+  getActiveShipments: () => TrackedShipment[];
+  getCompletedShipments: () => TrackedShipment[];
+  uploadDocument: (shipmentId: string, templateId: DocumentTemplateId, fileName: string, fileType: "pdf" | "image", stage: ShipmentStage) => ShipmentDocument;
+  verifyDocument: (docId: string) => void;
+  deleteDocument: (docId: string) => void;
+  getDocumentsForShipment: (shipmentId: string) => ShipmentDocument[];
+  getDocumentsForLoad: (loadId: string) => ShipmentDocument[];
+  updateShipmentStage: (shipmentId: string, stage: ShipmentStage, notes?: string) => void;
 }
 
 const MockDataContext = createContext<MockDataContextType | null>(null);
@@ -393,6 +477,238 @@ const initialSpend: MockSpend = {
     { carrier: "MegaHaul Inc", amount: 7500, loads: 4 },
   ],
 };
+
+const createShipmentEvents = (shipmentId: string, currentStage: ShipmentStage, pickup: string, drop: string): ShipmentStageEvent[] => {
+  const stageIndex = shipmentStages.indexOf(currentStage);
+  const now = new Date();
+  
+  return shipmentStages.map((stage, index) => ({
+    eventId: `evt-${shipmentId}-${index}`,
+    shipmentId,
+    stage,
+    location: index <= 2 ? pickup : index >= 5 ? drop : "In Transit",
+    timestamp: new Date(now.getTime() - (stageIndex - index) * 3600000 * 4),
+    completed: index <= stageIndex,
+    eta: index > stageIndex ? new Date(now.getTime() + (index - stageIndex) * 3600000 * 4) : undefined,
+    notes: index === stageIndex ? "Current stage" : undefined,
+    documents: [],
+  }));
+};
+
+const initialShipments: TrackedShipment[] = [
+  {
+    shipmentId: "SHP-001",
+    loadId: "LD-T001",
+    route: "New York, NY → Boston, MA",
+    currentStage: "in_transit",
+    carrierName: "FastHaul Logistics",
+    carrierId: "C-003",
+    vehicleId: "TRK-1024",
+    truckInfo: "Dry Van - NY-4523AB",
+    driverName: "John Smith",
+    driverPhone: "+1 (555) 123-4567",
+    progress: 65,
+    eta: new Date(Date.now() + 1000 * 60 * 60 * 4),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+    events: createShipmentEvents("SHP-001", "in_transit", "New York, NY", "Boston, MA"),
+    documents: [
+      {
+        docId: "DOC-001",
+        shipmentId: "SHP-001",
+        loadId: "LD-T001",
+        templateId: "lr",
+        fileName: "LR_Consignment_Note.pdf",
+        fileType: "pdf",
+        fileUrl: "/mock/lr_note.pdf",
+        fileSize: 245000,
+        status: "verified",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 20),
+        uploadedBy: "John Smith",
+        stage: "reached_pickup",
+      },
+      {
+        docId: "DOC-002",
+        shipmentId: "SHP-001",
+        loadId: "LD-T001",
+        templateId: "eway_bill",
+        fileName: "E-Way_Bill_12345.pdf",
+        fileType: "pdf",
+        fileUrl: "/mock/eway_bill.pdf",
+        fileSize: 180000,
+        status: "uploaded",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 18),
+        uploadedBy: "John Smith",
+        stage: "loaded",
+      },
+      {
+        docId: "DOC-003",
+        shipmentId: "SHP-001",
+        loadId: "LD-T001",
+        templateId: "loading_photos",
+        fileName: "Loading_Photo_1.jpg",
+        fileType: "image",
+        fileUrl: "/mock/loading_photo.jpg",
+        fileSize: 1200000,
+        status: "uploaded",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 19),
+        uploadedBy: "John Smith",
+        stage: "loaded",
+      },
+    ],
+  },
+  {
+    shipmentId: "SHP-002",
+    loadId: "LD-T002",
+    route: "San Francisco, CA → Los Angeles, CA",
+    currentStage: "loaded",
+    carrierName: "Swift Transport Co",
+    carrierId: "C-004",
+    vehicleId: "TRK-2048",
+    truckInfo: "Flatbed - CA-7891XY",
+    driverName: "Maria Garcia",
+    driverPhone: "+1 (555) 234-5678",
+    progress: 35,
+    eta: new Date(Date.now() + 1000 * 60 * 60 * 8),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12),
+    events: createShipmentEvents("SHP-002", "loaded", "San Francisco, CA", "Los Angeles, CA"),
+    documents: [
+      {
+        docId: "DOC-004",
+        shipmentId: "SHP-002",
+        loadId: "LD-T002",
+        templateId: "lr",
+        fileName: "Consignment_Note_SF.pdf",
+        fileType: "pdf",
+        fileUrl: "/mock/lr_sf.pdf",
+        fileSize: 220000,
+        status: "uploaded",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 6),
+        uploadedBy: "Maria Garcia",
+        stage: "reached_pickup",
+      },
+    ],
+  },
+  {
+    shipmentId: "SHP-003",
+    loadId: "LD-T003",
+    route: "Denver, CO → Salt Lake City, UT",
+    currentStage: "arrived_at_drop",
+    carrierName: "Premier Freight",
+    carrierId: "C-005",
+    vehicleId: "TRK-3072",
+    truckInfo: "Refrigerated - CO-3456ZZ",
+    driverName: "Robert Johnson",
+    driverPhone: "+1 (555) 345-6789",
+    progress: 85,
+    eta: new Date(Date.now() + 1000 * 60 * 60 * 2),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36),
+    events: createShipmentEvents("SHP-003", "arrived_at_drop", "Denver, CO", "Salt Lake City, UT"),
+    documents: [
+      {
+        docId: "DOC-005",
+        shipmentId: "SHP-003",
+        loadId: "LD-T003",
+        templateId: "lr",
+        fileName: "LR_Note_Denver.pdf",
+        fileType: "pdf",
+        fileUrl: "/mock/lr_denver.pdf",
+        fileSize: 195000,
+        status: "verified",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 30),
+        uploadedBy: "Robert Johnson",
+        stage: "reached_pickup",
+      },
+      {
+        docId: "DOC-006",
+        shipmentId: "SHP-003",
+        loadId: "LD-T003",
+        templateId: "eway_bill",
+        fileName: "EWay_Denver_SLC.pdf",
+        fileType: "pdf",
+        fileUrl: "/mock/eway_denver.pdf",
+        fileSize: 175000,
+        status: "verified",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 28),
+        uploadedBy: "Robert Johnson",
+        stage: "loaded",
+      },
+      {
+        docId: "DOC-007",
+        shipmentId: "SHP-003",
+        loadId: "LD-T003",
+        templateId: "inspection_photos",
+        fileName: "Inspection_Checkpoint.jpg",
+        fileType: "image",
+        fileUrl: "/mock/inspection.jpg",
+        fileSize: 980000,
+        status: "uploaded",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 10),
+        uploadedBy: "Robert Johnson",
+        stage: "in_transit",
+      },
+    ],
+  },
+  {
+    shipmentId: "SHP-004",
+    loadId: "LD-COMP-001",
+    route: "Miami, FL → Atlanta, GA",
+    currentStage: "completed",
+    carrierName: "FastHaul Logistics",
+    carrierId: "C-003",
+    vehicleId: "TRK-4096",
+    truckInfo: "Dry Van - FL-1122AB",
+    driverName: "Sarah Williams",
+    driverPhone: "+1 (555) 456-7890",
+    progress: 100,
+    eta: new Date(Date.now() - 1000 * 60 * 60 * 12),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72),
+    events: createShipmentEvents("SHP-004", "completed", "Miami, FL", "Atlanta, GA"),
+    documents: [
+      {
+        docId: "DOC-008",
+        shipmentId: "SHP-004",
+        loadId: "LD-COMP-001",
+        templateId: "pod",
+        fileName: "POD_Miami_Atlanta.pdf",
+        fileType: "pdf",
+        fileUrl: "/mock/pod_miami.pdf",
+        fileSize: 310000,
+        status: "verified",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 14),
+        uploadedBy: "Sarah Williams",
+        stage: "delivered",
+      },
+      {
+        docId: "DOC-009",
+        shipmentId: "SHP-004",
+        loadId: "LD-COMP-001",
+        templateId: "invoice",
+        fileName: "Invoice_SHP004.pdf",
+        fileType: "pdf",
+        fileUrl: "/mock/invoice_004.pdf",
+        fileSize: 125000,
+        status: "verified",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 13),
+        uploadedBy: "Admin",
+        stage: "completed",
+      },
+      {
+        docId: "DOC-010",
+        shipmentId: "SHP-004",
+        loadId: "LD-COMP-001",
+        templateId: "delivery_photos",
+        fileName: "Delivery_Confirmation.jpg",
+        fileType: "image",
+        fileUrl: "/mock/delivery_photo.jpg",
+        fileSize: 1450000,
+        status: "verified",
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 14),
+        uploadedBy: "Sarah Williams",
+        stage: "delivered",
+      },
+    ],
+  },
+];
 
 const cityCoordinates: Record<string, { lat: number; lng: number }> = {
   "Los Angeles, CA": { lat: 34.0522, lng: -118.2437 },
@@ -824,10 +1140,12 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<MockNotification[]>(initialNotifications);
   const [trucks, setTrucks] = useState<MockTruck[]>(initialTrucks);
   const [negotiations, setNegotiations] = useState<NegotiationThread[]>([]);
+  const [shipments, setShipments] = useState<TrackedShipment[]>(initialShipments);
   const [pendingTimeouts, setPendingTimeouts] = useState<Set<ReturnType<typeof setTimeout>>>(new Set());
   
   const bidsRef = useRef<MockBid[]>(bids);
   const negotiationsRef = useRef<NegotiationThread[]>(negotiations);
+  const shipmentsRef = useRef<TrackedShipment[]>(shipments);
   
   useEffect(() => {
     bidsRef.current = bids;
@@ -836,6 +1154,10 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     negotiationsRef.current = negotiations;
   }, [negotiations]);
+  
+  useEffect(() => {
+    shipmentsRef.current = shipments;
+  }, [shipments]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1526,6 +1848,166 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     negotiations.filter(n => n.status === "active"),
   [negotiations]);
 
+  const getShipmentById = useCallback((shipmentId: string) => 
+    shipmentsRef.current.find(s => s.shipmentId === shipmentId),
+  []);
+
+  const getShipmentByLoadId = useCallback((loadId: string) => 
+    shipmentsRef.current.find(s => s.loadId === loadId),
+  []);
+
+  const getActiveShipments = useCallback(() => 
+    shipments.filter(s => s.currentStage !== "completed"),
+  [shipments]);
+
+  const getCompletedShipments = useCallback(() => 
+    shipments.filter(s => s.currentStage === "completed"),
+  [shipments]);
+
+  const uploadDocument = useCallback((
+    shipmentId: string, 
+    templateId: DocumentTemplateId, 
+    fileName: string, 
+    fileType: "pdf" | "image",
+    stage: ShipmentStage
+  ): ShipmentDocument => {
+    const shipment = shipmentsRef.current.find(s => s.shipmentId === shipmentId);
+    if (!shipment) throw new Error("Shipment not found");
+
+    const template = documentTemplates.find(t => t.id === templateId);
+    const mockFileUrl = fileType === "pdf" ? `/mock/${templateId}.pdf` : `/mock/${templateId}.jpg`;
+    
+    const newDoc: ShipmentDocument = {
+      docId: generateId("DOC"),
+      shipmentId,
+      loadId: shipment.loadId,
+      templateId,
+      fileName,
+      fileType,
+      fileUrl: mockFileUrl,
+      fileSize: Math.floor(Math.random() * 2000000) + 100000,
+      status: "uploaded",
+      uploadedAt: new Date(),
+      uploadedBy: "You",
+      stage,
+    };
+
+    setShipments(prev => prev.map(s => 
+      s.shipmentId === shipmentId 
+        ? { ...s, documents: [...s.documents, newDoc] }
+        : s
+    ));
+
+    createNotification({
+      title: "Document Uploaded",
+      message: `${template?.name || fileName} uploaded for shipment ${shipmentId}`,
+      type: "document",
+      loadId: shipment.loadId,
+    });
+
+    if (templateId === "pod" && shipment.currentStage !== "completed") {
+      setShipments(prev => prev.map(s => {
+        if (s.shipmentId === shipmentId) {
+          const updatedEvents = s.events.map(e => ({
+            ...e,
+            completed: true,
+          }));
+          return { 
+            ...s, 
+            currentStage: "completed" as const, 
+            progress: 100,
+            events: updatedEvents,
+          };
+        }
+        return s;
+      }));
+
+      setLoads(prev => prev.map(l => 
+        l.loadId === shipment.loadId ? { ...l, status: "Delivered" as const } : l
+      ));
+      
+      setInTransit(prev => prev.filter(t => t.loadId !== shipment.loadId));
+
+      createNotification({
+        title: "Delivery Completed",
+        message: `POD uploaded - Load ${shipment.loadId} marked as completed`,
+        type: "shipment",
+        loadId: shipment.loadId,
+      });
+    }
+
+    return newDoc;
+  }, [createNotification]);
+
+  const verifyDocument = useCallback((docId: string) => {
+    setShipments(prev => prev.map(s => ({
+      ...s,
+      documents: s.documents.map(d => 
+        d.docId === docId ? { ...d, status: "verified" as const } : d
+      ),
+    })));
+  }, []);
+
+  const deleteDocument = useCallback((docId: string) => {
+    setShipments(prev => prev.map(s => ({
+      ...s,
+      documents: s.documents.filter(d => d.docId !== docId),
+    })));
+  }, []);
+
+  const getDocumentsForShipment = useCallback((shipmentId: string) => {
+    const shipment = shipmentsRef.current.find(s => s.shipmentId === shipmentId);
+    return shipment?.documents || [];
+  }, []);
+
+  const getDocumentsForLoad = useCallback((loadId: string) => {
+    const shipment = shipmentsRef.current.find(s => s.loadId === loadId);
+    return shipment?.documents || [];
+  }, []);
+
+  const updateShipmentStage = useCallback((shipmentId: string, stage: ShipmentStage, notes?: string) => {
+    const stageIndex = shipmentStages.indexOf(stage);
+    const progress = Math.round((stageIndex / (shipmentStages.length - 1)) * 100);
+
+    setShipments(prev => prev.map(s => {
+      if (s.shipmentId === shipmentId) {
+        const updatedEvents = s.events.map((e, idx) => ({
+          ...e,
+          completed: idx <= stageIndex,
+          notes: e.stage === stage && notes ? notes : e.notes,
+        }));
+        return { 
+          ...s, 
+          currentStage: stage,
+          progress,
+          events: updatedEvents,
+        };
+      }
+      return s;
+    }));
+
+    const shipment = shipmentsRef.current.find(s => s.shipmentId === shipmentId);
+    if (shipment) {
+      const stageLabels: Record<ShipmentStage, string> = {
+        load_created: "Load Created",
+        carrier_assigned: "Carrier Assigned",
+        reached_pickup: "Reached Pickup",
+        loaded: "Loaded",
+        in_transit: "In Transit",
+        arrived_at_drop: "Arrived at Drop",
+        delivered: "Delivered",
+        completed: "Completed",
+      };
+      
+      createNotification({
+        title: "Shipment Update",
+        message: `${shipment.route} - ${stageLabels[stage]}`,
+        type: "shipment",
+        loadId: shipment.loadId,
+      });
+    }
+  }, [createNotification]);
+
   useEffect(() => {
     return () => {
       pendingTimeouts.forEach(timeout => clearTimeout(timeout));
@@ -1540,6 +2022,8 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       spend,
       notifications,
       trucks,
+      negotiations,
+      shipments,
       addLoad,
       updateLoad,
       cancelLoad,
@@ -1563,13 +2047,22 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       getNearbyTrucks,
       requestQuote,
       getTruckById,
-      negotiations,
       getOrCreateNegotiation,
       sendNegotiationMessage,
       submitCounterOffer,
       acceptNegotiation,
       rejectNegotiation,
       getActiveNegotiations,
+      getShipmentById,
+      getShipmentByLoadId,
+      getActiveShipments,
+      getCompletedShipments,
+      uploadDocument,
+      verifyDocument,
+      deleteDocument,
+      getDocumentsForShipment,
+      getDocumentsForLoad,
+      updateShipmentStage,
     }}>
       {children}
     </MockDataContext.Provider>

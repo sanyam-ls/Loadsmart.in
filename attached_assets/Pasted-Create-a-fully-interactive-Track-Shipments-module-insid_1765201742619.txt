@@ -1,0 +1,177 @@
+Create a fully interactive “Track Shipments” module inside the Shipper Portal that includes document templates, stage-specific uploads, and fully openable document previews. All shipment documents must sync across Load Details, In Transit, Completed Loads, and the central mock data store.
+
+⸻
+
+🔵 1. SHIPMENT TRACKING MODULE OVERVIEW
+
+Create a section called:
+
+Track Shipments
+
+This module must show:
+	•	Timeline of shipment stages
+	•	Real-time status (mock data)
+	•	ETA updates
+	•	Carrier details
+	•	Vehicle/driver info (mock)
+	•	All associated documents
+
+Shipments should move through these stages:
+	1.	Load Created
+	2.	Carrier Assigned
+	3.	Reached Pickup
+	4.	Loaded
+	5.	In Transit
+	6.	Arrived at Drop
+	7.	Delivered
+	8.	Completed
+
+Every stage must support attached documents.
+
+⸻
+
+🔵 2. DOCUMENT TEMPLATES (MANDATORY)
+
+Create templated placeholders for all document types:
+	•	POD (Proof of Delivery)
+	•	Invoice
+	•	LR / Consignment Note
+	•	E-way Bill
+	•	RC & Insurance (vehicle)
+	•	Driver ID
+	•	Loading Photos
+	•	Delivery Photos
+	•	Additional Notes / Attachments
+
+Each template must include:
+	•	Document name
+	•	Upload button
+	•	Status (Not Uploaded / Uploaded / Verified)
+	•	Timestamp
+	•	Preview button
+
+These templates must exist whether the document is uploaded or not.
+
+⸻
+
+🔵 3. DOCUMENT WORKFLOW PER SHIPMENT STAGE
+
+Every stage in the timeline must support attaching documents.
+
+Examples:
+
+Reached Pickup:
+	•	Upload Loading Photos
+	•	Upload LR / Consignment Note
+
+Loaded:
+	•	Upload Weight Slip
+	•	Upload E-way Bill
+
+In Transit:
+	•	Upload Inspection Photos (mock)
+
+Delivered:
+	•	Upload POD
+	•	Upload Invoice
+	•	Upload Delivery Photos
+
+Each uploaded document must:
+	•	Appear instantly in the UI
+	•	Update the central mock data store
+	•	Be visible across the entire Shipper Portal
+
+⸻
+
+🔵 4. DOCUMENT PREVIEW (REQUIRED)
+
+Every uploaded document must be openable, using a simulated modal or viewer.
+
+The preview must show:
+	•	Full document image or PDF simulation
+	•	Name
+	•	Upload time
+	•	Download option (mock)
+
+⸻
+
+🔵 5. DOCUMENT SYNC ACROSS MODULES
+
+Once documents are uploaded for a shipment, they must:
+
+Sync to:
+	•	Track Shipments Page
+	•	Load Details Page
+	•	In Transit Page
+	•	Completed Loads Page
+
+Sync to dashboard metrics:
+
+If you add a rule like:
+	•	When POD uploaded → Load moves to Completed
+Then:
+	•	In Transit decreases
+	•	Completed Loads increases
+	•	Monthly Spend updates
+
+Everything must be synchronized through the central mock data store.
+
+⸻
+
+🔵 6. LOAD DETAILS PAGE — DOCUMENT SECTION
+
+Inside each Load Details page include:
+	•	Document list
+	•	Upload buttons
+	•	Preview buttons
+	•	Document status chips
+	•	Stage-wise document grouping
+
+⸻
+
+🔵 7. TRACK SHIPMENTS TIMELINE UI
+
+The timeline must show:
+	•	Current stage highlight
+	•	Completed stages
+	•	Future stages
+	•	ETA for each stage (mock-generated)
+	•	Document icons showing upload status
+
+Clicking a stage expands:
+	•	Stage description
+	•	Actions
+	•	Document templates for that stage
+
+⸻
+
+🔵 8. EMPTY STATES + ERROR STATES
+
+If no documents are uploaded:
+
+Show:
+“No documents uploaded yet. Upload your first document for this shipment.”
+
+If the user uploads a non-supported file type (simulate check):
+
+Show:
+“Unsupported file type. Please upload PDF or image.”
+
+⸻
+
+🔵 9. GLOBAL SYNCHRONIZATION BEHAVIOR
+
+All document interactions must update:
+	•	Shipper Dashboard
+	•	In Transit
+	•	Completed Loads
+	•	Load Details
+	•	Monthly Spend (optional if tied to delivery)
+
+Everything must stay consistent across the entire portal.
+
+⸻
+
+🔥 FINAL INSTRUCTION TO REPLIT AI
+
+Build a complete Track Shipments system inside the Shipper Portal where every shipment stage includes templated document uploads, every uploaded document is fully openable, and all files sync across timelines, Load Details, In Transit, Completed Loads, and dashboard metrics using a centralized mock data store.

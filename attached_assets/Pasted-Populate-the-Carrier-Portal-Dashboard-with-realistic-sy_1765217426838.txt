@@ -1,0 +1,131 @@
+Populate the Carrier Portal Dashboard with realistic, synchronized mock data so the user can actively view operational insights at a glance.
+Make all four primary metrics dynamic, clickable, and connected to deeper reports.
+
+⸻
+
+🔵 1. Insert Data Into Top Dashboard Tiles
+
+Populate these four tiles using synced mock data:
+
+Active Trucks
+	•	Show total trucks in fleet (e.g., 100 trucks).
+	•	Show count of trucks currently active (e.g., 58 active now).
+	•	Show “Available Now” under it (e.g., 22 available now).
+	•	Clicking this tile opens My Fleet → Active Filter.
+
+Pending Bids
+	•	Display 155 pending bids.
+	•	Show % change vs last week (+15%) below it.
+	•	Clicking it opens My Bids → Pending.
+	•	Each pending bid must show shipper, rate, counter-offer, truck type, and load route.
+
+Active Trips
+	•	Show current active trips (e.g., 14 active trips).
+	•	Display small text under it (e.g., “8 drivers en route”).
+	•	Clicking this tile opens Active Trips with full trip details:
+	•	Route
+	•	Distance traveled
+	•	Fuel consumed
+	•	Driver
+	•	Truck
+	•	Load type
+	•	ETA
+
+Monthly Revenue
+	•	Show live mock revenue (e.g., $124,800).
+	•	Show trend, e.g., +12% vs last month.
+	•	Clicking opens Revenue → Monthly Report.
+
+⸻
+
+🔵 2. Fill Monthly Revenue Graph With Data
+
+Insert values for Jan–Dec:
+
+Example:
+	•	Jan: $19,400
+	•	Feb: $22,300
+	•	Mar: $18,900
+	•	Apr: $24,100
+	•	May: $30,200
+	•	Jun: $28,500
+	•	Jul–Dec: auto-generate mock trends
+
+Make chart interactive:
+	•	Hover shows exact revenue
+	•	Click month → open revenue detail for that month
+
+⸻
+
+🔵 3. Populate Recommended Loads Section
+
+Example data:
+	•	Los Angeles, CA → Phoenix, AZ — 372 miles — 92% match — $2,500
+	•	Sacramento → Las Vegas — 480 miles — 87% match — $3,200
+	•	Houston → Dallas — 240 miles — 94% match — $1,100
+
+When clicking:
+→ Open full load details + Quick Bid option.
+
+⸻
+
+🔵 4. Populate Active Trips Section
+
+Add multiple high-fidelity trips:
+
+Example:
+
+Trip 1
+	•	San Francisco → Denver
+	•	65% complete
+	•	ETA: 8 hours
+	•	Driver: John Doe
+	•	Truck: Tata 32ft
+	•	Fuel used: 114 liters
+	•	KM covered: 920 km
+	•	Load type: Electronics
+
+Trip 2
+	•	Chicago → Detroit
+	•	42% complete
+	•	ETA: 4 hours
+	•	Driver: Amandeep
+	•	Truck: Freightliner
+	•	Load type: Machinery
+
+Each is clickable to open full trip reporting.
+
+⸻
+
+🔵 5. Fill Performance Score Section
+
+Populate environmental metrics:
+
+Scores
+	•	Reliability: 4.8
+	•	Communication: 4.9
+	•	On-Time Delivery: 4.7
+	•	Overall: 4.8/5
+
+Add tooltip text explaining how metrics are calculated (mock logic).
+
+⸻
+
+🔵 6. Sync All Dashboard Data With Modules
+
+Ensure all dashboard tiles update dynamically based on:
+	•	My Fleet → Truck availability
+	•	My Bids → Bid count changes
+	•	Active Trips → Trip count
+	•	Revenue → Actual revenue data for month
+
+Dashboard must pull data from a central mock data store shared across:
+	•	Carrier Portal
+	•	Shipper Portal
+	•	Admin Console
+
+⸻
+
+🔥 FINAL INSTRUCTION FOR REPLIT AI
+
+Populate the Carrier Portal Dashboard with full active data for Active Trucks, Pending Bids, Active Trips, and Monthly Revenue. Insert mock datasets, activate all metrics, fill the revenue graph, populate recommended loads and active trips, and link everything to deeper pages. All numbers must sync across the portal’s data layer to reflect accurate operational status.

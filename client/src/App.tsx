@@ -25,6 +25,7 @@ import TrackingPage from "@/pages/shipper/tracking";
 import CarriersPage from "@/pages/shipper/carriers";
 import ShipperDocumentsPage from "@/pages/shipper/documents";
 import SpendAnalyticsPage from "@/pages/shipper/spend";
+import NearbyTrucksPage from "@/pages/shipper/nearby-trucks";
 
 import CarrierDashboard from "@/pages/carrier/dashboard";
 import AddTruckPage from "@/pages/carrier/add-truck";
@@ -107,6 +108,7 @@ function AppContent() {
               <Route path="/shipper/negotiations" component={NegotiationsPage} />
               <Route path="/shipper/tracking" component={TrackingPage} />
               <Route path="/shipper/carriers" component={CarriersPage} />
+              <Route path="/shipper/nearby-trucks" component={NearbyTrucksPage} />
               <Route path="/shipper/documents" component={ShipperDocumentsPage} />
               
               <Route path="/carrier" component={CarrierDashboard} />

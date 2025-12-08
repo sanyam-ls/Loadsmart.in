@@ -17,12 +17,6 @@ import {
   ResponsiveContainer 
 } from "recharts";
 
-const mockNearbyTrucks = [
-  { id: "t1", type: "Dry Van", distance: 12, available: true },
-  { id: "t2", type: "Flatbed", distance: 25, available: true },
-  { id: "t3", type: "Refrigerated", distance: 34, available: false },
-  { id: "t4", type: "Container", distance: 41, available: true },
-];
 
 const mockTopCarriers = [
   { id: "c1", name: "FastHaul Logistics", rating: 4.9, deliveries: 234 },
@@ -44,7 +38,8 @@ export default function ShipperDashboard() {
     getActiveLoads, 
     getPendingBids, 
     getInTransitLoads, 
-    spend 
+    spend,
+    trucks
   } = useMockData();
 
   const activeLoads = getActiveLoads();
@@ -253,37 +248,41 @@ export default function ShipperDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
               <CardTitle className="text-lg">Nearby Trucks</CardTitle>
-              <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                {mockNearbyTrucks.filter(t => t.available).length} available
-              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/nearby-trucks")} data-testid="link-view-nearby-trucks">
+                Find Trucks
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {mockNearbyTrucks.map((truck) => (
+                {trucks.filter(t => t.availabilityStatus === "Available").slice(0, 4).map((truck) => (
                   <div
-                    key={truck.id}
+                    key={truck.truckId}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                    data-testid={`nearby-truck-${truck.id}`}
+                    onClick={() => navigate("/shipper/nearby-trucks")}
+                    data-testid={`nearby-truck-${truck.truckId}`}
                   >
                     <div className="flex items-center gap-3">
                       <Truck className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{truck.type}</span>
+                      <div>
+                        <span className="font-medium text-sm">{truck.carrierName}</span>
+                        <p className="text-xs text-muted-foreground">{truck.currentLocation}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground">{truck.distance} mi</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">{truck.truckType}</Badge>
                       <Badge 
-                        variant={truck.available ? "default" : "secondary"}
-                        className={truck.available 
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate" 
-                          : "no-default-hover-elevate no-default-active-elevate"
-                        }
+                        className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate"
                       >
-                        {truck.available ? "Available" : "In Use"}
+                        {truck.reliabilityScore}%
                       </Badge>
                     </div>
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                {trucks.filter(t => t.availabilityStatus === "Available").length} trucks available near your loads
+              </p>
             </CardContent>
           </Card>
 

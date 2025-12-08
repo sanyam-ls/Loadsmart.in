@@ -1,4 +1,27 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+
+export interface MockTruck {
+  truckId: string;
+  truckType: "32FT" | "20FT" | "Open" | "Container" | "Refrigerated" | "Flatbed" | "Dry Van";
+  currentLat: number;
+  currentLng: number;
+  currentLocation: string;
+  availabilityStatus: "Available" | "En Route" | "Busy";
+  loadCapacity: number;
+  carrierName: string;
+  carrierId: string;
+  reliabilityScore: number;
+  speed: number;
+  estimatedTimeToPickup: number;
+  driverName: string;
+  licensePlate: string;
+  lastUpdated: Date;
+}
+
+export interface TruckMatchResult extends MockTruck {
+  distanceFromPickup: number;
+  matchScore: number;
+}
 
 export interface MockLoad {
   loadId: string;
@@ -66,12 +89,21 @@ export interface MockNotification {
   bidId?: string;
 }
 
+interface NearbyTruckFilters {
+  truckType?: string;
+  radiusKm?: number;
+  minCapacity?: number;
+  minRating?: number;
+  availableOnly?: boolean;
+}
+
 interface MockDataContextType {
   loads: MockLoad[];
   bids: MockBid[];
   inTransit: MockInTransit[];
   spend: MockSpend;
   notifications: MockNotification[];
+  trucks: MockTruck[];
   addLoad: (load: Omit<MockLoad, "loadId" | "createdAt">) => MockLoad;
   updateLoad: (loadId: string, updates: Partial<MockLoad>) => void;
   cancelLoad: (loadId: string) => void;
@@ -92,6 +124,9 @@ interface MockDataContextType {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   getUnreadNotificationCount: () => number;
+  getNearbyTrucks: (pickupCity: string, loadType: string, loadWeight: number, filters?: NearbyTruckFilters) => TruckMatchResult[];
+  requestQuote: (truckId: string, loadId: string) => MockBid;
+  getTruckById: (truckId: string) => MockTruck | undefined;
 }
 
 const MockDataContext = createContext<MockDataContextType | null>(null);
@@ -328,6 +363,328 @@ const initialSpend: MockSpend = {
   ],
 };
 
+const cityCoordinates: Record<string, { lat: number; lng: number }> = {
+  "Los Angeles, CA": { lat: 34.0522, lng: -118.2437 },
+  "Phoenix, AZ": { lat: 33.4484, lng: -112.0740 },
+  "Chicago, IL": { lat: 41.8781, lng: -87.6298 },
+  "Detroit, MI": { lat: 42.3314, lng: -83.0458 },
+  "Dallas, TX": { lat: 32.7767, lng: -96.7970 },
+  "Houston, TX": { lat: 29.7604, lng: -95.3698 },
+  "Seattle, WA": { lat: 47.6062, lng: -122.3321 },
+  "Portland, OR": { lat: 45.5152, lng: -122.6784 },
+  "Miami, FL": { lat: 25.7617, lng: -80.1918 },
+  "Atlanta, GA": { lat: 33.7490, lng: -84.3880 },
+  "New York, NY": { lat: 40.7128, lng: -74.0060 },
+  "Boston, MA": { lat: 42.3601, lng: -71.0589 },
+  "San Francisco, CA": { lat: 37.7749, lng: -122.4194 },
+  "Denver, CO": { lat: 39.7392, lng: -104.9903 },
+  "Salt Lake City, UT": { lat: 40.7608, lng: -111.8910 },
+  "Las Vegas, NV": { lat: 36.1699, lng: -115.1398 },
+  "San Diego, CA": { lat: 32.7157, lng: -117.1611 },
+  "Austin, TX": { lat: 30.2672, lng: -97.7431 },
+  "Nashville, TN": { lat: 36.1627, lng: -86.7816 },
+  "Charlotte, NC": { lat: 35.2271, lng: -80.8431 },
+  "Indianapolis, IN": { lat: 39.7684, lng: -86.1581 },
+  "Columbus, OH": { lat: 39.9612, lng: -82.9988 },
+  "Philadelphia, PA": { lat: 39.9526, lng: -75.1652 },
+  "Jacksonville, FL": { lat: 30.3322, lng: -81.6557 },
+  "San Antonio, TX": { lat: 29.4241, lng: -98.4936 },
+  "Fort Worth, TX": { lat: 32.7555, lng: -97.3308 },
+  "Oklahoma City, OK": { lat: 35.4676, lng: -97.5164 },
+  "Memphis, TN": { lat: 35.1495, lng: -90.0490 },
+  "Louisville, KY": { lat: 38.2527, lng: -85.7585 },
+  "Baltimore, MD": { lat: 39.2904, lng: -76.6122 },
+  "Milwaukee, WI": { lat: 43.0389, lng: -87.9065 },
+  "Albuquerque, NM": { lat: 35.0844, lng: -106.6504 },
+  "Tucson, AZ": { lat: 32.2226, lng: -110.9747 },
+  "Kansas City, MO": { lat: 39.0997, lng: -94.5786 },
+  "Sacramento, CA": { lat: 38.5816, lng: -121.4944 },
+  "Fresno, CA": { lat: 36.7378, lng: -119.7871 },
+  "Omaha, NE": { lat: 41.2565, lng: -95.9345 },
+  "Minneapolis, MN": { lat: 44.9778, lng: -93.2650 },
+  "Raleigh, NC": { lat: 35.7796, lng: -78.6382 },
+  "Cleveland, OH": { lat: 41.4993, lng: -81.6944 },
+  "Pittsburgh, PA": { lat: 40.4406, lng: -79.9959 },
+  "St. Louis, MO": { lat: 38.6270, lng: -90.1994 },
+  "Tampa, FL": { lat: 27.9506, lng: -82.4572 },
+  "Orlando, FL": { lat: 28.5383, lng: -81.3792 },
+};
+
+const initialTrucks: MockTruck[] = [
+  {
+    truckId: "TRK-NB001",
+    truckType: "Dry Van",
+    currentLat: 34.1522,
+    currentLng: -118.3437,
+    currentLocation: "North Hollywood, CA",
+    availabilityStatus: "Available",
+    loadCapacity: 22,
+    carrierName: "FastHaul Logistics",
+    carrierId: "C-003",
+    reliabilityScore: 94,
+    speed: 0,
+    estimatedTimeToPickup: 25,
+    driverName: "Mike Chen",
+    licensePlate: "CA-8847XL",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB002",
+    truckType: "Flatbed",
+    currentLat: 33.9425,
+    currentLng: -118.4081,
+    currentLocation: "El Segundo, CA",
+    availabilityStatus: "Available",
+    loadCapacity: 28,
+    carrierName: "Swift Transport Co",
+    carrierId: "C-001",
+    reliabilityScore: 88,
+    speed: 45,
+    estimatedTimeToPickup: 35,
+    driverName: "Sarah Johnson",
+    licensePlate: "CA-2231AB",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB003",
+    truckType: "Refrigerated",
+    currentLat: 34.0195,
+    currentLng: -118.4912,
+    currentLocation: "Santa Monica, CA",
+    availabilityStatus: "Available",
+    loadCapacity: 18,
+    carrierName: "Premier Freight",
+    carrierId: "C-002",
+    reliabilityScore: 91,
+    speed: 0,
+    estimatedTimeToPickup: 40,
+    driverName: "David Kim",
+    licensePlate: "CA-5567RF",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB004",
+    truckType: "Container",
+    currentLat: 33.7701,
+    currentLng: -118.1937,
+    currentLocation: "Long Beach, CA",
+    availabilityStatus: "En Route",
+    loadCapacity: 40,
+    carrierName: "MegaHaul Inc",
+    carrierId: "C-004",
+    reliabilityScore: 85,
+    speed: 55,
+    estimatedTimeToPickup: 60,
+    driverName: "James Wilson",
+    licensePlate: "CA-9912CT",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB005",
+    truckType: "20FT",
+    currentLat: 34.1478,
+    currentLng: -118.1445,
+    currentLocation: "Pasadena, CA",
+    availabilityStatus: "Available",
+    loadCapacity: 15,
+    carrierName: "CrossCountry Trucking",
+    carrierId: "C-005",
+    reliabilityScore: 92,
+    speed: 0,
+    estimatedTimeToPickup: 30,
+    driverName: "Robert Garcia",
+    licensePlate: "CA-4421SM",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB006",
+    truckType: "32FT",
+    currentLat: 41.9281,
+    currentLng: -87.6798,
+    currentLocation: "Evanston, IL",
+    availabilityStatus: "Available",
+    loadCapacity: 25,
+    carrierName: "Midwest Express",
+    carrierId: "C-006",
+    reliabilityScore: 89,
+    speed: 0,
+    estimatedTimeToPickup: 20,
+    driverName: "Tom Anderson",
+    licensePlate: "IL-7732EX",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB007",
+    truckType: "Dry Van",
+    currentLat: 41.7508,
+    currentLng: -87.8878,
+    currentLocation: "La Grange, IL",
+    availabilityStatus: "Available",
+    loadCapacity: 22,
+    carrierName: "FastHaul Logistics",
+    carrierId: "C-003",
+    reliabilityScore: 94,
+    speed: 35,
+    estimatedTimeToPickup: 45,
+    driverName: "Chris Martinez",
+    licensePlate: "IL-1187DV",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB008",
+    truckType: "Flatbed",
+    currentLat: 42.0334,
+    currentLng: -87.8834,
+    currentLocation: "Skokie, IL",
+    availabilityStatus: "Busy",
+    loadCapacity: 30,
+    carrierName: "Heavy Haul Bros",
+    carrierId: "C-007",
+    reliabilityScore: 86,
+    speed: 0,
+    estimatedTimeToPickup: 90,
+    driverName: "Bill Thompson",
+    licensePlate: "IL-5543HH",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB009",
+    truckType: "Dry Van",
+    currentLat: 32.8267,
+    currentLng: -96.8470,
+    currentLocation: "Irving, TX",
+    availabilityStatus: "Available",
+    loadCapacity: 20,
+    carrierName: "Texas Star Freight",
+    carrierId: "C-008",
+    reliabilityScore: 90,
+    speed: 0,
+    estimatedTimeToPickup: 15,
+    driverName: "Jose Ramirez",
+    licensePlate: "TX-2241TS",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB010",
+    truckType: "Refrigerated",
+    currentLat: 32.9483,
+    currentLng: -96.7299,
+    currentLocation: "Richardson, TX",
+    availabilityStatus: "Available",
+    loadCapacity: 18,
+    carrierName: "ColdChain Carriers",
+    carrierId: "C-009",
+    reliabilityScore: 95,
+    speed: 0,
+    estimatedTimeToPickup: 25,
+    driverName: "Maria Santos",
+    licensePlate: "TX-8876CC",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB011",
+    truckType: "Container",
+    currentLat: 29.8804,
+    currentLng: -95.5198,
+    currentLocation: "Spring, TX",
+    availabilityStatus: "Available",
+    loadCapacity: 40,
+    carrierName: "Gulf Coast Transport",
+    carrierId: "C-010",
+    reliabilityScore: 87,
+    speed: 50,
+    estimatedTimeToPickup: 35,
+    driverName: "Kevin Brown",
+    licensePlate: "TX-3345GC",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB012",
+    truckType: "Open",
+    currentLat: 33.0462,
+    currentLng: -96.9942,
+    currentLocation: "Carrollton, TX",
+    availabilityStatus: "En Route",
+    loadCapacity: 24,
+    carrierName: "Open Road Trucking",
+    carrierId: "C-011",
+    reliabilityScore: 82,
+    speed: 60,
+    estimatedTimeToPickup: 50,
+    driverName: "Larry White",
+    licensePlate: "TX-6654OR",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB013",
+    truckType: "Dry Van",
+    currentLat: 47.6862,
+    currentLng: -122.3521,
+    currentLocation: "Wallingford, WA",
+    availabilityStatus: "Available",
+    loadCapacity: 22,
+    carrierName: "Pacific Northwest Freight",
+    carrierId: "C-012",
+    reliabilityScore: 93,
+    speed: 0,
+    estimatedTimeToPickup: 18,
+    driverName: "Alex Turner",
+    licensePlate: "WA-1123PN",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB014",
+    truckType: "Flatbed",
+    currentLat: 47.5262,
+    currentLng: -122.4321,
+    currentLocation: "West Seattle, WA",
+    availabilityStatus: "Available",
+    loadCapacity: 28,
+    carrierName: "Swift Transport Co",
+    carrierId: "C-001",
+    reliabilityScore: 88,
+    speed: 40,
+    estimatedTimeToPickup: 30,
+    driverName: "Emily Davis",
+    licensePlate: "WA-7789SW",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB015",
+    truckType: "20FT",
+    currentLat: 25.8617,
+    currentLng: -80.2918,
+    currentLocation: "Hialeah, FL",
+    availabilityStatus: "Available",
+    loadCapacity: 15,
+    carrierName: "Sunshine State Carriers",
+    carrierId: "C-013",
+    reliabilityScore: 91,
+    speed: 0,
+    estimatedTimeToPickup: 22,
+    driverName: "Carlos Rodriguez",
+    licensePlate: "FL-4456SS",
+    lastUpdated: new Date(),
+  },
+  {
+    truckId: "TRK-NB016",
+    truckType: "Refrigerated",
+    currentLat: 25.9017,
+    currentLng: -80.1318,
+    currentLocation: "North Miami, FL",
+    availabilityStatus: "Available",
+    loadCapacity: 20,
+    carrierName: "ColdChain Carriers",
+    carrierId: "C-009",
+    reliabilityScore: 95,
+    speed: 35,
+    estimatedTimeToPickup: 28,
+    driverName: "Anna Lopez",
+    licensePlate: "FL-8821CC",
+    lastUpdated: new Date(),
+  },
+];
+
 const initialNotifications: MockNotification[] = [
   {
     id: "notif-001",
@@ -377,12 +734,84 @@ const initialNotifications: MockNotification[] = [
   },
 ];
 
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function calculateMatchScore(
+  distance: number,
+  truckType: string,
+  loadType: string,
+  truckCapacity: number,
+  loadWeight: number,
+  reliabilityScore: number,
+  eta: number
+): number {
+  const distanceScore = Math.max(0, 100 - (distance * 2));
+  
+  const typeCompatibility: Record<string, string[]> = {
+    "Dry Van": ["Dry Van", "32FT", "20FT"],
+    "Flatbed": ["Flatbed", "Open"],
+    "Refrigerated": ["Refrigerated"],
+    "Container": ["Container"],
+    "Open": ["Open", "Flatbed"],
+    "32FT": ["32FT", "Dry Van"],
+    "20FT": ["20FT", "Dry Van"],
+  };
+  const compatible = typeCompatibility[loadType]?.includes(truckType) || truckType === loadType;
+  const typeScore = compatible ? 100 : 30;
+  
+  const weightInTons = loadWeight / 2000;
+  const capacityRatio = weightInTons / truckCapacity;
+  const capacityScore = capacityRatio <= 1 ? (capacityRatio > 0.5 ? 100 : 60) : 20;
+  
+  const etaScore = Math.max(0, 100 - (eta / 2));
+  
+  const weightedScore = (
+    distanceScore * 0.40 +
+    typeScore * 0.20 +
+    capacityScore * 0.15 +
+    reliabilityScore * 0.15 +
+    etaScore * 0.10
+  );
+  
+  return Math.round(Math.min(100, Math.max(0, weightedScore)));
+}
+
 export function MockDataProvider({ children }: { children: ReactNode }) {
   const [loads, setLoads] = useState<MockLoad[]>(initialLoads);
   const [bids, setBids] = useState<MockBid[]>(initialBids);
   const [inTransit, setInTransit] = useState<MockInTransit[]>(initialInTransit);
   const [spend, setSpend] = useState<MockSpend>(initialSpend);
   const [notifications, setNotifications] = useState<MockNotification[]>(initialNotifications);
+  const [trucks, setTrucks] = useState<MockTruck[]>(initialTrucks);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTrucks(prev => prev.map(truck => {
+        if (truck.availabilityStatus === "En Route" || truck.speed > 0) {
+          const movementLat = (Math.random() - 0.5) * 0.01;
+          const movementLng = (Math.random() - 0.5) * 0.01;
+          return {
+            ...truck,
+            currentLat: truck.currentLat + movementLat,
+            currentLng: truck.currentLng + movementLng,
+            lastUpdated: new Date(),
+          };
+        }
+        return truck;
+      }));
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const createNotification = useCallback((notificationData: Omit<MockNotification, "id" | "createdAt" | "isRead">) => {
     const newNotification: MockNotification = {
@@ -616,6 +1045,154 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     notifications.filter(n => !n.isRead).length,
   [notifications]);
 
+  const getTruckById = useCallback((truckId: string) => 
+    trucks.find(t => t.truckId === truckId),
+  [trucks]);
+
+  const getNearbyTrucks = useCallback((
+    pickupCity: string,
+    loadType: string,
+    loadWeight: number,
+    filters?: NearbyTruckFilters
+  ): TruckMatchResult[] => {
+    let pickupCoords = cityCoordinates[pickupCity];
+    
+    if (!pickupCoords) {
+      const cityName = pickupCity.split(',')[0]?.trim().toLowerCase();
+      const matchedCityKey = Object.keys(cityCoordinates).find(c => 
+        c.toLowerCase().includes(cityName || '') || cityName?.includes(c.split(',')[0].toLowerCase())
+      );
+      if (matchedCityKey) {
+        pickupCoords = cityCoordinates[matchedCityKey];
+      }
+    }
+    
+    const coords = pickupCoords || { lat: 34.0522, lng: -118.2437 };
+    const radiusKm = filters?.radiusKm || 50;
+    
+    let filteredTrucks = trucks.filter(truck => {
+      const distance = calculateDistance(coords.lat, coords.lng, truck.currentLat, truck.currentLng);
+      if (distance > radiusKm) return false;
+      
+      if (filters?.availableOnly && truck.availabilityStatus !== "Available") return false;
+      if (filters?.truckType && truck.truckType !== filters.truckType) return false;
+      if (filters?.minCapacity && truck.loadCapacity < filters.minCapacity) return false;
+      if (filters?.minRating && truck.reliabilityScore < filters.minRating) return false;
+      
+      return true;
+    });
+    
+    const results: TruckMatchResult[] = filteredTrucks.map(truck => {
+      const distance = calculateDistance(coords.lat, coords.lng, truck.currentLat, truck.currentLng);
+      const matchScore = calculateMatchScore(
+        distance,
+        truck.truckType,
+        loadType,
+        truck.loadCapacity,
+        loadWeight,
+        truck.reliabilityScore,
+        truck.estimatedTimeToPickup
+      );
+      
+      return {
+        ...truck,
+        distanceFromPickup: Math.round(distance * 10) / 10,
+        matchScore,
+      };
+    });
+    
+    return results.sort((a, b) => b.matchScore - a.matchScore);
+  }, [trucks]);
+
+  const requestQuote = useCallback((truckId: string, loadId: string): MockBid => {
+    const truck = trucks.find(t => t.truckId === truckId);
+    const load = loads.find(l => l.loadId === loadId);
+    
+    if (!truck || !load) {
+      throw new Error("Truck or load not found");
+    }
+    
+    const baseBidPrice = load.estimatedPrice * (0.85 + Math.random() * 0.2);
+    const bidPrice = Math.round(baseBidPrice / 50) * 50;
+    
+    const pickupDate = new Date(load.pickupDate);
+    pickupDate.setHours(pickupDate.getHours() + truck.estimatedTimeToPickup / 60);
+    const eta = pickupDate.toLocaleString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    const newBid = addBid({
+      loadId,
+      carrierName: truck.carrierName,
+      carrierId: truck.carrierId,
+      bidPrice,
+      eta,
+      status: "Pending",
+    });
+    
+    createNotification({
+      title: "Quote Requested",
+      message: `Quote requested from ${truck.carrierName} for load ${loadId}`,
+      type: "bid",
+      loadId,
+      bidId: newBid.bidId,
+    });
+    
+    setTimeout(() => {
+      const responses = ["accept", "counter", "decline"] as const;
+      const response = responses[Math.floor(Math.random() * 3)];
+      
+      if (response === "accept") {
+        createNotification({
+          title: "Carrier Responded",
+          message: `${truck.carrierName} accepted your quote request at $${bidPrice.toLocaleString()}`,
+          type: "bid",
+          loadId,
+          bidId: newBid.bidId,
+        });
+      } else if (response === "counter") {
+        const counterPrice = Math.round((bidPrice * (0.9 + Math.random() * 0.15)) / 50) * 50;
+        setBids(prev => prev.map(b => 
+          b.bidId === newBid.bidId 
+            ? { ...b, status: "Countered" as const, counterPrice, counterMessage: `We can offer $${counterPrice} for this route` }
+            : b
+        ));
+        createNotification({
+          title: "Counter-Offer Received",
+          message: `${truck.carrierName} countered with $${counterPrice.toLocaleString()} for load ${loadId}`,
+          type: "bid",
+          loadId,
+          bidId: newBid.bidId,
+        });
+      } else {
+        setBids(prev => prev.map(b => 
+          b.bidId === newBid.bidId ? { ...b, status: "Rejected" as const } : b
+        ));
+        createNotification({
+          title: "Quote Declined",
+          message: `${truck.carrierName} declined the quote request for load ${loadId}`,
+          type: "bid",
+          loadId,
+          bidId: newBid.bidId,
+        });
+      }
+      
+      setTrucks(prev => prev.map(t => {
+        if (t.truckId === truckId && response === "accept") {
+          return { ...t, availabilityStatus: "En Route" as const };
+        }
+        return t;
+      }));
+    }, 3000 + Math.random() * 5000);
+    
+    return newBid;
+  }, [trucks, loads, addBid, createNotification]);
+
   return (
     <MockDataContext.Provider value={{
       loads,
@@ -623,6 +1200,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       inTransit,
       spend,
       notifications,
+      trucks,
       addLoad,
       updateLoad,
       cancelLoad,
@@ -643,6 +1221,9 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       markNotificationRead,
       markAllNotificationsRead,
       getUnreadNotificationCount,
+      getNearbyTrucks,
+      requestQuote,
+      getTruckById,
     }}>
       {children}
     </MockDataContext.Provider>

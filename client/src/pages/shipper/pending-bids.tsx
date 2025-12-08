@@ -3,6 +3,9 @@ import { useMockData } from "@/lib/mock-data-store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -12,9 +15,10 @@ import {
   DollarSign,
   Truck,
   MapPin,
-  Calendar,
   TrendingDown,
   TrendingUp,
+  MessageSquare,
+  ArrowLeftRight,
 } from "lucide-react";
 import {
   Table,
@@ -36,11 +40,15 @@ import { useState } from "react";
 
 export default function PendingBidsPage() {
   const { toast } = useToast();
-  const { bids, loads, getPendingBids, getLoadById, acceptBid, rejectBid } = useMockData();
+  const { bids, loads, getPendingBids, getLoadById, acceptBid, rejectBid, counterBid } = useMockData();
   const [selectedBid, setSelectedBid] = useState<string | null>(null);
-  const [actionType, setActionType] = useState<"accept" | "reject" | null>(null);
+  const [actionType, setActionType] = useState<"accept" | "reject" | "counter" | null>(null);
+  const [counterPrice, setCounterPrice] = useState<string>("");
+  const [counterMessage, setCounterMessage] = useState<string>("");
 
   const pendingBids = getPendingBids();
+  const counteredBids = bids.filter(b => b.status === "Countered");
+  const activeBids = [...pendingBids, ...counteredBids];
 
   const handleAccept = (bidId: string) => {
     setSelectedBid(bidId);
@@ -52,6 +60,16 @@ export default function PendingBidsPage() {
     setActionType("reject");
   };
 
+  const handleCounter = (bidId: string) => {
+    const bid = bids.find(b => b.bidId === bidId);
+    if (bid) {
+      setCounterPrice(String(Math.round(bid.bidPrice * 0.9)));
+      setCounterMessage("We appreciate your bid. Would you consider this counter-offer?");
+    }
+    setSelectedBid(bidId);
+    setActionType("counter");
+  };
+
   const confirmAction = () => {
     if (!selectedBid || !actionType) return;
 
@@ -61,19 +79,36 @@ export default function PendingBidsPage() {
         title: "Bid Accepted",
         description: "The carrier has been notified and assigned to the load.",
       });
-    } else {
+    } else if (actionType === "reject") {
       rejectBid(selectedBid);
       toast({
         title: "Bid Rejected",
         description: "The carrier has been notified of your decision.",
       });
+    } else if (actionType === "counter") {
+      const price = parseFloat(counterPrice);
+      if (isNaN(price) || price <= 0) {
+        toast({
+          title: "Invalid Price",
+          description: "Please enter a valid counter-offer price.",
+          variant: "destructive",
+        });
+        return;
+      }
+      counterBid(selectedBid, price, counterMessage);
+      toast({
+        title: "Counter-Offer Sent",
+        description: "The carrier has been notified of your counter-offer.",
+      });
     }
 
     setSelectedBid(null);
     setActionType(null);
+    setCounterPrice("");
+    setCounterMessage("");
   };
 
-  const getBidStatusBadge = (status: string) => {
+  const getBidStatusBadge = (status: string, counterPrice?: number | null) => {
     switch (status) {
       case "Pending":
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">Pending</Badge>;
@@ -81,18 +116,24 @@ export default function PendingBidsPage() {
         return <Badge className="bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">Accepted</Badge>;
       case "Rejected":
         return <Badge variant="secondary" className="bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">Rejected</Badge>;
+      case "Countered":
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
+            Countered {counterPrice ? `$${counterPrice.toLocaleString()}` : ""}
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  const groupedBids = pendingBids.reduce((acc, bid) => {
+  const groupedBids = activeBids.reduce((acc, bid) => {
     if (!acc[bid.loadId]) {
       acc[bid.loadId] = [];
     }
     acc[bid.loadId].push(bid);
     return acc;
-  }, {} as Record<string, typeof pendingBids>);
+  }, {} as Record<string, typeof activeBids>);
 
   const selectedBidData = selectedBid ? bids.find(b => b.bidId === selectedBid) : null;
   const selectedLoadData = selectedBidData ? getLoadById(selectedBidData.loadId) : null;
@@ -111,7 +152,7 @@ export default function PendingBidsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card data-testid="card-total-bids">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
             <CardTitle className="text-sm font-medium">Total Pending Bids</CardTitle>
@@ -146,6 +187,17 @@ export default function PendingBidsPage() {
                 : 0}
             </div>
             <p className="text-xs text-muted-foreground">Across all pending bids</p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-countered-bids">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <CardTitle className="text-sm font-medium">Counter-Offers Sent</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-countered-bids">{counteredBids.length}</div>
+            <p className="text-xs text-muted-foreground">Awaiting carrier response</p>
           </CardContent>
         </Card>
       </div>
@@ -231,13 +283,22 @@ export default function PendingBidsPage() {
                         <TableCell className="text-muted-foreground">
                           {new Date(bid.createdAt).toLocaleDateString()}
                         </TableCell>
-                        <TableCell>{getBidStatusBadge(bid.status)}</TableCell>
+                        <TableCell>{getBidStatusBadge(bid.status, bid.counterPrice)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {bid.status === "Pending" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCounter(bid.bidId)}
+                                data-testid={`button-counter-${bid.bidId}`}
+                              >
+                                <ArrowLeftRight className="h-4 w-4 mr-1" />
+                                Counter
+                              </Button>
+                            )}
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
                               onClick={() => handleAccept(bid.bidId)}
                               data-testid={`button-accept-${bid.bidId}`}
                             >
@@ -247,7 +308,7 @@ export default function PendingBidsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="text-red-600 dark:text-red-400"
                               onClick={() => handleReject(bid.bidId)}
                               data-testid={`button-reject-${bid.bidId}`}
                             >
@@ -266,15 +327,17 @@ export default function PendingBidsPage() {
         })
       )}
 
-      <Dialog open={!!selectedBid} onOpenChange={() => { setSelectedBid(null); setActionType(null); }}>
+      <Dialog open={!!selectedBid} onOpenChange={() => { setSelectedBid(null); setActionType(null); setCounterPrice(""); setCounterMessage(""); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === "accept" ? "Accept Bid" : "Reject Bid"}
+              {actionType === "accept" ? "Accept Bid" : actionType === "counter" ? "Counter-Offer" : "Reject Bid"}
             </DialogTitle>
             <DialogDescription>
               {actionType === "accept" 
                 ? "Are you sure you want to accept this bid? This will assign the carrier to the load and reject all other bids."
+                : actionType === "counter"
+                ? "Send a counter-offer to negotiate the price with this carrier."
                 : "Are you sure you want to reject this bid? The carrier will be notified of your decision."}
             </DialogDescription>
           </DialogHeader>
@@ -287,7 +350,7 @@ export default function PendingBidsPage() {
                   <p className="font-medium">{selectedBidData.carrierName}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Bid Amount</p>
+                  <p className="text-muted-foreground">Original Bid</p>
                   <p className="font-medium text-lg">${selectedBidData.bidPrice.toLocaleString()}</p>
                 </div>
                 <div>
@@ -303,19 +366,60 @@ export default function PendingBidsPage() {
                 <p className="text-muted-foreground">Route</p>
                 <p className="font-medium">{selectedLoadData.pickup} → {selectedLoadData.drop}</p>
               </div>
+
+              {actionType === "counter" && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label htmlFor="counter-price">Your Counter-Offer Price</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="counter-price"
+                        type="number"
+                        placeholder="Enter your counter-offer"
+                        className="pl-9"
+                        value={counterPrice}
+                        onChange={(e) => setCounterPrice(e.target.value)}
+                        data-testid="input-counter-price"
+                      />
+                    </div>
+                    {counterPrice && selectedBidData && (
+                      <p className="text-xs text-muted-foreground">
+                        {parseFloat(counterPrice) < selectedBidData.bidPrice 
+                          ? `${Math.round((1 - parseFloat(counterPrice) / selectedBidData.bidPrice) * 100)}% lower than original bid`
+                          : parseFloat(counterPrice) > selectedBidData.bidPrice
+                          ? `${Math.round((parseFloat(counterPrice) / selectedBidData.bidPrice - 1) * 100)}% higher than original bid`
+                          : "Same as original bid"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="counter-message">Message to Carrier (Optional)</Label>
+                    <Textarea
+                      id="counter-message"
+                      placeholder="Add a note to explain your counter-offer..."
+                      value={counterMessage}
+                      onChange={(e) => setCounterMessage(e.target.value)}
+                      className="resize-none"
+                      rows={3}
+                      data-testid="input-counter-message"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setSelectedBid(null); setActionType(null); }}>
+            <Button variant="outline" onClick={() => { setSelectedBid(null); setActionType(null); setCounterPrice(""); setCounterMessage(""); }}>
               Cancel
             </Button>
             <Button
-              variant={actionType === "accept" ? "default" : "destructive"}
+              variant={actionType === "reject" ? "destructive" : "default"}
               onClick={confirmAction}
               data-testid={`button-confirm-${actionType}`}
             >
-              {actionType === "accept" ? "Accept Bid" : "Reject Bid"}
+              {actionType === "accept" ? "Accept Bid" : actionType === "counter" ? "Send Counter-Offer" : "Reject Bid"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -25,6 +25,8 @@ export interface MockBid {
   bidPrice: number;
   eta: string;
   status: "Pending" | "Accepted" | "Rejected" | "Countered";
+  counterPrice: number | null;
+  counterMessage: string | null;
   createdAt: string;
 }
 
@@ -63,9 +65,10 @@ interface MockDataContextType {
   cancelLoad: (loadId: string) => void;
   deleteLoad: (loadId: string) => void;
   duplicateLoad: (loadId: string) => MockLoad | null;
-  addBid: (bid: Omit<MockBid, "bidId" | "createdAt">) => MockBid;
+  addBid: (bid: Omit<MockBid, "bidId" | "createdAt" | "counterPrice" | "counterMessage">) => MockBid;
   acceptBid: (bidId: string) => void;
   rejectBid: (bidId: string) => void;
+  counterBid: (bidId: string, counterPrice: number, message: string) => void;
   moveToTransit: (loadId: string, vehicleId: string) => void;
   completeDelivery: (loadId: string) => void;
   getActiveLoads: () => MockLoad[];
@@ -173,6 +176,8 @@ const initialBids: MockBid[] = [
     bidPrice: 1650,
     eta: "Dec 11, 2025 10:00 AM",
     status: "Pending",
+    counterPrice: null,
+    counterMessage: null,
     createdAt: new Date(Date.now() - 1800000).toISOString(),
   },
   {
@@ -183,6 +188,8 @@ const initialBids: MockBid[] = [
     bidPrice: 1720,
     eta: "Dec 11, 2025 8:00 AM",
     status: "Pending",
+    counterPrice: null,
+    counterMessage: null,
     createdAt: new Date(Date.now() - 3600000).toISOString(),
   },
   {
@@ -193,6 +200,8 @@ const initialBids: MockBid[] = [
     bidPrice: 1950,
     eta: "Dec 12, 2025 4:00 PM",
     status: "Pending",
+    counterPrice: null,
+    counterMessage: null,
     createdAt: new Date(Date.now() - 900000).toISOString(),
   },
   {
@@ -203,6 +212,8 @@ const initialBids: MockBid[] = [
     bidPrice: 2050,
     eta: "Dec 12, 2025 2:00 PM",
     status: "Pending",
+    counterPrice: null,
+    counterMessage: null,
     createdAt: new Date(Date.now() - 600000).toISOString(),
   },
   {
@@ -213,6 +224,8 @@ const initialBids: MockBid[] = [
     bidPrice: 2400,
     eta: "Dec 9, 2025 6:00 PM",
     status: "Pending",
+    counterPrice: null,
+    counterMessage: null,
     createdAt: new Date(Date.now() - 300000).toISOString(),
   },
 ];
@@ -356,10 +369,12 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     return newLoad;
   }, [loads]);
 
-  const addBid = useCallback((bidData: Omit<MockBid, "bidId" | "createdAt">): MockBid => {
+  const addBid = useCallback((bidData: Omit<MockBid, "bidId" | "createdAt" | "counterPrice" | "counterMessage">): MockBid => {
     const newBid: MockBid = {
       ...bidData,
       bidId: generateId("BID"),
+      counterPrice: null,
+      counterMessage: null,
       createdAt: new Date().toISOString(),
     };
     setBids(prev => [newBid, ...prev]);
@@ -409,6 +424,14 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   const rejectBid = useCallback((bidId: string) => {
     setBids(prev => prev.map(bid => 
       bid.bidId === bidId ? { ...bid, status: "Rejected" as const } : bid
+    ));
+  }, []);
+
+  const counterBid = useCallback((bidId: string, counterPrice: number, message: string) => {
+    setBids(prev => prev.map(bid => 
+      bid.bidId === bidId 
+        ? { ...bid, status: "Countered" as const, counterPrice, counterMessage: message } 
+        : bid
     ));
   }, []);
 
@@ -478,6 +501,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       addBid,
       acceptBid,
       rejectBid,
+      counterBid,
       moveToTransit,
       completeDelivery,
       getActiveLoads,

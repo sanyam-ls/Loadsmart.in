@@ -326,6 +326,132 @@ export interface DetailedCarrier extends AdminCarrier {
   frequentShippers: { shipperId: string; shipperName: string; loadCount: number }[];
 }
 
+// Revenue Intelligence Types
+export interface RevenueBySource {
+  source: string;
+  category: string;
+  amount: number;
+  percentage: number;
+  trend: number;
+  color: string;
+}
+
+export interface RevenueSourceGroup {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export interface ShipperContributor {
+  shipperId: string;
+  name: string;
+  company: string;
+  totalSpend: number;
+  loadsBooked: number;
+  avgSpendPerLoad: number;
+  contribution: number;
+  region: string;
+}
+
+export interface CarrierContributor {
+  carrierId: string;
+  name: string;
+  loadsExecuted: number;
+  loadValue: number;
+  commissionGenerated: number;
+  contribution: number;
+  rating: number;
+}
+
+export interface LoadTypeRevenue {
+  type: string;
+  totalLoads: number;
+  avgRate: number;
+  revenue: number;
+  peakMonth: string;
+  yoyGrowth: number;
+}
+
+export interface RegionRevenue {
+  region: string;
+  code: string;
+  loadsExecuted: number;
+  revenue: number;
+  yoyGrowth: number;
+  topCustomer: string;
+  heatValue: number;
+}
+
+export interface MonthlyRevenueData {
+  month: string;
+  fullMonth: string;
+  revenue: number;
+  loads: number;
+  growth: number;
+  loadTransactions: number;
+  subscriptions: number;
+  addOns: number;
+  penalties: number;
+}
+
+export interface RevenueTransaction {
+  date: Date;
+  loadId: string;
+  shipper: string;
+  shipperId: string;
+  carrier: string;
+  carrierId: string;
+  loadValue: number;
+  platformFee: number;
+  subscriptionFee: number;
+  paymentStatus: "Paid" | "Pending" | "Overdue";
+  region: string;
+  loadType: string;
+}
+
+export interface QuarterlyRevenue {
+  quarter: string;
+  revenue: number;
+  loads: number;
+  growth: number;
+}
+
+export interface RevenueForecast {
+  month: string;
+  projected: number;
+  confidence: number;
+}
+
+export interface ProfitInsight {
+  label: string;
+  value: string | number;
+  trend?: number;
+  icon: "up" | "down" | "neutral";
+}
+
+export interface AIInsight {
+  text: string;
+  type: "success" | "warning" | "info";
+}
+
+export interface RevenueIntelligence {
+  totalRevenue: number;
+  revenueBySource: RevenueBySource[];
+  sourceGroups: RevenueSourceGroup[];
+  shipperContributors: ShipperContributor[];
+  carrierContributors: CarrierContributor[];
+  loadTypeRevenue: LoadTypeRevenue[];
+  regionRevenue: RegionRevenue[];
+  monthlyRevenue: MonthlyRevenueData[];
+  transactions: RevenueTransaction[];
+  quarterlyData: QuarterlyRevenue[];
+  forecast: RevenueForecast[];
+  bestMonth: MonthlyRevenueData;
+  worstMonth: MonthlyRevenueData;
+  profitInsights: ProfitInsight[];
+  aiInsights: AIInsight[];
+}
+
 export interface VerificationRequest {
   requestId: string;
   entityType: "carrier" | "shipper" | "document";
@@ -428,6 +554,8 @@ interface AdminDataContextType {
   
   refreshFromShipperPortal: () => void;
   syncToShipperPortal: (loadId: string, updates: Partial<MockLoad>) => void;
+  
+  getRevenueIntelligence: () => RevenueIntelligence;
 }
 
 const AdminDataContext = createContext<AdminDataContextType | null>(null);
@@ -1634,6 +1762,182 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const getRevenueIntelligence = useCallback((): RevenueIntelligence => {
+    const loadTypesForRevenue = ["FMCG", "Construction", "Machinery", "Perishables", "Chemical", "Bulk Materials", "Electronics", "Textiles", "Automotive", "Pharmaceuticals"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const fullMonths = ["January 2024", "February 2024", "March 2024", "April 2024", "May 2024", "June 2024", "July 2024", "August 2024", "September 2024", "October 2024", "November 2024", "December 2024"];
+    const revenueRegions = [
+      { name: "North India", code: "N" },
+      { name: "West India", code: "W" },
+      { name: "South India", code: "S" },
+      { name: "East India", code: "E" },
+      { name: "NCR", code: "NCR" },
+      { name: "Gujarat", code: "GJ" },
+      { name: "Maharashtra", code: "MH" },
+      { name: "Punjab", code: "PB" },
+    ];
+
+    const totalRevenue = 32600000;
+
+    const revenueBySource: RevenueBySource[] = [
+      { source: "Load Transactions", category: "Freight commissions", amount: totalRevenue * 0.65, percentage: 65, trend: 12.4, color: "hsl(217, 91%, 48%)" },
+      { source: "Load Transactions", category: "Platform fee per load", amount: totalRevenue * 0.12, percentage: 12, trend: 8.2, color: "hsl(217, 91%, 58%)" },
+      { source: "Subscription Revenue", category: "Shipper subscriptions", amount: totalRevenue * 0.08, percentage: 8, trend: 15.6, color: "hsl(142, 76%, 36%)" },
+      { source: "Subscription Revenue", category: "Carrier premium subscriptions", amount: totalRevenue * 0.05, percentage: 5, trend: 22.1, color: "hsl(142, 76%, 46%)" },
+      { source: "Subscription Revenue", category: "Enterprise accounts", amount: totalRevenue * 0.03, percentage: 3, trend: 18.9, color: "hsl(142, 76%, 56%)" },
+      { source: "Add-on Services", category: "Document verification fees", amount: totalRevenue * 0.025, percentage: 2.5, trend: 5.3, color: "hsl(48, 96%, 53%)" },
+      { source: "Add-on Services", category: "Priority support", amount: totalRevenue * 0.015, percentage: 1.5, trend: 7.8, color: "hsl(48, 96%, 63%)" },
+      { source: "Add-on Services", category: "Analytics upgrades", amount: totalRevenue * 0.01, percentage: 1, trend: 25.4, color: "hsl(48, 96%, 73%)" },
+      { source: "Penalty/Adjustment", category: "Late cancellation fees", amount: totalRevenue * 0.012, percentage: 1.2, trend: -3.2, color: "hsl(0, 72%, 51%)" },
+      { source: "Penalty/Adjustment", category: "Delay penalties", amount: totalRevenue * 0.008, percentage: 0.8, trend: -8.5, color: "hsl(0, 72%, 61%)" },
+    ];
+
+    const sourceGroups: RevenueSourceGroup[] = [
+      { name: "Load Transactions", value: totalRevenue * 0.77, color: "hsl(217, 91%, 48%)" },
+      { name: "Subscriptions", value: totalRevenue * 0.16, color: "hsl(142, 76%, 36%)" },
+      { name: "Add-on Services", value: totalRevenue * 0.05, color: "hsl(48, 96%, 53%)" },
+      { name: "Penalties", value: totalRevenue * 0.02, color: "hsl(0, 72%, 51%)" },
+    ];
+
+    const shippers = usersRef.current.filter(u => u.role === "shipper").slice(0, 15);
+    const shipperContributors: ShipperContributor[] = shippers.map((shipper) => {
+      const spend = randomBetween(500000, 5000000);
+      const loads = randomBetween(15, 120);
+      return {
+        shipperId: shipper.userId,
+        name: shipper.name,
+        company: shipper.company,
+        totalSpend: spend,
+        loadsBooked: loads,
+        avgSpendPerLoad: Math.round(spend / loads),
+        contribution: (spend / totalRevenue) * 100,
+        region: shipper.region,
+      };
+    }).sort((a, b) => b.totalSpend - a.totalSpend);
+
+    const carrierContributors: CarrierContributor[] = carriersRef.current.slice(0, 10).map((carrier) => {
+      const loads = randomBetween(30, 200);
+      const loadValue = randomBetween(2000000, 10000000);
+      const commission = loadValue * 0.08;
+      return {
+        carrierId: carrier.carrierId,
+        name: carrier.companyName,
+        loadsExecuted: loads,
+        loadValue,
+        commissionGenerated: commission,
+        contribution: (commission / (totalRevenue * 0.77)) * 100,
+        rating: carrier.rating,
+      };
+    }).sort((a, b) => b.commissionGenerated - a.commissionGenerated);
+
+    const loadTypeRevenue: LoadTypeRevenue[] = loadTypesForRevenue.map((type) => ({
+      type,
+      totalLoads: randomBetween(50, 300),
+      avgRate: randomBetween(25000, 85000),
+      revenue: randomBetween(1500000, 6000000),
+      peakMonth: randomFrom(fullMonths),
+      yoyGrowth: randomBetween(-15, 35),
+    })).sort((a, b) => b.revenue - a.revenue);
+
+    const regionRevenue: RegionRevenue[] = revenueRegions.map((region) => ({
+      region: region.name,
+      code: region.code,
+      loadsExecuted: randomBetween(100, 600),
+      revenue: randomBetween(2000000, 8000000),
+      yoyGrowth: randomBetween(-10, 30),
+      topCustomer: randomFrom(shippers)?.company || "ABC Logistics",
+      heatValue: Math.random(),
+    })).sort((a, b) => b.revenue - a.revenue);
+
+    const monthlyRevenue: MonthlyRevenueData[] = months.map((month, idx) => {
+      const baseRevenue = 2200000 + idx * 150000 + randomBetween(-200000, 200000);
+      return {
+        month,
+        fullMonth: fullMonths[idx],
+        revenue: baseRevenue,
+        loads: randomBetween(180, 350),
+        growth: idx > 0 ? randomBetween(-8, 15) : 0,
+        loadTransactions: baseRevenue * 0.77,
+        subscriptions: baseRevenue * 0.16,
+        addOns: baseRevenue * 0.05,
+        penalties: baseRevenue * 0.02,
+      };
+    });
+
+    const revenueTransactions: RevenueTransaction[] = [];
+    for (let i = 0; i < 100; i++) {
+      const loadValue = randomBetween(20000, 150000);
+      const shipper = randomFrom(shippers);
+      const carrier = randomFrom(carriersRef.current);
+      revenueTransactions.push({
+        date: new Date(Date.now() - randomBetween(0, 365) * 24 * 60 * 60 * 1000),
+        loadId: `LD-${randomBetween(10000, 99999)}`,
+        shipper: shipper?.company || "Unknown",
+        shipperId: shipper?.userId || `SHP-${randomBetween(1000, 9999)}`,
+        carrier: carrier?.companyName || "Unknown",
+        carrierId: carrier?.carrierId || `CAR-${randomBetween(1000, 9999)}`,
+        loadValue,
+        platformFee: loadValue * 0.08,
+        subscriptionFee: randomBetween(0, 500),
+        paymentStatus: randomFrom(["Paid", "Paid", "Paid", "Pending", "Overdue"]),
+        region: randomFrom(revenueRegions).name,
+        loadType: randomFrom(loadTypesForRevenue),
+      });
+    }
+    revenueTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    const quarterlyData: QuarterlyRevenue[] = [
+      { quarter: "Q1 2024", revenue: monthlyRevenue.slice(0, 3).reduce((s, m) => s + m.revenue, 0), loads: monthlyRevenue.slice(0, 3).reduce((s, m) => s + m.loads, 0), growth: 8.5 },
+      { quarter: "Q2 2024", revenue: monthlyRevenue.slice(3, 6).reduce((s, m) => s + m.revenue, 0), loads: monthlyRevenue.slice(3, 6).reduce((s, m) => s + m.loads, 0), growth: 12.3 },
+      { quarter: "Q3 2024", revenue: monthlyRevenue.slice(6, 9).reduce((s, m) => s + m.revenue, 0), loads: monthlyRevenue.slice(6, 9).reduce((s, m) => s + m.loads, 0), growth: 15.7 },
+      { quarter: "Q4 2024", revenue: monthlyRevenue.slice(9, 12).reduce((s, m) => s + m.revenue, 0), loads: monthlyRevenue.slice(9, 12).reduce((s, m) => s + m.loads, 0), growth: 18.2 },
+    ];
+
+    const forecast: RevenueForecast[] = [
+      { month: "Jan 2025", projected: 3100000, confidence: 85 },
+      { month: "Feb 2025", projected: 3250000, confidence: 78 },
+      { month: "Mar 2025", projected: 3400000, confidence: 72 },
+    ];
+
+    const sortedMonths = [...monthlyRevenue].sort((a, b) => b.revenue - a.revenue);
+    const bestMonth = sortedMonths[0];
+    const worstMonth = sortedMonths[sortedMonths.length - 1];
+
+    const profitInsights: ProfitInsight[] = [
+      { label: "Gross Revenue", value: totalRevenue, trend: 14.2, icon: "up" },
+      { label: "Estimated Cost", value: totalRevenue * 0.68, trend: 5.8, icon: "up" },
+      { label: "Estimated Profit Margin", value: "32%", trend: 2.1, icon: "up" },
+      { label: "CAC (Customer Acquisition)", value: 12500, trend: -5.3, icon: "down" },
+      { label: "LTV (Lifetime Value)", value: 285000, trend: 18.7, icon: "up" },
+    ];
+
+    const aiInsights: AIInsight[] = [
+      { text: "Machinery loads show the highest revenue contribution this quarter.", type: "success" },
+      { text: `${shipperContributors[0]?.company || "Top shipper"} is your top-paying customer this month.`, type: "info" },
+      { text: "Revenue dropped 11.9% in August due to fewer loads in North India.", type: "warning" },
+      { text: "Subscription revenue is growing 22% faster than load transactions.", type: "success" },
+      { text: "Consider expanding in East India - low penetration but high growth potential.", type: "info" },
+    ];
+
+    return {
+      totalRevenue,
+      revenueBySource,
+      sourceGroups,
+      shipperContributors,
+      carrierContributors,
+      loadTypeRevenue,
+      regionRevenue,
+      monthlyRevenue,
+      transactions: revenueTransactions,
+      quarterlyData,
+      forecast,
+      bestMonth,
+      worstMonth,
+      profitInsights,
+      aiInsights,
+    };
+  }, []);
+
   return (
     <AdminDataContext.Provider value={{
       users,
@@ -1670,6 +1974,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       addActivity,
       refreshFromShipperPortal,
       syncToShipperPortal,
+      getRevenueIntelligence,
     }}>
       {children}
     </AdminDataContext.Provider>

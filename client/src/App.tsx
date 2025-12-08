@@ -42,6 +42,7 @@ import AdminLoadDetailsPage from "@/pages/admin/load-details";
 import AdminCarriersPage from "@/pages/admin/carriers";
 import CarrierProfilePage from "@/pages/admin/carrier-profile";
 import AdminVolumeAnalytics from "@/pages/admin/volume-analytics";
+import RevenueDashboard from "@/pages/admin/revenue-dashboard";
 import InTransitPage from "@/pages/in-transit";
 import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
@@ -131,6 +132,9 @@ function AppContent() {
               <Route path="/admin/carriers" component={AdminCarriersPage} />
               <Route path="/admin/carriers/:carrierId" component={CarrierProfilePage} />
               <Route path="/admin/volume" component={AdminVolumeAnalytics} />
+              <Route path="/admin/analytics" component={AdminVolumeAnalytics} />
+              <Route path="/admin/revenue" component={RevenueDashboard} />
+              <Route path="/admin/revenue/:metric" component={RevenueDashboard} />
               <Route path="/admin/verification" component={AdminCarriersPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
               

@@ -252,3 +252,42 @@ All endpoints require authentication (`requireAuth` middleware):
 - Telemetry simulation engine updates every 1 second
 - No telematics data in Admin Console or Carrier Portal
 - Test users: shipper/admin123 (shipper role), admin/admin123 (admin role)
+
+## Admin Console Centralized Data Store
+
+The Admin Console uses a centralized data store (`client/src/lib/admin-data-store.tsx`) for enterprise-scale mock data management. This provides:
+
+### Architecture Pattern
+- React Context with useRef for stable references
+- All admin functions use useRef pattern to avoid stale closures
+- State refresh pattern: After admin actions, call getter methods to refresh local state
+
+### Data Types Managed
+- **AdminUser**: User accounts with roles (shipper, carrier, dispatcher, admin)
+- **AdminLoad**: Freight loads with detailed statuses and assignments
+- **AdminCarrier**: Carrier companies with fleet, documents, and performance data
+- **DetailedCarrier**: 7-tab carrier profile (Overview, Fleet, Documents, Performance, Loads, Financials, Activity)
+- **RevenueIntelligence**: Comprehensive revenue analytics with 8 data categories
+
+### Revenue Intelligence System
+The `getRevenueIntelligence()` method provides centralized revenue data:
+- **RevenueBySource**: Breakdown by Load Transactions (77%), Subscriptions (16%), Add-ons (5%), Penalties (2%)
+- **ShipperContributor/CarrierContributor**: Top revenue contributors
+- **LoadTypeRevenue**: Revenue by freight type (FMCG, Construction, Machinery, etc.)
+- **RegionRevenue**: Geographic revenue distribution across Indian regions
+- **MonthlyRevenueData**: 12-month historical data with growth metrics
+- **RevenueTransaction**: Individual transaction records
+- **ProfitInsight/AIInsight**: Profitability metrics and AI-generated insights
+
+### Key Methods
+- `getDetailedLoad(loadId)`: Returns complete load details with timeline and documents
+- `getDetailedCarrier(carrierId)`: Returns 7-tab carrier profile data
+- `getRevenueIntelligence()`: Returns comprehensive revenue analytics
+- Admin actions: `addCarrierNote()`, `invalidateCarrierDocument()`, `suspendCarrier()`, etc.
+
+### Data Scale
+- 350-450 users across all roles
+- 180-280 loads with full lifecycle data
+- 90-130 carriers with fleet and performance data
+- 24 months transaction history
+- Rs. 3.26 Cr (~$400K) total revenue for analytics

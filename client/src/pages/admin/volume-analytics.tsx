@@ -237,9 +237,13 @@ export default function AdminVolumeAnalytics() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate transition-all"
+          onClick={() => setLocation("/admin/revenue/sources")}
+          data-testid="card-total-volume"
+        >
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">Total Volume</p>
                 <p className="text-2xl font-bold">{formatCurrency(totalVolume)}</p>
@@ -255,11 +259,18 @@ export default function AdminVolumeAnalytics() {
               {monthlyGrowth >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
               {monthlyGrowth >= 0 ? "+" : ""}{monthlyGrowth.toFixed(1)}% vs last month
             </Badge>
+            <p className="text-xs text-primary mt-2 flex items-center gap-1">
+              Click to view detailed breakdown
+            </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate transition-all"
+          onClick={() => setLocation("/admin/revenue/transactions")}
+          data-testid="card-total-loads"
+        >
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">Total Loads</p>
                 <p className="text-2xl font-bold">{totalLoads.toLocaleString()}</p>
@@ -268,11 +279,18 @@ export default function AdminVolumeAnalytics() {
                 <Package className="h-5 w-5 text-green-500" />
               </div>
             </div>
+            <p className="text-xs text-primary mt-2 flex items-center gap-1">
+              Click to view all transactions
+            </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate transition-all"
+          onClick={() => setLocation("/admin/revenue/timeline")}
+          data-testid="card-avg-load-price"
+        >
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">Avg Load Price</p>
                 <p className="text-2xl font-bold">{formatCurrency(avgLoadPrice)}</p>
@@ -281,11 +299,18 @@ export default function AdminVolumeAnalytics() {
                 <TrendingUp className="h-5 w-5 text-amber-500" />
               </div>
             </div>
+            <p className="text-xs text-primary mt-2 flex items-center gap-1">
+              Click to view pricing trends
+            </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className="cursor-pointer hover-elevate transition-all"
+          onClick={() => setLocation("/admin/revenue/profitability")}
+          data-testid="card-active-months"
+        >
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">Active Months</p>
                 <p className="text-2xl font-bold">{filteredData.length}</p>
@@ -294,6 +319,9 @@ export default function AdminVolumeAnalytics() {
                 <Calendar className="h-5 w-5 text-purple-500" />
               </div>
             </div>
+            <p className="text-xs text-primary mt-2 flex items-center gap-1">
+              Click for profitability insights
+            </p>
           </CardContent>
         </Card>
       </div>

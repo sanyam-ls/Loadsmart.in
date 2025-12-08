@@ -1892,11 +1892,21 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       stage,
     };
 
-    setShipments(prev => prev.map(s => 
-      s.shipmentId === shipmentId 
-        ? { ...s, documents: [...s.documents, newDoc] }
-        : s
-    ));
+    setShipments(prev => prev.map(s => {
+      if (s.shipmentId === shipmentId) {
+        const updatedEvents = s.events.map(e => 
+          e.stage === stage 
+            ? { ...e, documents: [...e.documents, newDoc] }
+            : e
+        );
+        return { 
+          ...s, 
+          documents: [...s.documents, newDoc],
+          events: updatedEvents,
+        };
+      }
+      return s;
+    }));
 
     createNotification({
       title: "Document Uploaded",
@@ -1945,6 +1955,12 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       documents: s.documents.map(d => 
         d.docId === docId ? { ...d, status: "verified" as const } : d
       ),
+      events: s.events.map(e => ({
+        ...e,
+        documents: e.documents.map(d =>
+          d.docId === docId ? { ...d, status: "verified" as const } : d
+        ),
+      })),
     })));
   }, []);
 
@@ -1952,6 +1968,10 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     setShipments(prev => prev.map(s => ({
       ...s,
       documents: s.documents.filter(d => d.docId !== docId),
+      events: s.events.map(e => ({
+        ...e,
+        documents: e.documents.filter(d => d.docId !== docId),
+      })),
     })));
   }, []);
 
@@ -1966,14 +1986,29 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateShipmentStage = useCallback((shipmentId: string, stage: ShipmentStage, notes?: string) => {
-    const stageIndex = shipmentStages.indexOf(stage);
-    const progress = Math.round((stageIndex / (shipmentStages.length - 1)) * 100);
+    const shipment = shipmentsRef.current.find(s => s.shipmentId === shipmentId);
+    if (!shipment) return;
+
+    const currentStageIndex = shipmentStages.indexOf(shipment.currentStage);
+    const newStageIndex = shipmentStages.indexOf(stage);
+    
+    if (newStageIndex < currentStageIndex && stage !== "completed") {
+      console.warn(`Cannot regress stage from ${shipment.currentStage} to ${stage}`);
+      return;
+    }
+    
+    if (shipment.currentStage === "completed") {
+      console.warn("Cannot update stage of a completed shipment");
+      return;
+    }
+
+    const progress = Math.round((newStageIndex / (shipmentStages.length - 1)) * 100);
 
     setShipments(prev => prev.map(s => {
       if (s.shipmentId === shipmentId) {
         const updatedEvents = s.events.map((e, idx) => ({
           ...e,
-          completed: idx <= stageIndex,
+          completed: idx <= newStageIndex,
           notes: e.stage === stage && notes ? notes : e.notes,
         }));
         return { 
@@ -1986,26 +2021,23 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       return s;
     }));
 
-    const shipment = shipmentsRef.current.find(s => s.shipmentId === shipmentId);
-    if (shipment) {
-      const stageLabels: Record<ShipmentStage, string> = {
-        load_created: "Load Created",
-        carrier_assigned: "Carrier Assigned",
-        reached_pickup: "Reached Pickup",
-        loaded: "Loaded",
-        in_transit: "In Transit",
-        arrived_at_drop: "Arrived at Drop",
-        delivered: "Delivered",
-        completed: "Completed",
-      };
-      
-      createNotification({
-        title: "Shipment Update",
-        message: `${shipment.route} - ${stageLabels[stage]}`,
-        type: "shipment",
-        loadId: shipment.loadId,
-      });
-    }
+    const stageLabels: Record<ShipmentStage, string> = {
+      load_created: "Load Created",
+      carrier_assigned: "Carrier Assigned",
+      reached_pickup: "Reached Pickup",
+      loaded: "Loaded",
+      in_transit: "In Transit",
+      arrived_at_drop: "Arrived at Drop",
+      delivered: "Delivered",
+      completed: "Completed",
+    };
+    
+    createNotification({
+      title: "Shipment Update",
+      message: `${shipment.route} - ${stageLabels[stage]}`,
+      type: "shipment",
+      loadId: shipment.loadId,
+    });
   }, [createNotification]);
 
   useEffect(() => {

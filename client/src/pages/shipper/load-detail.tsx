@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { 
   ChevronLeft, MapPin, Package, Calendar, DollarSign, Truck, 
-  Users, Edit, Copy, X, CheckCircle, AlertCircle, Star
+  Users, Edit, Copy, X, CheckCircle, AlertCircle, Star, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useMockData } from "@/lib/mock-data-store";
+import { DocumentManager } from "@/components/document-manager";
 
 function getStatusColor(status: string | null) {
   switch (status) {
@@ -85,11 +86,13 @@ export default function LoadDetailPage() {
     cancelLoad, 
     duplicateLoad, 
     acceptBid, 
-    rejectBid 
+    rejectBid,
+    getShipmentByLoadId
   } = useMockData();
 
   const load = getLoadById(params.id || "");
   const bids = getBidsForLoad(params.id || "");
+  const shipment = getShipmentByLoadId(params.id || "");
 
   const handleCancel = () => {
     if (params.id) {
@@ -386,6 +389,29 @@ export default function LoadDetailPage() {
           )}
         </div>
       </div>
+
+      {shipment && (
+        <div className="mt-6">
+          <DocumentManager shipment={shipment} />
+        </div>
+      )}
+
+      {!shipment && (load.status === "Active" || load.status === "Bidding") && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Documents</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                <p className="text-sm">Documents become available after carrier assignment</p>
+                <p className="text-xs mt-1">Once a carrier is assigned, you can upload and manage shipment documents here</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Dialog open={cancelDialog} onOpenChange={setCancelDialog}>
         <DialogContent>

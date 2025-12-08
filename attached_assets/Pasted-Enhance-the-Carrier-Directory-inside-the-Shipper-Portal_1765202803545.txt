@@ -1,0 +1,187 @@
+Enhance the Carrier Directory inside the Shipper Portal so that every “View Profile” button opens a full carrier profile screen, every “Request Quote” button opens an interactive quote generation panel, and additional carrier profiles are automatically generated with mock data. All quote requests must integrate into the Pending Bids system, Negotiation Center, and dashboard metrics.
+
+⸻
+
+🔵 1. EXPAND CARRIER DIRECTORY WITH MORE CARRIER PROFILES
+
+Create a larger mock dataset of carriers including:
+	•	Carrier name
+	•	Badge level: Gold, Silver, Bronze, Platinum
+	•	Rating (4.0–5.0)
+	•	Fleet size
+	•	Number of deliveries
+	•	Service zones (tags)
+	•	Years in operation
+	•	Reliability score
+	•	Response time
+	•	Available truck types
+	•	Verified status
+
+The UI must automatically load multiple profiles (6–12 carriers minimum).
+
+⸻
+
+🔵 2. VIEW PROFILE — FULL CARRIER PROFILE SCREEN
+
+When the user clicks View Profile, open a full-screen or modal profile containing:
+
+Carrier Overview
+	•	Logo / initials badge
+	•	Carrier name
+	•	Rating
+	•	Badge level (Gold/Silver/Platinum etc.)
+	•	Verification status
+	•	Joined year
+	•	Service zones map or tags
+
+Carrier Details
+	•	Fleet breakdown by truck type
+	•	Average delivery time
+	•	Total completed shipments
+	•	Safety score (mock)
+	•	Reliability score
+	•	Driver documentation status (mock)
+	•	Insurance + compliance status
+
+Performance Insights
+	•	On-time delivery %
+	•	Communication rating
+	•	Damage claim rate
+	•	Monthly shipment capacity
+	•	Preferred routes
+
+Shipper Tools
+	•	Request Quote button
+	•	Add to Favorites (mock)
+	•	Start Negotiation (mock)
+	•	Quick contact (simulated)
+
+This profile must feel deep, trustworthy, and actionable.
+
+⸻
+
+🔵 3. REQUEST QUOTE — INTERACTIVE QUOTATION SCREEN
+
+When user clicks Request Quote, open a Quote Generation Panel that includes:
+
+Load selection
+	•	Choose from Active Loads
+	•	Load details auto-fill (pickup, drop, weight, type)
+
+Automatic Estimate (simulated)
+
+System should generate a mock estimated price based on:
+	•	Distance
+	•	Truck type required
+	•	Carrier’s pricing factor
+	•	Current demand simulation
+
+Show:
+	•	Base Rate
+	•	Fuel Surcharge
+	•	Carrier Premium / Discount
+	•	Total Estimated Quote
+
+Editable Fields
+
+Allow shipper to adjust:
+	•	Preferred pickup time
+	•	Notes to carrier
+	•	Counter-offer box
+
+Submit Quote Request
+
+When submitted:
+	1.	A new simulated bid appears under Pending Bids
+	2.	The Negotiation Center receives a new chat thread
+	3.	Dashboard Pending Bids count updates
+	4.	Carrier-side simulated response will appear in the chat (mock)
+
+⸻
+
+🔵 4. QUOTE WORKFLOW AND SYNC
+
+The entire quoting system must sync across:
+
+1. Pending Bids Page
+	•	New bid appears with:
+	•	Carrier
+	•	Load ID
+	•	Estimated price
+	•	ETA
+	•	Status: “Waiting for carrier response”
+
+2. Negotiation Center
+	•	Auto-creates a chat:
+	•	Carrier: “Thanks for your request, reviewing now.”
+	•	Then simulated responses follow
+
+3. Dashboard
+	•	Pending Bids count increases
+	•	Active Loads and In Transit update when bid is accepted
+
+4. Load Details
+	•	Quote request must appear under the load’s bidding history
+
+Everything must stay in sync using the central mock data store.
+
+⸻
+
+🔵 5. ADDITIONAL CARRIERS AUTO-GENERATED
+
+The system should auto-generate a fleet of additional carriers, each with unique:
+	•	Names
+	•	Ratings
+	•	Fleets
+	•	Zones
+	•	Badges
+	•	Profiles
+	•	Pricing behavior
+
+These carriers must appear alongside existing ones in the directory.
+
+⸻
+
+🔵 6. USER EXPERIENCE REQUIREMENTS
+
+The Carrier Directory should support:
+	•	Search by name
+	•	Filter by zone
+	•	Filter by carrier level
+	•	Sort by rating or fleet size
+	•	Pagination or scroll
+
+Carrier cards must remain clean and consistent.
+
+⸻
+
+🔵 7. DOCUMENTATION & INFO SECTIONS
+
+Inside each carrier profile, include:
+	•	Compliance documents (mock pdfs/images)
+	•	RC / Insurance status
+	•	Driver ID samples
+	•	Company registration info
+	•	Help button with carrier-specific FAQs
+
+These documents must be openable in a simulated viewer.
+
+⸻
+
+🔵 8. ERROR / EMPTY STATES
+
+If no carriers match filters:
+
+Show:
+“No carriers found. Adjust filters or try again.”
+
+If carrier cannot estimate price (simulated):
+
+Show:
+“Carrier unavailable at the moment.”
+
+⸻
+
+🔥 FINAL INSTRUCTION TO REPLIT AI
+
+Build a complete Carrier Directory experience where “View Profile” opens a detailed carrier profile, “Request Quote” opens an interactive quotation panel with estimated pricing, and additional carrier profiles are generated automatically. All quote requests must sync into Pending Bids, Negotiation Center, Load Details, and dashboard metrics via the central mock data store. No static pages — every component must feel alive, connected, and operational.

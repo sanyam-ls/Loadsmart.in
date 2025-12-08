@@ -38,6 +38,7 @@ import CarrierDocumentsPage from "@/pages/carrier/documents";
 import AdminOverview from "@/pages/admin/overview";
 import AdminUsersPage from "@/pages/admin/users";
 import AdminLoadsPage from "@/pages/admin/loads";
+import AdminLoadDetailsPage from "@/pages/admin/load-details";
 import AdminCarriersPage from "@/pages/admin/carriers";
 import AdminVolumeAnalytics from "@/pages/admin/volume-analytics";
 import InTransitPage from "@/pages/in-transit";
@@ -125,7 +126,7 @@ function AppContent() {
               <Route path="/admin/users" component={AdminUsersPage} />
               <Route path="/admin/users/:id" component={AdminUsersPage} />
               <Route path="/admin/loads" component={AdminLoadsPage} />
-              <Route path="/admin/loads/:id" component={AdminLoadsPage} />
+              <Route path="/admin/loads/:loadId" component={AdminLoadDetailsPage} />
               <Route path="/admin/carriers" component={AdminCarriersPage} />
               <Route path="/admin/carriers/:id" component={AdminCarriersPage} />
               <Route path="/admin/volume" component={AdminVolumeAnalytics} />

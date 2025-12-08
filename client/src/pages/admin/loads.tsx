@@ -422,7 +422,8 @@ export default function AdminLoadsPage() {
                   paginatedLoads.map((load) => (
                     <TableRow 
                       key={load.loadId} 
-                      className="cursor-pointer"
+                      className="cursor-pointer hover-elevate"
+                      onClick={() => setLocation(`/admin/loads/${load.loadId}`)}
                       data-testid={`row-load-${load.loadId}`}
                     >
                       <TableCell className="font-mono font-medium" data-testid={`text-load-id-${load.loadId}`}>

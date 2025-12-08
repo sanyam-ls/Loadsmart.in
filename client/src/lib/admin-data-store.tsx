@@ -35,6 +35,113 @@ export interface AdminLoad {
   bidCount: number;
   distance: number;
   dimensions: string;
+  priority?: "Normal" | "High" | "Critical";
+  title?: string;
+  description?: string;
+  specialHandling?: string;
+  requiredTruckType?: string;
+}
+
+export interface LoadShipperDetails {
+  shipperId: string;
+  name: string;
+  company: string;
+  phone: string;
+  email: string;
+  address: string;
+  isVerified: boolean;
+  totalLoadsPosted: number;
+  rating: number;
+}
+
+export interface LoadCarrierDetails {
+  carrierId: string;
+  companyName: string;
+  contactNumber: string;
+  verificationStatus: "verified" | "pending" | "rejected" | "expired";
+  rating: number;
+  fleetSize: number;
+}
+
+export interface LoadVehicleDetails {
+  vehicleId: string;
+  truckType: string;
+  vehicleNumber: string;
+  driverName: string;
+  driverPhone: string;
+  driverLicense: string;
+  capacity: string;
+  rcStatus: "Valid" | "Expired" | "Pending";
+  insuranceStatus: "Valid" | "Expired" | "Pending";
+}
+
+export interface LoadBidRecord {
+  bidId: string;
+  carrierId: string;
+  carrierName: string;
+  amount: number;
+  status: "Pending" | "Accepted" | "Rejected" | "Countered";
+  submittedAt: Date;
+  counterOffer?: number;
+  notes?: string;
+}
+
+export interface LoadNegotiationMessage {
+  messageId: string;
+  senderId: string;
+  senderType: "shipper" | "carrier" | "admin";
+  senderName: string;
+  message: string;
+  timestamp: Date;
+}
+
+export interface LoadCostBreakdown {
+  baseFreightCost: number;
+  fuelSurcharge: number;
+  handlingFee: number;
+  platformFee: number;
+  totalCost: number;
+}
+
+export interface LoadDocument {
+  documentId: string;
+  type: "POD" | "Invoice" | "Insurance" | "BOL" | "Consignment" | "RC" | "DriverLicense" | "Other";
+  name: string;
+  uploadedAt: Date;
+  uploadedBy: string;
+  status: "Pending" | "Approved" | "Rejected";
+  url?: string;
+}
+
+export interface LoadActivityEvent {
+  eventId: string;
+  type: "created" | "edited" | "bid_received" | "carrier_assigned" | "pickup_scheduled" | "driver_enroute" | "picked_up" | "in_transit" | "checkpoint" | "document_uploaded" | "delivered" | "admin_action" | "status_change";
+  description: string;
+  timestamp: Date;
+  userId?: string;
+  userName?: string;
+}
+
+export interface LoadRouteInfo {
+  pickupCoordinates: { lat: number; lng: number };
+  dropCoordinates: { lat: number; lng: number };
+  currentLocation?: { lat: number; lng: number };
+  estimatedTime: string;
+  liveStatus: "Pending Pickup" | "At Pickup" | "Loaded" | "En Route" | "At Checkpoint" | "Delivered";
+  checkpoints: { name: string; status: "passed" | "current" | "upcoming"; time?: Date }[];
+}
+
+export interface DetailedLoad extends AdminLoad {
+  shipperDetails: LoadShipperDetails;
+  carrierDetails?: LoadCarrierDetails;
+  vehicleDetails?: LoadVehicleDetails;
+  bids: LoadBidRecord[];
+  negotiations: LoadNegotiationMessage[];
+  costBreakdown: LoadCostBreakdown;
+  documents: LoadDocument[];
+  activityLog: LoadActivityEvent[];
+  routeInfo: LoadRouteInfo;
+  adminNotes?: string;
 }
 
 export interface AdminCarrier {
@@ -135,6 +242,11 @@ interface AdminDataContextType {
   updateLoad: (loadId: string, updates: Partial<AdminLoad>) => void;
   assignCarrier: (loadId: string, carrierId: string, carrierName: string) => void;
   updateLoadStatus: (loadId: string, status: AdminLoad["status"]) => void;
+  getDetailedLoad: (loadId: string) => DetailedLoad | null;
+  cancelLoad: (loadId: string) => void;
+  addAdminNote: (loadId: string, note: string) => void;
+  approveDocument: (loadId: string, documentId: string) => void;
+  rejectDocument: (loadId: string, documentId: string) => void;
   
   updateCarrier: (carrierId: string, updates: Partial<AdminCarrier>) => void;
   verifyCarrier: (carrierId: string) => void;
@@ -835,6 +947,223 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     });
   }, [shipperData]);
 
+  const getDetailedLoad = useCallback((loadId: string): DetailedLoad | null => {
+    const load = adminLoadsRef.current.find(l => l.loadId === loadId);
+    if (!load) return null;
+
+    const shipper = usersRef.current.find(u => u.userId === load.shipperId) || usersRef.current.find(u => u.role === "shipper");
+    const carrier = load.carrierId ? carriersRef.current.find(c => c.carrierId === load.carrierId) : null;
+
+    const driverFirstName = randomFrom(indianFirstNames);
+    const driverLastName = randomFrom(indianLastNames);
+
+    const shipperDetails: LoadShipperDetails = {
+      shipperId: shipper?.userId || load.shipperId,
+      name: shipper?.name || "Unknown Shipper",
+      company: shipper?.company || load.shipperName,
+      phone: shipper?.phone || `+91 ${randomBetween(70000, 99999)} ${randomBetween(10000, 99999)}`,
+      email: shipper?.email || "shipper@example.com",
+      address: `${randomFrom(cities)}, ${shipper?.region || "India"}`,
+      isVerified: shipper?.isVerified || false,
+      totalLoadsPosted: randomBetween(5, 150),
+      rating: 3.5 + Math.random() * 1.5,
+    };
+
+    const carrierDetails: LoadCarrierDetails | undefined = carrier ? {
+      carrierId: carrier.carrierId,
+      companyName: carrier.companyName,
+      contactNumber: carrier.phone,
+      verificationStatus: carrier.verificationStatus,
+      rating: carrier.rating,
+      fleetSize: carrier.fleetSize,
+    } : undefined;
+
+    const vehicleDetails: LoadVehicleDetails | undefined = carrier ? {
+      vehicleId: `VEH-${randomBetween(1000, 9999)}`,
+      truckType: load.requiredTruckType || randomFrom(["Flatbed", "Container", "Trailer", "Mini", "Reefer", "Tanker"]),
+      vehicleNumber: `${randomFrom(["MH", "DL", "KA", "TN", "GJ", "RJ"])} ${randomBetween(10, 99)} ${randomFrom(["AB", "CD", "EF"])} ${randomBetween(1000, 9999)}`,
+      driverName: `${driverFirstName} ${driverLastName}`,
+      driverPhone: `+91 ${randomBetween(70000, 99999)} ${randomBetween(10000, 99999)}`,
+      driverLicense: `DL-${randomBetween(1000000000, 9999999999)}`,
+      capacity: `${randomBetween(5, 25)} tons`,
+      rcStatus: Math.random() > 0.1 ? "Valid" : "Pending",
+      insuranceStatus: Math.random() > 0.15 ? "Valid" : "Pending",
+    } : undefined;
+
+    const bidCount = load.bidCount || randomBetween(3, 12);
+    const bids: LoadBidRecord[] = [];
+    for (let i = 0; i < bidCount; i++) {
+      const bidCarrier = randomFrom(carriersRef.current);
+      const isAccepted = carrier && bidCarrier.carrierId === carrier.carrierId;
+      bids.push({
+        bidId: `BID-${loadId}-${i + 1}`,
+        carrierId: bidCarrier.carrierId,
+        carrierName: bidCarrier.companyName,
+        amount: Math.round(load.spending * (0.85 + Math.random() * 0.3)),
+        status: isAccepted ? "Accepted" : (Math.random() < 0.2 ? "Rejected" : "Pending"),
+        submittedAt: new Date(load.createdDate.getTime() + randomBetween(1, 48) * 60 * 60 * 1000),
+        notes: Math.random() > 0.7 ? randomFrom(["Can pickup immediately", "Have experience with this route", "Offering best rate"]) : undefined,
+      });
+    }
+
+    const negotiations: LoadNegotiationMessage[] = [];
+    if (carrier) {
+      const messages = [
+        { type: "shipper" as const, msg: "Please confirm your availability for this load" },
+        { type: "carrier" as const, msg: "Yes, we can handle this. What is your expected pickup time?" },
+        { type: "shipper" as const, msg: "We need pickup by tomorrow morning" },
+        { type: "carrier" as const, msg: "That works for us. Driver will reach by 8 AM" },
+        { type: "shipper" as const, msg: "Perfect. Please share driver details" },
+      ];
+      messages.forEach((m, idx) => {
+        negotiations.push({
+          messageId: `MSG-${loadId}-${idx + 1}`,
+          senderId: m.type === "shipper" ? shipperDetails.shipperId : carrier.carrierId,
+          senderType: m.type,
+          senderName: m.type === "shipper" ? shipperDetails.name : carrier.companyName,
+          message: m.msg,
+          timestamp: new Date(load.createdDate.getTime() + (idx + 2) * 60 * 60 * 1000),
+        });
+      });
+    }
+
+    const baseFreight = Math.round(load.spending * 0.75);
+    const fuelSurcharge = Math.round(load.spending * 0.12);
+    const handlingFee = Math.round(load.spending * 0.08);
+    const platformFee = Math.round(load.spending * 0.05);
+    const costBreakdown: LoadCostBreakdown = {
+      baseFreightCost: baseFreight,
+      fuelSurcharge,
+      handlingFee,
+      platformFee,
+      totalCost: baseFreight + fuelSurcharge + handlingFee + platformFee,
+    };
+
+    const documents: LoadDocument[] = [];
+    if (["Assigned", "En Route", "Delivered"].includes(load.status)) {
+      documents.push(
+        { documentId: `DOC-${loadId}-1`, type: "BOL", name: "Bill of Lading.pdf", uploadedAt: new Date(), uploadedBy: shipperDetails.name, status: "Approved" },
+        { documentId: `DOC-${loadId}-2`, type: "Consignment", name: "Consignment Note.pdf", uploadedAt: new Date(), uploadedBy: shipperDetails.name, status: "Approved" },
+      );
+    }
+    if (load.status === "Delivered") {
+      documents.push(
+        { documentId: `DOC-${loadId}-3`, type: "POD", name: "Proof of Delivery.pdf", uploadedAt: new Date(), uploadedBy: carrier?.companyName || "Carrier", status: "Pending" },
+        { documentId: `DOC-${loadId}-4`, type: "Invoice", name: "Final Invoice.pdf", uploadedAt: new Date(), uploadedBy: carrier?.companyName || "Carrier", status: "Pending" },
+      );
+    }
+
+    const activityLog: LoadActivityEvent[] = [
+      { eventId: `EVT-${loadId}-1`, type: "created", description: `Load created by ${shipperDetails.company}`, timestamp: load.createdDate, userName: shipperDetails.name },
+    ];
+    if (bids.length > 0) {
+      activityLog.push({ eventId: `EVT-${loadId}-2`, type: "bid_received", description: `${bids.length} bids received`, timestamp: new Date(load.createdDate.getTime() + 2 * 60 * 60 * 1000) });
+    }
+    if (carrier) {
+      activityLog.push({ eventId: `EVT-${loadId}-3`, type: "carrier_assigned", description: `Carrier ${carrier.companyName} assigned`, timestamp: new Date(load.createdDate.getTime() + 12 * 60 * 60 * 1000), userName: "Admin" });
+    }
+    if (["En Route", "Delivered"].includes(load.status)) {
+      activityLog.push({ eventId: `EVT-${loadId}-4`, type: "picked_up", description: "Load picked up from origin", timestamp: new Date(load.createdDate.getTime() + 24 * 60 * 60 * 1000) });
+      activityLog.push({ eventId: `EVT-${loadId}-5`, type: "in_transit", description: "Shipment in transit", timestamp: new Date(load.createdDate.getTime() + 26 * 60 * 60 * 1000) });
+    }
+    if (load.status === "Delivered") {
+      activityLog.push({ eventId: `EVT-${loadId}-6`, type: "delivered", description: "Load delivered successfully", timestamp: new Date(load.createdDate.getTime() + 72 * 60 * 60 * 1000) });
+    }
+
+    const cityCoords: Record<string, { lat: number; lng: number }> = {
+      "Delhi": { lat: 28.6139, lng: 77.2090 },
+      "Mumbai": { lat: 19.0760, lng: 72.8777 },
+      "Bangalore": { lat: 12.9716, lng: 77.5946 },
+      "Chennai": { lat: 13.0827, lng: 80.2707 },
+      "Kolkata": { lat: 22.5726, lng: 88.3639 },
+      "Hyderabad": { lat: 17.3850, lng: 78.4867 },
+      "Pune": { lat: 18.5204, lng: 73.8567 },
+      "Ahmedabad": { lat: 23.0225, lng: 72.5714 },
+      "Jaipur": { lat: 26.9124, lng: 75.7873 },
+      "Lucknow": { lat: 26.8467, lng: 80.9462 },
+    };
+
+    const pickupCoords = cityCoords[load.pickup] || { lat: 20.5937 + Math.random() * 10, lng: 78.9629 + Math.random() * 10 };
+    const dropCoords = cityCoords[load.drop] || { lat: 20.5937 + Math.random() * 10, lng: 78.9629 + Math.random() * 10 };
+
+    const routeInfo: LoadRouteInfo = {
+      pickupCoordinates: pickupCoords,
+      dropCoordinates: dropCoords,
+      currentLocation: load.status === "En Route" ? {
+        lat: pickupCoords.lat + (dropCoords.lat - pickupCoords.lat) * Math.random(),
+        lng: pickupCoords.lng + (dropCoords.lng - pickupCoords.lng) * Math.random(),
+      } : undefined,
+      estimatedTime: `${Math.ceil(load.distance / 50)} hours`,
+      liveStatus: load.status === "Delivered" ? "Delivered" : 
+                  load.status === "En Route" ? "En Route" : 
+                  load.status === "Assigned" ? "Pending Pickup" : "Pending Pickup",
+      checkpoints: [
+        { name: load.pickup, status: ["En Route", "Delivered"].includes(load.status) ? "passed" : "current" },
+        { name: randomFrom(Object.keys(cityCoords)), status: load.status === "Delivered" ? "passed" : load.status === "En Route" ? "current" : "upcoming" },
+        { name: load.drop, status: load.status === "Delivered" ? "passed" : "upcoming" },
+      ],
+    };
+
+    return {
+      ...load,
+      priority: load.priority || randomFrom(["Normal", "Normal", "Normal", "High", "Critical"]),
+      title: load.title || `${load.type} Shipment`,
+      description: load.description || `Transport of ${load.weight}${load.weightUnit} ${load.type} cargo from ${load.pickup} to ${load.drop}`,
+      specialHandling: load.specialHandling || (load.type === "Refrigerated" ? "Temperature controlled, maintain 2-8°C" : undefined),
+      requiredTruckType: load.requiredTruckType || randomFrom(["Flatbed", "Container", "Trailer", "Open Body"]),
+      shipperDetails,
+      carrierDetails,
+      vehicleDetails,
+      bids,
+      negotiations,
+      costBreakdown,
+      documents,
+      activityLog: activityLog.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+      routeInfo,
+    };
+  }, []);
+
+  const cancelLoad = useCallback((loadId: string) => {
+    const load = adminLoadsRef.current.find(l => l.loadId === loadId);
+    setAdminLoads(prev => prev.map(l => l.loadId === loadId ? { ...l, status: "Cancelled" as const } : l));
+    shipperData.updateLoad(loadId, { status: "Cancelled" });
+    if (load) {
+      addActivity({
+        type: "load",
+        message: `Load ${loadId} cancelled by admin`,
+        entityId: loadId,
+        severity: "warning",
+      });
+    }
+  }, [shipperData]);
+
+  const addAdminNote = useCallback((loadId: string, note: string) => {
+    addActivity({
+      type: "load",
+      message: `Admin note added to load ${loadId}: ${note.substring(0, 50)}...`,
+      entityId: loadId,
+      severity: "info",
+    });
+  }, []);
+
+  const approveDocument = useCallback((loadId: string, documentId: string) => {
+    addActivity({
+      type: "document",
+      message: `Document ${documentId} approved for load ${loadId}`,
+      entityId: loadId,
+      severity: "success",
+    });
+  }, []);
+
+  const rejectDocument = useCallback((loadId: string, documentId: string) => {
+    addActivity({
+      type: "document",
+      message: `Document ${documentId} rejected for load ${loadId}`,
+      entityId: loadId,
+      severity: "error",
+    });
+  }, []);
+
   return (
     <AdminDataContext.Provider value={{
       users,
@@ -853,6 +1182,11 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       updateLoad,
       assignCarrier,
       updateLoadStatus,
+      getDetailedLoad,
+      cancelLoad,
+      addAdminNote,
+      approveDocument,
+      rejectDocument,
       updateCarrier,
       verifyCarrier,
       rejectCarrier,

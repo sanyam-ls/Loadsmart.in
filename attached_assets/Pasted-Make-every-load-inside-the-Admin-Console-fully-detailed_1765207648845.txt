@@ -1,0 +1,193 @@
+Make every load inside the Admin Console fully detailed, transparent, searchable, and synced with the Shipper Portal.
+
+⸻
+
+🔵 1. Create a Fully Detailed Load Information Screen
+
+When an admin clicks any load from “All Loads,” open a full-page Load Details module containing:
+
+Load Overview
+	•	Load ID
+	•	Load Title / Type (e.g., Machinery, FMCG, Bulk, Perishables, Construction Material)
+	•	Status (Pending, Active, In Transit, Completed, Canceled)
+	•	Priority tag (Normal / High / Critical)
+	•	Date created
+
+⸻
+
+🔵 2. Shipper Information (Must Be Visible to Admin)
+
+Display:
+
+Shipper Profile
+	•	Shipper Name
+	•	Company Name
+	•	Phone Number
+	•	Email
+	•	Address (optional)
+	•	Account type: Verified / Unverified
+	•	Total loads posted
+	•	Shipper rating (mock)
+
+Shipper Contact Options
+	•	“Call Shipper” (simulated)
+	•	“Email Shipper” (simulated)
+	•	“View Shipper Profile”
+
+Admins should clearly see who posted the load and how to reach them.
+
+⸻
+
+🔵 3. Load Specification Block
+
+Show complete technical information:
+	•	Pickup location
+	•	Dropoff location
+	•	Distance (km/mi)
+	•	Load category (choose from preset types)
+	•	Weight
+	•	Dimensions (L × W × H)
+	•	Load description
+	•	Special handling requirements
+	•	Required truck type
+
+Admins should easily understand what exactly is being transported.
+
+⸻
+
+🔵 4. Assigned Carrier + Vehicle Information
+
+Provide a complete carrier + truck breakdown:
+
+Carrier Details
+	•	Carrier company name
+	•	Carrier contact number
+	•	Carrier verification status
+	•	Carrier rating
+	•	Fleet size
+
+Assigned Vehicle
+	•	Truck type (Mini, Flatbed, Trailer, Container, Reefer, etc.)
+	•	Vehicle number (mock)
+	•	Driver name
+	•	Driver phone
+	•	Driver license (mock)
+	•	Vehicle capacity
+	•	RC / Insurance status
+
+This reveals who is fulfilling the load and with what assets.
+
+⸻
+
+🔵 5. Route & Tracking Information
+
+Add a “Route Details” section:
+	•	Map preview (simulated)
+	•	Pickup → Drop path
+	•	Distance + Estimated time
+	•	Live status (In Transit, Reached Pickup, Loaded, En Route, Delivered)
+	•	Current mock location
+	•	ETA updates
+
+Admins should see where the load is right now.
+
+⸻
+
+🔵 6. Bidding & Negotiation History
+
+Include a full history:
+
+Bid Timeline
+	•	All carriers who placed bids
+	•	Prices offered
+	•	Counter-offers
+	•	Accepted bid
+	•	Timestamp logs
+
+Negotiation Chat Log
+	•	Fake messages between shipper and carrier
+	•	Rate confirmations
+	•	Pickup scheduling discussion
+
+Admins get control over pricing and negotiation transparency.
+
+⸻
+
+🔵 7. Cost Breakdown & Spend Analytics
+
+Add financial transparency:
+	•	Base freight cost
+	•	Fuel surcharge
+	•	Handling fee
+	•	Platform fee (if applicable)
+	•	Total shipment cost
+
+Link this to Monthly Volume analytics.
+
+⸻
+
+🔵 8. Documents Section (Load-Specific)
+
+Auto-display any documents linked by shipper or carrier:
+	•	POD (Proof of Delivery)
+	•	Invoice
+	•	Insurance document
+	•	BOL (Bill of Lading)
+	•	Consignment note
+	•	RC + Driver documents
+
+Allow:
+	•	View
+	•	Download
+	•	Replace version
+	•	Approve (admin only)
+
+⸻
+
+🔵 9. Activity Log (Complete Timeline)
+
+Every load should have a timestamp-based audit trail:
+	•	Load created
+	•	Shipper edits
+	•	Carrier assigned
+	•	Pickup scheduled
+	•	Driver en route
+	•	Documents uploaded
+	•	Load delivered
+	•	Admin actions
+
+Admins must be able to see the entire lifecycle.
+
+⸻
+
+🔵 10. Actions Admin Can Take
+
+Admin panel must include:
+	•	Reassign Carrier
+	•	Update Status
+	•	Edit Load Details
+	•	Cancel Load
+	•	Add Admin Notes
+	•	Approve / Reject Documents
+	•	Trigger Sync with Shipper Portal
+
+All buttons operate via mock data.
+
+⸻
+
+🔵 11. Link Everything Back to the Unified Data Layer
+
+Any update made in Admin must reflect in:
+	•	Shipper Portal (Active Loads, Pending Bids, In Transit, Completed)
+	•	Carrier Portal (Assigned Loads, Bids, Negotiations)
+	•	Admin Dashboard metrics
+	•	Transaction Volume
+	•	Load Status chart
+
+Zero static numbers → everything must update dynamically.
+
+⸻
+
+🔥 FINAL INSTRUCTION FOR REPLIT AI
+
+Build a complete Load Details module in the Admin Console with full shipper information, load specifications, carrier details, truck data, bidding history, negotiation logs, route/ETA simulation, cost breakdown, documents, and an activity timeline. Make every load fully transparent and manageable. Sync every update with the Shipper Portal and keep all metrics dynamic across the system.

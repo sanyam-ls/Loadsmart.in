@@ -66,6 +66,8 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
   ComposedChart,
 } from "recharts";
 import { useTheme } from "@/lib/theme-provider";

@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Package, DollarSign, Truck, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight } from "lucide-react";
+import { Package, DollarSign, Truck, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatCard } from "@/components/stat-card";
 import { useAuth } from "@/lib/auth-context";
 import { useMockData } from "@/lib/mock-data-store";
+import { useDocumentVault } from "@/lib/document-vault-store";
 import { 
   AreaChart, 
   Area, 
@@ -24,11 +25,6 @@ const mockTopCarriers = [
   { id: "c3", name: "Premier Freight", rating: 4.7, deliveries: 156 },
 ];
 
-const mockAlerts = [
-  { id: 1, type: "delay", message: "Shipment LD-T001 may be delayed by 30 mins", time: "5 mins ago" },
-  { id: 2, type: "bid", message: "New bid received for load LD-002", time: "12 mins ago" },
-  { id: 3, type: "document", message: "POD uploaded for delivery #4521", time: "1 hour ago" },
-];
 
 export default function ShipperDashboard() {
   const [, navigate] = useLocation();
@@ -41,14 +37,34 @@ export default function ShipperDashboard() {
     spend,
     trucks
   } = useMockData();
+  const { getExpiringDocuments, getExpiredDocuments } = useDocumentVault();
 
   const activeLoads = getActiveLoads();
   const pendingBids = getPendingBids();
   const inTransitLoads = getInTransitLoads();
+  const expiringDocs = getExpiringDocuments();
+  const expiredDocs = getExpiredDocuments();
   
   const recentLoads = activeLoads.slice(0, 3);
 
   const spendChange = spend.percentChange;
+
+  const dashboardAlerts = [
+    { id: "delay-1", type: "delay", message: "Shipment LD-T001 may be delayed by 30 mins", time: "5 mins ago" },
+    { id: "bid-1", type: "bid", message: "New bid received for load LD-002", time: "12 mins ago" },
+    ...expiredDocs.slice(0, 2).map((doc, i) => ({
+      id: `expired-${i}`,
+      type: "document" as const,
+      message: `${doc.fileName} has expired and needs renewal`,
+      time: "Action required",
+    })),
+    ...expiringDocs.slice(0, 2).map((doc, i) => ({
+      id: `expiring-${i}`,
+      type: "document" as const,
+      message: `${doc.fileName} expires soon`,
+      time: "Review needed",
+    })),
+  ];
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -152,25 +168,26 @@ export default function ShipperDashboard() {
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
             <CardTitle className="text-lg">Alerts</CardTitle>
             <Badge variant="destructive" className="no-default-hover-elevate no-default-active-elevate">
-              {mockAlerts.length}
+              {dashboardAlerts.length}
             </Badge>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-64">
               <div className="space-y-3">
-                {mockAlerts.map((alert) => (
+                {dashboardAlerts.map((alert) => (
                   <div
                     key={alert.id}
                     className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                    onClick={() => alert.type === "document" && navigate("/shipper/documents")}
                     data-testid={`alert-${alert.id}`}
                   >
-                    <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                      alert.type === "delay" 
-                        ? "text-red-500" 
-                        : alert.type === "document" 
-                          ? "text-amber-500" 
-                          : "text-blue-500"
-                    }`} />
+                    {alert.type === "document" ? (
+                      <FileText className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500" />
+                    ) : (
+                      <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                        alert.type === "delay" ? "text-red-500" : "text-blue-500"
+                      }`} />
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm">{alert.message}</p>
                       <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>

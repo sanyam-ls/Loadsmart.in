@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 
 export interface MockTruck {
   truckId: string;
@@ -89,6 +89,30 @@ export interface MockNotification {
   bidId?: string;
 }
 
+export interface ChatMessage {
+  messageId: string;
+  sender: "shipper" | "carrier";
+  senderName: string;
+  content: string;
+  timestamp: Date;
+  type: "text" | "bid_update" | "counter_offer" | "acceptance" | "rejection" | "withdrawal" | "system";
+  bidAmount?: number;
+}
+
+export interface NegotiationThread {
+  threadId: string;
+  bidId: string;
+  loadId: string;
+  carrierName: string;
+  carrierId: string;
+  messages: ChatMessage[];
+  currentBidAmount: number;
+  lastCounterAmount: number | null;
+  status: "active" | "accepted" | "rejected" | "withdrawn";
+  carrierTyping: boolean;
+  lastUpdated: Date;
+}
+
 interface NearbyTruckFilters {
   truckType?: string;
   radiusKm?: number;
@@ -104,6 +128,7 @@ interface MockDataContextType {
   spend: MockSpend;
   notifications: MockNotification[];
   trucks: MockTruck[];
+  negotiations: NegotiationThread[];
   addLoad: (load: Omit<MockLoad, "loadId" | "createdAt">) => MockLoad;
   updateLoad: (loadId: string, updates: Partial<MockLoad>) => void;
   cancelLoad: (loadId: string) => void;
@@ -127,6 +152,12 @@ interface MockDataContextType {
   getNearbyTrucks: (pickupCity: string, loadType: string, loadWeight: number, filters?: NearbyTruckFilters) => TruckMatchResult[];
   requestQuote: (truckId: string, loadId: string) => MockBid;
   getTruckById: (truckId: string) => MockTruck | undefined;
+  getOrCreateNegotiation: (bidId: string) => NegotiationThread;
+  sendNegotiationMessage: (threadId: string, message: string) => void;
+  submitCounterOffer: (threadId: string, amount: number, message?: string) => void;
+  acceptNegotiation: (threadId: string) => void;
+  rejectNegotiation: (threadId: string) => void;
+  getActiveNegotiations: () => NegotiationThread[];
 }
 
 const MockDataContext = createContext<MockDataContextType | null>(null);
@@ -792,6 +823,19 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   const [spend, setSpend] = useState<MockSpend>(initialSpend);
   const [notifications, setNotifications] = useState<MockNotification[]>(initialNotifications);
   const [trucks, setTrucks] = useState<MockTruck[]>(initialTrucks);
+  const [negotiations, setNegotiations] = useState<NegotiationThread[]>([]);
+  const [pendingTimeouts, setPendingTimeouts] = useState<Set<ReturnType<typeof setTimeout>>>(new Set());
+  
+  const bidsRef = useRef<MockBid[]>(bids);
+  const negotiationsRef = useRef<NegotiationThread[]>(negotiations);
+  
+  useEffect(() => {
+    bidsRef.current = bids;
+  }, [bids]);
+  
+  useEffect(() => {
+    negotiationsRef.current = negotiations;
+  }, [negotiations]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -902,14 +946,22 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const acceptBid = useCallback((bidId: string) => {
-    const bid = bids.find(b => b.bidId === bidId);
-    if (!bid) return;
+    const bidRef: { current: MockBid | undefined } = { current: undefined };
+    
+    setBids(prev => {
+      const bid = prev.find(b => b.bidId === bidId);
+      if (!bid) return prev;
+      bidRef.current = bid;
+      
+      return prev.map(b => {
+        if (b.bidId === bidId) return { ...b, status: "Accepted" as const };
+        if (b.loadId === bid.loadId) return { ...b, status: "Rejected" as const };
+        return b;
+      });
+    });
 
-    setBids(prev => prev.map(b => {
-      if (b.bidId === bidId) return { ...b, status: "Accepted" as const };
-      if (b.loadId === bid.loadId) return { ...b, status: "Rejected" as const };
-      return b;
-    }));
+    const bid = bidRef.current;
+    if (!bid) return;
 
     setLoads(prev => prev.map(load => 
       load.loadId === bid.loadId 
@@ -940,7 +992,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       loadId: bid.loadId,
       bidId: bid.bidId,
     });
-  }, [bids, createNotification]);
+  }, [createNotification]);
 
   const rejectBid = useCallback((bidId: string) => {
     setBids(prev => prev.map(bid => 
@@ -949,13 +1001,18 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const counterBid = useCallback((bidId: string, counterPrice: number, message: string) => {
-    const bid = bids.find(b => b.bidId === bidId);
-    setBids(prev => prev.map(b => 
-      b.bidId === bidId 
-        ? { ...b, status: "Countered" as const, counterPrice, counterMessage: message } 
-        : b
-    ));
+    const bidRef: { current: MockBid | undefined } = { current: undefined };
     
+    setBids(prev => {
+      bidRef.current = prev.find(b => b.bidId === bidId);
+      return prev.map(b => 
+        b.bidId === bidId 
+          ? { ...b, status: "Countered" as const, counterPrice, counterMessage: message } 
+          : b
+      );
+    });
+    
+    const bid = bidRef.current;
     if (bid) {
       createNotification({
         title: "Counter-Offer Sent",
@@ -965,7 +1022,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
         bidId: bid.bidId,
       });
     }
-  }, [bids, createNotification]);
+  }, [createNotification]);
 
   const moveToTransit = useCallback((loadId: string, vehicleId: string) => {
     const load = loads.find(l => l.loadId === loadId);
@@ -1193,6 +1250,288 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     return newBid;
   }, [trucks, loads, addBid, createNotification]);
 
+  const carrierResponses = [
+    "We can offer ${amount} for this route.",
+    "Based on current fuel prices, ${amount} is our best rate.",
+    "Traffic conditions may affect ETA. We can do ${amount}.",
+    "Can you confirm loading time? We're offering ${amount}.",
+    "We can improve rate to ${amount} if loading is flexible.",
+    "Our driver is available. ${amount} is competitive for this lane.",
+    "Weather looks good. We can commit at ${amount}.",
+    "This is our standard rate: ${amount}. Volume discounts available.",
+  ];
+
+  const getRandomCarrierResponse = (amount: number) => {
+    const template = carrierResponses[Math.floor(Math.random() * carrierResponses.length)];
+    return template.replace("${amount}", `$${amount.toLocaleString()}`);
+  };
+
+  const simulateCarrierTyping = useCallback((threadId: string, callback: () => void) => {
+    setNegotiations(prev => prev.map(n => 
+      n.threadId === threadId ? { ...n, carrierTyping: true } : n
+    ));
+    
+    const typingDelay = 1000 + Math.random() * 2000;
+    const timeout = setTimeout(() => {
+      setNegotiations(prev => prev.map(n => 
+        n.threadId === threadId ? { ...n, carrierTyping: false } : n
+      ));
+      callback();
+      setPendingTimeouts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(timeout);
+        return newSet;
+      });
+    }, typingDelay);
+    
+    setPendingTimeouts(prev => new Set(prev).add(timeout));
+  }, []);
+
+  const addMessageToThread = useCallback((threadId: string, message: ChatMessage) => {
+    setNegotiations(prev => prev.map(n => 
+      n.threadId === threadId 
+        ? { 
+            ...n, 
+            messages: [...n.messages, message], 
+            lastUpdated: new Date(),
+            currentBidAmount: message.bidAmount ?? n.currentBidAmount 
+          } 
+        : n
+    ));
+  }, []);
+
+  const getOrCreateNegotiation = useCallback((bidId: string): NegotiationThread => {
+    const existing = negotiationsRef.current.find(n => n.bidId === bidId);
+    if (existing) return existing;
+
+    const bid = bidsRef.current.find(b => b.bidId === bidId);
+    if (!bid) throw new Error("Bid not found");
+    
+    const initialMessage: ChatMessage = {
+      messageId: generateId("msg"),
+      sender: "carrier",
+      senderName: bid.carrierName,
+      content: getRandomCarrierResponse(bid.bidPrice),
+      timestamp: new Date(bid.createdAt),
+      type: "bid_update",
+      bidAmount: bid.bidPrice,
+    };
+
+    const thread: NegotiationThread = {
+      threadId: generateId("thread"),
+      bidId,
+      loadId: bid.loadId,
+      carrierName: bid.carrierName,
+      carrierId: bid.carrierId,
+      messages: [initialMessage],
+      currentBidAmount: bid.bidPrice,
+      lastCounterAmount: bid.counterPrice,
+      status: bid.status === "Accepted" ? "accepted" : bid.status === "Rejected" ? "rejected" : "active",
+      carrierTyping: false,
+      lastUpdated: new Date(),
+    };
+
+    if (bid.counterPrice && bid.counterMessage) {
+      thread.messages.push({
+        messageId: generateId("msg"),
+        sender: "shipper",
+        senderName: "You",
+        content: `Counter-offer submitted: $${bid.counterPrice.toLocaleString()}`,
+        timestamp: new Date(),
+        type: "counter_offer",
+        bidAmount: bid.counterPrice,
+      });
+    }
+
+    setNegotiations(prev => [...prev, thread]);
+    return thread;
+  }, []);
+
+  const sendNegotiationMessage = useCallback((threadId: string, message: string) => {
+    const shipperMessage: ChatMessage = {
+      messageId: generateId("msg"),
+      sender: "shipper",
+      senderName: "You",
+      content: message,
+      timestamp: new Date(),
+      type: "text",
+    };
+    addMessageToThread(threadId, shipperMessage);
+
+    const thread = negotiationsRef.current.find(n => n.threadId === threadId);
+    if (!thread) return;
+
+    simulateCarrierTyping(threadId, () => {
+      const acknowledgments = [
+        "Got it, let me check with dispatch.",
+        "Understood. I'll get back to you shortly.",
+        "Thanks for the update!",
+        "Noted. We'll coordinate accordingly.",
+        "Received. Our team is reviewing.",
+      ];
+      const carrierReply: ChatMessage = {
+        messageId: generateId("msg"),
+        sender: "carrier",
+        senderName: thread.carrierName,
+        content: acknowledgments[Math.floor(Math.random() * acknowledgments.length)],
+        timestamp: new Date(),
+        type: "text",
+      };
+      addMessageToThread(threadId, carrierReply);
+    });
+  }, [addMessageToThread, simulateCarrierTyping]);
+
+  const submitCounterOffer = useCallback((threadId: string, amount: number, message?: string) => {
+    const thread = negotiationsRef.current.find(n => n.threadId === threadId);
+    if (!thread) return;
+
+    const counterMessage: ChatMessage = {
+      messageId: generateId("msg"),
+      sender: "shipper",
+      senderName: "You",
+      content: message || `Counter-offer submitted: $${amount.toLocaleString()}`,
+      timestamp: new Date(),
+      type: "counter_offer",
+      bidAmount: amount,
+    };
+    addMessageToThread(threadId, counterMessage);
+
+    setNegotiations(prev => prev.map(n => 
+      n.threadId === threadId ? { ...n, lastCounterAmount: amount } : n
+    ));
+
+    counterBid(thread.bidId, amount, message || `Counter-offer: $${amount}`);
+
+    simulateCarrierTyping(threadId, () => {
+      const responses = ["accept", "counter", "negotiate"] as const;
+      const response = responses[Math.floor(Math.random() * 3)];
+      
+      if (response === "accept") {
+        const acceptMessage: ChatMessage = {
+          messageId: generateId("msg"),
+          sender: "carrier",
+          senderName: thread.carrierName,
+          content: `We accept your offer of $${amount.toLocaleString()}. Ready to proceed!`,
+          timestamp: new Date(),
+          type: "text",
+          bidAmount: amount,
+        };
+        addMessageToThread(threadId, acceptMessage);
+        
+        setBids(prev => prev.map(b => 
+          b.bidId === thread.bidId ? { ...b, bidPrice: amount, status: "Pending" as const } : b
+        ));
+        
+        setNegotiations(prev => prev.map(n => 
+          n.threadId === threadId ? { ...n, currentBidAmount: amount } : n
+        ));
+        
+        createNotification({
+          title: "Carrier Accepted Counter-Offer",
+          message: `${thread.carrierName} accepted your counter-offer of $${amount.toLocaleString()}`,
+          type: "bid",
+          loadId: thread.loadId,
+          bidId: thread.bidId,
+        });
+      } else {
+        const carrierCounter = Math.round((amount + thread.currentBidAmount) / 2 / 50) * 50;
+        const counterReply: ChatMessage = {
+          messageId: generateId("msg"),
+          sender: "carrier",
+          senderName: thread.carrierName,
+          content: getRandomCarrierResponse(carrierCounter),
+          timestamp: new Date(),
+          type: "counter_offer",
+          bidAmount: carrierCounter,
+        };
+        addMessageToThread(threadId, counterReply);
+        
+        setBids(prev => prev.map(b => 
+          b.bidId === thread.bidId 
+            ? { ...b, bidPrice: carrierCounter, status: "Countered" as const, counterPrice: carrierCounter }
+            : b
+        ));
+        
+        setNegotiations(prev => prev.map(n => 
+          n.threadId === threadId ? { ...n, currentBidAmount: carrierCounter } : n
+        ));
+        
+        createNotification({
+          title: "New Counter-Offer",
+          message: `${thread.carrierName} countered with $${carrierCounter.toLocaleString()}`,
+          type: "bid",
+          loadId: thread.loadId,
+          bidId: thread.bidId,
+        });
+      }
+    });
+  }, [addMessageToThread, simulateCarrierTyping, counterBid, createNotification]);
+
+  const acceptNegotiation = useCallback((threadId: string) => {
+    const thread = negotiationsRef.current.find(n => n.threadId === threadId);
+    if (!thread) return;
+
+    const acceptMessage: ChatMessage = {
+      messageId: generateId("msg"),
+      sender: "shipper",
+      senderName: "You",
+      content: `You accepted the bid of $${thread.currentBidAmount.toLocaleString()}.`,
+      timestamp: new Date(),
+      type: "acceptance",
+      bidAmount: thread.currentBidAmount,
+    };
+    addMessageToThread(threadId, acceptMessage);
+
+    setNegotiations(prev => prev.map(n => 
+      n.threadId === threadId ? { ...n, status: "accepted" as const } : n
+    ));
+
+    acceptBid(thread.bidId);
+
+    simulateCarrierTyping(threadId, () => {
+      const confirmMessage: ChatMessage = {
+        messageId: generateId("msg"),
+        sender: "carrier",
+        senderName: thread.carrierName,
+        content: "Great! We'll dispatch our driver shortly. Thank you for your business!",
+        timestamp: new Date(),
+        type: "text",
+      };
+      addMessageToThread(threadId, confirmMessage);
+    });
+  }, [addMessageToThread, simulateCarrierTyping, acceptBid]);
+
+  const rejectNegotiation = useCallback((threadId: string) => {
+    const thread = negotiationsRef.current.find(n => n.threadId === threadId);
+    if (!thread) return;
+
+    const rejectMessage: ChatMessage = {
+      messageId: generateId("msg"),
+      sender: "shipper",
+      senderName: "You",
+      content: "You rejected this bid.",
+      timestamp: new Date(),
+      type: "rejection",
+    };
+    addMessageToThread(threadId, rejectMessage);
+
+    setNegotiations(prev => prev.map(n => 
+      n.threadId === threadId ? { ...n, status: "rejected" as const } : n
+    ));
+
+    rejectBid(thread.bidId);
+  }, [addMessageToThread, rejectBid]);
+
+  const getActiveNegotiations = useCallback(() => 
+    negotiations.filter(n => n.status === "active"),
+  [negotiations]);
+
+  useEffect(() => {
+    return () => {
+      pendingTimeouts.forEach(timeout => clearTimeout(timeout));
+    };
+  }, [pendingTimeouts]);
+
   return (
     <MockDataContext.Provider value={{
       loads,
@@ -1224,6 +1563,13 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       getNearbyTrucks,
       requestQuote,
       getTruckById,
+      negotiations,
+      getOrCreateNegotiation,
+      sendNegotiationMessage,
+      submitCounterOffer,
+      acceptNegotiation,
+      rejectNegotiation,
+      getActiveNegotiations,
     }}>
       {children}
     </MockDataContext.Provider>

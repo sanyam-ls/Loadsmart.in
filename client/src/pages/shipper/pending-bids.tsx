@@ -140,16 +140,26 @@ export default function PendingBidsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/shipper">
-          <Button variant="ghost" size="icon" data-testid="button-back">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Pending Bids</h1>
-          <p className="text-muted-foreground">Review and respond to carrier bids on your loads</p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <Link href="/shipper">
+            <Button variant="ghost" size="icon" data-testid="button-back">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold" data-testid="text-page-title">Pending Bids</h1>
+            <p className="text-muted-foreground">Review and respond to carrier bids on your loads</p>
+          </div>
         </div>
+        {activeBids.length > 0 && (
+          <Link href="/shipper/negotiations">
+            <Button data-testid="button-open-negotiations">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Open Negotiation Hub
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

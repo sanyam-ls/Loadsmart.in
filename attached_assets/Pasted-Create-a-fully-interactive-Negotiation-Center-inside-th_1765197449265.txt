@@ -1,0 +1,162 @@
+Create a fully interactive Negotiation Center inside the Shipper Portal where every bid opens into a simulated chat conversation between the shipper and carrier. The chat must update in real time as bids change, and every bid update must immediately sync with the Pending Bids, Active Loads, and dashboard metrics. Use mock data, simulated carrier messages, and a live updating UI to make the experience feel real.
+
+⸻
+
+🔵 1. NEGOTIATION CENTER OVERVIEW
+
+Build a dedicated module called:
+
+“Negotiation Hub”
+
+This will handle:
+	•	Bid conversations
+	•	Rate changes
+	•	Carrier replies
+	•	Shipper counter-offers
+	•	Status updates
+	•	Workflow transitions
+
+Each negotiation thread belongs to a specific bid and load.
+
+⸻
+
+🔵 2. CHAT SIMULATION (MANDATORY)
+
+Every negotiation must contain a live chat interface with:
+
+Simulated carrier messages such as:
+	•	“We can offer ₹18,500 for this route.”
+	•	“Traffic in the area may affect ETA.”
+	•	“Can you confirm loading time?”
+	•	“We can improve rate if loading is flexible.”
+
+Simulated behaviors:
+	•	Random delays (1–3 seconds)
+	•	Instant carrier reaction to shipper counter-offer
+	•	Acknowledgments after status changes
+
+Chat features:
+	•	Text bubbles
+	•	Time stamps (mock)
+	•	“Carrier is typing…” simulation
+	•	Auto-scroll
+	•	Quick action buttons (Accept / Counter / Reject)
+
+⸻
+
+🔵 3. BID UPDATES REFLECT LIVE IN CHAT
+
+When the shipper:
+	•	Enters a counter-offer
+	•	Accepts a bid
+	•	Rejects a bid
+
+The chat session must show:
+
+Shipper: “Counter-offer submitted: ₹17,200.”
+Carrier (simulated): “We can do ₹17,800. Confirm?”
+
+Bids update inside the chat and must sync with the central mock data store.
+
+⸻
+
+🔵 4. NEGOTIATION → PENDING BIDS SYNC
+
+Inside the mock data structure:
+	•	When a bid value changes → update Pending Bids
+	•	When new bid is created → add to Pending Bids
+	•	When bid is accepted → remove from Pending Bids and move to In Transit stage
+	•	When bid is rejected → remove from Pending Bids
+
+The Pending Bids count on dashboard must update instantly.
+
+⸻
+
+🔵 5. NEGOTIATION → ACTIVE LOADS LINKAGE
+
+Each negotiation must be tied to:
+	•	The specific load
+	•	The load’s details
+	•	The current load status
+
+If bid is accepted:
+	•	Update the load’s carrier
+	•	Move the load from Active Loads → In Transit
+	•	Reflect the movement instantly on dashboard tiles
+	•	Update “Assigned carrier” on load details screen
+
+⸻
+
+🔵 6. WORKFLOW LOGIC FOR NEGOTIATIONS
+
+The chat must support:
+
+(1) Shipper submits counter-offer
+	•	Chat displays shipper message
+	•	Bid amount changes
+	•	Carrier replies automatically with simulated response
+
+(2) Carrier submits counter-offer
+	•	Chat displays simulated carrier message
+	•	New price updates in Pending Bids
+
+(3) Shipper accepts the offer
+	•	Chat shows: “You accepted the bid.”
+	•	Bid moves to “Accepted”
+	•	Load moves to In Transit
+	•	Dashboard metrics update
+
+(4) Shipper rejects the offer
+	•	Chat shows: “You rejected the bid.”
+	•	Bid removed from Pending Bids
+
+(5) Carrier withdraws offer (simulated)
+	•	Chat shows: “Carrier has withdrawn the bid.”
+	•	Remove from Pending Bids
+
+⸻
+
+🔵 7. NEGOTIATION USER INTERFACE REQUIREMENTS
+
+Every negotiation thread should display:
+	•	Load ID
+	•	Carrier name
+	•	Current bid amount
+	•	ETA
+	•	Match Score (optional)
+	•	Quick action buttons
+	•	Status display (“Pending”, “Countered”, “Accepted”, “Rejected”)
+
+All fields update automatically.
+
+⸻
+
+🔵 8. GLOBAL SYNCHRONIZATION
+
+All changes happening in the Negotiation Center must simultaneously update:
+	•	Pending Bids
+	•	Active Loads
+	•	In Transit
+	•	Completed Loads (after delivery)
+	•	Dashboard Tile Counts
+	•	Load Details Page
+
+The system must behave like a real-time logistics platform, even using mock data.
+
+⸻
+
+🔵 9. EMPTY STATE FOR NEGOTIATION CENTER
+
+If no bids exist:
+
+Show:
+“Negotiations will appear here when you receive bids on your loads.”
+
+CTA:
+“Post a Load”
+
+⸻
+
+🔥 FINAL INSTRUCTION TO REPLIT AI
+
+Build a complete Negotiation Center inside the Shipper Portal where shipper and carrier communicate through simulated chat. Every bid update must instantly reflect across Pending Bids, Active Loads, and In Transit through the centralized mock data store. The negotiation experience should feel real-time, dynamic, and deeply integrated with the load workflow. No static screens — everything must sync.

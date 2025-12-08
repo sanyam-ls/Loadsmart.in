@@ -55,11 +55,23 @@ export interface MockSpend {
   carrierSpend: { carrier: string; amount: number; loads: number }[];
 }
 
+export interface MockNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: "bid" | "shipment" | "document" | "general";
+  isRead: boolean;
+  createdAt: Date;
+  loadId?: string;
+  bidId?: string;
+}
+
 interface MockDataContextType {
   loads: MockLoad[];
   bids: MockBid[];
   inTransit: MockInTransit[];
   spend: MockSpend;
+  notifications: MockNotification[];
   addLoad: (load: Omit<MockLoad, "loadId" | "createdAt">) => MockLoad;
   updateLoad: (loadId: string, updates: Partial<MockLoad>) => void;
   cancelLoad: (loadId: string) => void;
@@ -76,6 +88,10 @@ interface MockDataContextType {
   getInTransitLoads: () => MockInTransit[];
   getLoadById: (loadId: string) => MockLoad | undefined;
   getBidsForLoad: (loadId: string) => MockBid[];
+  addNotification: (notification: Omit<MockNotification, "id" | "createdAt" | "isRead">) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  getUnreadNotificationCount: () => number;
 }
 
 const MockDataContext = createContext<MockDataContextType | null>(null);
@@ -312,11 +328,71 @@ const initialSpend: MockSpend = {
   ],
 };
 
+const initialNotifications: MockNotification[] = [
+  {
+    id: "notif-001",
+    title: "New Bid Received",
+    message: "FastHaul Logistics bid $2,450 on Load LD-001",
+    type: "bid",
+    isRead: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 5),
+    loadId: "LD-001",
+    bidId: "BID-001",
+  },
+  {
+    id: "notif-002",
+    title: "Shipment Update",
+    message: "Load LD-T001 is approaching Phoenix, AZ",
+    type: "shipment",
+    isRead: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 30),
+    loadId: "LD-T001",
+  },
+  {
+    id: "notif-003",
+    title: "Rate Confirmed",
+    message: "Your counter-offer for Load LD-003 has been accepted",
+    type: "bid",
+    isRead: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
+    loadId: "LD-003",
+  },
+  {
+    id: "notif-004",
+    title: "Document Uploaded",
+    message: "POD uploaded for Load LD-007",
+    type: "document",
+    isRead: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
+    loadId: "LD-007",
+  },
+  {
+    id: "notif-005",
+    title: "Delivery Completed",
+    message: "Load LD-005 has been delivered successfully",
+    type: "shipment",
+    isRead: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+    loadId: "LD-005",
+  },
+];
+
 export function MockDataProvider({ children }: { children: ReactNode }) {
   const [loads, setLoads] = useState<MockLoad[]>(initialLoads);
   const [bids, setBids] = useState<MockBid[]>(initialBids);
   const [inTransit, setInTransit] = useState<MockInTransit[]>(initialInTransit);
   const [spend, setSpend] = useState<MockSpend>(initialSpend);
+  const [notifications, setNotifications] = useState<MockNotification[]>(initialNotifications);
+
+  const createNotification = useCallback((notificationData: Omit<MockNotification, "id" | "createdAt" | "isRead">) => {
+    const newNotification: MockNotification = {
+      ...notificationData,
+      id: generateId("notif"),
+      isRead: false,
+      createdAt: new Date(),
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  }, []);
 
   const addLoad = useCallback((loadData: Omit<MockLoad, "loadId" | "createdAt">): MockLoad => {
     const newLoad: MockLoad = {
@@ -325,8 +401,16 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     setLoads(prev => [newLoad, ...prev]);
+    
+    createNotification({
+      title: "Load Posted",
+      message: `New load ${newLoad.loadId} posted: ${loadData.pickup} to ${loadData.drop}`,
+      type: "general",
+      loadId: newLoad.loadId,
+    });
+    
     return newLoad;
-  }, []);
+  }, [createNotification]);
 
   const updateLoad = useCallback((loadId: string, updates: Partial<MockLoad>) => {
     setLoads(prev => prev.map(load => 
@@ -419,7 +503,15 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
           : cs
       )
     }));
-  }, [bids]);
+
+    createNotification({
+      title: "Bid Accepted",
+      message: `You accepted ${bid.carrierName}'s bid of $${bid.bidPrice.toLocaleString()} for load ${bid.loadId}`,
+      type: "bid",
+      loadId: bid.loadId,
+      bidId: bid.bidId,
+    });
+  }, [bids, createNotification]);
 
   const rejectBid = useCallback((bidId: string) => {
     setBids(prev => prev.map(bid => 
@@ -428,12 +520,23 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const counterBid = useCallback((bidId: string, counterPrice: number, message: string) => {
-    setBids(prev => prev.map(bid => 
-      bid.bidId === bidId 
-        ? { ...bid, status: "Countered" as const, counterPrice, counterMessage: message } 
-        : bid
+    const bid = bids.find(b => b.bidId === bidId);
+    setBids(prev => prev.map(b => 
+      b.bidId === bidId 
+        ? { ...b, status: "Countered" as const, counterPrice, counterMessage: message } 
+        : b
     ));
-  }, []);
+    
+    if (bid) {
+      createNotification({
+        title: "Counter-Offer Sent",
+        message: `You countered ${bid.carrierName}'s bid with $${counterPrice.toLocaleString()} for load ${bid.loadId}`,
+        type: "bid",
+        loadId: bid.loadId,
+        bidId: bid.bidId,
+      });
+    }
+  }, [bids, createNotification]);
 
   const moveToTransit = useCallback((loadId: string, vehicleId: string) => {
     const load = loads.find(l => l.loadId === loadId);
@@ -463,11 +566,21 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   }, [loads]);
 
   const completeDelivery = useCallback((loadId: string) => {
-    setLoads(prev => prev.map(load => 
-      load.loadId === loadId ? { ...load, status: "Delivered" as const } : load
+    const load = loads.find(l => l.loadId === loadId);
+    setLoads(prev => prev.map(l => 
+      l.loadId === loadId ? { ...l, status: "Delivered" as const } : l
     ));
     setInTransit(prev => prev.filter(t => t.loadId !== loadId));
-  }, []);
+    
+    if (load) {
+      createNotification({
+        title: "Delivery Completed",
+        message: `Load ${loadId} has been delivered to ${load.drop}`,
+        type: "shipment",
+        loadId: loadId,
+      });
+    }
+  }, [loads, createNotification]);
 
   const getActiveLoads = useCallback(() => 
     loads.filter(l => ["Active", "Bidding", "Assigned"].includes(l.status)),
@@ -487,12 +600,29 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     bids.filter(b => b.loadId === loadId),
   [bids]);
 
+  const addNotification = createNotification;
+
+  const markNotificationRead = useCallback((id: string) => {
+    setNotifications(prev => prev.map(n => 
+      n.id === id ? { ...n, isRead: true } : n
+    ));
+  }, []);
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  }, []);
+
+  const getUnreadNotificationCount = useCallback(() => 
+    notifications.filter(n => !n.isRead).length,
+  [notifications]);
+
   return (
     <MockDataContext.Provider value={{
       loads,
       bids,
       inTransit,
       spend,
+      notifications,
       addLoad,
       updateLoad,
       cancelLoad,
@@ -509,6 +639,10 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       getInTransitLoads,
       getLoadById,
       getBidsForLoad,
+      addNotification,
+      markNotificationRead,
+      markAllNotificationsRead,
+      getUnreadNotificationCount,
     }}>
       {children}
     </MockDataContext.Provider>

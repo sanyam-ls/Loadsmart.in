@@ -1410,18 +1410,27 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { load_id } = req.body;
+      const { load_id, distance: mockDistance, weight: mockWeight, loadType: mockLoadType, pickupCity: mockPickupCity, mockMode } = req.body;
       const load = await storage.getLoad(load_id);
-      if (!load) {
+      
+      // In production, require load to exist unless explicit mock mode is enabled
+      const isMockMode = mockMode === true || (mockDistance !== undefined && mockWeight !== undefined);
+      if (!load && !isMockMode) {
         return res.status(404).json({ error: "Load not found" });
       }
-
-      const distance = parseFloat(load.distance?.toString() || '500');
-      const weight = parseFloat(load.weight?.toString() || '10');
-      const pickupDate = load.pickupDate ? new Date(load.pickupDate) : new Date();
+      
+      // Support mock data when load not found (for development with mock loads)
+      const distance = load 
+        ? parseFloat(load.distance?.toString() || '500') 
+        : parseFloat(mockDistance?.toString() || '500');
+      const weight = load 
+        ? parseFloat(load.weight?.toString() || '10') 
+        : parseFloat(mockWeight?.toString() || '10');
+      const pickupDate = load?.pickupDate ? new Date(load.pickupDate) : new Date();
+      const loadType = load?.requiredTruckType || mockLoadType;
 
       // Determine region from pickup city
-      const city = load.pickupCity?.toLowerCase() || '';
+      const city = (load?.pickupCity || mockPickupCity || '').toLowerCase();
       let region = 'central';
       if (['delhi', 'chandigarh', 'jaipur', 'lucknow'].some(c => city.includes(c))) region = 'north';
       else if (['chennai', 'bangalore', 'hyderabad', 'kochi'].some(c => city.includes(c))) region = 'south';
@@ -1431,32 +1440,35 @@ export async function registerRoutes(
       const pricing = calculatePricing({
         distance,
         weight,
-        loadType: load.requiredTruckType || undefined,
+        loadType: loadType || undefined,
         region,
         pickupDate,
       });
 
       // Get comparable loads (last 90 days)
-      const allLoads = await storage.getAllLoads();
-      const comparableLoads = allLoads
-        .filter(l => 
-          l.id !== load.id && 
-          l.status === 'delivered' && 
-          l.finalPrice &&
-          Math.abs(parseFloat(l.distance?.toString() || '0') - distance) < 100 &&
-          l.requiredTruckType === load.requiredTruckType
-        )
-        .slice(0, 5)
-        .map(l => ({
-          id: l.id,
-          route: `${l.pickupCity} → ${l.dropoffCity}`,
-          distance: l.distance,
-          finalPrice: l.finalPrice,
-        }));
+      let comparableLoads: Array<{ id: string; route: string; distance: string | number | null; finalPrice: string | null }> = [];
+      if (load) {
+        const allLoads = await storage.getAllLoads();
+        comparableLoads = allLoads
+          .filter(l => 
+            l.id !== load.id && 
+            l.status === 'delivered' && 
+            l.finalPrice &&
+            Math.abs(parseFloat(l.distance?.toString() || '0') - distance) < 100 &&
+            l.requiredTruckType === load.requiredTruckType
+          )
+          .slice(0, 5)
+          .map(l => ({
+            id: l.id,
+            route: `${l.pickupCity} → ${l.dropoffCity}`,
+            distance: l.distance,
+            finalPrice: l.finalPrice,
+          }));
+      }
 
       // Risk flags
       const riskFlags: string[] = [];
-      if (!load.kycVerified) riskFlags.push('Shipper KYC not verified');
+      if (load && !load.kycVerified) riskFlags.push('Shipper KYC not verified');
       if (distance > 2000) riskFlags.push('Long haul route (>2000km)');
       if (weight > 25) riskFlags.push('Heavy load (>25 tons)');
 

@@ -669,28 +669,30 @@ export default function LoadQueuePage() {
         carriers={mockCarriers}
       />
 
-      <InvoiceDrawer
-        open={invoiceDrawerOpen}
-        onOpenChange={setInvoiceDrawerOpen}
-        load={selectedLoad ? {
-          id: selectedLoad.loadId,
-          pickupCity: selectedLoad.pickup.split(",")[0].trim(),
-          dropoffCity: selectedLoad.drop.split(",")[0].trim(),
-          weight: selectedLoad.weight,
-          requiredTruckType: selectedLoad.type,
-          distance: estimateDistance(selectedLoad.pickup, selectedLoad.drop),
-          pickupDate: selectedLoad.pickupDate,
-          shipperId: (selectedLoad as unknown as { shipperId?: string }).shipperId || "shipper-1",
-          cargoDescription: selectedLoad.cargoDescription,
-        } : null}
-        pricingAmount={invoicePricingAmount}
-        onSuccess={() => {
-          toast({
-            title: "Invoice Created",
-            description: "Invoice has been created successfully.",
-          });
-        }}
-      />
+      {selectedLoad && invoiceDrawerOpen && (
+        <InvoiceDrawer
+          open={invoiceDrawerOpen}
+          onOpenChange={setInvoiceDrawerOpen}
+          load={{
+            id: selectedLoad.loadId,
+            pickupCity: selectedLoad.pickup.split(",")[0].trim(),
+            dropoffCity: selectedLoad.drop.split(",")[0].trim(),
+            weight: selectedLoad.weight,
+            requiredTruckType: selectedLoad.type,
+            distance: estimateDistance(selectedLoad.pickup, selectedLoad.drop),
+            pickupDate: selectedLoad.pickupDate,
+            shipperId: (selectedLoad as unknown as { shipperId?: string }).shipperId || "shipper-1",
+            cargoDescription: selectedLoad.cargoDescription,
+          }}
+          pricingAmount={invoicePricingAmount}
+          onSuccess={() => {
+            toast({
+              title: "Invoice Created",
+              description: "Invoice has been created successfully.",
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

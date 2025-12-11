@@ -224,6 +224,10 @@ export function PricingDrawer({
     try {
       const response = await apiRequest("POST", "/api/admin/pricing/suggest", {
         load_id: load.id,
+        distance: load.distance,
+        weight: load.weight,
+        loadType: load.requiredTruckType,
+        pickupCity: load.pickupCity,
       });
       const data: PricingSuggestion = await response.json();
 
@@ -436,12 +440,12 @@ export function PricingDrawer({
                     {/* Template Selection */}
                     <div className="space-y-2">
                       <Label>Pricing Template (Optional)</Label>
-                      <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                      <Select value={selectedTemplate || "none"} onValueChange={(val) => setSelectedTemplate(val === "none" ? "" : val)}>
                         <SelectTrigger data-testid="select-template">
                           <SelectValue placeholder="Select a template..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No template</SelectItem>
+                          <SelectItem value="none">No template</SelectItem>
                           {templates.map((template) => (
                             <SelectItem key={template.id} value={template.id}>
                               {template.name}

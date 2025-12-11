@@ -16,6 +16,10 @@ export type LoadStatus = typeof loadStatuses[number];
 export const adminPostModes = ["open", "invite", "assign"] as const;
 export type AdminPostMode = typeof adminPostModes[number];
 
+// Admin pricing status enum
+export const adminPricingStatuses = ["draft", "locked", "awaiting_approval", "approved", "posted", "assigned", "rejected"] as const;
+export type AdminPricingStatus = typeof adminPricingStatuses[number];
+
 // Bid status enum
 export const bidStatuses = ["pending", "accepted", "rejected", "countered", "expired"] as const;
 export type BidStatus = typeof bidStatuses[number];
@@ -136,6 +140,54 @@ export const adminDecisions = pgTable("admin_decisions", {
   pricingBreakdown: jsonb("pricing_breakdown"),
   actionType: text("action_type").default("price_and_post"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Pricing Templates table (reusable margin presets)
+export const pricingTemplates = pgTable("pricing_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  markupPercent: decimal("markup_percent", { precision: 5, scale: 2 }).default("0"),
+  fixedFee: decimal("fixed_fee", { precision: 12, scale: 2 }).default("0"),
+  fuelSurchargePercent: decimal("fuel_surcharge_percent", { precision: 5, scale: 2 }).default("0"),
+  platformRatePercent: decimal("platform_rate_percent", { precision: 5, scale: 2 }).default("10"),
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Admin Pricings table (detailed pricing calculations and adjustments)
+export const adminPricings = pgTable("admin_pricings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  templateId: varchar("template_id").references(() => pricingTemplates.id),
+  suggestedPrice: decimal("suggested_price", { precision: 12, scale: 2 }).notNull(),
+  finalPrice: decimal("final_price", { precision: 12, scale: 2 }),
+  markupPercent: decimal("markup_percent", { precision: 5, scale: 2 }).default("0"),
+  fixedFee: decimal("fixed_fee", { precision: 12, scale: 2 }).default("0"),
+  fuelOverride: decimal("fuel_override", { precision: 12, scale: 2 }),
+  discountAmount: decimal("discount_amount", { precision: 12, scale: 2 }).default("0"),
+  payoutEstimate: decimal("payout_estimate", { precision: 12, scale: 2 }),
+  platformMargin: decimal("platform_margin", { precision: 12, scale: 2 }),
+  platformMarginPercent: decimal("platform_margin_percent", { precision: 5, scale: 2 }),
+  status: text("status").default("draft"),
+  requiresApproval: boolean("requires_approval").default(false),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  postMode: text("post_mode"),
+  invitedCarrierIds: text("invited_carrier_ids").array(),
+  notes: text("notes"),
+  priceBreakdown: jsonb("price_breakdown"),
+  confidenceScore: integer("confidence_score"),
+  riskFlags: text("risk_flags").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Bids table (updated for Admin-as-Mediator flow)
@@ -492,6 +544,33 @@ export const adminDecisionsRelations = relations(adminDecisions, ({ one }) => ({
   }),
 }));
 
+export const pricingTemplatesRelations = relations(pricingTemplates, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [pricingTemplates.createdBy],
+    references: [users.id],
+  }),
+  pricings: many(adminPricings),
+}));
+
+export const adminPricingsRelations = relations(adminPricings, ({ one }) => ({
+  load: one(loads, {
+    fields: [adminPricings.loadId],
+    references: [loads.id],
+  }),
+  admin: one(users, {
+    fields: [adminPricings.adminId],
+    references: [users.id],
+  }),
+  template: one(pricingTemplates, {
+    fields: [adminPricings.templateId],
+    references: [pricingTemplates.id],
+  }),
+  approver: one(users, {
+    fields: [adminPricings.approvedBy],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCarrierProfileSchema = createInsertSchema(carrierProfiles).omit({ id: true });
@@ -499,6 +578,8 @@ export const insertTruckSchema = createInsertSchema(trucks).omit({ id: true, cre
 export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, createdAt: true });
 export const insertBidSchema = createInsertSchema(bids).omit({ id: true, createdAt: true });
 export const insertAdminDecisionSchema = createInsertSchema(adminDecisions).omit({ id: true, createdAt: true });
+export const insertPricingTemplateSchema = createInsertSchema(pricingTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAdminPricingSchema = createInsertSchema(adminPricings).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertShipmentSchema = createInsertSchema(shipments).omit({ id: true });
 export const insertShipmentEventSchema = createInsertSchema(shipmentEvents).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
@@ -524,6 +605,10 @@ export type InsertBid = z.infer<typeof insertBidSchema>;
 export type Bid = typeof bids.$inferSelect;
 export type InsertAdminDecision = z.infer<typeof insertAdminDecisionSchema>;
 export type AdminDecision = typeof adminDecisions.$inferSelect;
+export type InsertPricingTemplate = z.infer<typeof insertPricingTemplateSchema>;
+export type PricingTemplate = typeof pricingTemplates.$inferSelect;
+export type InsertAdminPricing = z.infer<typeof insertAdminPricingSchema>;
+export type AdminPricing = typeof adminPricings.$inferSelect;
 export type InsertShipment = z.infer<typeof insertShipmentSchema>;
 export type Shipment = typeof shipments.$inferSelect;
 export type InsertShipmentEvent = z.infer<typeof insertShipmentEventSchema>;

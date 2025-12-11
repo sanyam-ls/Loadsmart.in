@@ -3,6 +3,7 @@ import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import {
   users, trucks, loads, bids, shipments, shipmentEvents,
   messages, documents, notifications, ratings, carrierProfiles, adminDecisions,
+  pricingTemplates, adminPricings,
   type User, type InsertUser,
   type Truck, type InsertTruck,
   type Load, type InsertLoad,
@@ -15,6 +16,8 @@ import {
   type Rating, type InsertRating,
   type CarrierProfile, type InsertCarrierProfile,
   type AdminDecision, type InsertAdminDecision,
+  type PricingTemplate, type InsertPricingTemplate,
+  type AdminPricing, type InsertAdminPricing,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -82,6 +85,22 @@ export interface IStorage {
   getAdminDecision(id: string): Promise<AdminDecision | undefined>;
   getAdminDecisionsByLoad(loadId: string): Promise<AdminDecision[]>;
   createAdminDecision(decision: InsertAdminDecision): Promise<AdminDecision>;
+
+  // Admin Pricing & Margin Builder methods
+  getPricingTemplates(): Promise<PricingTemplate[]>;
+  getPricingTemplate(id: string): Promise<PricingTemplate | undefined>;
+  createPricingTemplate(template: InsertPricingTemplate): Promise<PricingTemplate>;
+  updatePricingTemplate(id: string, updates: Partial<PricingTemplate>): Promise<PricingTemplate | undefined>;
+  deletePricingTemplate(id: string): Promise<boolean>;
+
+  getAdminPricing(id: string): Promise<AdminPricing | undefined>;
+  getAdminPricingByLoad(loadId: string): Promise<AdminPricing | undefined>;
+  getAdminPricingHistory(loadId: string): Promise<AdminPricing[]>;
+  createAdminPricing(pricing: InsertAdminPricing): Promise<AdminPricing>;
+  updateAdminPricing(id: string, updates: Partial<AdminPricing>): Promise<AdminPricing | undefined>;
+  lockAdminPricing(id: string, finalPrice: string, postMode: string, invitedCarrierIds?: string[]): Promise<AdminPricing | undefined>;
+  approveAdminPricing(id: string, approverId: string): Promise<AdminPricing | undefined>;
+  rejectAdminPricing(id: string, rejecterId: string, reason: string): Promise<AdminPricing | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -339,6 +358,110 @@ export class DatabaseStorage implements IStorage {
   async createAdminDecision(decision: InsertAdminDecision): Promise<AdminDecision> {
     const [newDecision] = await db.insert(adminDecisions).values(decision).returning();
     return newDecision;
+  }
+
+  // Admin Pricing & Margin Builder implementations
+  async getPricingTemplates(): Promise<PricingTemplate[]> {
+    return db.select().from(pricingTemplates)
+      .where(eq(pricingTemplates.isActive, true))
+      .orderBy(desc(pricingTemplates.createdAt));
+  }
+
+  async getPricingTemplate(id: string): Promise<PricingTemplate | undefined> {
+    const [template] = await db.select().from(pricingTemplates).where(eq(pricingTemplates.id, id));
+    return template;
+  }
+
+  async createPricingTemplate(template: InsertPricingTemplate): Promise<PricingTemplate> {
+    const [newTemplate] = await db.insert(pricingTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updatePricingTemplate(id: string, updates: Partial<PricingTemplate>): Promise<PricingTemplate | undefined> {
+    const [updated] = await db.update(pricingTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(pricingTemplates.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePricingTemplate(id: string): Promise<boolean> {
+    await db.update(pricingTemplates)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(pricingTemplates.id, id));
+    return true;
+  }
+
+  async getAdminPricing(id: string): Promise<AdminPricing | undefined> {
+    const [pricing] = await db.select().from(adminPricings).where(eq(adminPricings.id, id));
+    return pricing;
+  }
+
+  async getAdminPricingByLoad(loadId: string): Promise<AdminPricing | undefined> {
+    const [pricing] = await db.select().from(adminPricings)
+      .where(eq(adminPricings.loadId, loadId))
+      .orderBy(desc(adminPricings.createdAt));
+    return pricing;
+  }
+
+  async getAdminPricingHistory(loadId: string): Promise<AdminPricing[]> {
+    return db.select().from(adminPricings)
+      .where(eq(adminPricings.loadId, loadId))
+      .orderBy(desc(adminPricings.createdAt));
+  }
+
+  async createAdminPricing(pricing: InsertAdminPricing): Promise<AdminPricing> {
+    const [newPricing] = await db.insert(adminPricings).values(pricing).returning();
+    return newPricing;
+  }
+
+  async updateAdminPricing(id: string, updates: Partial<AdminPricing>): Promise<AdminPricing | undefined> {
+    const [updated] = await db.update(adminPricings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(adminPricings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async lockAdminPricing(id: string, finalPrice: string, postMode: string, invitedCarrierIds?: string[]): Promise<AdminPricing | undefined> {
+    const [updated] = await db.update(adminPricings)
+      .set({ 
+        finalPrice,
+        postMode,
+        invitedCarrierIds: invitedCarrierIds || [],
+        status: 'locked',
+        updatedAt: new Date()
+      })
+      .where(eq(adminPricings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async approveAdminPricing(id: string, approverId: string): Promise<AdminPricing | undefined> {
+    const [updated] = await db.update(adminPricings)
+      .set({ 
+        status: 'approved',
+        approvedBy: approverId,
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(adminPricings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async rejectAdminPricing(id: string, rejecterId: string, reason: string): Promise<AdminPricing | undefined> {
+    const [updated] = await db.update(adminPricings)
+      .set({ 
+        status: 'rejected',
+        rejectedBy: rejecterId,
+        rejectedAt: new Date(),
+        rejectionReason: reason,
+        updatedAt: new Date()
+      })
+      .where(eq(adminPricings.id, id))
+      .returning();
+    return updated;
   }
 }
 

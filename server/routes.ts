@@ -1890,6 +1890,304 @@ export async function registerRoutes(
     }
   });
 
+  // =============================================
+  // INVOICE BUILDER ENDPOINTS
+  // =============================================
+
+  // GET /api/admin/invoices - Get all invoices (admin only)
+  app.get("/api/admin/invoices", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const invoices = await storage.getAllInvoices();
+      res.json(invoices);
+    } catch (error) {
+      console.error("Get invoices error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/invoices/shipper - Get invoices for current shipper
+  app.get("/api/invoices/shipper", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const invoices = await storage.getInvoicesByShipper(user.id);
+      res.json(invoices);
+    } catch (error) {
+      console.error("Get shipper invoices error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/invoices/:id - Get specific invoice
+  app.get("/api/admin/invoices/:id", requireAuth, async (req, res) => {
+    try {
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (user?.role !== "admin" && user?.id !== invoice.shipperId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json(invoice);
+    } catch (error) {
+      console.error("Get invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/invoices - Create new invoice
+  app.post("/api/admin/invoices", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId, shipperId, lineItems, subtotal, fuelSurcharge, tollCharges, 
+              handlingFee, insuranceFee, discountAmount, discountReason, 
+              taxPercent, taxAmount, totalAmount, paymentTerms, dueDate, notes } = req.body;
+
+      if (!loadId || !shipperId || !subtotal || !totalAmount) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const invoiceNumber = await storage.generateInvoiceNumber();
+
+      const invoice = await storage.createInvoice({
+        invoiceNumber,
+        loadId,
+        shipperId,
+        adminId: user.id,
+        subtotal,
+        fuelSurcharge: fuelSurcharge || "0",
+        tollCharges: tollCharges || "0",
+        handlingFee: handlingFee || "0",
+        insuranceFee: insuranceFee || "0",
+        discountAmount: discountAmount || "0",
+        discountReason,
+        taxPercent: taxPercent || "18",
+        taxAmount: taxAmount || "0",
+        totalAmount,
+        paymentTerms: paymentTerms || "Net 30",
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        notes,
+        lineItems,
+        status: "draft",
+      });
+
+      res.status(201).json(invoice);
+    } catch (error) {
+      console.error("Create invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PUT /api/admin/invoices/:id - Update invoice
+  app.put("/api/admin/invoices/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      if (invoice.status === "paid") {
+        return res.status(400).json({ error: "Cannot modify paid invoice" });
+      }
+
+      const updated = await storage.updateInvoice(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/invoices/:id/send - Send invoice to shipper
+  app.post("/api/admin/invoices/:id/send", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const updated = await storage.sendInvoice(req.params.id);
+      
+      // Create notification for shipper
+      const load = await storage.getLoad(invoice.loadId);
+      await storage.createNotification({
+        userId: invoice.shipperId,
+        title: "New Invoice Received",
+        message: `Invoice ${invoice.invoiceNumber} for load ${load?.pickupCity} to ${load?.dropoffCity} has been sent to you.`,
+        type: "invoice",
+        relatedLoadId: invoice.loadId,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Send invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/invoices/:id/pay - Mark invoice as paid
+  app.post("/api/admin/invoices/:id/pay", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { paidAmount, paymentMethod, paymentReference } = req.body;
+      if (!paidAmount || !paymentMethod) {
+        return res.status(400).json({ error: "Missing payment details" });
+      }
+
+      const updated = await storage.markInvoicePaid(req.params.id, {
+        paidAmount,
+        paymentMethod,
+        paymentReference,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Mark invoice paid error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/invoices/load/:loadId - Get invoice for a specific load
+  app.get("/api/admin/invoices/load/:loadId", requireAuth, async (req, res) => {
+    try {
+      const invoice = await storage.getInvoiceByLoad(req.params.loadId);
+      res.json(invoice || null);
+    } catch (error) {
+      console.error("Get invoice by load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // CARRIER SETTLEMENT ENDPOINTS
+  // =============================================
+
+  // GET /api/carrier/settlements - Get settlements for current carrier
+  app.get("/api/carrier/settlements", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const settlements = await storage.getSettlementsByCarrier(user.id);
+      res.json(settlements);
+    } catch (error) {
+      console.error("Get carrier settlements error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/settlements - Create carrier settlement
+  app.post("/api/admin/settlements", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId, carrierId, invoiceId, grossAmount, platformFee, deductions, 
+              deductionReason, netPayout, scheduledDate, notes } = req.body;
+
+      if (!loadId || !carrierId || !grossAmount || !netPayout) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const settlement = await storage.createSettlement({
+        loadId,
+        carrierId,
+        invoiceId,
+        grossAmount,
+        platformFee: platformFee || "0",
+        deductions: deductions || "0",
+        deductionReason,
+        netPayout,
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
+        notes,
+        status: "pending",
+      });
+
+      // Notify carrier
+      const load = await storage.getLoad(loadId);
+      await storage.createNotification({
+        userId: carrierId,
+        title: "Settlement Created",
+        message: `A settlement of Rs. ${parseFloat(netPayout).toLocaleString('en-IN')} has been created for load ${load?.pickupCity} to ${load?.dropoffCity}.`,
+        type: "payment",
+        relatedLoadId: loadId,
+      });
+
+      res.status(201).json(settlement);
+    } catch (error) {
+      console.error("Create settlement error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/settlements/:id/pay - Mark settlement as paid
+  app.post("/api/admin/settlements/:id/pay", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { paymentMethod, transactionId } = req.body;
+      if (!paymentMethod) {
+        return res.status(400).json({ error: "Payment method required" });
+      }
+
+      const updated = await storage.markSettlementPaid(req.params.id, {
+        paymentMethod,
+        transactionId,
+      });
+
+      if (updated) {
+        await storage.createNotification({
+          userId: updated.carrierId,
+          title: "Payment Received",
+          message: `Your payout of Rs. ${parseFloat(updated.netPayout).toLocaleString('en-IN')} has been processed.`,
+          type: "payment",
+          relatedLoadId: updated.loadId,
+        });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Mark settlement paid error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Setup WebSocket for real-time telemetry
   setupTelemetryWebSocket(httpServer);
 

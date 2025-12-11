@@ -3,7 +3,7 @@ import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import {
   users, trucks, loads, bids, shipments, shipmentEvents,
   messages, documents, notifications, ratings, carrierProfiles, adminDecisions,
-  pricingTemplates, adminPricings,
+  pricingTemplates, adminPricings, invoices, carrierSettlements,
   type User, type InsertUser,
   type Truck, type InsertTruck,
   type Load, type InsertLoad,
@@ -18,6 +18,8 @@ import {
   type AdminDecision, type InsertAdminDecision,
   type PricingTemplate, type InsertPricingTemplate,
   type AdminPricing, type InsertAdminPricing,
+  type Invoice, type InsertInvoice,
+  type CarrierSettlement, type InsertCarrierSettlement,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -101,6 +103,27 @@ export interface IStorage {
   lockAdminPricing(id: string, finalPrice: string, postMode: string, invitedCarrierIds?: string[]): Promise<AdminPricing | undefined>;
   approveAdminPricing(id: string, approverId: string): Promise<AdminPricing | undefined>;
   rejectAdminPricing(id: string, rejecterId: string, reason: string): Promise<AdminPricing | undefined>;
+
+  // Invoice Builder methods
+  getInvoice(id: string): Promise<Invoice | undefined>;
+  getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | undefined>;
+  getInvoiceByLoad(loadId: string): Promise<Invoice | undefined>;
+  getInvoicesByShipper(shipperId: string): Promise<Invoice[]>;
+  getInvoicesByAdmin(adminId: string): Promise<Invoice[]>;
+  getAllInvoices(): Promise<Invoice[]>;
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  updateInvoice(id: string, updates: Partial<Invoice>): Promise<Invoice | undefined>;
+  sendInvoice(id: string): Promise<Invoice | undefined>;
+  markInvoicePaid(id: string, paymentDetails: { paidAmount: string; paymentMethod: string; paymentReference?: string }): Promise<Invoice | undefined>;
+  generateInvoiceNumber(): Promise<string>;
+
+  // Carrier Settlement methods
+  getSettlement(id: string): Promise<CarrierSettlement | undefined>;
+  getSettlementByLoad(loadId: string): Promise<CarrierSettlement | undefined>;
+  getSettlementsByCarrier(carrierId: string): Promise<CarrierSettlement[]>;
+  createSettlement(settlement: InsertCarrierSettlement): Promise<CarrierSettlement>;
+  updateSettlement(id: string, updates: Partial<CarrierSettlement>): Promise<CarrierSettlement | undefined>;
+  markSettlementPaid(id: string, paymentDetails: { paymentMethod: string; transactionId?: string }): Promise<CarrierSettlement | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -460,6 +483,133 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(adminPricings.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Invoice Builder methods
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    return invoice;
+  }
+
+  async getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.invoiceNumber, invoiceNumber));
+    return invoice;
+  }
+
+  async getInvoiceByLoad(loadId: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices)
+      .where(eq(invoices.loadId, loadId))
+      .orderBy(desc(invoices.createdAt));
+    return invoice;
+  }
+
+  async getInvoicesByShipper(shipperId: string): Promise<Invoice[]> {
+    return db.select().from(invoices)
+      .where(eq(invoices.shipperId, shipperId))
+      .orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoicesByAdmin(adminId: string): Promise<Invoice[]> {
+    return db.select().from(invoices)
+      .where(eq(invoices.adminId, adminId))
+      .orderBy(desc(invoices.createdAt));
+  }
+
+  async getAllInvoices(): Promise<Invoice[]> {
+    return db.select().from(invoices).orderBy(desc(invoices.createdAt));
+  }
+
+  async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
+    const [newInvoice] = await db.insert(invoices).values(invoice).returning();
+    return newInvoice;
+  }
+
+  async updateInvoice(id: string, updates: Partial<Invoice>): Promise<Invoice | undefined> {
+    const [updated] = await db.update(invoices)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(invoices.id, id))
+      .returning();
+    return updated;
+  }
+
+  async sendInvoice(id: string): Promise<Invoice | undefined> {
+    const [updated] = await db.update(invoices)
+      .set({ 
+        status: 'sent',
+        sentAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(invoices.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markInvoicePaid(id: string, paymentDetails: { paidAmount: string; paymentMethod: string; paymentReference?: string }): Promise<Invoice | undefined> {
+    const [updated] = await db.update(invoices)
+      .set({ 
+        status: 'paid',
+        paidAt: new Date(),
+        paidAmount: paymentDetails.paidAmount,
+        paymentMethod: paymentDetails.paymentMethod,
+        paymentReference: paymentDetails.paymentReference,
+        updatedAt: new Date()
+      })
+      .where(eq(invoices.id, id))
+      .returning();
+    return updated;
+  }
+
+  async generateInvoiceNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const [result] = await db.select({ count: sql<number>`count(*)` }).from(invoices);
+    const sequence = String((result?.count || 0) + 1).padStart(5, '0');
+    return `INV-${year}${month}-${sequence}`;
+  }
+
+  // Carrier Settlement methods
+  async getSettlement(id: string): Promise<CarrierSettlement | undefined> {
+    const [settlement] = await db.select().from(carrierSettlements).where(eq(carrierSettlements.id, id));
+    return settlement;
+  }
+
+  async getSettlementByLoad(loadId: string): Promise<CarrierSettlement | undefined> {
+    const [settlement] = await db.select().from(carrierSettlements)
+      .where(eq(carrierSettlements.loadId, loadId))
+      .orderBy(desc(carrierSettlements.createdAt));
+    return settlement;
+  }
+
+  async getSettlementsByCarrier(carrierId: string): Promise<CarrierSettlement[]> {
+    return db.select().from(carrierSettlements)
+      .where(eq(carrierSettlements.carrierId, carrierId))
+      .orderBy(desc(carrierSettlements.createdAt));
+  }
+
+  async createSettlement(settlement: InsertCarrierSettlement): Promise<CarrierSettlement> {
+    const [newSettlement] = await db.insert(carrierSettlements).values(settlement).returning();
+    return newSettlement;
+  }
+
+  async updateSettlement(id: string, updates: Partial<CarrierSettlement>): Promise<CarrierSettlement | undefined> {
+    const [updated] = await db.update(carrierSettlements)
+      .set(updates)
+      .where(eq(carrierSettlements.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markSettlementPaid(id: string, paymentDetails: { paymentMethod: string; transactionId?: string }): Promise<CarrierSettlement | undefined> {
+    const [updated] = await db.update(carrierSettlements)
+      .set({ 
+        status: 'paid',
+        paidAt: new Date(),
+        paymentMethod: paymentDetails.paymentMethod,
+        transactionId: paymentDetails.transactionId
+      })
+      .where(eq(carrierSettlements.id, id))
       .returning();
     return updated;
   }

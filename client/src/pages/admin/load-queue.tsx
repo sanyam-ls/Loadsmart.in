@@ -15,7 +15,8 @@ import {
   Building2,
   Send,
   Calculator,
-  Users
+  Users,
+  Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useMockData, MockLoad } from "@/lib/mock-data-store";
 import { PricingDrawer } from "@/components/admin/pricing-drawer";
+import { InvoiceDrawer } from "@/components/admin/invoice-drawer";
 
 const regions = ["All Regions", "North India", "South India", "East India", "West India", "Central India"];
 const loadTypes = ["All Types", "Dry Van", "Flatbed", "Refrigerated", "Tanker", "Container", "Open Deck"];
@@ -164,6 +166,8 @@ export default function LoadQueuePage() {
   const [selectedLoad, setSelectedLoad] = useState<MockLoad | null>(null);
   const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
   const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false);
+  const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false);
+  const [invoicePricingAmount, setInvoicePricingAmount] = useState<number>(0);
   const [finalPrice, setFinalPrice] = useState("");
   const [postMode, setPostMode] = useState<"open" | "invite" | "assign">("open");
   const [selectedCarriers, setSelectedCarriers] = useState<string[]>([]);
@@ -188,6 +192,13 @@ export default function LoadQueuePage() {
   const openPricingDrawer = (load: MockLoad) => {
     setSelectedLoad(load);
     setPricingDrawerOpen(true);
+  };
+
+  const openInvoiceDrawer = (load: MockLoad) => {
+    setSelectedLoad(load);
+    const pricing = calculateSuggestedPrice(load);
+    setInvoicePricingAmount(pricing.suggestedPrice);
+    setInvoiceDrawerOpen(true);
   };
 
   const pendingLoads = useMemo(() => getPendingLoads(loads), [loads]);
@@ -399,6 +410,15 @@ export default function LoadQueuePage() {
                             >
                               <Calculator className="h-4 w-4 mr-1" />
                               Price & Post
+                            </Button>
+                            <Button 
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openInvoiceDrawer(load)}
+                              data-testid={`button-invoice-${load.loadId}`}
+                            >
+                              <Receipt className="h-4 w-4 mr-1" />
+                              Invoice
                             </Button>
                           </div>
                         </TableCell>
@@ -647,6 +667,29 @@ export default function LoadQueuePage() {
           }
         }}
         carriers={mockCarriers}
+      />
+
+      <InvoiceDrawer
+        open={invoiceDrawerOpen}
+        onOpenChange={setInvoiceDrawerOpen}
+        load={selectedLoad ? {
+          id: selectedLoad.loadId,
+          pickupCity: selectedLoad.pickup.split(",")[0].trim(),
+          dropoffCity: selectedLoad.drop.split(",")[0].trim(),
+          weight: selectedLoad.weight,
+          requiredTruckType: selectedLoad.type,
+          distance: estimateDistance(selectedLoad.pickup, selectedLoad.drop),
+          pickupDate: selectedLoad.pickupDate,
+          shipperId: (selectedLoad as unknown as { shipperId?: string }).shipperId || "shipper-1",
+          cargoDescription: selectedLoad.cargoDescription,
+        } : null}
+        pricingAmount={invoicePricingAmount}
+        onSuccess={() => {
+          toast({
+            title: "Invoice Created",
+            description: "Invoice has been created successfully.",
+          });
+        }}
       />
     </div>
   );

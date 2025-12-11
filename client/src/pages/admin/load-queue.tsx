@@ -52,6 +52,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useMockData, MockLoad } from "@/lib/mock-data-store";
+import { PricingDrawer } from "@/components/admin/pricing-drawer";
 
 const regions = ["All Regions", "North India", "South India", "East India", "West India", "Central India"];
 const loadTypes = ["All Types", "Dry Van", "Flatbed", "Refrigerated", "Tanker", "Container", "Open Deck"];
@@ -162,6 +163,7 @@ export default function LoadQueuePage() {
   const [priorityFilter, setPriorityFilter] = useState("All Priority");
   const [selectedLoad, setSelectedLoad] = useState<MockLoad | null>(null);
   const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
+  const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false);
   const [finalPrice, setFinalPrice] = useState("");
   const [postMode, setPostMode] = useState<"open" | "invite" | "assign">("open");
   const [selectedCarriers, setSelectedCarriers] = useState<string[]>([]);
@@ -169,6 +171,24 @@ export default function LoadQueuePage() {
   const [allowCounterBids, setAllowCounterBids] = useState(true);
   const [adminComment, setAdminComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const convertToDrawerFormat = (load: MockLoad) => ({
+    id: load.loadId,
+    loadId: load.loadId,
+    pickupCity: load.pickup.split(",")[0].trim(),
+    dropoffCity: load.drop.split(",")[0].trim(),
+    weight: load.weight,
+    weightUnit: load.weightUnit,
+    requiredTruckType: load.type,
+    distance: estimateDistance(load.pickup, load.drop),
+    pickupDate: load.pickupDate,
+    cargoDescription: load.cargoDescription,
+  });
+
+  const openPricingDrawer = (load: MockLoad) => {
+    setSelectedLoad(load);
+    setPricingDrawerOpen(true);
+  };
 
   const pendingLoads = useMemo(() => getPendingLoads(loads), [loads]);
 
@@ -374,7 +394,7 @@ export default function LoadQueuePage() {
                             </span>
                             <Button 
                               size="sm" 
-                              onClick={() => openPricingDialog(load)}
+                              onClick={() => openPricingDrawer(load)}
                               data-testid={`button-price-${load.loadId}`}
                             >
                               <Calculator className="h-4 w-4 mr-1" />
@@ -616,6 +636,18 @@ export default function LoadQueuePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PricingDrawer
+        open={pricingDrawerOpen}
+        onOpenChange={setPricingDrawerOpen}
+        load={selectedLoad ? convertToDrawerFormat(selectedLoad) : null}
+        onSuccess={() => {
+          if (selectedLoad) {
+            updateLoad(selectedLoad.loadId, { status: "Posted" });
+          }
+        }}
+        carriers={mockCarriers}
+      />
     </div>
   );
 }

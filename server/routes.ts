@@ -2200,6 +2200,514 @@ export async function registerRoutes(
     }
   });
 
+  // =============================================
+  // ADMIN TROUBLESHOOTING DASHBOARD ENDPOINTS
+  // =============================================
+
+  // GET /api/admin/troubleshoot/load/:id - Full load diagnostics
+  app.get("/api/admin/troubleshoot/load/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const load = await storage.getLoad(req.params.id);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Get related data
+      const shipper = await storage.getUser(load.shipperId);
+      const pricing = await storage.getAdminPricingByLoad(load.id);
+      const invoice = await storage.getInvoiceByLoad(load.id);
+      const bidsData = await storage.getBidsByLoad(load.id);
+      const auditLogs = await storage.getAuditLogsByLoad(load.id);
+      const apiLogs = await storage.getApiLogsByLoad(load.id, 50);
+      const pendingActions = await storage.getPendingActionsByLoad(load.id);
+
+      // Build diagnostics
+      const diagnostics = {
+        loadBasics: {
+          id: load.id,
+          status: load.status,
+          pickupCity: load.pickupCity,
+          dropoffCity: load.dropoffCity,
+          distance: load.distance,
+          weight: load.weight,
+          requiredTruckType: load.requiredTruckType,
+          finalPrice: load.finalPrice,
+          adminFinalPrice: load.adminFinalPrice,
+          hasFinalPrice: !!load.finalPrice || !!load.adminFinalPrice,
+          createdAt: load.createdAt,
+          submittedAt: load.submittedAt,
+          postedAt: load.postedAt,
+        },
+        shipperInfo: shipper ? {
+          id: shipper.id,
+          username: shipper.username,
+          companyName: shipper.companyName,
+          isVerified: shipper.isVerified,
+          kycVerified: load.kycVerified,
+        } : null,
+        pricingInfo: pricing ? {
+          id: pricing.id,
+          status: pricing.status,
+          suggestedPrice: pricing.suggestedPrice,
+          finalPrice: pricing.finalPrice,
+          requiresApproval: pricing.requiresApproval,
+          approvedAt: pricing.approvedAt,
+          rejectedAt: pricing.rejectedAt,
+          rejectionReason: pricing.rejectionReason,
+        } : null,
+        invoiceInfo: invoice ? {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          status: invoice.status,
+          totalAmount: invoice.totalAmount,
+          sentAt: invoice.sentAt,
+          paidAt: invoice.paidAt,
+        } : null,
+        bidsCount: bidsData.length,
+        auditLogCount: auditLogs.length,
+        recentApiLogs: apiLogs.slice(0, 10),
+        pendingActions: pendingActions,
+        healthChecks: {
+          hasPricing: !!pricing,
+          hasInvoice: !!invoice,
+          isPosted: ['posted', 'posted_open', 'posted_invite', 'assigned', 'bidding'].includes(load.status || ''),
+          hasValidPrice: !!(load.finalPrice || load.adminFinalPrice),
+          shipperVerified: !!shipper?.isVerified,
+        },
+      };
+
+      // Log this view action
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: load.id,
+        actionType: 'view_load',
+        actionDescription: 'Admin viewed load diagnostics',
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+
+      res.json(diagnostics);
+    } catch (error) {
+      console.error("Load diagnostics error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/troubleshoot/force-post/:loadId - Force post a load
+  app.post("/api/admin/troubleshoot/force-post/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { reason, finalPrice, postMode, tempPost } = req.body;
+      if (!reason) {
+        return res.status(400).json({ error: "Admin reason required for force post" });
+      }
+
+      const load = await storage.getLoad(req.params.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const beforeState = {
+        status: load.status,
+        finalPrice: load.finalPrice,
+        adminFinalPrice: load.adminFinalPrice,
+        postedAt: load.postedAt,
+      };
+
+      // Force update the load
+      const price = finalPrice || load.adminFinalPrice || load.finalPrice || load.estimatedPrice || '0';
+      const updated = await storage.updateLoad(load.id, {
+        status: postMode === 'invite' ? 'posted_invite' : postMode === 'assign' ? 'assigned' : 'posted_open',
+        adminFinalPrice: price,
+        finalPrice: price,
+        postedAt: new Date(),
+        adminId: user.id,
+        adminPostMode: postMode || 'open',
+      });
+
+      // Log the action
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: load.id,
+        actionType: 'force_post',
+        actionDescription: `Force posted load to ${postMode || 'open'} mode`,
+        reason,
+        beforeState,
+        afterState: {
+          status: updated?.status,
+          finalPrice: updated?.finalPrice,
+          adminFinalPrice: updated?.adminFinalPrice,
+          postedAt: updated?.postedAt,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { tempPost: !!tempPost },
+      });
+
+      // Notify shipper
+      await storage.createNotification({
+        userId: load.shipperId,
+        title: "Load Posted",
+        message: `Your load from ${load.pickupCity} to ${load.dropoffCity} has been posted by admin.`,
+        type: "load",
+        relatedLoadId: load.id,
+      });
+
+      res.json({ success: true, load: updated });
+    } catch (error) {
+      console.error("Force post error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/troubleshoot/requeue/:loadId - Requeue a failed post action
+  app.post("/api/admin/troubleshoot/requeue/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { actionType, payload, priority } = req.body;
+      const load = await storage.getLoad(req.params.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const queuedAction = await storage.createActionQueue({
+        loadId: load.id,
+        actionType: actionType || 'post',
+        payload: payload || {},
+        status: 'pending',
+        priority: priority || 0,
+        createdBy: user.id,
+      });
+
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: load.id,
+        actionType: 'requeue_post',
+        actionDescription: `Requeued ${actionType || 'post'} action`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { queueId: queuedAction.id },
+      });
+
+      res.json({ success: true, queuedAction });
+    } catch (error) {
+      console.error("Requeue error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/troubleshoot/generate-invoice/:loadId - Generate standalone invoice
+  app.post("/api/admin/troubleshoot/generate-invoice/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { provisional, notes } = req.body;
+      const load = await storage.getLoad(req.params.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Check for existing invoice
+      const existingInvoice = await storage.getInvoiceByLoad(load.id);
+      if (existingInvoice && !provisional) {
+        return res.status(400).json({ error: "Invoice already exists. Use provisional flag to create provisional invoice." });
+      }
+
+      const finalPrice = parseFloat(load.adminFinalPrice || load.finalPrice || load.estimatedPrice || '0');
+      const taxRate = 0.18;
+      const taxAmount = finalPrice * taxRate;
+      const totalAmount = finalPrice + taxAmount;
+
+      const invoiceNumber = await storage.generateInvoiceNumber();
+      const invoice = await storage.createInvoice({
+        invoiceNumber: provisional ? `PROV-${invoiceNumber}` : invoiceNumber,
+        loadId: load.id,
+        shipperId: load.shipperId,
+        adminId: user.id,
+        subtotal: String(finalPrice),
+        taxPercent: '18',
+        taxAmount: String(Math.round(taxAmount)),
+        totalAmount: String(Math.round(totalAmount)),
+        status: 'draft',
+        notes: provisional ? `Provisional invoice - ${notes || 'Generated pending platform confirmation'}` : notes,
+        paymentTerms: 'Net 30',
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        lineItems: [
+          { description: `Freight: ${load.pickupCity} to ${load.dropoffCity}`, amount: finalPrice }
+        ],
+      });
+
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: load.id,
+        actionType: 'generate_invoice',
+        actionDescription: provisional ? 'Generated provisional invoice' : 'Generated standalone invoice',
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { invoiceId: invoice.id, provisional },
+      });
+
+      res.status(201).json(invoice);
+    } catch (error) {
+      console.error("Generate invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/troubleshoot/send-invoice/:invoiceId - Send/resend invoice
+  app.post("/api/admin/troubleshoot/send-invoice/:invoiceId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { channel } = req.body; // email, sms, webhook
+      const invoice = await storage.getInvoice(req.params.invoiceId);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const updated = await storage.sendInvoice(invoice.id);
+
+      // Notify shipper
+      const load = await storage.getLoad(invoice.loadId);
+      await storage.createNotification({
+        userId: invoice.shipperId,
+        title: "Invoice Sent",
+        message: `Invoice ${invoice.invoiceNumber} for Rs. ${parseFloat(invoice.totalAmount).toLocaleString('en-IN')} has been sent for load ${load?.pickupCity} to ${load?.dropoffCity}.`,
+        type: "payment",
+        relatedLoadId: invoice.loadId,
+      });
+
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: invoice.loadId,
+        actionType: 'send_invoice',
+        actionDescription: `Sent invoice via ${channel || 'email'}`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { invoiceId: invoice.id, channel: channel || 'email' },
+      });
+
+      res.json({ success: true, invoice: updated });
+    } catch (error) {
+      console.error("Send invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/troubleshoot/rollback-price/:loadId - Rollback to previous price
+  app.post("/api/admin/troubleshoot/rollback-price/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { reason, targetPricingId } = req.body;
+      if (!reason) {
+        return res.status(400).json({ error: "Reason required for price rollback" });
+      }
+
+      const load = await storage.getLoad(req.params.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Get pricing history
+      const pricingHistory = await storage.getAdminPricingHistory(load.id);
+      if (pricingHistory.length < 2 && !targetPricingId) {
+        return res.status(400).json({ error: "No previous pricing to rollback to" });
+      }
+
+      const targetPricing = targetPricingId 
+        ? pricingHistory.find(p => p.id === targetPricingId)
+        : pricingHistory[1]; // Second most recent
+
+      if (!targetPricing) {
+        return res.status(404).json({ error: "Target pricing not found" });
+      }
+
+      const beforeState = {
+        finalPrice: load.finalPrice,
+        adminFinalPrice: load.adminFinalPrice,
+      };
+
+      await storage.updateLoad(load.id, {
+        finalPrice: targetPricing.finalPrice,
+        adminFinalPrice: targetPricing.finalPrice,
+      });
+
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: load.id,
+        actionType: 'rollback_price',
+        actionDescription: `Rolled back price to ${targetPricing.finalPrice}`,
+        reason,
+        beforeState,
+        afterState: { finalPrice: targetPricing.finalPrice, adminFinalPrice: targetPricing.finalPrice },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { targetPricingId: targetPricing.id },
+      });
+
+      res.json({ success: true, rolledBackToPrice: targetPricing.finalPrice });
+    } catch (error) {
+      console.error("Rollback price error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/troubleshoot/audit-trail/:loadId - Get audit trail for load
+  app.get("/api/admin/troubleshoot/audit-trail/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const auditLogs = await storage.getAuditLogsByLoad(req.params.loadId);
+      res.json(auditLogs);
+    } catch (error) {
+      console.error("Get audit trail error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/troubleshoot/api-logs/:loadId - Get API logs for load
+  app.get("/api/admin/troubleshoot/api-logs/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 50;
+      const apiLogsData = await storage.getApiLogsByLoad(req.params.loadId, limit);
+      res.json(apiLogsData);
+    } catch (error) {
+      console.error("Get API logs error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/feature-flags - Get all feature flags
+  app.get("/api/admin/feature-flags", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const flags = await storage.getAllFeatureFlags();
+      res.json(flags);
+    } catch (error) {
+      console.error("Get feature flags error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/feature-flags/:name/toggle - Toggle feature flag
+  app.post("/api/admin/feature-flags/:name/toggle", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { isEnabled } = req.body;
+      const updated = await storage.toggleFeatureFlag(req.params.name, isEnabled, user.id);
+
+      if (!updated) {
+        // Create if doesn't exist
+        const newFlag = await storage.createFeatureFlag({
+          name: req.params.name,
+          isEnabled,
+          updatedBy: user.id,
+        });
+
+        await storage.createAuditLog({
+          adminId: user.id,
+          actionType: 'toggle_feature_flag',
+          actionDescription: `Created and set feature flag ${req.params.name} to ${isEnabled}`,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          metadata: { flagName: req.params.name, isEnabled },
+        });
+
+        return res.json(newFlag);
+      }
+
+      await storage.createAuditLog({
+        adminId: user.id,
+        actionType: 'toggle_feature_flag',
+        actionDescription: `Toggled feature flag ${req.params.name} to ${isEnabled}`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { flagName: req.params.name, isEnabled },
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Toggle feature flag error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/troubleshoot/queue - Get pending action queue
+  app.get("/api/admin/troubleshoot/queue", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const pendingActions = await storage.getPendingActions();
+      res.json(pendingActions);
+    } catch (error) {
+      console.error("Get action queue error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/troubleshoot/queue/:id/process - Process queued action
+  app.post("/api/admin/troubleshoot/queue/:id/process", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const action = await storage.getActionQueue(req.params.id);
+      if (!action) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+
+      const processed = await storage.processActionQueue(action.id);
+      res.json({ success: true, action: processed });
+    } catch (error) {
+      console.error("Process queue action error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Setup WebSocket for real-time telemetry
   setupTelemetryWebSocket(httpServer);
 

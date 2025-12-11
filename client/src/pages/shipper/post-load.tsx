@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { MapPin, Package, Calendar, DollarSign, Truck, Save, ArrowRight, Sparkles, Info } from "lucide-react";
+import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMockData } from "@/lib/mock-data-store";
 import { AddressAutocomplete, getRouteInfo } from "@/components/address-autocomplete";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const loadFormSchema = z.object({
   pickupAddress: z.string().min(5, "Pickup address is required"),
@@ -35,13 +36,14 @@ const loadFormSchema = z.object({
   dropoffAddress: z.string().min(5, "Dropoff address is required"),
   dropoffCity: z.string().min(2, "Dropoff city is required"),
   weight: z.string().min(1, "Weight is required"),
-  weightUnit: z.string().default("lbs"),
+  weightUnit: z.string().default("tons"),
   cargoDescription: z.string().optional(),
   requiredTruckType: z.string().optional(),
   pickupDate: z.string().min(1, "Pickup date is required"),
   deliveryDate: z.string().optional(),
   isTemplate: z.boolean().default(false),
   templateName: z.string().optional(),
+  preferredCarriers: z.boolean().default(false),
 });
 
 type LoadFormData = z.infer<typeof loadFormSchema>;
@@ -56,8 +58,8 @@ const truckTypes = [
 ];
 
 const savedTemplates = [
-  { id: "t1", name: "LA to Phoenix Regular", pickup: "Los Angeles, CA", dropoff: "Phoenix, AZ" },
-  { id: "t2", name: "SF Distribution Route", pickup: "San Francisco, CA", dropoff: "Denver, CO" },
+  { id: "t1", name: "Mumbai to Delhi Regular", pickup: "Mumbai, MH", dropoff: "Delhi, DL" },
+  { id: "t2", name: "Bangalore Distribution Route", pickup: "Bangalore, KA", dropoff: "Chennai, TN" },
 ];
 
 function calculateDistance(from: string, to: string): number {
@@ -66,28 +68,13 @@ function calculateDistance(from: string, to: string): number {
     return routeInfo.distance;
   }
   const distances: Record<string, number> = {
-    "los angeles, ca_phoenix, az": 372,
-    "san francisco, ca_denver, co": 1235,
-    "los angeles, ca_denver, co": 1020,
-    "phoenix, az_denver, co": 602,
+    "mumbai, mh_delhi, dl": 1400,
+    "bangalore, ka_chennai, tn": 350,
+    "mumbai, mh_chennai, tn": 1340,
+    "delhi, dl_kolkata, wb": 1500,
   };
   const key = `${from.toLowerCase()}_${to.toLowerCase()}`;
   return distances[key] || Math.floor(Math.random() * 1500) + 200;
-}
-
-function calculatePrice(distance: number, weight: number, truckType: string): number {
-  const baseRate = 2.5;
-  const typeMultiplier: Record<string, number> = {
-    "Dry Van": 1.0,
-    "Flatbed": 1.15,
-    "Refrigerated": 1.35,
-    "Tanker": 1.25,
-    "Container": 1.1,
-    "Open Deck": 1.2,
-  };
-  const multiplier = typeMultiplier[truckType] || 1.0;
-  const weightFactor = weight > 30000 ? 1.2 : weight > 20000 ? 1.1 : 1.0;
-  return Math.round(distance * baseRate * multiplier * weightFactor);
 }
 
 function suggestTruckType(weight: number, description: string): string {
@@ -95,7 +82,7 @@ function suggestTruckType(weight: number, description: string): string {
   if (desc.includes("frozen") || desc.includes("cold") || desc.includes("perishable")) return "Refrigerated";
   if (desc.includes("liquid") || desc.includes("oil") || desc.includes("fuel")) return "Tanker";
   if (desc.includes("machine") || desc.includes("equipment") || desc.includes("vehicle")) return "Flatbed";
-  if (weight > 40000) return "Flatbed";
+  if (weight > 40) return "Flatbed";
   return "Dry Van";
 }
 
@@ -104,9 +91,10 @@ export default function PostLoadPage() {
   const { toast } = useToast();
   const { addLoad } = useMockData();
   const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submittedLoadId, setSubmittedLoadId] = useState<string | null>(null);
   const [estimation, setEstimation] = useState<{
     distance: number;
-    price: number;
     suggestedTruck: string;
     nearbyTrucks: number;
   } | null>(null);
@@ -119,13 +107,14 @@ export default function PostLoadPage() {
       dropoffAddress: "",
       dropoffCity: "",
       weight: "",
-      weightUnit: "lbs",
+      weightUnit: "tons",
       cargoDescription: "",
       requiredTruckType: "",
       pickupDate: "",
       deliveryDate: "",
       isTemplate: false,
       templateName: "",
+      preferredCarriers: false,
     },
   });
 
@@ -136,14 +125,12 @@ export default function PostLoadPage() {
     if (pickupCity && dropoffCity && weight) {
       const distance = calculateDistance(pickupCity, dropoffCity);
       const suggestedTruck = truckType || suggestTruckType(Number(weight), description || "");
-      const price = calculatePrice(distance, Number(weight), suggestedTruck);
       const nearbyTrucks = Math.floor(Math.random() * 15) + 3;
-      setEstimation({ distance, price, suggestedTruck, nearbyTrucks });
+      setEstimation({ distance, suggestedTruck, nearbyTrucks });
     }
   }, [pickupCity, dropoffCity, weight, description, truckType]);
 
   const updateEstimation = () => {
-    // Triggered by form changes - useEffect handles the actual update
   };
 
   const applyTemplate = (templateId: string) => {
@@ -167,21 +154,41 @@ export default function PostLoadPage() {
         weight: Number(data.weight),
         weightUnit: data.weightUnit,
         type: truckType,
-        status: "Active",
+        status: "Pending Admin Review",
         carrier: null,
         eta: null,
-        estimatedPrice: estimation?.price || 2000,
+        estimatedPrice: null,
         finalPrice: null,
         cargoDescription: data.cargoDescription || "",
         pickupDate: new Date(data.pickupDate).toISOString(),
       });
 
+      try {
+        await apiRequest("POST", "/api/loads/submit", {
+          pickupAddress: data.pickupAddress,
+          pickupCity: data.pickupCity,
+          dropoffAddress: data.dropoffAddress,
+          dropoffCity: data.dropoffCity,
+          weight: data.weight,
+          cargoDescription: data.cargoDescription || "",
+          requiredTruckType: truckType,
+          pickupDate: data.pickupDate,
+          deliveryDate: data.deliveryDate || null,
+        });
+      } catch (apiError) {
+        console.log("API call skipped - using mock data for demo");
+      }
+
+      setSubmittedLoadId(newLoad.loadId);
+      setSubmitted(true);
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+
       toast({ 
-        title: "Load Posted Successfully!", 
-        description: `Load ${newLoad.loadId} is now visible to carriers. Dashboard updated.` 
+        title: "Load Submitted for Review", 
+        description: `Your load has been submitted. Our team will evaluate and price it shortly.` 
       });
       
-      navigate("/shipper/loads");
     } catch (error) {
       toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
     } finally {
@@ -189,11 +196,91 @@ export default function PostLoadPage() {
     }
   };
 
+  if (submitted) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <CardTitle className="text-xl" data-testid="text-submission-success">Load Submitted Successfully</CardTitle>
+            <CardDescription>
+              Your load has been submitted for admin review. You'll be notified once it's posted to carriers.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground mb-2">Load ID</p>
+              <p className="font-mono font-semibold">{submittedLoadId}</p>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Status Timeline</h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Submitted</p>
+                    <p className="text-xs text-muted-foreground">Just now</p>
+                  </div>
+                </div>
+                <div className="ml-3 border-l-2 border-dashed border-muted h-4" />
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shrink-0 animate-pulse">
+                    <Clock className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Pending Admin Review</p>
+                    <p className="text-xs text-muted-foreground">Our team is evaluating and pricing your load</p>
+                  </div>
+                </div>
+                <div className="ml-3 border-l-2 border-dashed border-muted h-4" />
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <Send className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-muted-foreground">Posted to Carriers</p>
+                    <p className="text-xs text-muted-foreground">Waiting for admin to post</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-700 dark:text-blue-300 text-sm">What happens next?</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Our logistics team will review your load details, determine the optimal pricing based on current market conditions, and post it to verified carriers. You'll receive a notification once your load is live.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button onClick={() => navigate("/shipper/loads")} className="flex-1" data-testid="button-view-loads">
+                View My Loads
+              </Button>
+              <Button variant="outline" onClick={() => { setSubmitted(false); form.reset(); }} data-testid="button-post-another">
+                Post Another Load
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold" data-testid="text-page-title">Post New Load</h1>
-        <p className="text-muted-foreground">Fill in the details below to post your load to the marketplace.</p>
+        <h1 className="text-2xl font-bold" data-testid="text-page-title">Submit New Load</h1>
+        <p className="text-muted-foreground">Fill in the details below. We will evaluate and price your load - you'll be notified when it's posted.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -255,7 +342,7 @@ export default function PostLoadPage() {
                           <AddressAutocomplete
                             value={field.value}
                             onChange={(val) => { field.onChange(val); updateEstimation(); }}
-                            placeholder="Los Angeles, CA"
+                            placeholder="Mumbai, MH"
                             testId="input-pickup-city"
                           />
                         </FormControl>
@@ -297,7 +384,7 @@ export default function PostLoadPage() {
                           <AddressAutocomplete
                             value={field.value}
                             onChange={(val) => { field.onChange(val); updateEstimation(); }}
-                            placeholder="Phoenix, AZ"
+                            placeholder="Delhi, DL"
                             testId="input-dropoff-city"
                           />
                         </FormControl>
@@ -327,20 +414,19 @@ export default function PostLoadPage() {
                             <div className="flex gap-2">
                               <Input 
                                 type="number" 
-                                placeholder="15000" 
+                                placeholder="15" 
                                 {...field}
                                 onBlur={(e) => { field.onBlur(); updateEstimation(); }}
                                 data-testid="input-weight" 
                               />
                               <Select
-                                defaultValue="lbs"
+                                defaultValue="tons"
                                 onValueChange={(value) => form.setValue("weightUnit", value)}
                               >
                                 <SelectTrigger className="w-24">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="lbs">lbs</SelectItem>
                                   <SelectItem value="tons">tons</SelectItem>
                                   <SelectItem value="kg">kg</SelectItem>
                                 </SelectContent>
@@ -443,8 +529,8 @@ export default function PostLoadPage() {
               </Card>
 
               <div className="flex gap-3">
-                <Button type="submit" className="flex-1" disabled={isLoading} data-testid="button-post-load">
-                  {isLoading ? "Posting..." : "Post Load"}
+                <Button type="submit" className="flex-1" disabled={isLoading} data-testid="button-submit-load">
+                  {isLoading ? "Submitting..." : "Submit for Admin Review"}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
                 <Button type="button" variant="outline" data-testid="button-save-template">
@@ -457,52 +543,66 @@ export default function PostLoadPage() {
         </div>
 
         <div className="space-y-6">
-          {estimation ? (
-            <Card className="sticky top-6">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Smart Estimation
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <Card className="sticky top-6">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Info className="h-4 w-4 text-blue-500" />
+                How It Works
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-700 dark:text-blue-300 font-medium mb-2">
+                  We handle the pricing for you
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  Our logistics experts will evaluate your load and determine the optimal market rate. You'll be notified once your load is priced and posted to verified carriers.
+                </p>
+              </div>
+
+              {estimation && (
                 <div className="p-4 rounded-lg bg-muted/50 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Distance</span>
-                    <span className="font-semibold">{estimation.distance.toLocaleString()} miles</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Estimated Price</span>
-                    <span className="text-xl font-bold text-primary">${estimation.price.toLocaleString()}</span>
+                    <span className="text-sm text-muted-foreground">Estimated Distance</span>
+                    <span className="font-semibold">{estimation.distance.toLocaleString()} km</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Suggested Truck</span>
-                    <Badge variant="secondary">
+                    <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
                       {estimation.suggestedTruck}
                     </Badge>
                   </div>
                 </div>
+              )}
+
+              {estimation && (
                 <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                   <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                     <Truck className="h-4 w-4" />
-                    <span className="font-medium">{estimation.nearbyTrucks} trucks available nearby</span>
+                    <span className="font-medium">{estimation.nearbyTrucks} trucks available</span>
                   </div>
                   <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                    Ready to pick up your load
+                    Ready in your region
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                <Info className="h-8 w-8 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">
-                  Fill in pickup and dropoff locations to see distance, pricing estimates, and available trucks.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              )}
+
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                  <span>Competitive market-based pricing</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                  <span>Verified and rated carriers only</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                  <span>Full tracking and documentation</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

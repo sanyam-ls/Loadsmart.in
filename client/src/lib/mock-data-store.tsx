@@ -30,10 +30,17 @@ export interface MockLoad {
   weight: number;
   weightUnit: string;
   type: string;
-  status: "Active" | "Bidding" | "Assigned" | "En Route" | "Delivered" | "Cancelled";
+  status: "Active" | "Bidding" | "Assigned" | "En Route" | "Delivered" | "Cancelled" | "Pending Admin Review" | "Admin Priced" | "Posted";
   carrier: string | null;
   eta: string | null;
-  estimatedPrice: number;
+  estimatedPrice: number | null;
+  adminSuggestedPrice?: number | null;
+  adminFinalPrice?: number | null;
+  adminPostMode?: "open" | "invite" | "assign" | null;
+  adminId?: string | null;
+  invitedCarrierIds?: string[] | null;
+  allowCounterBids?: boolean;
+  postedAt?: string | null;
   finalPrice: number | null;
   cargoDescription: string;
   pickupDate: string;
@@ -1491,7 +1498,8 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       throw new Error("Truck or load not found");
     }
     
-    const baseBidPrice = load.estimatedPrice * (0.85 + Math.random() * 0.2);
+    const basePrice = load.estimatedPrice || load.adminFinalPrice || 50000;
+    const baseBidPrice = basePrice * (0.85 + Math.random() * 0.2);
     const bidPrice = Math.round(baseBidPrice / 50) * 50;
     
     const pickupDate = new Date(load.pickupDate);

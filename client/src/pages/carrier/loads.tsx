@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { 
   Search, Filter, MapPin, LayoutGrid, List, Map, Package, Star, 
   Truck, Clock, TrendingUp, ArrowRight, Building2, AlertCircle, 
-  Target, Timer, Sparkles 
+  Target, Timer, Sparkles, ShieldCheck, Lock, Unlock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -195,10 +195,18 @@ export default function CarrierLoadsPage() {
                 <Card key={load.loadId} className="hover-elevate" data-testid={`rec-load-${load.loadId}`}>
                   <CardContent className="pt-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <Badge className={`${getMatchScoreBadge(load.matchScore)} no-default-hover-elevate no-default-active-elevate`}>
-                        <Target className="h-3 w-3 mr-1" />
-                        {load.matchScore}% Match
-                      </Badge>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={`${getMatchScoreBadge(load.matchScore)} no-default-hover-elevate no-default-active-elevate`}>
+                          <Target className="h-3 w-3 mr-1" />
+                          {load.matchScore}% Match
+                        </Badge>
+                        {load.postedByAdmin && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">
+                            <ShieldCheck className="h-3 w-3 mr-1" />
+                            Admin
+                          </Badge>
+                        )}
+                      </div>
                       <span className="text-xs text-muted-foreground">{load.loadId}</span>
                     </div>
                     <div className="flex items-center gap-1 text-sm">
@@ -208,9 +216,9 @@ export default function CarrierLoadsPage() {
                       <span className="font-medium truncate">{load.dropoff}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold">{formatCurrency(load.expectedRate)}</span>
+                      <span className="text-lg font-bold">{formatCurrency(load.adminFinalPrice || load.expectedRate)}</span>
                       <Button size="sm" onClick={() => handleBid(load)} data-testid={`button-bid-rec-${load.loadId}`}>
-                        Bid Now
+                        {load.priceFixed ? "Accept" : "Bid Now"}
                       </Button>
                     </div>
                   </CardContent>
@@ -289,10 +297,18 @@ export default function CarrierLoadsPage() {
             <Card key={load.loadId} className="hover-elevate" data-testid={`load-card-${load.loadId}`}>
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <Badge className={`${getMatchScoreBadge(load.matchScore)} no-default-hover-elevate no-default-active-elevate`}>
-                    <Target className="h-3 w-3 mr-1" />
-                    {load.matchScore}% Match
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`${getMatchScoreBadge(load.matchScore)} no-default-hover-elevate no-default-active-elevate`}>
+                      <Target className="h-3 w-3 mr-1" />
+                      {load.matchScore}% Match
+                    </Badge>
+                    {load.postedByAdmin && (
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                        Posted by Admin
+                      </Badge>
+                    )}
+                  </div>
                   <span className="text-xs text-muted-foreground">{load.loadId}</span>
                 </div>
                 
@@ -311,6 +327,21 @@ export default function CarrierLoadsPage() {
                   <Badge variant="outline">{load.loadType}</Badge>
                   <Badge variant="outline">{load.weight} Tons</Badge>
                   <Badge variant="outline">{load.distance} km</Badge>
+                  {load.priceFixed !== undefined && (
+                    <Badge 
+                      variant="outline" 
+                      className={load.priceFixed 
+                        ? "border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400" 
+                        : "border-green-300 text-green-700 dark:border-green-700 dark:text-green-400"
+                      }
+                    >
+                      {load.priceFixed ? (
+                        <><Lock className="h-3 w-3 mr-1" />Fixed Price</>
+                      ) : (
+                        <><Unlock className="h-3 w-3 mr-1" />Negotiable</>
+                      )}
+                    </Badge>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -322,11 +353,17 @@ export default function CarrierLoadsPage() {
                 
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div>
-                    <p className="text-xs text-muted-foreground">Expected Rate</p>
-                    <p className="text-xl font-bold">{formatCurrency(load.expectedRate)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {load.postedByAdmin ? "Admin Price" : "Expected Rate"}
+                    </p>
+                    <p className="text-xl font-bold">{formatCurrency(load.adminFinalPrice || load.expectedRate)}</p>
                   </div>
-                  <Button onClick={() => handleBid(load)} data-testid={`button-bid-${load.loadId}`}>
-                    Place Bid
+                  <Button 
+                    onClick={() => handleBid(load)} 
+                    data-testid={`button-bid-${load.loadId}`}
+                    variant={load.priceFixed ? "default" : "outline"}
+                  >
+                    {load.priceFixed ? "Accept" : "Place Bid"}
                   </Button>
                 </div>
                 

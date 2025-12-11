@@ -1,8 +1,8 @@
 import { db } from "./db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import {
   users, trucks, loads, bids, shipments, shipmentEvents,
-  messages, documents, notifications, ratings, carrierProfiles,
+  messages, documents, notifications, ratings, carrierProfiles, adminDecisions,
   type User, type InsertUser,
   type Truck, type InsertTruck,
   type Load, type InsertLoad,
@@ -14,6 +14,7 @@ import {
   type Notification, type InsertNotification,
   type Rating, type InsertRating,
   type CarrierProfile, type InsertCarrierProfile,
+  type AdminDecision, type InsertAdminDecision,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -73,6 +74,14 @@ export interface IStorage {
 
   getRatingsByUser(userId: string): Promise<Rating[]>;
   createRating(rating: InsertRating): Promise<Rating>;
+
+  // Admin mediation methods
+  getLoadsSubmittedToAdmin(): Promise<Load[]>;
+  getAdminPostedLoads(): Promise<Load[]>;
+  submitLoadToAdmin(loadId: string): Promise<Load | undefined>;
+  getAdminDecision(id: string): Promise<AdminDecision | undefined>;
+  getAdminDecisionsByLoad(loadId: string): Promise<AdminDecision[]>;
+  createAdminDecision(decision: InsertAdminDecision): Promise<AdminDecision>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -290,6 +299,46 @@ export class DatabaseStorage implements IStorage {
   async createRating(rating: InsertRating): Promise<Rating> {
     const [newRating] = await db.insert(ratings).values(rating).returning();
     return newRating;
+  }
+
+  // Admin mediation methods
+  async getLoadsSubmittedToAdmin(): Promise<Load[]> {
+    return db.select().from(loads)
+      .where(sql`${loads.status} IN ('submitted_to_admin', 'pending_admin_review')`)
+      .orderBy(desc(loads.submittedAt));
+  }
+
+  async getAdminPostedLoads(): Promise<Load[]> {
+    return db.select().from(loads)
+      .where(sql`${loads.status} IN ('posted', 'posted_open', 'posted_invite', 'assigned') AND ${loads.adminId} IS NOT NULL`)
+      .orderBy(desc(loads.postedAt));
+  }
+
+  async submitLoadToAdmin(loadId: string): Promise<Load | undefined> {
+    const [updated] = await db.update(loads)
+      .set({ 
+        status: 'submitted_to_admin',
+        submittedAt: new Date()
+      })
+      .where(eq(loads.id, loadId))
+      .returning();
+    return updated;
+  }
+
+  async getAdminDecision(id: string): Promise<AdminDecision | undefined> {
+    const [decision] = await db.select().from(adminDecisions).where(eq(adminDecisions.id, id));
+    return decision;
+  }
+
+  async getAdminDecisionsByLoad(loadId: string): Promise<AdminDecision[]> {
+    return db.select().from(adminDecisions)
+      .where(eq(adminDecisions.loadId, loadId))
+      .orderBy(desc(adminDecisions.createdAt));
+  }
+
+  async createAdminDecision(decision: InsertAdminDecision): Promise<AdminDecision> {
+    const [newDecision] = await db.insert(adminDecisions).values(decision).returning();
+    return newDecision;
   }
 }
 

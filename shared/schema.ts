@@ -8,13 +8,21 @@ import { z } from "zod";
 export const userRoles = ["shipper", "carrier", "admin"] as const;
 export type UserRole = typeof userRoles[number];
 
-// Load status enum
-export const loadStatuses = ["draft", "posted", "bidding", "assigned", "in_transit", "delivered", "cancelled"] as const;
+// Load status enum (updated for Admin-as-Mediator flow)
+export const loadStatuses = ["draft", "submitted_to_admin", "pending_admin_review", "admin_priced", "posted", "posted_open", "posted_invite", "assigned", "bidding", "in_transit", "delivered", "cancelled", "archived"] as const;
 export type LoadStatus = typeof loadStatuses[number];
+
+// Admin post mode enum
+export const adminPostModes = ["open", "invite", "assign"] as const;
+export type AdminPostMode = typeof adminPostModes[number];
 
 // Bid status enum
 export const bidStatuses = ["pending", "accepted", "rejected", "countered", "expired"] as const;
 export type BidStatus = typeof bidStatuses[number];
+
+// Bid type enum (for Admin-as-Mediator flow)
+export const bidTypes = ["carrier_bid", "admin_posted_acceptance", "admin_counter"] as const;
+export type BidType = typeof bidTypes[number];
 
 // Shipment status enum
 export const shipmentStatuses = ["pickup_scheduled", "picked_up", "in_transit", "at_checkpoint", "out_for_delivery", "delivered"] as const;
@@ -75,7 +83,7 @@ export const trucks = pgTable("trucks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Loads table
+// Loads table (updated for Admin-as-Mediator flow)
 export const loads = pgTable("loads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   shipperId: varchar("shipper_id").notNull().references(() => users.id),
@@ -101,10 +109,36 @@ export const loads = pgTable("loads", {
   status: text("status").default("draft"),
   isTemplate: boolean("is_template").default(false),
   templateName: text("template_name"),
+  adminSuggestedPrice: decimal("admin_suggested_price", { precision: 12, scale: 2 }),
+  adminFinalPrice: decimal("admin_final_price", { precision: 12, scale: 2 }),
+  adminPostMode: text("admin_post_mode"),
+  adminId: varchar("admin_id").references(() => users.id),
+  adminDecisionId: varchar("admin_decision_id"),
+  invitedCarrierIds: text("invited_carrier_ids").array(),
+  allowCounterBids: boolean("allow_counter_bids").default(false),
+  kycVerified: boolean("kyc_verified").default(false),
+  priority: text("priority").default("normal"),
+  submittedAt: timestamp("submitted_at"),
+  postedAt: timestamp("posted_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Bids table
+// Admin Decisions table (immutable audit trail)
+export const adminDecisions = pgTable("admin_decisions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  suggestedPrice: decimal("suggested_price", { precision: 12, scale: 2 }).notNull(),
+  finalPrice: decimal("final_price", { precision: 12, scale: 2 }).notNull(),
+  postingMode: text("posting_mode").notNull(),
+  invitedCarrierIds: text("invited_carrier_ids").array(),
+  comment: text("comment"),
+  pricingBreakdown: jsonb("pricing_breakdown"),
+  actionType: text("action_type").default("price_and_post"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Bids table (updated for Admin-as-Mediator flow)
 export const bids = pgTable("bids", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   loadId: varchar("load_id").notNull().references(() => loads.id),
@@ -116,6 +150,9 @@ export const bids = pgTable("bids", {
   estimatedDelivery: timestamp("estimated_delivery"),
   notes: text("notes"),
   status: text("status").default("pending"),
+  bidType: text("bid_type").default("carrier_bid"),
+  approvalRequired: boolean("approval_required").default(false),
+  adminMediated: boolean("admin_mediated").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -444,12 +481,24 @@ export const ratingsRelations = relations(ratings, ({ one }) => ({
   }),
 }));
 
+export const adminDecisionsRelations = relations(adminDecisions, ({ one }) => ({
+  load: one(loads, {
+    fields: [adminDecisions.loadId],
+    references: [loads.id],
+  }),
+  admin: one(users, {
+    fields: [adminDecisions.adminId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCarrierProfileSchema = createInsertSchema(carrierProfiles).omit({ id: true });
 export const insertTruckSchema = createInsertSchema(trucks).omit({ id: true, createdAt: true });
 export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, createdAt: true });
 export const insertBidSchema = createInsertSchema(bids).omit({ id: true, createdAt: true });
+export const insertAdminDecisionSchema = createInsertSchema(adminDecisions).omit({ id: true, createdAt: true });
 export const insertShipmentSchema = createInsertSchema(shipments).omit({ id: true });
 export const insertShipmentEventSchema = createInsertSchema(shipmentEvents).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
@@ -473,6 +522,8 @@ export type InsertLoad = z.infer<typeof insertLoadSchema>;
 export type Load = typeof loads.$inferSelect;
 export type InsertBid = z.infer<typeof insertBidSchema>;
 export type Bid = typeof bids.$inferSelect;
+export type InsertAdminDecision = z.infer<typeof insertAdminDecisionSchema>;
+export type AdminDecision = typeof adminDecisions.$inferSelect;
 export type InsertShipment = z.infer<typeof insertShipmentSchema>;
 export type Shipment = typeof shipments.$inferSelect;
 export type InsertShipmentEvent = z.infer<typeof insertShipmentEventSchema>;

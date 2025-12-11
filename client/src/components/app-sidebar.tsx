@@ -17,6 +17,7 @@ import {
   DollarSign,
   User,
   History,
+  ClipboardList,
 } from "lucide-react";
 import {
   Sidebar,
@@ -61,6 +62,7 @@ const carrierItems = [
 
 const adminItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
+  { title: "Load Queue", url: "/admin/queue", icon: ClipboardList },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "All Loads", url: "/admin/loads", icon: Package },
   { title: "Carriers", url: "/admin/carriers", icon: Truck },

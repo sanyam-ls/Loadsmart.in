@@ -160,6 +160,11 @@ export interface AvailableLoad {
   nearestDriver: string | null;
   postedAt: Date;
   expiresAt: Date;
+  postedByAdmin?: boolean;
+  adminFinalPrice?: number | null;
+  adminPostMode?: "open" | "invite" | "assign" | null;
+  allowCounterBids?: boolean;
+  priceFixed?: boolean;
 }
 
 // Trip History
@@ -596,6 +601,12 @@ function generateAvailableLoads(count: number, trucks: CarrierTruck[]): Availabl
       .slice(0, 3)
       .map(t => t.licensePlate);
     
+    const isAdminPosted = i < 25;
+    const expectedRate = distance * randomBetween(18, 35);
+    const adminFinalPrice = isAdminPosted ? Math.round(expectedRate * 1.08) : null;
+    const priceFixed = isAdminPosted ? Math.random() > 0.4 : undefined;
+    const matchScore = isAdminPosted && i < 5 ? randomBetween(95, 99) : randomBetween(60, 98);
+    
     loads.push({
       loadId: `LD-${40000 + i}`,
       route: `${pickup} to ${dropoff}`,
@@ -608,12 +619,17 @@ function generateAvailableLoads(count: number, trucks: CarrierTruck[]): Availabl
       shipperCompany: randomFrom(shipperCompanies),
       shipperRating: 3.5 + Math.random() * 1.5,
       budget: distance * randomBetween(20, 40),
-      expectedRate: distance * randomBetween(18, 35),
-      matchScore: randomBetween(60, 98),
+      expectedRate,
+      matchScore,
       recommendedTrucks: matchingTrucks,
       nearestDriver: matchingTrucks.length > 0 ? trucks.find(t => t.licensePlate === matchingTrucks[0])?.assignedDriver || null : null,
       postedAt: new Date(Date.now() - randomBetween(1, 48) * 60 * 60 * 1000),
-      expiresAt: new Date(Date.now() + randomBetween(12, 72) * 60 * 60 * 1000)
+      expiresAt: new Date(Date.now() + randomBetween(12, 72) * 60 * 60 * 1000),
+      postedByAdmin: isAdminPosted,
+      adminFinalPrice,
+      adminPostMode: isAdminPosted ? (Math.random() > 0.7 ? "invite" : "open") : null,
+      allowCounterBids: isAdminPosted ? !priceFixed : undefined,
+      priceFixed: priceFixed
     });
   }
   return loads.sort((a, b) => b.matchScore - a.matchScore);

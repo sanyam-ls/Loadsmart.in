@@ -1735,7 +1735,7 @@ export async function registerRoutes(
       // Approve the pricing
       const approvedPricing = await storage.approveAdminPricing(pricing_id, user.id);
 
-      // Now post the load
+      // Get the load
       const load = await storage.getLoad(pricing.loadId);
       if (!load) {
         return res.status(404).json({ error: "Load not found" });
@@ -1744,18 +1744,14 @@ export async function registerRoutes(
       const finalPrice = parseFloat(pricing.finalPrice?.toString() || '0');
       const mode = post_mode || pricing.postMode || 'open';
 
-      let loadStatus = 'posted_open';
-      if (mode === 'invite') loadStatus = 'posted_invite';
-      else if (mode === 'assign') loadStatus = 'assigned';
-
+      // Set to awaiting_shipper_confirmation - carriers will only see after shipper confirms
       await storage.updateLoad(pricing.loadId, {
-        status: loadStatus,
+        status: 'awaiting_shipper_confirmation',
         adminFinalPrice: finalPrice.toString(),
         adminPostMode: mode,
         adminId: pricing.adminId,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || pricing.invitedCarrierIds || [],
-        postedAt: new Date(),
       });
 
       // Create admin decision record
@@ -1771,57 +1767,20 @@ export async function registerRoutes(
         actionType: 'approve_and_post',
       });
 
-      // Update pricing status to posted
-      await storage.updateAdminPricing(pricing_id, { status: 'posted' });
+      // Update pricing status to locked (not posted yet - waiting for shipper confirmation)
+      await storage.updateAdminPricing(pricing_id, { status: 'locked' });
 
       // Notify original admin
       await storage.createNotification({
         userId: pricing.adminId,
         title: "Pricing Override Approved",
-        message: `Your pricing for load has been approved and posted.`,
+        message: `Pricing approved. Awaiting shipper confirmation before carrier bidding begins.`,
         type: "success",
         relatedLoadId: pricing.loadId,
       });
-
-      // Notify shipper
-      await storage.createNotification({
-        userId: load.shipperId,
-        title: "Load Priced and Posted",
-        message: `Your load has been priced at Rs. ${finalPrice.toLocaleString()} and posted to carriers.`,
-        type: "success",
-        relatedLoadId: pricing.loadId,
-      });
-
-      // Notify all carriers for open mode
-      if (mode === 'open') {
-        const allUsers = await storage.getAllUsers();
-        const carriers = allUsers.filter(u => u.role === 'carrier');
-        for (const carrier of carriers.slice(0, 20)) {
-          await storage.createNotification({
-            userId: carrier.id,
-            title: "New Load Available",
-            message: `New load available: ${load.pickupCity} → ${load.dropoffCity} at Rs. ${finalPrice.toLocaleString('en-IN')}`,
-            type: "info",
-            relatedLoadId: pricing.loadId,
-          });
-        }
-      }
-
-      // If invite mode, notify invited carriers
-      const carrierIds = invite_carrier_ids || pricing.invitedCarrierIds || [];
-      if (mode === 'invite' && carrierIds.length) {
-        for (const carrierId of carrierIds) {
-          await storage.createNotification({
-            userId: carrierId,
-            title: "New Load Invitation",
-            message: `You've been invited to bid on a load: ${load.pickupCity} → ${load.dropoffCity}`,
-            type: "info",
-            relatedLoadId: pricing.loadId,
-          });
-        }
-      }
 
       // Generate invoice for shipper
+      let invoiceCreated = false;
       try {
         const existingInvoice = await storage.getInvoiceByLoad(load.id);
         if (!existingInvoice) {
@@ -1854,11 +1813,13 @@ export async function registerRoutes(
           });
 
           await storage.sendInvoice(invoice.id);
+          invoiceCreated = true;
 
+          // Notify shipper - they need to confirm before bidding begins
           await storage.createNotification({
             userId: load.shipperId,
-            title: "Invoice Generated",
-            message: `Invoice ${invoiceNumber} for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. 18% GST) has been sent.`,
+            title: "Invoice Ready - Confirmation Required",
+            message: `Invoice ${invoiceNumber} for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. 18% GST) requires your confirmation before carriers can bid.`,
             type: "payment",
             relatedLoadId: load.id,
           });
@@ -1867,7 +1828,23 @@ export async function registerRoutes(
         console.error("Invoice creation error:", invoiceError);
       }
 
-      res.json({ success: true, pricing: approvedPricing, load_status: loadStatus });
+      // Notify shipper about pending confirmation
+      await storage.createNotification({
+        userId: load.shipperId,
+        title: "Load Priced - Confirmation Needed",
+        message: `Your load has been priced at Rs. ${finalPrice.toLocaleString('en-IN')}. Please confirm the invoice to begin carrier bidding.`,
+        type: "warning",
+        relatedLoadId: pricing.loadId,
+      });
+
+      // NOTE: Carriers are NOT notified here - they will be notified when shipper confirms
+
+      res.json({ 
+        success: true, 
+        pricing: approvedPricing, 
+        load_status: 'awaiting_shipper_confirmation',
+        invoice_created: invoiceCreated,
+      });
     } catch (error) {
       console.error("Pricing approve error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -2044,6 +2021,124 @@ export async function registerRoutes(
       res.json(invoices);
     } catch (error) {
       console.error("Get shipper invoices error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/invoices/:id/confirm - Shipper confirms invoice to start carrier bidding
+  app.post("/api/invoices/:id/confirm", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Verify shipper owns this invoice
+      if (invoice.shipperId !== user.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Check if already confirmed
+      if (invoice.shipperConfirmed) {
+        return res.status(400).json({ error: "Invoice already confirmed" });
+      }
+
+      // Confirm the invoice
+      const updatedInvoice = await storage.updateInvoice(req.params.id, {
+        shipperConfirmed: true,
+        shipperConfirmedAt: new Date(),
+        status: 'sent', // Mark as properly sent now that shipper acknowledged
+      });
+
+      // Get the load and post it for carrier bidding
+      const load = await storage.getLoad(invoice.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Determine status based on post mode
+      const postMode = load.adminPostMode || 'open';
+      let loadStatus = 'posted_open';
+      if (postMode === 'invite') loadStatus = 'posted_invite';
+      else if (postMode === 'assign') loadStatus = 'assigned';
+
+      // Update load status - NOW carriers can see and bid
+      await storage.updateLoad(load.id, {
+        status: loadStatus,
+        postedAt: new Date(),
+      });
+
+      // Update pricing status to posted
+      const pricing = await storage.getAdminPricingByLoad(load.id);
+      if (pricing) {
+        await storage.updateAdminPricing(pricing.id, { status: 'posted' });
+      }
+
+      const finalPrice = parseFloat(load.adminFinalPrice?.toString() || '0');
+
+      // Notify shipper of confirmation
+      await storage.createNotification({
+        userId: user.id,
+        title: "Invoice Confirmed",
+        message: `You have confirmed the invoice. Your load is now posted for carrier bidding.`,
+        type: "success",
+        relatedLoadId: load.id,
+      });
+
+      // NOW notify carriers - this is when bidding begins
+      if (postMode === 'open') {
+        const allUsers = await storage.getAllUsers();
+        const carriers = allUsers.filter(u => u.role === 'carrier');
+        for (const carrier of carriers.slice(0, 20)) {
+          await storage.createNotification({
+            userId: carrier.id,
+            title: "New Load Available",
+            message: `New load available: ${load.pickupCity} → ${load.dropoffCity} at Rs. ${finalPrice.toLocaleString('en-IN')}`,
+            type: "info",
+            relatedLoadId: load.id,
+          });
+        }
+      }
+
+      // If invite mode, notify invited carriers
+      if (postMode === 'invite' && load.invitedCarrierIds?.length) {
+        for (const carrierId of load.invitedCarrierIds) {
+          await storage.createNotification({
+            userId: carrierId,
+            title: "New Load Invitation",
+            message: `You've been invited to bid on a load: ${load.pickupCity} → ${load.dropoffCity} at Rs. ${finalPrice.toLocaleString('en-IN')}`,
+            type: "info",
+            relatedLoadId: load.id,
+          });
+        }
+      }
+
+      // Notify admins that shipper confirmed
+      const allUsers = await storage.getAllUsers();
+      const admins = allUsers.filter(u => u.role === 'admin');
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Shipper Confirmed Invoice",
+          message: `Shipper ${user.companyName || user.username} confirmed invoice. Load is now open for carrier bidding.`,
+          type: "success",
+          relatedLoadId: load.id,
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        invoice: updatedInvoice,
+        load_status: loadStatus,
+        message: "Invoice confirmed. Load is now posted for carrier bidding.",
+      });
+    } catch (error) {
+      console.error("Invoice confirm error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

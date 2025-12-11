@@ -9,7 +9,7 @@ export const userRoles = ["shipper", "carrier", "admin"] as const;
 export type UserRole = typeof userRoles[number];
 
 // Load status enum (updated for Admin-as-Mediator flow)
-export const loadStatuses = ["draft", "submitted_to_admin", "pending_admin_review", "admin_priced", "posted", "posted_open", "posted_invite", "assigned", "bidding", "in_transit", "delivered", "cancelled", "archived"] as const;
+export const loadStatuses = ["draft", "submitted_to_admin", "pending_admin_review", "admin_priced", "awaiting_shipper_confirmation", "posted", "posted_open", "posted_invite", "assigned", "bidding", "in_transit", "delivered", "cancelled", "archived"] as const;
 export type LoadStatus = typeof loadStatuses[number];
 
 // Admin post mode enum
@@ -223,6 +223,8 @@ export const invoices = pgTable("invoices", {
   paidAmount: decimal("paid_amount", { precision: 12, scale: 2 }),
   paymentMethod: text("payment_method"),
   paymentReference: text("payment_reference"),
+  shipperConfirmed: boolean("shipper_confirmed").default(false),
+  shipperConfirmedAt: timestamp("shipper_confirmed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

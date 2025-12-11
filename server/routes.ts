@@ -1319,6 +1319,577 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // Admin Pricing & Margin Builder Routes
+  // ============================================
+
+  // Pricing coefficients (configurable)
+  const PRICING_CONFIG = {
+    baseRates: {
+      'flatbed': 45,
+      'refrigerated': 65,
+      'dry_van': 40,
+      'tanker': 55,
+      'container': 50,
+      'open_deck': 35,
+      'default': 42,
+    } as Record<string, number>,
+    fuelSurchargePercent: 12,
+    defaultPlatformRate: 10,
+    handlingFee: 500,
+    approvalThresholdPercent: 15, // If admin price differs from suggested by > 15%, require approval
+    seasonalMultipliers: {
+      'jan': 1.0, 'feb': 1.0, 'mar': 1.05, 'apr': 1.05,
+      'may': 1.1, 'jun': 1.1, 'jul': 1.15, 'aug': 1.1,
+      'sep': 1.05, 'oct': 1.1, 'nov': 1.15, 'dec': 1.2,
+    } as Record<string, number>,
+    regionMultipliers: {
+      'north': 1.0, 'south': 0.95, 'east': 1.02, 'west': 1.05, 'central': 1.0,
+    } as Record<string, number>,
+  };
+
+  // Helper function for price calculation
+  const calculatePricing = (params: {
+    distance: number;
+    weight: number;
+    loadType?: string;
+    region?: string;
+    pickupDate?: Date;
+  }) => {
+    const { distance, weight, loadType, region, pickupDate } = params;
+    const baseRate = PRICING_CONFIG.baseRates[loadType?.toLowerCase() || 'default'] || PRICING_CONFIG.baseRates['default'];
+    
+    // Base calculation
+    let baseAmount = distance * baseRate;
+    
+    // Weight adjustment (+2% per ton above 5 tons)
+    if (weight > 5) {
+      baseAmount *= (1 + (weight - 5) * 0.02);
+    }
+    
+    // Seasonal multiplier
+    const month = (pickupDate || new Date()).toLocaleString('en-US', { month: 'short' }).toLowerCase();
+    const seasonalMultiplier = PRICING_CONFIG.seasonalMultipliers[month] || 1.0;
+    baseAmount *= seasonalMultiplier;
+    
+    // Region multiplier
+    const regionMultiplier = PRICING_CONFIG.regionMultipliers[region?.toLowerCase() || 'central'] || 1.0;
+    baseAmount *= regionMultiplier;
+    
+    // Surcharges
+    const fuelSurcharge = baseAmount * (PRICING_CONFIG.fuelSurchargePercent / 100);
+    const handlingFee = PRICING_CONFIG.handlingFee;
+    
+    const totalSuggestedPrice = Math.round(baseAmount + fuelSurcharge + handlingFee);
+    
+    return {
+      suggestedPrice: totalSuggestedPrice,
+      breakdown: {
+        baseAmount: Math.round(baseAmount),
+        fuelSurcharge: Math.round(fuelSurcharge),
+        handlingFee,
+        seasonalMultiplier,
+        regionMultiplier,
+      },
+      params: {
+        distanceKm: distance,
+        weightTons: weight,
+        loadType: loadType || 'default',
+        baseRatePerKm: baseRate,
+        region: region || 'central',
+      },
+      confidenceScore: Math.min(95, 70 + Math.floor(distance / 100) + (weight > 5 ? 10 : 5)),
+    };
+  };
+
+  // POST /api/admin/pricing/suggest - Get suggested price with full breakdown
+  app.post("/api/admin/pricing/suggest", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { load_id } = req.body;
+      const load = await storage.getLoad(load_id);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const distance = parseFloat(load.distance?.toString() || '500');
+      const weight = parseFloat(load.weight?.toString() || '10');
+      const pickupDate = load.pickupDate ? new Date(load.pickupDate) : new Date();
+
+      // Determine region from pickup city
+      const city = load.pickupCity?.toLowerCase() || '';
+      let region = 'central';
+      if (['delhi', 'chandigarh', 'jaipur', 'lucknow'].some(c => city.includes(c))) region = 'north';
+      else if (['chennai', 'bangalore', 'hyderabad', 'kochi'].some(c => city.includes(c))) region = 'south';
+      else if (['kolkata', 'bhubaneswar', 'guwahati'].some(c => city.includes(c))) region = 'east';
+      else if (['mumbai', 'pune', 'ahmedabad', 'surat'].some(c => city.includes(c))) region = 'west';
+
+      const pricing = calculatePricing({
+        distance,
+        weight,
+        loadType: load.requiredTruckType || undefined,
+        region,
+        pickupDate,
+      });
+
+      // Get comparable loads (last 90 days)
+      const allLoads = await storage.getAllLoads();
+      const comparableLoads = allLoads
+        .filter(l => 
+          l.id !== load.id && 
+          l.status === 'delivered' && 
+          l.finalPrice &&
+          Math.abs(parseFloat(l.distance?.toString() || '0') - distance) < 100 &&
+          l.requiredTruckType === load.requiredTruckType
+        )
+        .slice(0, 5)
+        .map(l => ({
+          id: l.id,
+          route: `${l.pickupCity} → ${l.dropoffCity}`,
+          distance: l.distance,
+          finalPrice: l.finalPrice,
+        }));
+
+      // Risk flags
+      const riskFlags: string[] = [];
+      if (!load.kycVerified) riskFlags.push('Shipper KYC not verified');
+      if (distance > 2000) riskFlags.push('Long haul route (>2000km)');
+      if (weight > 25) riskFlags.push('Heavy load (>25 tons)');
+
+      res.json({
+        load_id,
+        suggested_price: pricing.suggestedPrice,
+        breakdown: pricing.breakdown,
+        params: pricing.params,
+        confidence_score: pricing.confidenceScore,
+        comparable_loads: comparableLoads,
+        risk_flags: riskFlags,
+        platform_rate_percent: PRICING_CONFIG.defaultPlatformRate,
+      });
+    } catch (error) {
+      console.error("Pricing suggest error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/pricing/save - Save draft pricing
+  app.post("/api/admin/pricing/save", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { 
+        load_id, suggested_price, final_price, markup_percent, fixed_fee, 
+        fuel_override, discount_amount, platform_margin_percent, notes, template_id 
+      } = req.body;
+
+      // Check if pricing already exists for this load
+      let existingPricing = await storage.getAdminPricingByLoad(load_id);
+
+      // Calculate payout and margin
+      const finalPriceNum = parseFloat(final_price || suggested_price);
+      const platformMarginPercent = parseFloat(platform_margin_percent || PRICING_CONFIG.defaultPlatformRate);
+      const platformMargin = Math.round(finalPriceNum * (platformMarginPercent / 100));
+      const payoutEstimate = Math.round(finalPriceNum - platformMargin);
+
+      const pricingData = {
+        loadId: load_id,
+        adminId: user.id,
+        templateId: template_id || null,
+        suggestedPrice: suggested_price?.toString(),
+        finalPrice: final_price?.toString() || null,
+        markupPercent: markup_percent?.toString() || "0",
+        fixedFee: fixed_fee?.toString() || "0",
+        fuelOverride: fuel_override?.toString() || null,
+        discountAmount: discount_amount?.toString() || "0",
+        payoutEstimate: payoutEstimate.toString(),
+        platformMargin: platformMargin.toString(),
+        platformMarginPercent: platformMarginPercent.toString(),
+        status: 'draft',
+        notes: notes || null,
+      };
+
+      let pricing;
+      if (existingPricing && existingPricing.status === 'draft') {
+        pricing = await storage.updateAdminPricing(existingPricing.id, pricingData);
+      } else {
+        pricing = await storage.createAdminPricing(pricingData as any);
+      }
+
+      res.json({ success: true, pricing });
+    } catch (error) {
+      console.error("Pricing save error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/pricing/lock - Lock final price and optionally post
+  app.post("/api/admin/pricing/lock", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { pricing_id, final_price, post_mode, invite_carrier_ids, notes, allow_counter_bids } = req.body;
+
+      const pricing = await storage.getAdminPricing(pricing_id);
+      if (!pricing) {
+        return res.status(404).json({ error: "Pricing not found" });
+      }
+
+      // Check if approval is needed
+      const suggestedPrice = parseFloat(pricing.suggestedPrice?.toString() || '0');
+      const finalPrice = parseFloat(final_price);
+      const deviation = Math.abs((finalPrice - suggestedPrice) / suggestedPrice * 100);
+      const requiresApproval = deviation > PRICING_CONFIG.approvalThresholdPercent;
+
+      // Calculate margins
+      const platformMarginPercent = parseFloat(pricing.platformMarginPercent?.toString() || PRICING_CONFIG.defaultPlatformRate.toString());
+      const platformMargin = Math.round(finalPrice * (platformMarginPercent / 100));
+      const payoutEstimate = Math.round(finalPrice - platformMargin);
+
+      // Update pricing record
+      const updatedPricing = await storage.updateAdminPricing(pricing_id, {
+        finalPrice: finalPrice.toString(),
+        postMode: post_mode,
+        invitedCarrierIds: invite_carrier_ids || [],
+        status: requiresApproval ? 'awaiting_approval' : 'locked',
+        requiresApproval,
+        payoutEstimate: payoutEstimate.toString(),
+        platformMargin: platformMargin.toString(),
+        notes: notes || pricing.notes,
+      });
+
+      if (requiresApproval) {
+        // Notify other admins for approval
+        const allUsers = await storage.getAllUsers();
+        const otherAdmins = allUsers.filter(u => u.role === 'admin' && u.id !== user.id);
+        for (const admin of otherAdmins) {
+          await storage.createNotification({
+            userId: admin.id,
+            title: "Pricing Override Requires Approval",
+            message: `Load pricing deviates ${deviation.toFixed(1)}% from suggested. Review required.`,
+            type: "warning",
+            relatedLoadId: pricing.loadId,
+          });
+        }
+
+        return res.json({ 
+          success: true, 
+          pricing: updatedPricing, 
+          requires_approval: true,
+          deviation_percent: deviation,
+        });
+      }
+
+      // If no approval needed, proceed to post
+      const load = await storage.getLoad(pricing.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Determine status based on post mode
+      let loadStatus = 'posted_open';
+      if (post_mode === 'invite') loadStatus = 'posted_invite';
+      else if (post_mode === 'assign') loadStatus = 'assigned';
+
+      // Update load with admin pricing
+      await storage.updateLoad(pricing.loadId, {
+        status: loadStatus,
+        adminFinalPrice: finalPrice.toString(),
+        adminPostMode: post_mode,
+        adminId: user.id,
+        allowCounterBids: allow_counter_bids !== false,
+        invitedCarrierIds: invite_carrier_ids || [],
+        postedAt: new Date(),
+      });
+
+      // Create admin decision record
+      await storage.createAdminDecision({
+        loadId: pricing.loadId,
+        adminId: user.id,
+        suggestedPrice: pricing.suggestedPrice,
+        finalPrice: finalPrice.toString(),
+        postingMode: post_mode,
+        invitedCarrierIds: invite_carrier_ids || [],
+        comment: notes || null,
+        pricingBreakdown: JSON.stringify({
+          platformMargin,
+          payoutEstimate,
+          markupPercent: pricing.markupPercent,
+          fixedFee: pricing.fixedFee,
+        }),
+        actionType: 'price_and_post',
+      });
+
+      // Update pricing status
+      await storage.updateAdminPricing(pricing_id, { status: 'posted' });
+
+      // Notify shipper
+      await storage.createNotification({
+        userId: load.shipperId,
+        title: "Load Priced and Posted",
+        message: `Your load has been priced at Rs. ${finalPrice.toLocaleString()} and posted to carriers.`,
+        type: "success",
+        relatedLoadId: pricing.loadId,
+      });
+
+      // If invite mode, notify invited carriers
+      if (post_mode === 'invite' && invite_carrier_ids?.length) {
+        for (const carrierId of invite_carrier_ids) {
+          await storage.createNotification({
+            userId: carrierId,
+            title: "New Load Invitation",
+            message: `You've been invited to bid on a load: ${load.pickupCity} → ${load.dropoffCity}`,
+            type: "info",
+            relatedLoadId: pricing.loadId,
+          });
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        pricing: updatedPricing,
+        requires_approval: false,
+        load_status: loadStatus,
+      });
+    } catch (error) {
+      console.error("Pricing lock error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/pricing/approve - Approve pricing override
+  app.post("/api/admin/pricing/approve", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { pricing_id, post_mode, invite_carrier_ids, allow_counter_bids } = req.body;
+
+      const pricing = await storage.getAdminPricing(pricing_id);
+      if (!pricing) {
+        return res.status(404).json({ error: "Pricing not found" });
+      }
+
+      if (pricing.status !== 'awaiting_approval') {
+        return res.status(400).json({ error: "Pricing is not awaiting approval" });
+      }
+
+      // Approve the pricing
+      const approvedPricing = await storage.approveAdminPricing(pricing_id, user.id);
+
+      // Now post the load
+      const load = await storage.getLoad(pricing.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const finalPrice = parseFloat(pricing.finalPrice?.toString() || '0');
+      const mode = post_mode || pricing.postMode || 'open';
+
+      let loadStatus = 'posted_open';
+      if (mode === 'invite') loadStatus = 'posted_invite';
+      else if (mode === 'assign') loadStatus = 'assigned';
+
+      await storage.updateLoad(pricing.loadId, {
+        status: loadStatus,
+        adminFinalPrice: finalPrice.toString(),
+        adminPostMode: mode,
+        adminId: pricing.adminId,
+        allowCounterBids: allow_counter_bids !== false,
+        invitedCarrierIds: invite_carrier_ids || pricing.invitedCarrierIds || [],
+        postedAt: new Date(),
+      });
+
+      // Create admin decision record
+      await storage.createAdminDecision({
+        loadId: pricing.loadId,
+        adminId: user.id,
+        suggestedPrice: pricing.suggestedPrice,
+        finalPrice: finalPrice.toString(),
+        postingMode: mode,
+        invitedCarrierIds: invite_carrier_ids || pricing.invitedCarrierIds || [],
+        comment: `Approved by ${user.username}`,
+        pricingBreakdown: pricing.priceBreakdown as Record<string, unknown> || null,
+        actionType: 'approve_and_post',
+      });
+
+      // Update pricing status to posted
+      await storage.updateAdminPricing(pricing_id, { status: 'posted' });
+
+      // Notify original admin
+      await storage.createNotification({
+        userId: pricing.adminId,
+        title: "Pricing Override Approved",
+        message: `Your pricing for load has been approved and posted.`,
+        type: "success",
+        relatedLoadId: pricing.loadId,
+      });
+
+      // Notify shipper
+      await storage.createNotification({
+        userId: load.shipperId,
+        title: "Load Priced and Posted",
+        message: `Your load has been priced at Rs. ${finalPrice.toLocaleString()} and posted to carriers.`,
+        type: "success",
+        relatedLoadId: pricing.loadId,
+      });
+
+      res.json({ success: true, pricing: approvedPricing, load_status: loadStatus });
+    } catch (error) {
+      console.error("Pricing approve error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/pricing/reject - Reject pricing override
+  app.post("/api/admin/pricing/reject", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { pricing_id, reason } = req.body;
+
+      const pricing = await storage.getAdminPricing(pricing_id);
+      if (!pricing) {
+        return res.status(404).json({ error: "Pricing not found" });
+      }
+
+      const rejectedPricing = await storage.rejectAdminPricing(pricing_id, user.id, reason);
+
+      // Notify original admin
+      await storage.createNotification({
+        userId: pricing.adminId,
+        title: "Pricing Override Rejected",
+        message: `Your pricing override was rejected: ${reason}`,
+        type: "error",
+        relatedLoadId: pricing.loadId,
+      });
+
+      res.json({ success: true, pricing: rejectedPricing });
+    } catch (error) {
+      console.error("Pricing reject error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/pricing/history/:loadId - Get pricing history
+  app.get("/api/admin/pricing/history/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const history = await storage.getAdminPricingHistory(req.params.loadId);
+      
+      // Add admin names to history entries
+      const historyWithAdmins = await Promise.all(
+        history.map(async (entry) => {
+          const admin = await storage.getUser(entry.adminId);
+          const approver = entry.approvedBy ? await storage.getUser(entry.approvedBy) : null;
+          return {
+            ...entry,
+            adminName: admin?.username || 'Unknown',
+            approverName: approver?.username || null,
+          };
+        })
+      );
+
+      res.json(historyWithAdmins);
+    } catch (error) {
+      console.error("Pricing history error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/pricing/templates - Get all pricing templates
+  app.get("/api/admin/pricing/templates", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const templates = await storage.getPricingTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Get templates error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/pricing/templates - Create pricing template
+  app.post("/api/admin/pricing/templates", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { name, description, markup_percent, fixed_fee, fuel_surcharge_percent, platform_rate_percent } = req.body;
+
+      const template = await storage.createPricingTemplate({
+        name,
+        description,
+        markupPercent: markup_percent?.toString() || "0",
+        fixedFee: fixed_fee?.toString() || "0",
+        fuelSurchargePercent: fuel_surcharge_percent?.toString() || "0",
+        platformRatePercent: platform_rate_percent?.toString() || PRICING_CONFIG.defaultPlatformRate.toString(),
+        createdBy: user.id,
+      });
+
+      res.json(template);
+    } catch (error) {
+      console.error("Create template error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // DELETE /api/admin/pricing/templates/:id - Delete (deactivate) pricing template
+  app.delete("/api/admin/pricing/templates/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      await storage.deletePricingTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete template error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/pricing/:loadId - Get current pricing for a load
+  app.get("/api/admin/pricing/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const pricing = await storage.getAdminPricingByLoad(req.params.loadId);
+      res.json(pricing || null);
+    } catch (error) {
+      console.error("Get pricing error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Setup WebSocket for real-time telemetry
   setupTelemetryWebSocket(httpServer);
 

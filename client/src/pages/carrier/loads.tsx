@@ -118,8 +118,24 @@ export default function CarrierLoadsPage() {
 
   const handleBid = (load: AvailableLoad) => {
     setSelectedLoad(load);
-    setBidAmount(load.expectedRate.toString());
+    const price = load.adminFinalPrice || load.expectedRate;
+    setBidAmount(price.toString());
     setBidDialogOpen(true);
+  };
+
+  const handleAccept = () => {
+    if (!selectedLoad) return;
+    const price = selectedLoad.adminFinalPrice || selectedLoad.expectedRate;
+    
+    placeBid(selectedLoad.loadId, price);
+    
+    toast({
+      title: "Load Accepted",
+      description: `You've accepted the fixed price of ${formatCurrency(price)} from ${selectedLoad.shipperCompany}.`,
+    });
+    setBidDialogOpen(false);
+    setBidAmount("");
+    setSelectedLoad(null);
   };
 
   const submitBid = () => {
@@ -127,9 +143,13 @@ export default function CarrierLoadsPage() {
     
     placeBid(selectedLoad.loadId, parseInt(bidAmount));
     
+    const isCounterBid = selectedLoad.priceFixed === false && parseInt(bidAmount) !== (selectedLoad.adminFinalPrice || selectedLoad.expectedRate);
+    
     toast({
-      title: "Bid Placed Successfully",
-      description: `Your bid of ${formatCurrency(parseInt(bidAmount))} has been sent to ${selectedLoad.shipperCompany}.`,
+      title: isCounterBid ? "Counter-Bid Submitted" : "Bid Placed Successfully",
+      description: isCounterBid
+        ? `Your counter-bid of ${formatCurrency(parseInt(bidAmount))} has been submitted for review.`
+        : `Your bid of ${formatCurrency(parseInt(bidAmount))} has been sent to ${selectedLoad.shipperCompany}.`,
     });
     setBidDialogOpen(false);
     setBidAmount("");
@@ -444,9 +464,16 @@ export default function CarrierLoadsPage() {
       <Dialog open={bidDialogOpen} onOpenChange={setBidDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Place Your Bid</DialogTitle>
+            <DialogTitle>
+              {selectedLoad?.priceFixed ? "Accept Fixed Price Load" : "Place Your Bid"}
+            </DialogTitle>
             <DialogDescription>
-              Submit a competitive bid for this load
+              {selectedLoad?.priceFixed 
+                ? "Review the admin-priced load and accept to book immediately"
+                : selectedLoad?.postedByAdmin 
+                  ? "Submit a bid or counter-offer for this admin-posted load"
+                  : "Submit a competitive bid for this load"
+              }
             </DialogDescription>
           </DialogHeader>
           
@@ -489,49 +516,74 @@ export default function CarrierLoadsPage() {
                   </div>
                   
                   <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-muted-foreground">Expected Rate</span>
-                    <span className="text-lg font-bold">{formatCurrency(selectedLoad.expectedRate)}</span>
+                    <span className="text-muted-foreground">
+                      {selectedLoad.postedByAdmin ? "Admin Price" : "Expected Rate"}
+                    </span>
+                    <span className="text-lg font-bold">{formatCurrency(selectedLoad.adminFinalPrice || selectedLoad.expectedRate)}</span>
                   </div>
                 </CardContent>
               </Card>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Your Bid Amount</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rs.</span>
-                  <Input
-                    type="number"
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
-                    className="pl-10"
-                    placeholder="Enter your bid"
-                    data-testid="input-bid-amount"
-                  />
+              {selectedLoad.priceFixed ? (
+                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lock className="h-4 w-4 text-amber-600" />
+                    <span className="font-medium text-amber-700 dark:text-amber-400">Fixed Price Load</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    This load has been priced by the admin. Accept the fixed price to book this load immediately.
+                  </p>
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-background rounded border">
+                    <span className="text-sm text-muted-foreground">Fixed Price</span>
+                    <span className="text-xl font-bold text-green-600">{formatCurrency(selectedLoad.adminFinalPrice || selectedLoad.expectedRate)}</span>
+                  </div>
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => setBidAmount(Math.round(selectedLoad.expectedRate * 0.95).toString())}
-                  >
-                    -5%
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => setBidAmount(selectedLoad.expectedRate.toString())}
-                  >
-                    Match
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => setBidAmount(Math.round(selectedLoad.expectedRate * 1.05).toString())}
-                  >
-                    +5%
-                  </Button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Unlock className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-green-700 dark:text-green-400">Negotiable Load</span>
+                  </div>
+                  <label className="text-sm font-medium">Your Bid Amount</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rs.</span>
+                    <Input
+                      type="number"
+                      value={bidAmount}
+                      onChange={(e) => setBidAmount(e.target.value)}
+                      className="pl-10"
+                      placeholder="Enter your bid"
+                      data-testid="input-bid-amount"
+                    />
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setBidAmount(Math.round((selectedLoad.adminFinalPrice || selectedLoad.expectedRate) * 0.95).toString())}
+                    >
+                      -5%
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setBidAmount((selectedLoad.adminFinalPrice || selectedLoad.expectedRate).toString())}
+                    >
+                      Match
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setBidAmount(Math.round((selectedLoad.adminFinalPrice || selectedLoad.expectedRate) * 1.05).toString())}
+                    >
+                      +5%
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    You can submit a counter-bid that differs from the asking price. Counter-bids will be reviewed by the admin.
+                  </p>
                 </div>
-              </div>
+              )}
               
               {selectedLoad.recommendedTrucks.length > 0 && (
                 <div className="p-3 rounded-lg bg-muted/50">
@@ -550,9 +602,15 @@ export default function CarrierLoadsPage() {
             <Button variant="outline" onClick={() => setBidDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submitBid} disabled={!bidAmount} data-testid="button-submit-bid">
-              Submit Bid
-            </Button>
+            {selectedLoad?.priceFixed ? (
+              <Button onClick={handleAccept} data-testid="button-accept-load">
+                Accept Fixed Price
+              </Button>
+            ) : (
+              <Button onClick={submitBid} disabled={!bidAmount} data-testid="button-submit-bid">
+                {parseInt(bidAmount) !== (selectedLoad?.adminFinalPrice || selectedLoad?.expectedRate) ? "Submit Counter-Bid" : "Submit Bid"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

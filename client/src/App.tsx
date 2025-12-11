@@ -26,6 +26,7 @@ import CarriersPage from "@/pages/shipper/carriers";
 import ShipperDocumentsPage from "@/pages/shipper/documents";
 import SpendAnalyticsPage from "@/pages/shipper/spend";
 import NearbyTrucksPage from "@/pages/shipper/nearby-trucks";
+import ShipperInvoicesPage from "@/pages/shipper/invoices";
 
 import CarrierDashboard from "@/pages/carrier/dashboard";
 import AddTruckPage from "@/pages/carrier/add-truck";
@@ -120,6 +121,7 @@ function AppContent() {
               <Route path="/shipper/carriers" component={CarriersPage} />
               <Route path="/shipper/nearby-trucks" component={NearbyTrucksPage} />
               <Route path="/shipper/documents" component={ShipperDocumentsPage} />
+              <Route path="/shipper/invoices" component={ShipperInvoicesPage} />
               
               <Route path="/carrier" component={CarrierDashboard} />
               <Route path="/carrier/add-truck" component={AddTruckPage} />

@@ -39,12 +39,13 @@ const shipperItems = [
   { title: "Dashboard", url: "/shipper", icon: LayoutDashboard },
   { title: "Post Load", url: "/shipper/post-load", icon: Plus },
   { title: "My Loads", url: "/shipper/loads", icon: Package },
+  { title: "Invoices", url: "/shipper/invoices", icon: FileText },
   { title: "Nearby Trucks", url: "/shipper/nearby-trucks", icon: MapPin },
   { title: "Negotiations", url: "/shipper/negotiations", icon: MessageSquare },
   { title: "Track Shipments", url: "/shipper/tracking", icon: Route },
   { title: "In-Transit", url: "/shipper/in-transit", icon: Radio },
   { title: "Carriers", url: "/shipper/carriers", icon: Truck },
-  { title: "Documents", url: "/shipper/documents", icon: FileText },
+  { title: "Documents", url: "/shipper/documents", icon: DollarSign },
 ];
 
 const carrierItems = [

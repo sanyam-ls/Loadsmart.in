@@ -1666,6 +1666,70 @@ export async function registerRoutes(
         }
       }
 
+      // If open mode, notify all carriers
+      if (post_mode === 'open') {
+        const allUsers = await storage.getAllUsers();
+        const carriers = allUsers.filter(u => u.role === 'carrier');
+        for (const carrier of carriers.slice(0, 20)) { // Limit to 20 carriers for now
+          await storage.createNotification({
+            userId: carrier.id,
+            title: "New Load Available",
+            message: `New load available: ${load.pickupCity} → ${load.dropoffCity} at Rs. ${finalPrice.toLocaleString('en-IN')}`,
+            type: "info",
+            relatedLoadId: pricing.loadId,
+          });
+        }
+      }
+
+      // Generate invoice for shipper
+      try {
+        const existingInvoice = await storage.getInvoiceByLoad(load.id);
+        if (!existingInvoice) {
+          const taxRate = 0.18; // 18% GST
+          const taxAmount = Math.round(finalPrice * taxRate);
+          const totalAmount = finalPrice + taxAmount;
+          
+          const invoiceNumber = await storage.generateInvoiceNumber();
+          const invoice = await storage.createInvoice({
+            invoiceNumber,
+            loadId: load.id,
+            shipperId: load.shipperId,
+            adminId: user.id,
+            subtotal: finalPrice.toString(),
+            taxPercent: '18',
+            taxAmount: taxAmount.toString(),
+            totalAmount: totalAmount.toString(),
+            status: 'draft',
+            paymentTerms: 'Net 30',
+            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            lineItems: [
+              { 
+                description: `Freight Transportation: ${load.pickupCity} to ${load.dropoffCity}`, 
+                quantity: 1,
+                rate: finalPrice,
+                amount: finalPrice 
+              }
+            ],
+            notes: `Load ID: ${load.id}`,
+          });
+
+          // Auto-send invoice to shipper
+          await storage.sendInvoice(invoice.id);
+
+          // Notify shipper about invoice
+          await storage.createNotification({
+            userId: load.shipperId,
+            title: "Invoice Generated",
+            message: `Invoice ${invoiceNumber} for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. 18% GST) has been sent for your load.`,
+            type: "payment",
+            relatedLoadId: load.id,
+          });
+        }
+      } catch (invoiceError) {
+        console.error("Invoice creation error:", invoiceError);
+        // Continue even if invoice fails - load is already posted
+      }
+
       res.json({ 
         success: true, 
         pricing: updatedPricing,
@@ -1756,6 +1820,81 @@ export async function registerRoutes(
         type: "success",
         relatedLoadId: pricing.loadId,
       });
+
+      // Notify all carriers for open mode
+      if (mode === 'open') {
+        const allUsers = await storage.getAllUsers();
+        const carriers = allUsers.filter(u => u.role === 'carrier');
+        for (const carrier of carriers.slice(0, 20)) {
+          await storage.createNotification({
+            userId: carrier.id,
+            title: "New Load Available",
+            message: `New load available: ${load.pickupCity} → ${load.dropoffCity} at Rs. ${finalPrice.toLocaleString('en-IN')}`,
+            type: "info",
+            relatedLoadId: pricing.loadId,
+          });
+        }
+      }
+
+      // If invite mode, notify invited carriers
+      const carrierIds = invite_carrier_ids || pricing.invitedCarrierIds || [];
+      if (mode === 'invite' && carrierIds.length) {
+        for (const carrierId of carrierIds) {
+          await storage.createNotification({
+            userId: carrierId,
+            title: "New Load Invitation",
+            message: `You've been invited to bid on a load: ${load.pickupCity} → ${load.dropoffCity}`,
+            type: "info",
+            relatedLoadId: pricing.loadId,
+          });
+        }
+      }
+
+      // Generate invoice for shipper
+      try {
+        const existingInvoice = await storage.getInvoiceByLoad(load.id);
+        if (!existingInvoice) {
+          const taxRate = 0.18;
+          const taxAmount = Math.round(finalPrice * taxRate);
+          const totalAmount = finalPrice + taxAmount;
+          
+          const invoiceNumber = await storage.generateInvoiceNumber();
+          const invoice = await storage.createInvoice({
+            invoiceNumber,
+            loadId: load.id,
+            shipperId: load.shipperId,
+            adminId: user.id,
+            subtotal: finalPrice.toString(),
+            taxPercent: '18',
+            taxAmount: taxAmount.toString(),
+            totalAmount: totalAmount.toString(),
+            status: 'draft',
+            paymentTerms: 'Net 30',
+            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            lineItems: [
+              { 
+                description: `Freight Transportation: ${load.pickupCity} to ${load.dropoffCity}`, 
+                quantity: 1,
+                rate: finalPrice,
+                amount: finalPrice 
+              }
+            ],
+            notes: `Load ID: ${load.id}`,
+          });
+
+          await storage.sendInvoice(invoice.id);
+
+          await storage.createNotification({
+            userId: load.shipperId,
+            title: "Invoice Generated",
+            message: `Invoice ${invoiceNumber} for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. 18% GST) has been sent.`,
+            type: "payment",
+            relatedLoadId: load.id,
+          });
+        }
+      } catch (invoiceError) {
+        console.error("Invoice creation error:", invoiceError);
+      }
 
       res.json({ success: true, pricing: approvedPricing, load_status: loadStatus });
     } catch (error) {

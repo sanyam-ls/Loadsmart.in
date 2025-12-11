@@ -18,6 +18,7 @@ import {
   User,
   History,
   ClipboardList,
+  Wrench,
 } from "lucide-react";
 import {
   Sidebar,
@@ -68,6 +69,7 @@ const adminItems = [
   { title: "Carriers", url: "/admin/carriers", icon: Truck },
   { title: "Verification", url: "/admin/verification", icon: Shield },
   { title: "Reports", url: "/admin/reports", icon: BarChart3 },
+  { title: "Troubleshoot", url: "/admin/troubleshoot", icon: Wrench },
 ];
 
 export function AppSidebar() {

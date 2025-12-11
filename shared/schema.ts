@@ -227,6 +227,84 @@ export const invoices = pgTable("invoices", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Admin Action Types enum
+export const adminActionTypes = [
+  "view_load", "impersonate_user", "force_post", "generate_invoice", 
+  "send_invoice", "save_draft", "requeue_post", "toggle_feature_flag",
+  "grant_permission", "rollback_price", "manual_override", "create_ticket"
+] as const;
+export type AdminActionType = typeof adminActionTypes[number];
+
+// API Log types enum
+export const apiLogTypes = ["request", "response", "error"] as const;
+export type ApiLogType = typeof apiLogTypes[number];
+
+// Admin Audit Logs table (immutable trail of all admin actions)
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  loadId: varchar("load_id").references(() => loads.id),
+  userId: varchar("user_id").references(() => users.id),
+  actionType: text("action_type").notNull(),
+  actionDescription: text("action_description"),
+  reason: text("reason"),
+  beforeState: jsonb("before_state"),
+  afterState: jsonb("after_state"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: text("session_id"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// API Request Logs table (for debugging and troubleshooting)
+export const apiLogs = pgTable("api_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").references(() => loads.id),
+  userId: varchar("user_id").references(() => users.id),
+  endpoint: text("endpoint").notNull(),
+  method: text("method").notNull(),
+  requestBody: jsonb("request_body"),
+  responseBody: jsonb("response_body"),
+  statusCode: integer("status_code"),
+  errorMessage: text("error_message"),
+  durationMs: integer("duration_ms"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  logType: text("log_type").default("request"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Admin Actions Queue table (for retry/requeue operations)
+export const adminActionsQueue = pgTable("admin_actions_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  actionType: text("action_type").notNull(),
+  payload: jsonb("payload"),
+  status: text("status").default("pending"),
+  priority: integer("priority").default(0),
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  lastError: text("last_error"),
+  scheduledFor: timestamp("scheduled_for"),
+  processedAt: timestamp("processed_at"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Feature Flags table (for admin controls)
+export const featureFlags = pgTable("feature_flags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isEnabled: boolean("is_enabled").default(false),
+  targetRoles: text("target_roles").array(),
+  metadata: jsonb("metadata"),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Carrier Settlements table (payouts to carriers)
 export const carrierSettlements = pgTable("carrier_settlements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -663,6 +741,50 @@ export const carrierSettlementsRelations = relations(carrierSettlements, ({ one 
   }),
 }));
 
+export const adminAuditLogsRelations = relations(adminAuditLogs, ({ one }) => ({
+  admin: one(users, {
+    fields: [adminAuditLogs.adminId],
+    references: [users.id],
+  }),
+  load: one(loads, {
+    fields: [adminAuditLogs.loadId],
+    references: [loads.id],
+  }),
+  user: one(users, {
+    fields: [adminAuditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const apiLogsRelations = relations(apiLogs, ({ one }) => ({
+  load: one(loads, {
+    fields: [apiLogs.loadId],
+    references: [loads.id],
+  }),
+  user: one(users, {
+    fields: [apiLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const adminActionsQueueRelations = relations(adminActionsQueue, ({ one }) => ({
+  load: one(loads, {
+    fields: [adminActionsQueue.loadId],
+    references: [loads.id],
+  }),
+  createdByUser: one(users, {
+    fields: [adminActionsQueue.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const featureFlagsRelations = relations(featureFlags, ({ one }) => ({
+  updatedByUser: one(users, {
+    fields: [featureFlags.updatedBy],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCarrierProfileSchema = createInsertSchema(carrierProfiles).omit({ id: true });
@@ -685,6 +807,10 @@ export const insertGpsBreadcrumbSchema = createInsertSchema(gpsBreadcrumbs).omit
 export const insertRouteEtaPredictionSchema = createInsertSchema(routeEtaPredictions).omit({ id: true });
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCarrierSettlementSchema = createInsertSchema(carrierSettlements).omit({ id: true, createdAt: true });
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit({ id: true, createdAt: true });
+export const insertApiLogSchema = createInsertSchema(apiLogs).omit({ id: true, createdAt: true });
+export const insertAdminActionsQueueSchema = createInsertSchema(adminActionsQueue).omit({ id: true, createdAt: true });
+export const insertFeatureFlagSchema = createInsertSchema(featureFlags).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -729,6 +855,14 @@ export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertCarrierSettlement = z.infer<typeof insertCarrierSettlementSchema>;
 export type CarrierSettlement = typeof carrierSettlements.$inferSelect;
+export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+export type InsertApiLog = z.infer<typeof insertApiLogSchema>;
+export type ApiLog = typeof apiLogs.$inferSelect;
+export type InsertAdminActionsQueue = z.infer<typeof insertAdminActionsQueueSchema>;
+export type AdminActionsQueue = typeof adminActionsQueue.$inferSelect;
+export type InsertFeatureFlag = z.infer<typeof insertFeatureFlagSchema>;
+export type FeatureFlag = typeof featureFlags.$inferSelect;
 
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {

@@ -4,6 +4,7 @@ import {
   users, trucks, loads, bids, shipments, shipmentEvents,
   messages, documents, notifications, ratings, carrierProfiles, adminDecisions,
   pricingTemplates, adminPricings, invoices, carrierSettlements,
+  adminAuditLogs, apiLogs, adminActionsQueue, featureFlags,
   type User, type InsertUser,
   type Truck, type InsertTruck,
   type Load, type InsertLoad,
@@ -20,6 +21,10 @@ import {
   type AdminPricing, type InsertAdminPricing,
   type Invoice, type InsertInvoice,
   type CarrierSettlement, type InsertCarrierSettlement,
+  type AdminAuditLog, type InsertAdminAuditLog,
+  type ApiLog, type InsertApiLog,
+  type AdminActionsQueue, type InsertAdminActionsQueue,
+  type FeatureFlag, type InsertFeatureFlag,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -124,6 +129,33 @@ export interface IStorage {
   createSettlement(settlement: InsertCarrierSettlement): Promise<CarrierSettlement>;
   updateSettlement(id: string, updates: Partial<CarrierSettlement>): Promise<CarrierSettlement | undefined>;
   markSettlementPaid(id: string, paymentDetails: { paymentMethod: string; transactionId?: string }): Promise<CarrierSettlement | undefined>;
+
+  // Admin Audit Log methods
+  createAuditLog(log: InsertAdminAuditLog): Promise<AdminAuditLog>;
+  getAuditLogsByLoad(loadId: string): Promise<AdminAuditLog[]>;
+  getAuditLogsByAdmin(adminId: string): Promise<AdminAuditLog[]>;
+  getRecentAuditLogs(limit?: number): Promise<AdminAuditLog[]>;
+
+  // API Log methods
+  createApiLog(log: InsertApiLog): Promise<ApiLog>;
+  getApiLogsByLoad(loadId: string, limit?: number): Promise<ApiLog[]>;
+  getApiLogsByEndpoint(endpoint: string, limit?: number): Promise<ApiLog[]>;
+  getRecentApiLogs(limit?: number): Promise<ApiLog[]>;
+
+  // Admin Actions Queue methods
+  createActionQueue(action: InsertAdminActionsQueue): Promise<AdminActionsQueue>;
+  getActionQueue(id: string): Promise<AdminActionsQueue | undefined>;
+  getPendingActionsByLoad(loadId: string): Promise<AdminActionsQueue[]>;
+  getPendingActions(): Promise<AdminActionsQueue[]>;
+  updateActionQueue(id: string, updates: Partial<AdminActionsQueue>): Promise<AdminActionsQueue | undefined>;
+  processActionQueue(id: string): Promise<AdminActionsQueue | undefined>;
+
+  // Feature Flags methods
+  getFeatureFlag(name: string): Promise<FeatureFlag | undefined>;
+  getAllFeatureFlags(): Promise<FeatureFlag[]>;
+  createFeatureFlag(flag: InsertFeatureFlag): Promise<FeatureFlag>;
+  updateFeatureFlag(id: string, updates: Partial<FeatureFlag>): Promise<FeatureFlag | undefined>;
+  toggleFeatureFlag(name: string, isEnabled: boolean, adminId: string): Promise<FeatureFlag | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -610,6 +642,136 @@ export class DatabaseStorage implements IStorage {
         transactionId: paymentDetails.transactionId
       })
       .where(eq(carrierSettlements.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Admin Audit Log methods
+  async createAuditLog(log: InsertAdminAuditLog): Promise<AdminAuditLog> {
+    const [newLog] = await db.insert(adminAuditLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getAuditLogsByLoad(loadId: string): Promise<AdminAuditLog[]> {
+    return db.select().from(adminAuditLogs)
+      .where(eq(adminAuditLogs.loadId, loadId))
+      .orderBy(desc(adminAuditLogs.createdAt));
+  }
+
+  async getAuditLogsByAdmin(adminId: string): Promise<AdminAuditLog[]> {
+    return db.select().from(adminAuditLogs)
+      .where(eq(adminAuditLogs.adminId, adminId))
+      .orderBy(desc(adminAuditLogs.createdAt));
+  }
+
+  async getRecentAuditLogs(limit: number = 100): Promise<AdminAuditLog[]> {
+    return db.select().from(adminAuditLogs)
+      .orderBy(desc(adminAuditLogs.createdAt))
+      .limit(limit);
+  }
+
+  // API Log methods
+  async createApiLog(log: InsertApiLog): Promise<ApiLog> {
+    const [newLog] = await db.insert(apiLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getApiLogsByLoad(loadId: string, limit: number = 50): Promise<ApiLog[]> {
+    return db.select().from(apiLogs)
+      .where(eq(apiLogs.loadId, loadId))
+      .orderBy(desc(apiLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getApiLogsByEndpoint(endpoint: string, limit: number = 50): Promise<ApiLog[]> {
+    return db.select().from(apiLogs)
+      .where(sql`${apiLogs.endpoint} LIKE ${'%' + endpoint + '%'}`)
+      .orderBy(desc(apiLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getRecentApiLogs(limit: number = 50): Promise<ApiLog[]> {
+    return db.select().from(apiLogs)
+      .orderBy(desc(apiLogs.createdAt))
+      .limit(limit);
+  }
+
+  // Admin Actions Queue methods
+  async createActionQueue(action: InsertAdminActionsQueue): Promise<AdminActionsQueue> {
+    const [newAction] = await db.insert(adminActionsQueue).values(action).returning();
+    return newAction;
+  }
+
+  async getActionQueue(id: string): Promise<AdminActionsQueue | undefined> {
+    const [action] = await db.select().from(adminActionsQueue).where(eq(adminActionsQueue.id, id));
+    return action;
+  }
+
+  async getPendingActionsByLoad(loadId: string): Promise<AdminActionsQueue[]> {
+    return db.select().from(adminActionsQueue)
+      .where(and(
+        eq(adminActionsQueue.loadId, loadId),
+        eq(adminActionsQueue.status, 'pending')
+      ))
+      .orderBy(desc(adminActionsQueue.priority), adminActionsQueue.createdAt);
+  }
+
+  async getPendingActions(): Promise<AdminActionsQueue[]> {
+    return db.select().from(adminActionsQueue)
+      .where(eq(adminActionsQueue.status, 'pending'))
+      .orderBy(desc(adminActionsQueue.priority), adminActionsQueue.createdAt);
+  }
+
+  async updateActionQueue(id: string, updates: Partial<AdminActionsQueue>): Promise<AdminActionsQueue | undefined> {
+    const [updated] = await db.update(adminActionsQueue)
+      .set(updates)
+      .where(eq(adminActionsQueue.id, id))
+      .returning();
+    return updated;
+  }
+
+  async processActionQueue(id: string): Promise<AdminActionsQueue | undefined> {
+    const [updated] = await db.update(adminActionsQueue)
+      .set({ 
+        status: 'processing',
+        processedAt: new Date()
+      })
+      .where(eq(adminActionsQueue.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Feature Flags methods
+  async getFeatureFlag(name: string): Promise<FeatureFlag | undefined> {
+    const [flag] = await db.select().from(featureFlags).where(eq(featureFlags.name, name));
+    return flag;
+  }
+
+  async getAllFeatureFlags(): Promise<FeatureFlag[]> {
+    return db.select().from(featureFlags).orderBy(featureFlags.name);
+  }
+
+  async createFeatureFlag(flag: InsertFeatureFlag): Promise<FeatureFlag> {
+    const [newFlag] = await db.insert(featureFlags).values(flag).returning();
+    return newFlag;
+  }
+
+  async updateFeatureFlag(id: string, updates: Partial<FeatureFlag>): Promise<FeatureFlag | undefined> {
+    const [updated] = await db.update(featureFlags)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(featureFlags.id, id))
+      .returning();
+    return updated;
+  }
+
+  async toggleFeatureFlag(name: string, isEnabled: boolean, adminId: string): Promise<FeatureFlag | undefined> {
+    const [updated] = await db.update(featureFlags)
+      .set({ 
+        isEnabled,
+        updatedBy: adminId,
+        updatedAt: new Date()
+      })
+      .where(eq(featureFlags.name, name))
       .returning();
     return updated;
   }

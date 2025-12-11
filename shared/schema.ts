@@ -190,6 +190,63 @@ export const adminPricings = pgTable("admin_pricings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Invoice status enum
+export const invoiceStatuses = ["draft", "sent", "viewed", "paid", "overdue", "cancelled"] as const;
+export type InvoiceStatus = typeof invoiceStatuses[number];
+
+// Invoices table (Admin-generated invoices for shippers)
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  shipperId: varchar("shipper_id").notNull().references(() => users.id),
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  pricingId: varchar("pricing_id").references(() => adminPricings.id),
+  subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
+  fuelSurcharge: decimal("fuel_surcharge", { precision: 12, scale: 2 }).default("0"),
+  tollCharges: decimal("toll_charges", { precision: 12, scale: 2 }).default("0"),
+  handlingFee: decimal("handling_fee", { precision: 12, scale: 2 }).default("0"),
+  insuranceFee: decimal("insurance_fee", { precision: 12, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 12, scale: 2 }).default("0"),
+  discountReason: text("discount_reason"),
+  taxPercent: decimal("tax_percent", { precision: 5, scale: 2 }).default("18"),
+  taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }).default("0"),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  paymentTerms: text("payment_terms").default("Net 30"),
+  dueDate: timestamp("due_date"),
+  status: text("status").default("draft"),
+  notes: text("notes"),
+  lineItems: jsonb("line_items"),
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  paidAt: timestamp("paid_at"),
+  paidAmount: decimal("paid_amount", { precision: 12, scale: 2 }),
+  paymentMethod: text("payment_method"),
+  paymentReference: text("payment_reference"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Carrier Settlements table (payouts to carriers)
+export const carrierSettlements = pgTable("carrier_settlements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  grossAmount: decimal("gross_amount", { precision: 12, scale: 2 }).notNull(),
+  platformFee: decimal("platform_fee", { precision: 12, scale: 2 }).default("0"),
+  deductions: decimal("deductions", { precision: 12, scale: 2 }).default("0"),
+  deductionReason: text("deduction_reason"),
+  netPayout: decimal("net_payout", { precision: 12, scale: 2 }).notNull(),
+  status: text("status").default("pending"),
+  scheduledDate: timestamp("scheduled_date"),
+  paidAt: timestamp("paid_at"),
+  paymentMethod: text("payment_method"),
+  transactionId: text("transaction_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Bids table (updated for Admin-as-Mediator flow)
 export const bids = pgTable("bids", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -552,7 +609,7 @@ export const pricingTemplatesRelations = relations(pricingTemplates, ({ one, man
   pricings: many(adminPricings),
 }));
 
-export const adminPricingsRelations = relations(adminPricings, ({ one }) => ({
+export const adminPricingsRelations = relations(adminPricings, ({ one, many }) => ({
   load: one(loads, {
     fields: [adminPricings.loadId],
     references: [loads.id],
@@ -568,6 +625,41 @@ export const adminPricingsRelations = relations(adminPricings, ({ one }) => ({
   approver: one(users, {
     fields: [adminPricings.approvedBy],
     references: [users.id],
+  }),
+  invoices: many(invoices),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  load: one(loads, {
+    fields: [invoices.loadId],
+    references: [loads.id],
+  }),
+  shipper: one(users, {
+    fields: [invoices.shipperId],
+    references: [users.id],
+  }),
+  admin: one(users, {
+    fields: [invoices.adminId],
+    references: [users.id],
+  }),
+  pricing: one(adminPricings, {
+    fields: [invoices.pricingId],
+    references: [adminPricings.id],
+  }),
+}));
+
+export const carrierSettlementsRelations = relations(carrierSettlements, ({ one }) => ({
+  load: one(loads, {
+    fields: [carrierSettlements.loadId],
+    references: [loads.id],
+  }),
+  carrier: one(users, {
+    fields: [carrierSettlements.carrierId],
+    references: [users.id],
+  }),
+  invoice: one(invoices, {
+    fields: [carrierSettlements.invoiceId],
+    references: [invoices.id],
   }),
 }));
 
@@ -591,6 +683,8 @@ export const insertDriverBehaviorEventSchema = createInsertSchema(driverBehavior
 export const insertTelematicsAlertSchema = createInsertSchema(telematicsAlerts).omit({ id: true, createdAt: true });
 export const insertGpsBreadcrumbSchema = createInsertSchema(gpsBreadcrumbs).omit({ id: true, createdAt: true });
 export const insertRouteEtaPredictionSchema = createInsertSchema(routeEtaPredictions).omit({ id: true });
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCarrierSettlementSchema = createInsertSchema(carrierSettlements).omit({ id: true, createdAt: true });
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -631,6 +725,10 @@ export type InsertGpsBreadcrumb = z.infer<typeof insertGpsBreadcrumbSchema>;
 export type GpsBreadcrumb = typeof gpsBreadcrumbs.$inferSelect;
 export type InsertRouteEtaPrediction = z.infer<typeof insertRouteEtaPredictionSchema>;
 export type RouteEtaPrediction = typeof routeEtaPredictions.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertCarrierSettlement = z.infer<typeof insertCarrierSettlementSchema>;
+export type CarrierSettlement = typeof carrierSettlements.$inferSelect;
 
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {

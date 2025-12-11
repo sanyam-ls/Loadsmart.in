@@ -1,0 +1,391 @@
+Build a full multi-role logistics platform (Shipper Portal, Carrier Portal, Admin Console) where the ADMIN is the central decision-maker.
+Shippers submit loads → Admin estimates price & builds margin → Admin finalizes & posts load → Carriers accept or negotiate → Trips, tracking, documents, invoices, and settlements follow.
+
+Retain all advanced features from Loadlink-style platforms, and simulate functionality where APIs/devices are not available.
+
+⸻
+
+================================
+
+1️⃣ SYSTEM ACTORS
+
+================================
+
+Shipper
+	•	Posts loads (no pricing shown to them).
+	•	Receives admin-created invoices.
+	•	Tracks shipments, uploads/receives documents.
+
+Carrier / Fleet Owner
+	•	Views admin-posted loads & invitations.
+	•	Accepts load, counters admin price, views payout.
+	•	Manages trucks, drivers, trips.
+
+Admin (Core Role)
+	•	Mediator between shipper & carrier.
+	•	Approves/edits loads, performs pricing, margin, invoice creation.
+	•	Posts loads to carriers or assigns directly.
+	•	Verifies KYC, resolves disputes, runs operations.
+
+⸻
+
+================================
+
+2️⃣ GLOBAL PLATFORM MODULES
+
+================================
+	1.	Authentication & Role-Based Access Control
+	2.	Load Management + Admin Approval Queue
+	3.	Smart Distance-Based Estimation Engine
+	4.	Admin Margin Builder
+	5.	Admin Invoice Builder + Send to Shipper
+	6.	Carrier Matching & Nearby Trucks Simulation
+	7.	Bidding/Negotiation Hub (Admin-controlled)
+	8.	Tracking Service (App GPS + Simulated telemetry)
+	9.	Document Center + Templates
+	10.	Payment Simulation + Settlement Workflow
+	11.	Analytics Dashboards (Admin, Shipper, Carrier)
+	12.	Notifications (UI + mock SMS/WhatsApp + in-app)
+
+⸻
+
+================================
+
+3️⃣ SHIPPER PORTAL (UX + FEATURES)
+
+================================
+
+Dashboard
+
+Show mock metrics with real-time sync:
+	•	Active Loads
+	•	Pending Bids
+	•	In Transit
+	•	Monthly Spend
+Each tile is clickable and opens detailed analytics.
+
+Post Load
+
+Shipper submits load details ONLY.
+No estimate, no pricing visible.
+
+My Loads
+
+Status stages: Submitted → Under Admin Review → Bidding → Assigned → In Transit → Delivered.
+
+Negotiations
+
+Show carrier/admin messages tied to a specific load.
+
+Nearby Trucks
+
+Simulated “X trucks available nearby” based on load location.
+Admin can override/use this info.
+
+Track Shipment
+
+Live map (simulated GPS), ETA, stops, POD upload, timeline events.
+
+Documents
+
+Invoice received from Admin, proof of delivery, certificates, LR, contracts.
+All documents must open.
+
+⸻
+
+================================
+
+4️⃣ CARRIER PORTAL (UX + FEATURES)
+
+================================
+
+Dashboard
+	•	Active Trucks
+	•	Pending Bids
+	•	Active Trips
+	•	Monthly Revenue
+	•	Performance Score
+
+Available Loads
+
+Only loads posted by Admin with final admin pricing appear.
+Carriers can:
+	•	Accept
+	•	Counter-offer
+	•	Request call back
+
+My Fleet
+
+List trucks: model, make, license plate, RC, permit, insurance.
+100+ trucks allowed.
+Show telemetry placeholders (fuel %, odometer, last ping).
+
+My Bids
+
+Track bid status: Sent → Reviewing → Rejected → Accepted.
+
+Active Trips
+
+From → To, ETA, route, fuel consumption (simulated), driver info.
+
+Trip History
+
+Full history with mileage, payouts, completed loads.
+
+Revenue
+
+Monthly and yearly payout charts.
+
+⸻
+
+================================
+
+5️⃣ ADMIN CONSOLE (CORE OF SYSTEM)
+
+================================
+
+A. ADMIN QUEUE — PENDING LOADS
+
+When a shipper submits a load, it appears here as Pending.
+Admin clicks a load → opens Assign Cost Drawer.
+
+⸻
+
+B. ASSIGN COST WORKFLOW
+
+Admin opens cost-estimation panel with:
+
+Smart Estimation Block
+	•	Distance (auto-calculated)
+	•	Suggested price (formula-based)
+	•	Suggested truck type
+	•	Timeline (ETA with buffers)
+	•	Nearby truck availability (simulated)
+
+Estimation Formula
+
+suggested_price = (distance × baseRate) + fuel_surcharge + truck_premium + tolls + handling + insurance
+All coefficients editable in admin settings.
+
+⸻
+
+C. ADMIN MARGIN BUILDER
+
+Admin can edit financials:
+	•	Markup %
+	•	Fixed admin fee
+	•	Fuel override
+	•	Discounts
+	•	Manual final price override
+
+Profit + Payout Preview:
+	•	Suggested price
+	•	Final admin price
+	•	Platform margin
+	•	Carrier payout
+	•	Estimated profit
+
+Actions:
+	•	Save Draft
+	•	Lock Final Price
+	•	Post to Carriers
+	•	Invite Selected Carriers
+	•	Assign Carrier Directly
+	•	Send for Approval (if override > threshold)
+
+All actions create audit entries.
+
+⸻
+
+D. ADMIN INVOICE BUILDER
+
+After final price is set:
+
+Invoice Panel includes:
+	•	Auto-filled invoice line items
+	•	Editable fuel surcharge, tolls, discounts
+	•	Tax calculation
+	•	Payment terms
+	•	Invoice number auto-generation
+
+Actions:
+	•	Save Draft
+	•	Download PDF
+	•	Send Invoice to Shipper Portal
+	•	Send Edited Estimation to Carriers as a Proposed Bid
+	•	Record Payment
+
+Shipper sees invoice under Documents → Invoices.
+
+⸻
+
+E. BIDDING & NEGOTIATION (ADMIN CONTROLLED)
+
+Admin posts load to carrier marketplace.
+Carriers bid or counter.
+Admin sees all bids and selects winning carrier OR negotiates.
+
+Bids appear inside live chat context.
+
+All updates sync to shipper & carrier dashboards.
+
+⸻
+
+F. TRACKING + TELEMETRY
+	•	App-based GPS + simulated CAN-Bus telematics
+	•	Trip stages: Start → Pickup → Loaded → En Route → At Facility → Unloading → Completed
+	•	POD upload
+	•	Admin + Shipper can view live map and timeline
+
+⸻
+
+G. DOCUMENT CENTER
+
+Admin can upload:
+	•	LR
+	•	POD
+	•	Invoice
+	•	Insurance
+	•	Contracts
+
+Shipper & Carrier can upload/download view PDFs.
+
+⸻
+
+H. ANALYTICS MODULES
+
+Admin Dashboard
+	•	Total Users
+	•	Active Loads
+	•	Verified Carriers
+	•	Monthly Volume
+	•	Transaction Volume graph (12-month expandable)
+	•	Load Status Chart
+	•	User Growth
+	•	Recent Activity
+
+Shipper Dashboard
+	•	Active loads, pending bids, in transit, spend summary
+
+Carrier Dashboard
+	•	Fleet performance, revenue, recommended loads
+
+⸻
+
+================================
+
+6️⃣ WORKFLOW SUMMARY (END-TO-END)
+
+================================
+
+1. Shipper creates load
+
+→ Enters basic details
+→ Sent to Admin Pending Queue
+
+2. Admin opens load
+
+→ Smart estimation runs
+→ Admin edits cost & margin
+→ Lock price
+
+3. Admin posts load
+
+Options:
+	•	Open marketplace
+	•	Invite carriers
+	•	Direct assign to carrier
+
+4. Carriers respond
+
+→ Accept / Counter
+→ Admin negotiates or awards
+
+5. Trip created
+
+→ Tracking started
+→ Shipper sees tracking & timeline
+→ POD uploaded
+
+6. Admin generates invoice
+
+→ Editable
+→ Send to shipper
+→ Shipper pays or acknowledges
+
+7. Settlement & close
+
+→ Carrier payout calculated
+→ Trip archived
+→ All analytics updated
+
+⸻
+
+================================
+
+7️⃣ DEVELOPMENT REQUIREMENTS
+
+================================
+
+MOCK + SIMULATED DATA REQUIRED:
+	•	Suggested pricing formulas
+	•	Carrier availability (7 trucks nearby)
+	•	Telemetry (fuel, odometer, GPS)
+	•	Monthly charts (Admin/Carrier/Shipper)
+	•	Alerts & notifications
+
+All buttons must be functional
+
+If backend not implemented → simulate POST success + state change.
+
+Theme
+
+Keep clean blue + white theme with dark mode toggle.
+
+AI Concierge
+
+Add a sidebar assistant capable of:
+	•	Explaining load performance
+	•	Suggesting margins
+	•	Summarizing invoices
+	•	Recommending carriers
+
+⸻
+
+================================
+
+8️⃣ REQUIRED ENDPOINTS (SIMULATED OK)
+
+================================
+	•	/auth/*
+	•	/loads/*
+	•	/admin/pricing/*
+	•	/admin/invoice/*
+	•	/carrier/bids/*
+	•	/tracking/*
+	•	/documents/*
+	•	/analytics/*
+	•	/notifications/*
+
+Every endpoint must update UI state in real time.
+
+⸻
+
+================================
+
+9️⃣ ACCEPTANCE TESTING (MANDATORY)
+
+================================
+
+Before completion, run a mock scenario:
+
+Scenario:
+A shipper posts a load → admin prices it → admin posts it → carrier bids → admin assigns → trip starts → shipper gets invoice → invoices can be downloaded → tracking live → POD uploaded → trip closes → analytics update.
+
+If ANY step fails to update UI state → fix.
+
+⸻
+
+END OF MASTER PROMPT
+
+Implement EVERYTHING above. Simulate where needed. All roles, workflows, and pricing logic must function exactly as specified.

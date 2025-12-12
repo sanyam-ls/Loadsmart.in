@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Clock, 
   MapPin, 
@@ -76,6 +77,25 @@ interface CarrierOption {
   trucks: number;
   zone: string;
   completedLoads: number;
+}
+
+interface RealLoad {
+  id: string;
+  pickupCity: string;
+  dropoffCity: string;
+  pickupAddress?: string;
+  dropoffAddress?: string;
+  weight: number;
+  weightUnit?: string;
+  cargoDescription?: string;
+  requiredTruckType?: string;
+  pickupDate?: string;
+  status: string;
+  shipperId: string;
+  shipperName?: string;
+  shipperEmail?: string;
+  distance?: number;
+  priority?: string;
 }
 
 const mockCarriers: CarrierOption[] = [
@@ -164,6 +184,7 @@ export default function LoadQueuePage() {
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [priorityFilter, setPriorityFilter] = useState("All Priority");
   const [selectedLoad, setSelectedLoad] = useState<MockLoad | null>(null);
+  const [selectedRealLoad, setSelectedRealLoad] = useState<RealLoad | null>(null);
   const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
   const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false);
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false);
@@ -175,6 +196,11 @@ export default function LoadQueuePage() {
   const [allowCounterBids, setAllowCounterBids] = useState(true);
   const [adminComment, setAdminComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: realLoads = [], isLoading: isLoadingReal } = useQuery<RealLoad[]>({
+    queryKey: ["/api/admin/queue"],
+    refetchInterval: 30000,
+  });
 
   const convertToDrawerFormat = (load: MockLoad) => ({
     id: load.loadId,
@@ -188,6 +214,25 @@ export default function LoadQueuePage() {
     pickupDate: load.pickupDate,
     cargoDescription: load.cargoDescription,
   });
+
+  const convertRealToDrawerFormat = (load: RealLoad) => ({
+    id: load.id,
+    loadId: load.id.slice(0, 8).toUpperCase(),
+    pickupCity: load.pickupCity,
+    dropoffCity: load.dropoffCity,
+    weight: load.weight,
+    weightUnit: load.weightUnit || "MT",
+    requiredTruckType: load.requiredTruckType || "Standard",
+    distance: load.distance || 500,
+    pickupDate: load.pickupDate,
+    cargoDescription: load.cargoDescription,
+    shipperId: load.shipperId,
+  });
+
+  const openRealLoadPricingDrawer = (load: RealLoad) => {
+    setSelectedRealLoad(load);
+    setPricingDrawerOpen(true);
+  };
 
   const openPricingDrawer = (load: MockLoad) => {
     setSelectedLoad(load);
@@ -283,10 +328,86 @@ export default function LoadQueuePage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="text-lg px-3 py-1">
-            {pendingLoads.length} Pending
+            {pendingLoads.length + realLoads.length} Pending
           </Badge>
         </div>
       </div>
+
+      {realLoads.length > 0 && (
+        <Card className="border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              Database Loads Pending Review ({realLoads.length})
+            </CardTitle>
+            <CardDescription>Real shipper submissions requiring admin pricing</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="max-h-[400px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Load ID</TableHead>
+                    <TableHead>Route</TableHead>
+                    <TableHead>Shipper</TableHead>
+                    <TableHead>Cargo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {realLoads.map((load) => (
+                    <TableRow key={load.id} data-testid={`row-real-load-${load.id.slice(0, 8)}`}>
+                      <TableCell className="font-mono font-medium">{load.id.slice(0, 8).toUpperCase()}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 text-sm">
+                            <MapPin className="h-3 w-3 text-green-500" />
+                            <span className="truncate max-w-[120px]">{load.pickupCity}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sm">
+                            <MapPin className="h-3 w-3 text-red-500" />
+                            <span className="truncate max-w-[120px]">{load.dropoffCity}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{load.shipperName || "Unknown"}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
+                          {load.cargoDescription && (
+                            <p className="text-xs text-muted-foreground truncate max-w-[100px]">
+                              {load.cargoDescription}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-amber-500 text-white">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Pending
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          size="sm" 
+                          onClick={() => openRealLoadPricingDrawer(load)}
+                          data-testid={`button-price-real-${load.id.slice(0, 8)}`}
+                        >
+                          <Calculator className="h-4 w-4 mr-1" />
+                          Price & Post
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
@@ -659,12 +780,18 @@ export default function LoadQueuePage() {
 
       <PricingDrawer
         open={pricingDrawerOpen}
-        onOpenChange={setPricingDrawerOpen}
-        load={selectedLoad ? convertToDrawerFormat(selectedLoad) : null}
+        onOpenChange={(open) => {
+          setPricingDrawerOpen(open);
+          if (!open) {
+            setSelectedRealLoad(null);
+          }
+        }}
+        load={selectedRealLoad ? convertRealToDrawerFormat(selectedRealLoad) : (selectedLoad ? convertToDrawerFormat(selectedLoad) : null)}
         onSuccess={() => {
           if (selectedLoad) {
             updateLoad(selectedLoad.loadId, { status: "Posted" });
           }
+          setSelectedRealLoad(null);
         }}
         carriers={mockCarriers}
       />

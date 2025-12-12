@@ -1,0 +1,243 @@
+Build, fix, and fully implement the following system across Admin Console, Shipper Portal, and Carrier Portal.
+All buttons MUST work and trigger real state updates.
+If backend is not implemented, simulate success responses and state transitions.
+
+⸻
+
+================================
+
+🔥 1. CRITICAL FIXES REQUIRED
+
+================================
+
+A. Fix “Send Invoice” button
+
+Required behavior:
+	•	On click → validate fields → call /api/admin/invoice/send.
+	•	If endpoint exists → return success, update invoice status to SentToShipper, show success toast, close modal, and update all affected dashboards.
+	•	If endpoint does not exist → SIMULATE success:
+	•	Update invoice object in local store
+	•	status = "SentToShipper"
+	•	Emit event to Shipper Portal
+	•	Show success toast "Invoice Sent"
+
+Additional requirements:
+	•	Must show a loading spinner on click.
+	•	Button must be disabled during API call.
+	•	Must show REAL error messages from server.
+	•	Must support an Idempotency-Key header so multiple clicks do NOT duplicate invoices.
+	•	If backend fails, display:
+“Invoice failed: <server_message>”
+
+⸻
+
+B. Fix “Lock & Post Load” button
+
+Required behavior:
+	•	On click → validate pricing → call /api/admin/load/lock-and-post.
+	•	If endpoint missing → SIMULATE success:
+	•	Set load.status = "Posted"
+	•	Set pricing.locked = true
+	•	Show "Load posted successfully"
+	•	Update Carrier Portal with new load entry.
+
+Additional requirements:
+	•	Must disable button + show spinner while in progress.
+	•	Must show actionable error:
+“Failed to lock and post load: ”
+	•	Must update Admin dashboard metrics instantly:
+	•	Active Loads +1
+	•	Pending Loads −1
+
+⸻
+
+================================
+
+🔥 2. FULL INVOICE BUILDER WORKFLOW
+
+================================
+
+Implement the entire invoice builder flow, making sure each step WORKS:
+
+1. Admin opens “Invoice Builder” modal.
+
+Populate fields:
+	•	Load info
+	•	Shipper ID
+	•	Editable line items
+	•	Qty / rate auto-calculation
+	•	Payment terms
+	•	Due date
+	•	Notes
+
+2. Admin may:
+	•	Add item
+	•	Remove item
+	•	Edit amount
+	•	Save Draft
+	•	Send Invoice
+
+3. On Send Invoice:
+	•	Validate required fields
+	•	Generate unique invoice number
+	•	Calculate totals (sub, tax, grand total)
+	•	Generate PDF (simulate if backend unavailable)
+	•	Push invoice into Shipper Portal documents
+	•	Update Admin → Invoices list
+	•	Update Load → invoiceId
+
+4. Shipper Portal must show:
+	•	Invoice in “Documents” section
+	•	Invoice inside “Load Details”
+	•	Buttons: Download PDF, Acknowledge, Pay (mock)
+
+5. Payment mock:
+	•	On “Pay Now”:
+	•	invoice.status = "Paid"
+	•	write payment record
+	•	update dashboards
+
+6. Every invoice action MUST write an internal history entry:
+	•	created
+	•	edited
+	•	sent
+	•	viewed
+	•	paid
+
+⸻
+
+================================
+
+🔥 3. ADMIN PRICING ENGINE (WORKING)
+
+================================
+
+Keep all the AI estimation features you already built.
+
+Add new required behavior:
+
+When admin finalizes price:
+	•	Must calculate:
+	•	base
+	•	fuel
+	•	handling
+	•	seasonal multiplier
+	•	admin markup
+	•	discount
+	•	final price
+	•	carrier payout
+	•	platform margin
+
+Must enforce:
+	•	no negative totals
+	•	markup cannot be applied twice
+	•	UI always reflects calculations instantly
+
+⸻
+
+================================
+
+🔥 4. CARRIER BID + SHIPPER FLOW (WORKING)
+
+================================
+
+Implement or simulate:
+
+Carrier sees:
+	•	Posted loads
+	•	Admin-set payout
+	•	Button: Accept / Counter
+
+Shipper sees:
+	•	Load status updates automatically
+	•	Invoice after admin sends
+
+⸻
+
+================================
+
+🔥 5. BACKEND ENDPOINTS (IMPLEMENT OR SIMULATE)
+
+================================
+
+Implement these endpoints.
+If backend unavailable, simulate with mock responses and persist state in front-end store.
+
+/api/admin/invoice/create
+
+/api/admin/invoice/send
+
+/api/admin/load/lock-and-post
+
+/api/admin/invoice/pdf (optional async)
+
+/api/shipper/invoice/acknowledge
+
+/api/shipper/invoice/pay
+================================
+
+🔥 6. SIMULATION RULES
+
+================================
+
+If any backend endpoint is missing:
+	•	Simulate it.
+	•	Update local store.
+	•	Update UI state.
+	•	Trigger toast notifications.
+	•	Trigger dashboard metric updates.
+	•	Log action to internal event history.
+
+This ensures every button works even during backend development.
+
+⸻
+
+================================
+
+🔥 7. ACCEPTANCE TESTS (MUST PASS)
+
+================================
+
+✅ Test 1 — Send Invoice
+	•	Click → Loader shows → Success toast → Invoice appears in Shipper Portal.
+
+✅ Test 2 — Lock & Post Load
+	•	Click → Loader shows → Load moves from Pending → Posted → Visible in Carrier Portal.
+
+✅ Test 3 — Error handling
+	•	If validation fails → specific field highlighted + specific error displayed.
+
+✅ Test 4 — Carrier sees posted load
+	•	After admin posts, load must appear instantly in Carrier Portal Available Loads.
+
+✅ Test 5 — Shipper can download invoice PDF
+	•	Regardless of backend, PDF link must open (mock acceptable).
+
+⸻
+
+================================
+
+🔥 8. NON-NEGOTIABLE REQUIREMENTS
+
+================================
+	•	Buttons must always give feedback (loading + disabled).
+	•	Every API must return real server errors to UI (no generic toasts).
+	•	If backend not ready → simulate success.
+	•	All totals must calculate live.
+	•	Data must sync across portals instantly.
+	•	No empty states — show placeholder data with examples.
+	•	Dark mode must apply to new modals.
+
+⸻
+
+================================
+
+🔥 9. FINAL INSTRUCTION TO REPLIT
+
+================================
+
+Implement EVERYTHING above.
+Fix all failing buttons.
+Make all workflows clickable, functional, stateful, and synced.
+Simulate where backend is missing.
+Ensure the system behaves like a fully working MVP end-to-end.

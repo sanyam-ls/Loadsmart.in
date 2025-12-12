@@ -286,17 +286,35 @@ export function PricingDrawer({
     }
   };
 
+  const validatePricing = (): string | null => {
+    if (finalPrice <= 0) {
+      return "Final price must be greater than zero.";
+    }
+    if (postMode === "invite" && selectedCarriers.length === 0) {
+      return "Please select at least one carrier to invite.";
+    }
+    if (platformMarginPercent < 0 || platformMarginPercent > 50) {
+      return "Platform margin must be between 0% and 50%.";
+    }
+    return null;
+  };
+
   const handleLockAndPost = async () => {
     if (!load?.id) return;
 
-    // Save first if no pricing ID
-    if (!pricingId) {
-      await handleSaveDraft();
+    const validationError = validatePricing();
+    if (validationError) {
+      toast({
+        title: "Validation Error",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
     }
 
     setIsLocking(true);
     try {
-      // Create pricing if not exists
+      // Create or update pricing
       const saveResponse = await apiRequest("POST", "/api/admin/pricing/save", {
         load_id: load.id,
         suggested_price: suggestedPrice,
@@ -337,13 +355,18 @@ export function PricingDrawer({
         });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
         queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/available-loads"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
         onSuccess?.();
         onOpenChange(false);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error 
+        ? (error.message.includes(':') ? error.message.split(':').slice(1).join(':').trim() : error.message)
+        : "Failed to lock and post load";
       toast({
-        title: "Error",
-        description: "Failed to lock and post load",
+        title: "Failed to Lock & Post",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

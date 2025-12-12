@@ -216,6 +216,50 @@ export default function ShipperInvoicesPage() {
     setQueryDialogOpen(true);
   };
 
+  const handleDownloadPDF = (invoice: Invoice) => {
+    const content = `
+INVOICE
+========================================
+Invoice Number: ${invoice.invoiceNumber}
+Date: ${formatDate(invoice.createdAt)}
+Due Date: ${formatDate(invoice.dueDate)}
+Status: ${invoice.status.toUpperCase()}
+
+FROM: FreightFlow Platform
+
+LINE ITEMS:
+${invoice.lineItems?.map(item => `${item.code || 'ITEM'} - ${item.description}: Rs. ${item.amount?.toLocaleString('en-IN') || '0'}`).join('\n') || 'No line items'}
+
+----------------------------------------
+Subtotal: ${formatCurrency(invoice.subtotal)}
+${invoice.discountAmount && parseFloat(invoice.discountAmount) > 0 ? `Discount: ${formatCurrency(invoice.discountAmount)}` : ''}
+GST (${invoice.taxPercent}%): ${formatCurrency(invoice.taxAmount)}
+----------------------------------------
+TOTAL: ${formatCurrency(invoice.totalAmount)}
+========================================
+
+${invoice.notes ? `Notes: ${invoice.notes}` : ''}
+${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
+
+Thank you for your business!
+    `;
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${invoice.invoiceNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Invoice Downloaded",
+      description: `${invoice.invoiceNumber} has been downloaded.`,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-6 max-w-4xl mx-auto">
@@ -276,6 +320,15 @@ export default function ShipperInvoicesPage() {
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   View
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleDownloadPDF(invoice)}
+                  data-testid={`button-download-invoice-${invoice.id}`}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  PDF
                 </Button>
                 
                 {!invoice.shipperConfirmed && invoice.status !== 'paid' && (

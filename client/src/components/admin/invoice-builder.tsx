@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, generateIdempotencyKey } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import {
   FileText,
@@ -116,6 +116,7 @@ export function InvoiceBuilder({
   const [notes, setNotes] = useState("");
   const [marginPercent, setMarginPercent] = useState(15);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
+  const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
   useEffect(() => {
     if (open && load && pricing) {
@@ -304,8 +305,75 @@ export function InvoiceBuilder({
     },
   });
 
+  const validateInvoice = (): string | null => {
+    if (lineItems.length === 0) {
+      return "Please add at least one line item to the invoice.";
+    }
+    if (totalAmount <= 0) {
+      return "Invoice total must be greater than zero.";
+    }
+    if (!load?.shipperId) {
+      return "Shipper information is missing.";
+    }
+    return null;
+  };
+
+  const handleDownloadPDF = () => {
+    const invoiceNumber = invoiceId ? `INV-${invoiceId.slice(-8).toUpperCase()}` : `INV-DRAFT-${Date.now()}`;
+    const content = `
+INVOICE
+========================================
+Invoice Number: ${invoiceNumber}
+Date: ${new Date().toLocaleDateString('en-IN')}
+Due Date: ${paymentTerms}
+
+FROM: FreightFlow Platform
+TO: Shipper ID ${load?.shipperId || 'N/A'}
+
+LOAD DETAILS:
+Route: ${load?.pickupCity} to ${load?.dropoffCity}
+Weight: ${load?.weight} ${load?.weightUnit || 'tons'}
+Truck Type: ${load?.requiredTruckType}
+
+LINE ITEMS:
+${lineItems.map(item => `${item.code} - ${item.description}: Rs. ${item.amount.toLocaleString('en-IN')}`).join('\n')}
+
+----------------------------------------
+Subtotal: Rs. ${subtotal.toLocaleString('en-IN')}
+Discount: Rs. ${discountAmount.toLocaleString('en-IN')}
+GST (${taxPercent}%): Rs. ${taxAmount.toLocaleString('en-IN')}
+----------------------------------------
+TOTAL: Rs. ${totalAmount.toLocaleString('en-IN')}
+========================================
+
+${notes ? `Notes: ${notes}` : ''}
+
+Thank you for your business!
+    `;
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${invoiceNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Invoice Downloaded",
+      description: "Invoice has been downloaded. (PDF generation coming soon)",
+    });
+  };
+
   const sendToShipperMutation = useMutation({
     mutationFn: async () => {
+      const validationError = validateInvoice();
+      if (validationError) {
+        throw new Error(validationError);
+      }
+
       const dueDate = new Date();
       const days = parseInt(paymentTerms.replace("Net ", "")) || 30;
       dueDate.setDate(dueDate.getDate() + days);
@@ -327,6 +395,7 @@ export function InvoiceBuilder({
         estimatedCarrierPayout: estimatedCarrierPayout.toString(),
         status: "sent",
         sendToShipper: true,
+        idempotencyKey,
       };
 
       if (invoiceId) {
@@ -339,17 +408,21 @@ export function InvoiceBuilder({
     onSuccess: async () => {
       toast({
         title: "Invoice Sent",
-        description: "Invoice has been sent to the shipper.",
+        description: "Invoice has been sent to the shipper successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
       onSuccess?.();
       onOpenChange(false);
     },
     onError: (error: Error) => {
+      const message = error.message.includes(':') 
+        ? error.message.split(':').slice(1).join(':').trim() 
+        : error.message;
       toast({
-        title: "Error",
-        description: error.message || "Failed to send invoice",
+        title: "Invoice Failed",
+        description: message || "Failed to send invoice. Please try again.",
         variant: "destructive",
       });
     },
@@ -639,7 +712,8 @@ export function InvoiceBuilder({
           </Button>
           <Button
             variant="outline"
-            disabled
+            onClick={handleDownloadPDF}
+            disabled={lineItems.length === 0}
             data-testid="button-download-pdf"
           >
             <Download className="h-4 w-4 mr-2" />

@@ -337,47 +337,41 @@ export default function ShipperInvoicesPage() {
         <p className="text-muted-foreground">View, confirm, and manage your invoices</p>
       </div>
 
-      {invoices.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No Invoices Yet</h3>
-            <p className="text-muted-foreground">
-              Invoices will appear here once your loads are priced by the admin.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pending" data-testid="tab-pending">
-              Pending ({pendingConfirmation.length})
-            </TabsTrigger>
-            <TabsTrigger value="active" data-testid="tab-active">
-              Active ({activeInvoices.length})
-            </TabsTrigger>
-            <TabsTrigger value="paid" data-testid="tab-paid">
-              Paid ({paidInvoices.length})
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="pending" className="space-y-4 mt-4">
-            {pendingConfirmation.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <p className="text-muted-foreground">No invoices pending confirmation</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <AlertCircle className="h-4 w-4 text-warning" />
-                  <span>Please confirm these invoices to start carrier bidding on your loads.</span>
-                </div>
-                {pendingConfirmation.map(invoice => renderInvoiceCard(invoice))}
-              </>
-            )}
-          </TabsContent>
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="pending" data-testid="tab-pending">
+            Pending ({pendingConfirmation.length})
+          </TabsTrigger>
+          <TabsTrigger value="active" data-testid="tab-active">
+            Active ({activeInvoices.length})
+          </TabsTrigger>
+          <TabsTrigger value="paid" data-testid="tab-paid">
+            Paid ({paidInvoices.length})
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="pending" className="space-y-4 mt-4">
+          {pendingConfirmation.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">
+                  {invoices.length === 0 
+                    ? "No invoices yet. Invoices will appear here once your loads are priced by the admin."
+                    : "No invoices pending confirmation"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4 text-warning" />
+                <span>Please confirm these invoices to start carrier bidding on your loads.</span>
+              </div>
+              {pendingConfirmation.map(invoice => renderInvoiceCard(invoice))}
+            </>
+          )}
+        </TabsContent>
           
           <TabsContent value="active" className="space-y-4 mt-4">
             {activeInvoices.length === 0 ? (
@@ -403,7 +397,6 @@ export default function ShipperInvoicesPage() {
             )}
           </TabsContent>
         </Tabs>
-      )}
 
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent>

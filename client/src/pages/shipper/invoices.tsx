@@ -70,7 +70,12 @@ export default function ShipperInvoicesPage() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [queryDialogOpen, setQueryDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [negotiateDialogOpen, setNegotiateDialogOpen] = useState(false);
   const [queryMessage, setQueryMessage] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [negotiateReason, setNegotiateReason] = useState("");
+  const [counterAmount, setCounterAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
 
   const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
@@ -165,6 +170,53 @@ export default function ShipperInvoicesPage() {
     },
   });
 
+  const rejectMutation = useMutation({
+    mutationFn: async ({ invoiceId, reason }: { invoiceId: string; reason: string }) => {
+      return apiRequest("POST", `/api/shipper/invoices/${invoiceId}/reject`, { reason });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invoice Rejected",
+        description: "The invoice has been rejected and sent back to admin for review.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
+      setRejectDialogOpen(false);
+      setRejectReason("");
+      setSelectedInvoice(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject invoice",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const negotiateMutation = useMutation({
+    mutationFn: async ({ invoiceId, proposedAmount, reason }: { invoiceId: string; proposedAmount: number; reason: string }) => {
+      return apiRequest("POST", `/api/shipper/invoices/${invoiceId}/negotiate`, { proposedAmount, reason });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Counter Offer Submitted",
+        description: "Your counter offer has been sent to admin for review.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
+      setNegotiateDialogOpen(false);
+      setCounterAmount("");
+      setNegotiateReason("");
+      setSelectedInvoice(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit counter offer",
+        variant: "destructive",
+      });
+    },
+  });
+
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
     return `Rs. ${num.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -179,17 +231,25 @@ export default function ShipperInvoicesPage() {
   };
 
   const getStatusBadge = (invoice: Invoice) => {
-    if (invoice.status === 'paid') {
+    const status = invoice.status.toLowerCase();
+    
+    if (status === 'paid') {
       return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"><CheckCircle className="h-3 w-3 mr-1" />Paid</Badge>;
     }
-    if (invoice.status === 'disputed') {
-      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Disputed</Badge>;
+    if (status === 'disputed' || status === 'invoice_rejected') {
+      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
     }
-    if (invoice.status === 'acknowledged') {
+    if (status === 'negotiation' || status === 'invoice_negotiation') {
+      return <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"><MessageSquare className="h-3 w-3 mr-1" />Negotiating</Badge>;
+    }
+    if (status === 'acknowledged') {
       return <Badge variant="secondary"><Check className="h-3 w-3 mr-1" />Acknowledged</Badge>;
     }
-    if (invoice.status === 'sent' && !invoice.shipperConfirmed) {
-      return <Badge variant="outline" className="text-warning border-warning"><Clock className="h-3 w-3 mr-1" />Pending Confirmation</Badge>;
+    if (status === 'confirmed' || status === 'invoice_approved') {
+      return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"><Check className="h-3 w-3 mr-1" />Confirmed</Badge>;
+    }
+    if ((status === 'sent' || status === 'invoice_sent') && !invoice.shipperConfirmed) {
+      return <Badge variant="outline" className="text-warning border-warning"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>;
     }
     if (invoice.shipperConfirmed) {
       return <Badge variant="secondary"><Check className="h-3 w-3 mr-1" />Confirmed</Badge>;
@@ -197,9 +257,25 @@ export default function ShipperInvoicesPage() {
     return <Badge variant="outline">{invoice.status}</Badge>;
   };
 
-  const pendingConfirmation = invoices.filter(inv => !inv.shipperConfirmed && inv.status !== 'paid');
-  const activeInvoices = invoices.filter(inv => inv.shipperConfirmed && inv.status !== 'paid');
-  const paidInvoices = invoices.filter(inv => inv.status === 'paid');
+  const canTakeAction = (invoice: Invoice) => {
+    const status = invoice.status.toLowerCase();
+    const actionableStatuses = ['sent', 'invoice_sent'];
+    return !invoice.shipperConfirmed && actionableStatuses.includes(status);
+  };
+
+  const pendingConfirmation = invoices.filter(inv => {
+    const status = inv.status.toLowerCase();
+    return !inv.shipperConfirmed && 
+           status !== 'paid' && 
+           status !== 'confirmed' && 
+           status !== 'invoice_approved';
+  });
+  const activeInvoices = invoices.filter(inv => {
+    const status = inv.status.toLowerCase();
+    return (inv.shipperConfirmed || status === 'confirmed' || status === 'invoice_approved') && 
+           status !== 'paid';
+  });
+  const paidInvoices = invoices.filter(inv => inv.status.toLowerCase() === 'paid');
 
   const handleConfirm = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -214,6 +290,16 @@ export default function ShipperInvoicesPage() {
   const handleQuery = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setQueryDialogOpen(true);
+  };
+
+  const handleReject = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setRejectDialogOpen(true);
+  };
+
+  const handleNegotiate = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setNegotiateDialogOpen(true);
   };
 
   const handleDownloadPDF = (invoice: Invoice) => {
@@ -331,18 +417,40 @@ Thank you for your business!
                   PDF
                 </Button>
                 
-                {!invoice.shipperConfirmed && invoice.status !== 'paid' && (
-                  <Button 
-                    size="sm"
-                    onClick={() => handleConfirm(invoice)}
-                    data-testid={`button-confirm-invoice-${invoice.id}`}
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Confirm
-                  </Button>
+                {canTakeAction(invoice) && (
+                  <>
+                    <Button 
+                      size="sm"
+                      onClick={() => handleConfirm(invoice)}
+                      data-testid={`button-confirm-invoice-${invoice.id}`}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleNegotiate(invoice)}
+                      data-testid={`button-negotiate-invoice-${invoice.id}`}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Counter
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleReject(invoice)}
+                      data-testid={`button-reject-invoice-${invoice.id}`}
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Reject
+                    </Button>
+                  </>
                 )}
                 
-                {invoice.shipperConfirmed && invoice.status !== 'paid' && invoice.status !== 'disputed' && (
+                {(invoice.shipperConfirmed || ['confirmed', 'invoice_approved'].includes(invoice.status.toLowerCase())) && 
+                 invoice.status.toLowerCase() !== 'paid' && 
+                 !['disputed', 'invoice_rejected'].includes(invoice.status.toLowerCase()) && (
                   <>
                     {invoice.status !== 'acknowledged' && (
                       <Button 
@@ -619,7 +727,128 @@ Thank you for your business!
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!selectedInvoice && !confirmDialogOpen && !payDialogOpen && !queryDialogOpen} onOpenChange={(open) => !open && setSelectedInvoice(null)}>
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Invoice</DialogTitle>
+            <DialogDescription>
+              Reject invoice {selectedInvoice?.invoiceNumber}. This will send it back to admin for review.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Reason for Rejection</Label>
+              <Textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Please explain why you are rejecting this invoice..."
+                rows={4}
+                data-testid="textarea-reject-reason"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              The admin team will review your concerns and may revise the pricing.
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => selectedInvoice && rejectMutation.mutate({ 
+                invoiceId: selectedInvoice.id, 
+                reason: rejectReason 
+              })}
+              disabled={rejectMutation.isPending || !rejectReason.trim()}
+              data-testid="button-confirm-reject"
+            >
+              {rejectMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
+              Reject Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={negotiateDialogOpen} onOpenChange={setNegotiateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Counter Offer</DialogTitle>
+            <DialogDescription>
+              Submit a counter offer for invoice {selectedInvoice?.invoiceNumber}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedInvoice && (
+              <div className="p-3 bg-muted rounded-md">
+                <p className="text-sm text-muted-foreground">Current Amount</p>
+                <p className="text-lg font-bold">{formatCurrency(selectedInvoice.totalAmount)}</p>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label>Your Counter Offer (Rs.)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rs.</span>
+                <input
+                  type="number"
+                  value={counterAmount}
+                  onChange={(e) => setCounterAmount(e.target.value)}
+                  placeholder="Enter your proposed amount"
+                  className="w-full pl-10 pr-4 py-2 border rounded-md"
+                  data-testid="input-counter-amount"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Reason for Counter Offer</Label>
+              <Textarea
+                value={negotiateReason}
+                onChange={(e) => setNegotiateReason(e.target.value)}
+                placeholder="Explain why you're proposing a different amount..."
+                rows={3}
+                data-testid="textarea-negotiate-reason"
+              />
+            </div>
+            
+            <p className="text-sm text-muted-foreground">
+              Admin will review your counter offer and respond within 24 hours.
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNegotiateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => selectedInvoice && negotiateMutation.mutate({ 
+                invoiceId: selectedInvoice.id, 
+                proposedAmount: parseFloat(counterAmount),
+                reason: negotiateReason 
+              })}
+              disabled={negotiateMutation.isPending || !counterAmount || !negotiateReason.trim()}
+              data-testid="button-submit-counter"
+            >
+              {negotiateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4 mr-2" />
+              )}
+              Submit Counter Offer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedInvoice && !confirmDialogOpen && !payDialogOpen && !queryDialogOpen && !rejectDialogOpen && !negotiateDialogOpen} onOpenChange={(open) => !open && setSelectedInvoice(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Invoice Details</DialogTitle>

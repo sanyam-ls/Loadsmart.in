@@ -420,13 +420,13 @@ export class DatabaseStorage implements IStorage {
   // Admin mediation methods
   async getLoadsSubmittedToAdmin(): Promise<Load[]> {
     return db.select().from(loads)
-      .where(sql`${loads.status} IN ('submitted_to_admin', 'pending_admin_review')`)
+      .where(sql`${loads.status} IN ('pending', 'priced', 'invoice_sent', 'invoice_rejected', 'invoice_negotiation', 'submitted_to_admin', 'pending_admin_review')`)
       .orderBy(desc(loads.submittedAt));
   }
 
   async getAdminPostedLoads(): Promise<Load[]> {
     return db.select().from(loads)
-      .where(sql`${loads.status} IN ('posted', 'posted_open', 'posted_invite', 'assigned') AND ${loads.adminId} IS NOT NULL`)
+      .where(sql`${loads.status} IN ('open_for_bids', 'bidding_active', 'awarded', 'in_transit', 'posted', 'posted_open', 'posted_invite', 'assigned') AND ${loads.adminId} IS NOT NULL`)
       .orderBy(desc(loads.postedAt));
   }
 

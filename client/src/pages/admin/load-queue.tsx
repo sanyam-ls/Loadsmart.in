@@ -119,6 +119,36 @@ interface RealLoad {
   shipperEmail?: string;
   distance?: number;
   priority?: string;
+  adminPrice?: number;
+  priceLockedAt?: string;
+}
+
+function getCanonicalStateDisplay(status: string): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string } {
+  const stateMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
+    "draft": { label: "Draft", variant: "outline" },
+    "pending": { label: "Pending Review", variant: "default", className: "bg-amber-500 text-white" },
+    "priced": { label: "Priced", variant: "secondary", className: "bg-blue-500 text-white" },
+    "invoice_sent": { label: "Invoice Sent", variant: "secondary", className: "bg-indigo-500 text-white" },
+    "invoice_approved": { label: "Invoice Approved", variant: "secondary", className: "bg-green-500 text-white" },
+    "invoice_rejected": { label: "Invoice Rejected", variant: "destructive" },
+    "invoice_negotiation": { label: "Negotiating", variant: "secondary", className: "bg-orange-500 text-white" },
+    "open_for_bids": { label: "Open for Bids", variant: "secondary", className: "bg-cyan-500 text-white" },
+    "bidding_active": { label: "Bidding Active", variant: "secondary", className: "bg-purple-500 text-white" },
+    "awarded": { label: "Awarded", variant: "secondary", className: "bg-emerald-500 text-white" },
+    "in_transit": { label: "In Transit", variant: "secondary", className: "bg-blue-600 text-white" },
+    "completed": { label: "Completed", variant: "secondary", className: "bg-gray-500 text-white" },
+  };
+  return stateMap[status.toLowerCase()] || { label: status, variant: "outline" };
+}
+
+function getAdminActionForState(status: string): { action: string; buttonLabel: string } | null {
+  const actionMap: Record<string, { action: string; buttonLabel: string }> = {
+    "pending": { action: "price", buttonLabel: "Price Load" },
+    "priced": { action: "send_invoice", buttonLabel: "Send Invoice" },
+    "invoice_rejected": { action: "reprice", buttonLabel: "Revise Price" },
+    "invoice_negotiation": { action: "negotiate", buttonLabel: "Review Counter" },
+  };
+  return actionMap[status.toLowerCase()] || null;
 }
 
 const mockCarriers: CarrierOption[] = [
@@ -387,9 +417,11 @@ export default function LoadQueuePage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-primary" />
-              Database Loads Pending Review ({realLoads.length})
+              Loads Requiring Admin Action ({realLoads.length})
             </CardTitle>
-            <CardDescription>Real shipper submissions requiring admin pricing</CardDescription>
+            <CardDescription>
+              Shipper submissions in various workflow stages requiring admin attention
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="max-h-[400px]">
@@ -400,6 +432,7 @@ export default function LoadQueuePage() {
                     <TableHead>Route</TableHead>
                     <TableHead>Shipper</TableHead>
                     <TableHead>Cargo</TableHead>
+                    <TableHead>Admin Price</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -434,20 +467,51 @@ export default function LoadQueuePage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-amber-500 text-white">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Pending
-                        </Badge>
+                        {load.adminPrice ? (
+                          <span className="font-medium text-green-600 dark:text-green-400">
+                            Rs. {Number(load.adminPrice).toLocaleString('en-IN')}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Not priced</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const stateDisplay = getCanonicalStateDisplay(load.status);
+                          return (
+                            <Badge variant={stateDisplay.variant} className={stateDisplay.className}>
+                              {load.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                              {load.status === "priced" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                              {load.status === "invoice_sent" && <Send className="h-3 w-3 mr-1" />}
+                              {stateDisplay.label}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          size="sm" 
-                          onClick={() => openRealLoadPricingDrawer(load)}
-                          data-testid={`button-price-real-${load.id.slice(0, 8)}`}
-                        >
-                          <Calculator className="h-4 w-4 mr-1" />
-                          Price & Post
-                        </Button>
+                        {(() => {
+                          const adminAction = getAdminActionForState(load.status);
+                          if (adminAction) {
+                            return (
+                              <Button 
+                                size="sm" 
+                                onClick={() => openRealLoadPricingDrawer(load)}
+                                data-testid={`button-action-real-${load.id.slice(0, 8)}`}
+                              >
+                                {adminAction.action === "price" && <Calculator className="h-4 w-4 mr-1" />}
+                                {adminAction.action === "send_invoice" && <Send className="h-4 w-4 mr-1" />}
+                                {adminAction.action === "reprice" && <Calculator className="h-4 w-4 mr-1" />}
+                                {adminAction.action === "negotiate" && <Users className="h-4 w-4 mr-1" />}
+                                {adminAction.buttonLabel}
+                              </Button>
+                            );
+                          }
+                          return (
+                            <Badge variant="outline" className="text-xs">
+                              No action required
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                   ))}

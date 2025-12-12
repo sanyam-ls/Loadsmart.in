@@ -2304,6 +2304,440 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/admin/invoices/generate - Generate invoice from Invoice Builder
+  app.post("/api/admin/invoices/generate", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId, shipperId, lineItems, subtotal, discountAmount, discountReason,
+              taxPercent, taxAmount, totalAmount, paymentTerms, dueDate, notes,
+              platformMargin, estimatedCarrierPayout, status, sendToShipper, idempotencyKey } = req.body;
+
+      // Check idempotency
+      if (idempotencyKey) {
+        const existing = await storage.getInvoiceByIdempotencyKey(idempotencyKey);
+        if (existing) {
+          return res.json({ invoice: existing, existed: true });
+        }
+      }
+
+      // Check if invoice already exists for this load
+      const existingInvoice = await storage.getInvoiceByLoad(loadId);
+      if (existingInvoice) {
+        return res.json({ invoice: existingInvoice, existed: true });
+      }
+
+      if (!loadId || !shipperId || !subtotal || !totalAmount) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const invoiceNumber = await storage.generateInvoiceNumber();
+      const dueDateValue = dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      const invoice = await storage.createInvoice({
+        invoiceNumber,
+        loadId,
+        shipperId,
+        adminId: user.id,
+        subtotal,
+        discountAmount: discountAmount || "0",
+        discountReason,
+        taxPercent: taxPercent || "18",
+        taxAmount: taxAmount || "0",
+        totalAmount,
+        paymentTerms: paymentTerms || "Net 30",
+        dueDate: dueDateValue,
+        notes,
+        lineItems,
+        platformMargin: platformMargin || "0",
+        estimatedCarrierPayout: estimatedCarrierPayout || "0",
+        status: status || "draft",
+        idempotencyKey,
+      });
+
+      // Create audit log
+      await storage.createInvoiceHistory({
+        invoiceId: invoice.id,
+        userId: user.id,
+        action: "create",
+        payload: { lineItems, subtotal, totalAmount, taxPercent },
+      });
+
+      // If sendToShipper is true, send immediately
+      if (sendToShipper) {
+        await storage.updateInvoice(invoice.id, { status: "sent", sentAt: new Date() });
+        
+        const load = await storage.getLoad(loadId);
+        await storage.createNotification({
+          userId: shipperId,
+          title: "Invoice Received",
+          message: `Invoice ${invoiceNumber} for ${load?.pickupCity} to ${load?.dropoffCity} - Total: Rs. ${parseFloat(totalAmount).toLocaleString('en-IN')}`,
+          type: "invoice",
+          relatedLoadId: loadId,
+        });
+
+        await storage.createInvoiceHistory({
+          invoiceId: invoice.id,
+          userId: user.id,
+          action: "send",
+          payload: { sentAt: new Date() },
+        });
+      }
+
+      res.status(201).json({ invoice, existed: false });
+    } catch (error) {
+      console.error("Generate invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/invoices/:id/history - Get invoice audit history
+  app.get("/api/admin/invoices/:id/history", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const history = await storage.getInvoiceHistory(req.params.id);
+      res.json(history);
+    } catch (error) {
+      console.error("Get invoice history error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/shipper/invoices/:id/acknowledge - Shipper acknowledges invoice
+  app.post("/api/shipper/invoices/:id/acknowledge", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice || invoice.shipperId !== user.id) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const updated = await storage.updateInvoice(req.params.id, {
+        status: "acknowledged",
+        viewedAt: new Date(),
+      });
+
+      await storage.createInvoiceHistory({
+        invoiceId: invoice.id,
+        userId: user.id,
+        action: "acknowledge",
+        payload: { acknowledgedAt: new Date() },
+      });
+
+      // Notify admin
+      const admins = (await storage.getAllUsers()).filter(u => u.role === 'admin');
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Invoice Acknowledged",
+          message: `${user.companyName || user.username} acknowledged invoice ${invoice.invoiceNumber}`,
+          type: "success",
+          relatedLoadId: invoice.loadId,
+        });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Acknowledge invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/shipper/invoices/:id/pay - Shipper pays invoice (mock)
+  app.post("/api/shipper/invoices/:id/pay", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice || invoice.shipperId !== user.id) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const { paymentMethod } = req.body;
+      const paymentReference = `PAY-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
+      const updated = await storage.markInvoicePaid(req.params.id, {
+        paidAmount: invoice.totalAmount,
+        paymentMethod: paymentMethod || "mock_payment",
+        paymentReference,
+      });
+
+      await storage.createInvoiceHistory({
+        invoiceId: invoice.id,
+        userId: user.id,
+        action: "pay",
+        payload: { paymentMethod, paymentReference, paidAmount: invoice.totalAmount },
+      });
+
+      // Notify admin
+      const admins = (await storage.getAllUsers()).filter(u => u.role === 'admin');
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Payment Received",
+          message: `Payment of Rs. ${parseFloat(invoice.totalAmount).toLocaleString('en-IN')} received for invoice ${invoice.invoiceNumber}`,
+          type: "success",
+          relatedLoadId: invoice.loadId,
+        });
+      }
+
+      res.json({ invoice: updated, paymentReference });
+    } catch (error) {
+      console.error("Pay invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/shipper/invoices/:id/query - Shipper raises a query/dispute
+  app.post("/api/shipper/invoices/:id/query", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice || invoice.shipperId !== user.id) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const { message } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Query message is required" });
+      }
+
+      const updated = await storage.updateInvoice(req.params.id, {
+        status: "disputed",
+      });
+
+      await storage.createInvoiceHistory({
+        invoiceId: invoice.id,
+        userId: user.id,
+        action: "dispute",
+        payload: { message, disputedAt: new Date() },
+      });
+
+      // Notify admin
+      const admins = (await storage.getAllUsers()).filter(u => u.role === 'admin');
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Invoice Query Raised",
+          message: `${user.companyName || user.username} raised a query on invoice ${invoice.invoiceNumber}: "${message.slice(0, 50)}..."`,
+          type: "warning",
+          relatedLoadId: invoice.loadId,
+        });
+      }
+
+      res.json({ invoice: updated, queryId: `QRY-${Date.now()}` });
+    } catch (error) {
+      console.error("Query invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // CARRIER PROPOSAL ENDPOINTS (Edited Estimations)
+  // =============================================
+
+  // POST /api/admin/proposals/send - Send edited estimation to carriers
+  app.post("/api/admin/proposals/send", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId, carrierIds, proposedPayout, lineItems, message, expiryHours } = req.body;
+
+      if (!loadId || !carrierIds?.length || !proposedPayout) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const load = await storage.getLoad(loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const expiresAt = new Date(Date.now() + (expiryHours || 24) * 60 * 60 * 1000);
+      const proposals = [];
+
+      for (const carrierId of carrierIds) {
+        const proposal = await storage.createCarrierProposal({
+          loadId,
+          carrierId,
+          adminId: user.id,
+          proposedPayout,
+          lineItems,
+          message,
+          expiresAt,
+          status: "pending",
+        });
+        proposals.push(proposal);
+
+        // Notify carrier
+        await storage.createNotification({
+          userId: carrierId,
+          title: "New Proposal Received",
+          message: `You have a new freight proposal for ${load.pickupCity} to ${load.dropoffCity} - Payout: Rs. ${parseFloat(proposedPayout).toLocaleString('en-IN')}`,
+          type: "info",
+          relatedLoadId: loadId,
+        });
+      }
+
+      res.json({ proposals, count: proposals.length });
+    } catch (error) {
+      console.error("Send proposals error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier/proposals - Get proposals for carrier
+  app.get("/api/carrier/proposals", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const proposals = await storage.getCarrierProposalsByCarrier(user.id);
+      res.json(proposals);
+    } catch (error) {
+      console.error("Get proposals error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier/proposals/pending - Get pending proposals for carrier
+  app.get("/api/carrier/proposals/pending", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const proposals = await storage.getPendingCarrierProposals(user.id);
+      res.json(proposals);
+    } catch (error) {
+      console.error("Get pending proposals error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/carrier/proposals/:id/accept - Accept a proposal
+  app.post("/api/carrier/proposals/:id/accept", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const proposal = await storage.getCarrierProposal(req.params.id);
+      if (!proposal || proposal.carrierId !== user.id) {
+        return res.status(404).json({ error: "Proposal not found" });
+      }
+
+      if (proposal.status !== "pending") {
+        return res.status(400).json({ error: "Proposal is no longer pending" });
+      }
+
+      if (proposal.expiresAt && new Date(proposal.expiresAt) < new Date()) {
+        await storage.updateCarrierProposal(req.params.id, { status: "expired" });
+        return res.status(400).json({ error: "Proposal has expired" });
+      }
+
+      const updated = await storage.acceptCarrierProposal(req.params.id);
+
+      // Notify admin
+      await storage.createNotification({
+        userId: proposal.adminId,
+        title: "Proposal Accepted",
+        message: `${user.companyName || user.username} accepted your proposal for payout Rs. ${parseFloat(proposal.proposedPayout).toLocaleString('en-IN')}`,
+        type: "success",
+        relatedLoadId: proposal.loadId,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Accept proposal error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/carrier/proposals/:id/counter - Counter a proposal
+  app.post("/api/carrier/proposals/:id/counter", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const proposal = await storage.getCarrierProposal(req.params.id);
+      if (!proposal || proposal.carrierId !== user.id) {
+        return res.status(404).json({ error: "Proposal not found" });
+      }
+
+      if (proposal.status !== "pending") {
+        return res.status(400).json({ error: "Proposal is no longer pending" });
+      }
+
+      const { counterAmount, counterMessage } = req.body;
+      if (!counterAmount) {
+        return res.status(400).json({ error: "Counter amount is required" });
+      }
+
+      const updated = await storage.counterCarrierProposal(
+        req.params.id,
+        counterAmount,
+        counterMessage || ""
+      );
+
+      // Notify admin
+      await storage.createNotification({
+        userId: proposal.adminId,
+        title: "Counter Offer Received",
+        message: `${user.companyName || user.username} countered with Rs. ${parseFloat(counterAmount).toLocaleString('en-IN')}`,
+        type: "warning",
+        relatedLoadId: proposal.loadId,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Counter proposal error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/proposals/load/:loadId - Get proposals for a load
+  app.get("/api/admin/proposals/load/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const proposals = await storage.getCarrierProposalsByLoad(req.params.loadId);
+      res.json(proposals);
+    } catch (error) {
+      console.error("Get proposals by load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // =============================================
   // CARRIER SETTLEMENT ENDPOINTS
   // =============================================

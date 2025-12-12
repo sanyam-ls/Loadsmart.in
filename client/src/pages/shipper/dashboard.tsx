@@ -108,7 +108,7 @@ export default function ShipperDashboard() {
         />
         <StatCard
           title="Monthly Spend"
-          value={`$${spend.totalAmount.toLocaleString()}`}
+          value={`Rs. ${spend.totalAmount.toLocaleString('en-IN')}`}
           icon={DollarSign}
           trend={{ value: Math.abs(spendChange), isPositive: spendChange > 0 }}
           onClick={() => navigate("/shipper/spend")}
@@ -141,14 +141,14 @@ export default function ShipperDashboard() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" tickFormatter={(value) => `$${value / 1000}k`} />
+                  <YAxis className="text-xs" tickFormatter={(value) => `Rs. ${(value / 100000).toFixed(1)}L`} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "hsl(var(--card))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
                     }}
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, "Spend"]}
+                    formatter={(value: number) => [`Rs. ${value.toLocaleString('en-IN')}`, "Spend"]}
                   />
                   <Area
                     type="monotone"
@@ -251,8 +251,8 @@ export default function ShipperDashboard() {
                       </p>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="font-medium">${load.estimatedPrice.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">{load.weight.toLocaleString()} {load.weightUnit}</p>
+                      <p className="font-medium">Rs. {(load.estimatedPrice ?? 0).toLocaleString('en-IN')}</p>
+                      <p className="text-xs text-muted-foreground">{load.weight.toLocaleString('en-IN')} {load.weightUnit}</p>
                     </div>
                   </div>
                 ))}

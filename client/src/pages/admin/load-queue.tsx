@@ -58,16 +58,39 @@ import { PricingDrawer } from "@/components/admin/pricing-drawer";
 import { InvoiceDrawer } from "@/components/admin/invoice-drawer";
 
 const regions = ["All Regions", "North India", "South India", "East India", "West India", "Central India"];
-const loadTypes = ["All Types", "Dry Van", "Flatbed", "Refrigerated", "Tanker", "Container", "Open Deck"];
+const loadTypes = [
+  "All Types", 
+  "17 ft", "19 ft", "20 ft", "22 ft", "24 ft",
+  "28 ft SXL", "28 ft MXL", 
+  "32 ft SXL", "32 ft MXL",
+  "Open Truck", 
+  "Trailer 20ft", "Trailer 40ft",
+  "Container 20ft", "Container 40ft",
+  "Taurus 14T", "Taurus 16T", "Taurus 21T",
+  "TATA Ace", "Bolero Pickup"
+];
 const priorities = ["All Priority", "Urgent", "High", "Normal", "Low"];
 
 const ratePerKmByType: Record<string, number> = {
-  "Dry Van": 45,
-  "Flatbed": 52,
-  "Refrigerated": 65,
-  "Tanker": 58,
-  "Container": 55,
-  "Open Deck": 48,
+  "17 ft": 38,
+  "19 ft": 40,
+  "20 ft": 42,
+  "22 ft": 45,
+  "24 ft": 48,
+  "28 ft SXL": 52,
+  "28 ft MXL": 55,
+  "32 ft SXL": 58,
+  "32 ft MXL": 62,
+  "Open Truck": 45,
+  "Trailer 20ft": 65,
+  "Trailer 40ft": 75,
+  "Container 20ft": 60,
+  "Container 40ft": 70,
+  "Taurus 14T": 55,
+  "Taurus 16T": 58,
+  "Taurus 21T": 62,
+  "TATA Ace": 25,
+  "Bolero Pickup": 28,
 };
 
 interface CarrierOption {
@@ -116,14 +139,40 @@ function estimateDistance(pickup: string, drop: string): number {
     "delhi_mumbai": 1400,
     "bangalore_chennai": 350,
     "chennai_bangalore": 350,
+    "bengaluru_chennai": 350,
+    "chennai_bengaluru": 350,
     "kolkata_delhi": 1500,
     "delhi_kolkata": 1500,
     "mumbai_chennai": 1340,
     "chennai_mumbai": 1340,
     "bangalore_hyderabad": 570,
     "hyderabad_bangalore": 570,
+    "bengaluru_hyderabad": 570,
+    "hyderabad_bengaluru": 570,
     "delhi_jaipur": 280,
     "jaipur_delhi": 280,
+    "mumbai_pune": 150,
+    "pune_mumbai": 150,
+    "bhiwandi_ahmedabad": 530,
+    "ahmedabad_bhiwandi": 530,
+    "ahmedabad_mumbai": 524,
+    "mumbai_ahmedabad": 524,
+    "ludhiana_jaipur": 580,
+    "jaipur_ludhiana": 580,
+    "kolkata_guwahati": 980,
+    "guwahati_kolkata": 980,
+    "delhi_ludhiana": 310,
+    "ludhiana_delhi": 310,
+    "chennai_hyderabad": 625,
+    "hyderabad_chennai": 625,
+    "surat_mumbai": 284,
+    "mumbai_surat": 284,
+    "ahmedabad_surat": 265,
+    "surat_ahmedabad": 265,
+    "nagpur_mumbai": 840,
+    "mumbai_nagpur": 840,
+    "indore_mumbai": 585,
+    "mumbai_indore": 585,
   };
   
   const key = `${pickup.toLowerCase().split(",")[0].trim()}_${drop.toLowerCase().split(",")[0].trim()}`;

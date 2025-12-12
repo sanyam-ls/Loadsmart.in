@@ -1,0 +1,159 @@
+Use this to generate workflows, UI logic, load flow, and behaviour for the entire platform.
+
+Everything follows Indian logistics standards, compliances, geography, and truck categories.
+
+⸻
+
+🔶 ROLE: ADMIN PANEL (Indian Context)
+
+The Admin is the operational command center. It must follow Indian transportation conventions.
+
+ADMIN — CORE CAPABILITIES
+	•	Create, view, edit, assign, and track loads across India.
+	•	Use Indian cities, states, and industrial hubs (e.g., Bhiwandi, Ludhiana, Ahmedabad, Jaipur, Bengaluru, Hosur, Chennai, Hyderabad, Pune, Guwahati).
+	•	Support all major Indian truck types:
+	•	17 ft / 19 ft / 20 ft / 22 ft / 24 ft
+	•	28 ft single axle
+	•	28 ft multi-axle
+	•	32 ft SXL
+	•	32 ft MXL
+	•	Open truck
+	•	Trailer (20 ft / 40 ft)
+	•	Container (20 ft / 40 ft)
+	•	Taurus 14T / 16T / 21T
+	•	Small commercial vehicles (TATA Ace, Pickup, Bolero Maxx)
+
+ADMIN — PRICING & COSTING RULES
+	•	Distance-based estimation using Indian per-km freight averages.
+	•	Auto-calculation of:
+	•	Diesel index pricing
+	•	Toll roads (NHAI norms)
+	•	Driver bata (₹300–₹600/day depending on lane)
+	•	Loading/unloading charges (₹500–₹2000)
+	•	State border check-post delays
+	•	Fastag auto-deduction
+
+Admin can override estimation manually.
+
+ADMIN — LOAD WORKFLOW
+	1.	Pending Load → Open → Assign Cost
+	•	System should show price estimation based on distance and truck type.
+	•	Admin can edit cost, lock cost, and generate an invoice for shipper approval.
+	2.	Send Invoice to Shipper Portal
+	•	Shipper can view, negotiate, or approve.
+	•	Once shipper approves, Admin can open bidding for carriers.
+	3.	Carrier Bidding Opens
+	•	Carriers place bids with Indian pricing conventions (₹ per km, fixed amount, or lane-based flat rate).
+	•	Admin sees all bids and can award the load manually or auto-select lowest or preferred carrier.
+	4.	Post-Award Workflow
+	•	Upload driver RC, DL, vehicle number, e-way bill if provided by shipper.
+	•	Track via GPS/driver updates.
+	•	Close load with POD upload.
+
+⸻
+
+🔶 ROLE: SHIPPER PORTAL (India-Specific)
+
+The shipper handles bookings, approvals, invoices, and real-time updates.
+
+SHIPPER — CORE CAPABILITIES
+	•	Create new loads with:
+	•	Pickup/delivery city (Indian cities only)
+	•	Material type (FMCG, textile, auto parts, pharma, electronics, steel, chemicals, e-commerce)
+	•	Truck type (India list)
+	•	Weight in metric tonnes
+	•	Value of goods in INR
+	•	View invoice sent by Admin
+	•	Approve or negotiate cost
+	•	View carrier assigned
+	•	Download/submit e-way bill
+	•	Track load in real time
+	•	Approve POD for payment release
+
+SHIPPER — COMPLIANCE
+	•	Follow GST & E-way Bill rules:
+	•	Goods value over ₹50,000 requires e-way bill
+	•	Part-B required for vehicle number
+	•	Shipper must upload e-way bill after approval
+
+⸻
+
+🔶 ROLE: CARRIER PORTAL (India-Specific)
+
+The carrier is responsible for bidding, assigning drivers, and delivering goods.
+
+CARRIER — CORE CAPABILITIES
+	•	View open loads with:
+	•	Pickup & drop city
+	•	Distance in km
+	•	Material type
+	•	Required truck type
+	•	Place competitive bids in INR
+	•	Add fleet vehicles with:
+	•	Truck type
+	•	Vehicle number
+	•	Driver details
+	•	RC & insurance validity
+	•	Accept or reject awarded loads
+	•	Provide:
+	•	Driver name
+	•	Contact number
+	•	Vehicle number
+	•	Live-location updates (manual or GPS)
+	•	Upload POD after delivery
+
+CARRIER — INDIA-SPECIFIC COMPLIANCE
+	•	Valid FASTag
+	•	Valid RC, Insurance, Fitness Certificate
+	•	Driver with valid LMV/HTV license
+	•	Regional lane restrictions (Delhi pollution norms, Maharashtra entry timings, etc.)
+
+⸻
+
+🔶 LOAD FLOW (INDIAN MODEL — END-TO-END)
+
+1. Shipper creates load
+
+Indian city → city lane + truck type → weight → material.
+
+2. Admin views as “Pending Load”
+
+Opens it → assigns estimation cost using India freight norms.
+
+3. Admin sends invoice to Shipper
+
+Shipper views → approves/negotiates.
+
+4. After approval, Admin opens load for bidding
+
+Carriers across India can place INR-based bids.
+
+5. Admin awards load
+
+Carrier receives award → updates driver & truck details.
+
+6. Pickup → Transit → Delivery
+
+Driver sends updates, GPS movement, arrival at warehouse, unloading.
+
+7. POD Upload
+
+Carrier uploads POD → Shipper verifies → Admin closes load.
+
+⸻
+
+🔶 REQUIRED INDIA DATASETS BUILT INTO THE LOGIC
+
+The platform should always treat the following as defaults:
+
+INDIAN MAJOR LOGISTICS CITIES
+
+Mumbai, Bhiwandi, Navi Mumbai, Pune, Nashik, Chennai, Bengaluru, Hyderabad, Ahmedabad, Delhi, Gurgaon, Faridabad, Jaipur, Ludhiana, Jalandhar, Guwahati, Siliguri, Kolkata, Indore, Nagpur, Surat, Vadodara, Kochi, Coimbatore, Hosur, Tirupur.
+
+INDIAN MATERIAL TYPES
+
+FMCG, auto parts, steel coils, textiles, chemicals, pharma, electronics, machinery, agro, cold chain.
+
+INDIAN TRUCK TYPES (MANDATORY LIST)
+
+17 ft, 19 ft, 20 ft, 22 ft, 24 ft, 28 ft SXL, 28 ft MXL, 32 ft SXL, 32 ft MXL, Open truck, Trailer (20/40 ft), Container (20/40 ft), Taurus (14T/16T/21T), TATA Ace, Bolero Pickup.

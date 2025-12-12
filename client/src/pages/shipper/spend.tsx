@@ -47,7 +47,7 @@ import { useTheme } from "@/lib/theme-provider";
 import { useMockData } from "@/lib/mock-data-store";
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+  return `Rs. ${amount.toLocaleString('en-IN')}`;
 }
 
 export default function SpendAnalyticsPage() {
@@ -58,11 +58,11 @@ export default function SpendAnalyticsPage() {
   const { spend } = useMockData();
 
   const routeSpendData = [
-    { route: "LA - Phoenix", amount: 85000, loads: 42 },
-    { route: "Chicago - Detroit", amount: 72000, loads: 38 },
-    { route: "Dallas - Houston", amount: 65000, loads: 35 },
-    { route: "Atlanta - Miami", amount: 58000, loads: 30 },
-    { route: "NY - Boston", amount: 45000, loads: 25 },
+    { route: "Mumbai - Pune", amount: 850000, loads: 42 },
+    { route: "Delhi - Jaipur", amount: 720000, loads: 38 },
+    { route: "Chennai - Bengaluru", amount: 650000, loads: 35 },
+    { route: "Ahmedabad - Surat", amount: 580000, loads: 30 },
+    { route: "Kolkata - Siliguri", amount: 450000, loads: 25 },
   ];
 
   const carrierSpendData = spend.carrierSpend.map((carrier, index) => ({
@@ -79,11 +79,11 @@ export default function SpendAnalyticsPage() {
   };
 
   const topExpensiveLoads = [
-    { id: "LD-EXP1", pickup: "LA, CA", drop: "Miami, FL", price: 8500 },
-    { id: "LD-EXP2", pickup: "Seattle, WA", drop: "NYC, NY", price: 7200 },
-    { id: "LD-EXP3", pickup: "Chicago, IL", drop: "Phoenix, AZ", price: 6800 },
-    { id: "LD-EXP4", pickup: "Dallas, TX", drop: "Boston, MA", price: 6200 },
-    { id: "LD-EXP5", pickup: "Denver, CO", drop: "Atlanta, GA", price: 5800 },
+    { id: "LD-EXP1", pickup: "Mumbai, MH", drop: "Hyderabad, TS", price: 185000 },
+    { id: "LD-EXP2", pickup: "Delhi, NCR", drop: "Kolkata, WB", price: 172000 },
+    { id: "LD-EXP3", pickup: "Bengaluru, KA", drop: "Chennai, TN", price: 168000 },
+    { id: "LD-EXP4", pickup: "Ahmedabad, GJ", drop: "Pune, MH", price: 152000 },
+    { id: "LD-EXP5", pickup: "Jaipur, RJ", drop: "Lucknow, UP", price: 145000 },
   ];
 
   return (
@@ -215,7 +215,7 @@ export default function SpendAnalyticsPage() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                     <XAxis dataKey="month" stroke={chartColors.text} fontSize={12} />
-                    <YAxis stroke={chartColors.text} fontSize={12} tickFormatter={(v) => `$${v/1000}k`} />
+                    <YAxis stroke={chartColors.text} fontSize={12} tickFormatter={(v) => `Rs. ${(v/100000).toFixed(1)}L`} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: theme === "dark" ? "hsl(220, 12%, 8%)" : "white",
@@ -309,7 +309,7 @@ export default function SpendAnalyticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={carrierSpendData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                    <XAxis type="number" stroke={chartColors.text} fontSize={12} tickFormatter={(v) => `$${v/1000}k`} />
+                    <XAxis type="number" stroke={chartColors.text} fontSize={12} tickFormatter={(v) => `Rs. ${(v/100000).toFixed(1)}L`} />
                     <YAxis type="category" dataKey="name" stroke={chartColors.text} fontSize={12} width={120} />
                     <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     <Bar dataKey="value" fill={chartColors.primary} radius={[0, 4, 4, 0]} />
@@ -357,7 +357,7 @@ export default function SpendAnalyticsPage() {
                   <BarChart data={routeSpendData}>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                     <XAxis dataKey="route" stroke={chartColors.text} fontSize={12} />
-                    <YAxis stroke={chartColors.text} fontSize={12} tickFormatter={(v) => `$${v/1000}k`} />
+                    <YAxis stroke={chartColors.text} fontSize={12} tickFormatter={(v) => `Rs. ${(v/100000).toFixed(1)}L`} />
                     <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     <Bar dataKey="amount" fill={chartColors.primary} radius={[4, 4, 0, 0]} />
                   </BarChart>

@@ -228,6 +228,21 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/loads/:id/history - Get load state change history
+  app.get("/api/loads/:id/history", requireAuth, async (req, res) => {
+    try {
+      const load = await storage.getLoad(req.params.id);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+      const history = await storage.getLoadStateHistory(req.params.id);
+      res.json(history);
+    } catch (error) {
+      console.error("Get load history error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.patch("/api/loads/:id", requireAuth, async (req, res) => {
     try {
       const body = { ...req.body };
@@ -1607,15 +1622,20 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Load not found" });
       }
 
-      // Update load - set to awaiting_shipper_confirmation (not posted yet)
-      // Carriers will only see the load AFTER shipper confirms the invoice
+      // Update load to 'priced' status first (canonical state machine)
+      // This will transition to 'invoice_sent' after invoice is generated
       await storage.updateLoad(pricing.loadId, {
-        status: 'awaiting_shipper_confirmation',
+        status: 'priced',
+        previousStatus: load.status,
         adminFinalPrice: finalPrice.toString(),
         adminPostMode: post_mode,
         adminId: user.id,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || [],
+        priceLockedAt: new Date(),
+        priceLockedBy: user.id,
+        statusChangedBy: user.id,
+        statusChangedAt: new Date(),
       });
 
       // Create admin decision record
@@ -1676,11 +1696,19 @@ export async function registerRoutes(
           await storage.sendInvoice(invoice.id);
           invoiceCreated = true;
 
+          // Update load to 'invoice_sent' status (canonical state)
+          await storage.updateLoad(load.id, {
+            status: 'invoice_sent',
+            previousStatus: 'priced',
+            statusChangedBy: user.id,
+            statusChangedAt: new Date(),
+          });
+
           // Notify shipper - they need to confirm the invoice before bidding begins
           await storage.createNotification({
             userId: load.shipperId,
-            title: "Invoice Ready - Confirmation Required",
-            message: `Invoice ${invoiceNumber} for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. 18% GST) requires your confirmation before carriers can bid.`,
+            title: "Invoice Ready - Approval Required",
+            message: `Invoice ${invoiceNumber} for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. 18% GST) requires your approval before carriers can bid.`,
             type: "payment",
             relatedLoadId: load.id,
           });
@@ -1689,22 +1717,22 @@ export async function registerRoutes(
         console.error("Invoice creation error:", invoiceError);
       }
 
-      // Notify shipper about pending confirmation
+      // Notify shipper about pending approval
       await storage.createNotification({
         userId: load.shipperId,
-        title: "Load Priced - Confirmation Needed",
-        message: `Your load has been priced at Rs. ${finalPrice.toLocaleString('en-IN')}. Please confirm the invoice to begin carrier bidding.`,
+        title: "Load Priced - Approval Needed",
+        message: `Your load has been priced at Rs. ${finalPrice.toLocaleString('en-IN')}. Please review and approve the invoice to begin carrier bidding.`,
         type: "warning",
         relatedLoadId: pricing.loadId,
       });
 
-      // NOTE: Carriers are NOT notified here - they will be notified when shipper confirms
+      // NOTE: Carriers are NOT notified here - they will be notified when shipper approves
 
       res.json({ 
         success: true, 
         pricing: updatedPricing,
         requires_approval: false,
-        load_status: 'awaiting_shipper_confirmation',
+        load_status: 'invoice_sent',
         invoice_created: invoiceCreated,
       });
     } catch (error) {
@@ -1744,14 +1772,19 @@ export async function registerRoutes(
       const finalPrice = parseFloat(pricing.finalPrice?.toString() || '0');
       const mode = post_mode || pricing.postMode || 'open';
 
-      // Set to awaiting_shipper_confirmation - carriers will only see after shipper confirms
+      // Set to 'priced' status - carriers will only see after shipper approves invoice
       await storage.updateLoad(pricing.loadId, {
-        status: 'awaiting_shipper_confirmation',
+        status: 'priced',
+        previousStatus: load.status,
         adminFinalPrice: finalPrice.toString(),
         adminPostMode: mode,
         adminId: pricing.adminId,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || pricing.invitedCarrierIds || [],
+        priceLockedAt: new Date(),
+        priceLockedBy: user.id,
+        statusChangedBy: user.id,
+        statusChangedAt: new Date(),
       });
 
       // Create admin decision record
@@ -2048,11 +2081,12 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invoice already confirmed" });
       }
 
-      // Confirm the invoice
+      // Confirm the invoice (shipper approves)
       const updatedInvoice = await storage.updateInvoice(req.params.id, {
         shipperConfirmed: true,
         shipperConfirmedAt: new Date(),
-        status: 'sent', // Mark as properly sent now that shipper acknowledged
+        shipperResponseType: 'approve',
+        status: 'confirmed',
       });
 
       // Get the load and post it for carrier bidding
@@ -2061,16 +2095,17 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Load not found" });
       }
 
-      // Determine status based on post mode
+      // First transition to 'invoice_approved' then to 'open_for_bids' (canonical states)
       const postMode = load.adminPostMode || 'open';
-      let loadStatus = 'posted_open';
-      if (postMode === 'invite') loadStatus = 'posted_invite';
-      else if (postMode === 'assign') loadStatus = 'assigned';
-
-      // Update load status - NOW carriers can see and bid
+      
+      // Update load status - NOW carriers can see and bid (using canonical 'open_for_bids')
       await storage.updateLoad(load.id, {
-        status: loadStatus,
+        status: 'open_for_bids',
+        previousStatus: load.status,
         postedAt: new Date(),
+        statusChangedBy: user.id,
+        statusChangedAt: new Date(),
+        statusNote: 'Invoice approved by shipper - load opened for carrier bidding',
       });
 
       // Update pricing status to posted
@@ -2134,11 +2169,172 @@ export async function registerRoutes(
       res.json({ 
         success: true, 
         invoice: updatedInvoice,
-        load_status: loadStatus,
-        message: "Invoice confirmed. Load is now posted for carrier bidding.",
+        load_status: 'open_for_bids',
+        message: "Invoice approved. Load is now open for carrier bidding.",
       });
     } catch (error) {
       console.error("Invoice confirm error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/invoices/:id/reject - Shipper rejects invoice
+  app.post("/api/invoices/:id/reject", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const { reason } = req.body;
+      if (!reason) {
+        return res.status(400).json({ error: "Rejection reason is required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      if (invoice.shipperId !== user.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      if (invoice.shipperConfirmed) {
+        return res.status(400).json({ error: "Invoice already confirmed" });
+      }
+
+      // Update invoice with rejection
+      const updatedInvoice = await storage.updateInvoice(req.params.id, {
+        shipperResponseType: 'reject',
+        shipperResponseMessage: reason,
+        status: 'disputed',
+      });
+
+      // Update load status to invoice_rejected (canonical state)
+      const load = await storage.getLoad(invoice.loadId);
+      if (load) {
+        await storage.updateLoad(load.id, {
+          status: 'invoice_rejected',
+          previousStatus: load.status,
+          statusChangedBy: user.id,
+          statusChangedAt: new Date(),
+          statusNote: `Invoice rejected: ${reason}`,
+        });
+      }
+
+      // Create shipper invoice response record for audit
+      await storage.createShipperInvoiceResponse({
+        invoiceId: invoice.id,
+        loadId: invoice.loadId,
+        shipperId: user.id,
+        responseType: 'reject',
+        message: reason,
+        status: 'submitted',
+      });
+
+      // Notify admins about rejection
+      const allUsers = await storage.getAllUsers();
+      const admins = allUsers.filter(u => u.role === 'admin');
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Invoice Rejected by Shipper",
+          message: `Invoice ${invoice.invoiceNumber} was rejected: "${reason}"`,
+          type: "error",
+          relatedLoadId: invoice.loadId,
+        });
+      }
+
+      res.json({
+        success: true,
+        invoice: updatedInvoice,
+        load_status: 'invoice_rejected',
+        message: "Invoice rejected. Admin has been notified.",
+      });
+    } catch (error) {
+      console.error("Invoice reject error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/invoices/:id/negotiate - Shipper requests negotiation
+  app.post("/api/invoices/:id/negotiate", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const { proposedAmount, reason } = req.body;
+      if (!proposedAmount || !reason) {
+        return res.status(400).json({ error: "Proposed amount and reason are required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      if (invoice.shipperId !== user.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      if (invoice.shipperConfirmed) {
+        return res.status(400).json({ error: "Invoice already confirmed" });
+      }
+
+      // Update invoice with negotiation request
+      const updatedInvoice = await storage.updateInvoice(req.params.id, {
+        shipperResponseType: 'negotiate',
+        shipperResponseMessage: `Counter: Rs. ${parseFloat(proposedAmount).toLocaleString('en-IN')} - ${reason}`,
+        status: 'negotiation',
+      });
+
+      // Update load status to invoice_negotiation (canonical state)
+      const load = await storage.getLoad(invoice.loadId);
+      if (load) {
+        await storage.updateLoad(load.id, {
+          status: 'invoice_negotiation',
+          previousStatus: load.status,
+          statusChangedBy: user.id,
+          statusChangedAt: new Date(),
+          statusNote: `Invoice negotiation: Proposed Rs. ${proposedAmount.toLocaleString('en-IN')}`,
+        });
+      }
+
+      // Create shipper invoice response record for audit
+      await storage.createShipperInvoiceResponse({
+        invoiceId: invoice.id,
+        loadId: invoice.loadId,
+        shipperId: user.id,
+        responseType: 'negotiate',
+        counterAmount: proposedAmount.toString(),
+        message: reason,
+        status: 'pending',
+      });
+
+      // Notify admins about negotiation request
+      const allUsers = await storage.getAllUsers();
+      const admins = allUsers.filter(u => u.role === 'admin');
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Invoice Negotiation Requested",
+          message: `Shipper ${user.companyName || user.username} proposes Rs. ${parseFloat(proposedAmount).toLocaleString('en-IN')} (was Rs. ${parseFloat(invoice.totalAmount?.toString() || '0').toLocaleString('en-IN')})`,
+          type: "warning",
+          relatedLoadId: invoice.loadId,
+        });
+      }
+
+      res.json({
+        success: true,
+        invoice: updatedInvoice,
+        load_status: 'invoice_negotiation',
+        message: "Negotiation request submitted. Admin will review your proposal.",
+      });
+    } catch (error) {
+      console.error("Invoice negotiate error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

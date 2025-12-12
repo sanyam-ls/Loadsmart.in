@@ -5,7 +5,8 @@ import {
   messages, documents, notifications, ratings, carrierProfiles, adminDecisions,
   pricingTemplates, adminPricings, invoices, carrierSettlements,
   adminAuditLogs, apiLogs, adminActionsQueue, featureFlags,
-  invoiceHistory, carrierProposals,
+  invoiceHistory, carrierProposals, loadStateChangeLogs, shipperInvoiceResponses,
+  validStateTransitions,
   type User, type InsertUser,
   type Truck, type InsertTruck,
   type Load, type InsertLoad,
@@ -28,6 +29,9 @@ import {
   type ApiLog, type InsertApiLog,
   type AdminActionsQueue, type InsertAdminActionsQueue,
   type FeatureFlag, type InsertFeatureFlag,
+  type LoadStateChangeLog, type InsertLoadStateChangeLog,
+  type ShipperInvoiceResponse, type InsertShipperInvoiceResponse,
+  type LoadStatus,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -174,6 +178,26 @@ export interface IStorage {
   createFeatureFlag(flag: InsertFeatureFlag): Promise<FeatureFlag>;
   updateFeatureFlag(id: string, updates: Partial<FeatureFlag>): Promise<FeatureFlag | undefined>;
   toggleFeatureFlag(name: string, isEnabled: boolean, adminId: string): Promise<FeatureFlag | undefined>;
+
+  // State Machine & Canonical Lifecycle methods
+  validateStateTransition(fromStatus: LoadStatus, toStatus: LoadStatus): boolean;
+  transitionLoadState(loadId: string, toStatus: LoadStatus, userId: string, reason?: string, metadata?: Record<string, unknown>): Promise<Load | undefined>;
+  getLoadStateHistory(loadId: string): Promise<LoadStateChangeLog[]>;
+  createLoadStateChangeLog(log: InsertLoadStateChangeLog): Promise<LoadStateChangeLog>;
+  
+  // Shipper Invoice Response methods
+  createShipperInvoiceResponse(response: InsertShipperInvoiceResponse): Promise<ShipperInvoiceResponse>;
+  getShipperInvoiceResponses(invoiceId: string): Promise<ShipperInvoiceResponse[]>;
+  getPendingShipperResponses(shipperId: string): Promise<ShipperInvoiceResponse[]>;
+  updateShipperInvoiceResponse(id: string, updates: Partial<ShipperInvoiceResponse>): Promise<ShipperInvoiceResponse | undefined>;
+  
+  // Load Status Queries by canonical states
+  getLoadsByStatus(status: LoadStatus): Promise<Load[]>;
+  getLoadsByStatuses(statuses: LoadStatus[]): Promise<Load[]>;
+  getPendingLoads(): Promise<Load[]>;
+  getPricedLoads(): Promise<Load[]>;
+  getApprovedLoads(): Promise<Load[]>;
+  getOpenForBidLoads(): Promise<Load[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -875,6 +899,134 @@ export class DatabaseStorage implements IStorage {
       .where(eq(featureFlags.name, name))
       .returning();
     return updated;
+  }
+
+  // State Machine & Canonical Lifecycle methods
+  validateStateTransition(fromStatus: LoadStatus, toStatus: LoadStatus): boolean {
+    const validNextStates = validStateTransitions[fromStatus];
+    return validNextStates?.includes(toStatus) ?? false;
+  }
+
+  async transitionLoadState(
+    loadId: string, 
+    toStatus: LoadStatus, 
+    userId: string, 
+    reason?: string, 
+    metadata?: Record<string, unknown>
+  ): Promise<Load | undefined> {
+    const load = await this.getLoad(loadId);
+    if (!load) {
+      throw new Error(`Load ${loadId} not found`);
+    }
+
+    const fromStatus = load.status as LoadStatus;
+    
+    if (!this.validateStateTransition(fromStatus, toStatus)) {
+      throw new Error(`Invalid state transition from ${fromStatus} to ${toStatus}`);
+    }
+
+    const now = new Date();
+
+    await this.createLoadStateChangeLog({
+      loadId,
+      userId,
+      fromStatus,
+      toStatus,
+      reason: reason || null,
+      metadata: metadata as Record<string, unknown> || null,
+      ipAddress: null,
+      userAgent: null,
+    });
+
+    const [updated] = await db.update(loads)
+      .set({
+        status: toStatus,
+        previousStatus: fromStatus,
+        statusChangedBy: userId,
+        statusChangedAt: now,
+        statusNote: reason || null,
+        version: (load.version || 1) + 1,
+        updatedAt: now,
+        lastUpdatedBy: userId,
+      })
+      .where(eq(loads.id, loadId))
+      .returning();
+
+    return updated;
+  }
+
+  async getLoadStateHistory(loadId: string): Promise<LoadStateChangeLog[]> {
+    return db.select()
+      .from(loadStateChangeLogs)
+      .where(eq(loadStateChangeLogs.loadId, loadId))
+      .orderBy(desc(loadStateChangeLogs.createdAt));
+  }
+
+  async createLoadStateChangeLog(log: InsertLoadStateChangeLog): Promise<LoadStateChangeLog> {
+    const [newLog] = await db.insert(loadStateChangeLogs).values(log).returning();
+    return newLog;
+  }
+
+  // Shipper Invoice Response methods
+  async createShipperInvoiceResponse(response: InsertShipperInvoiceResponse): Promise<ShipperInvoiceResponse> {
+    const [newResponse] = await db.insert(shipperInvoiceResponses).values(response).returning();
+    return newResponse;
+  }
+
+  async getShipperInvoiceResponses(invoiceId: string): Promise<ShipperInvoiceResponse[]> {
+    return db.select()
+      .from(shipperInvoiceResponses)
+      .where(eq(shipperInvoiceResponses.invoiceId, invoiceId))
+      .orderBy(desc(shipperInvoiceResponses.createdAt));
+  }
+
+  async getPendingShipperResponses(shipperId: string): Promise<ShipperInvoiceResponse[]> {
+    return db.select()
+      .from(shipperInvoiceResponses)
+      .where(and(
+        eq(shipperInvoiceResponses.shipperId, shipperId),
+        eq(shipperInvoiceResponses.status, 'pending')
+      ))
+      .orderBy(desc(shipperInvoiceResponses.createdAt));
+  }
+
+  async updateShipperInvoiceResponse(id: string, updates: Partial<ShipperInvoiceResponse>): Promise<ShipperInvoiceResponse | undefined> {
+    const [updated] = await db.update(shipperInvoiceResponses)
+      .set(updates)
+      .where(eq(shipperInvoiceResponses.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Load Status Queries by canonical states
+  async getLoadsByStatus(status: LoadStatus): Promise<Load[]> {
+    return db.select()
+      .from(loads)
+      .where(eq(loads.status, status))
+      .orderBy(desc(loads.createdAt));
+  }
+
+  async getLoadsByStatuses(statuses: LoadStatus[]): Promise<Load[]> {
+    return db.select()
+      .from(loads)
+      .where(inArray(loads.status, statuses))
+      .orderBy(desc(loads.createdAt));
+  }
+
+  async getPendingLoads(): Promise<Load[]> {
+    return this.getLoadsByStatus('pending');
+  }
+
+  async getPricedLoads(): Promise<Load[]> {
+    return this.getLoadsByStatus('priced');
+  }
+
+  async getApprovedLoads(): Promise<Load[]> {
+    return this.getLoadsByStatus('approved');
+  }
+
+  async getOpenForBidLoads(): Promise<Load[]> {
+    return this.getLoadsByStatus('open_for_bid');
   }
 }
 

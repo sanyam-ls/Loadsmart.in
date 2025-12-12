@@ -313,8 +313,26 @@ export function PricingDrawer({
     }
 
     setIsLocking(true);
+    
+    // Check if this is a mock load (starts with "LD-") vs a real database load (UUID)
+    const isMockLoad = load.id.startsWith("LD-") || (load.loadId && load.loadId.startsWith("LD-"));
+    
+    if (isMockLoad) {
+      // Handle mock loads locally without API calls
+      setTimeout(() => {
+        toast({
+          title: "Load Posted Successfully",
+          description: `Load has been priced at ${formatRupees(finalPrice)} and posted to carriers.`,
+        });
+        onSuccess?.();
+        onOpenChange(false);
+        setIsLocking(false);
+      }, 500);
+      return;
+    }
+    
     try {
-      // Create or update pricing
+      // Real database loads - use API
       const saveResponse = await apiRequest("POST", "/api/admin/pricing/save", {
         load_id: load.id,
         suggested_price: suggestedPrice,

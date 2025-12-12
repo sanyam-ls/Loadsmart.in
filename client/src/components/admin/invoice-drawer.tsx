@@ -100,7 +100,20 @@ export function InvoiceDrawer({
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const getInitialLineItems = (): LineItem[] => {
+    if (load && pricingAmount && pricingAmount > 0) {
+      return [{
+        id: crypto.randomUUID(),
+        description: `Freight Transportation: ${load.pickupCity} to ${load.dropoffCity}`,
+        quantity: 1,
+        rate: pricingAmount,
+        amount: pricingAmount,
+      }];
+    }
+    return [];
+  };
+
+  const [lineItems, setLineItems] = useState<LineItem[]>(getInitialLineItems);
   const [fuelSurcharge, setFuelSurcharge] = useState(0);
   const [tollCharges, setTollCharges] = useState(0);
   const [handlingFee, setHandlingFee] = useState(0);
@@ -198,6 +211,24 @@ export function InvoiceDrawer({
     if (!load) return;
     
     setIsSaving(true);
+    
+    // Check if this is a mock load (starts with "LD-") vs a real database load (UUID)
+    const isMockLoad = load.id.startsWith("LD-");
+    
+    if (isMockLoad) {
+      // Handle mock loads locally without API calls
+      setTimeout(() => {
+        toast({
+          title: "Invoice Saved",
+          description: "Invoice has been saved as draft.",
+        });
+        onSuccess?.();
+        onOpenChange(false);
+        setIsSaving(false);
+      }, 500);
+      return;
+    }
+    
     try {
       await apiRequest("POST", "/api/admin/invoices", {
         loadId: load.id,
@@ -246,6 +277,24 @@ export function InvoiceDrawer({
     if (!load) return;
     
     setIsSending(true);
+    
+    // Check if this is a mock load (starts with "LD-") vs a real database load (UUID)
+    const isMockLoad = load.id.startsWith("LD-");
+    
+    if (isMockLoad) {
+      // Handle mock loads locally without API calls
+      setTimeout(() => {
+        toast({
+          title: "Invoice Sent",
+          description: "Invoice has been created and sent to the shipper.",
+        });
+        onSuccess?.();
+        onOpenChange(false);
+        setIsSending(false);
+      }, 500);
+      return;
+    }
+    
     try {
       const response = await apiRequest("POST", "/api/admin/invoices", {
         loadId: load.id,

@@ -1,0 +1,227 @@
+1) SYSTEM STATES (single canonical lifecycle)
+
+Define these states for every load record (state machine):
+	1.	Draft
+	2.	Pending (created by Shipper or Admin)
+	3.	Priced (Admin assigned/locked cost)
+	4.	Invoice_Sent (invoice pushed to Shipper)
+	5.	Awaiting_Shipper_Response (viewed / pending approval)
+	6.	Approved (Shipper approved invoice)
+	7.	Open_For_Bid (Carriers can see & bid)
+	8.	Bidding_Closed (Admin has awarded)
+	9.	Awarded (Carrier accepted)
+	10.	In_Transit
+	11.	Delivered
+	12.	Closed / Cancelled
+
+Use these state names exactly in workflows and dashboards so every UI and API consumes the same canonical status.
+
+⸻
+
+2) EVENT: Admin decides & locks price
+
+Trigger: Admin clicks Lock Price on Pending load.
+
+System actions (atomic transaction):
+	•	Validate required fields (pickup, drop, truck type, weight, material, GST applicability, HSN if required).
+	•	Calculate and display cost break-up: Base freight (₹/km * km), Diesel index adj., Toll estimate, Driver bata, Loading/unloading, Insurance, GST (auto-calc), Total (INR).
+	•	Ensure PriceLockedBy and timestamp recorded.
+	•	Change load state from Pending → Priced.
+	•	Write audit log entry (who, when, full price break-up).
+	•	Push notification to Shipper (in-app + SMS/WhatsApp/email template).
+
+UI behavior:
+	•	Admin dashboard updates: load moves from Pending list to Priced list.
+	•	Shipper dashboard gets a new tile: Invoice Received with View Invoice CTA.
+	•	All downstream dashboards subscribe to the state-change event stream.
+
+⸻
+
+3) PUSH: System sends invoice to Shipper automatically
+
+Trigger: state Priced → create invoice and set state Invoice_Sent (same transaction or immediately after).
+
+Invoice data model minimum:
+	•	Invoice ID (platform UUID)
+	•	Load ID
+	•	Total INR (rounded to nearest rupee)
+	•	Price break-down with line items and units (₹/km, tolls, bata/day, loading)
+	•	GST % and GST amount (if applicable)
+	•	HSN / SAC code where relevant
+	•	E-way bill requirement flag (true if goods value > ₹50,000 or per regulation)
+	•	Payment terms (T+X days OR COD)
+	•	Attachments allowed (PO, packing list, insurance docs)
+
+System actions:
+	•	Persist invoice, link to load.
+	•	Mark Invoice_Sent and timestamp.
+	•	Send in-app push + SMS/WhatsApp + email to shipper with secure link to invoice viewer (mobile-optimized).
+	•	Make invoice visible in Shipper dashboard Invoice tab and under the specific load view.
+
+UI behavior for Shipper:
+	•	Prominent banner: Invoice from Admin — Review & Approve / Negotiate
+	•	Buttons: Approve, Request Negotiation, Raise Query (all logged), Download Invoice (PDF).
+
+⸻
+
+4) SHIPPER RESPONSE FLOW
+
+Possible shipper actions and system reactions:
+
+A) Approve
+	•	Action: Shipper clicks Approve.
+	•	System: Mark invoice Approved; set load state Approved.
+	•	System: Auto-generate e-way requirement notice if needed and show Open For Bid CTA.
+	•	Then: Transition load to Open_For_Bid (see next step).
+	•	Notifications: Admin + Carrier pool receive event.
+
+B) Request Negotiation / Raise Query
+	•	Action: Shipper submits counter-proposal or query text and optionally adjusted price.
+	•	System: Create negotiation thread linked to invoice (two-way messaging).
+	•	State: Remains Invoice_Sent → set Awaiting_Shipper_Response with negotiation flag.
+	•	Notification: Admin receives message and sees load in Negotiation queue.
+	•	If Admin accepts counter-offer: Admin locks new price → go to step 2 again (Priced → Invoice_Sent).
+
+C) No response / Auto policy
+	•	Configurable policy (platform setting): if shipper doesn’t respond in X hours (set by admin), optionally auto-open for bidding or auto-escalate to operations. (Make X configurable per client; default disabled).
+
+Note: implement as configurable; do not hard-code timers.
+
+All shipper actions must create immutable audit entries.
+
+⸻
+
+5) OPEN FOR BIDDING (system-wide publication)
+
+Trigger: Invoice approved (state Approved) → automatic transition to Open_For_Bid.
+
+System actions:
+	•	Publish load to Carrier marketplace feed (region & truck-type filtered).
+	•	Index load in search with attributes: pickup/drop city, km, lane, material, truck type, date/time window, value INR, GST applicability, load weight, required documents (e-way), and estimated price (for reference only).
+	•	Push notifications to matching carriers using preference filters (lane, truck type, fleet size). Include Quick Bid CTA with pre-filled fields: ₹ per km or Flat Rate.
+
+Visibility rules:
+	•	Carriers only see loads matching registration region/permits and active compliance (FASTag, RC, Insurance).
+	•	Sensitive lanes (e.g., Delhi NCR restrictions) flagged and visible in load details.
+
+Bid content:
+	•	Bid ID, Carrier ID, Bid amount (INR), Bid type (₹/km, flat), validity window (X hours), remarks, expected lead time.
+
+⸻
+
+6) CARRIER BIDDING PROCESS
+
+UI & systemic behavior:
+	•	Carrier dashboard Open For Bid list auto-updates.
+	•	Carriers can Place Bid, edit within validity, or Auto-Bid with rules (preferred lanes, max ₹/km).
+	•	System prevents duplicate bids from same carrier; allow update within validity window.
+	•	Each bid creates an immutable record with timestamp and Carrier credentials.
+
+Admin visibility:
+	•	Admin gets a Bids Dashboard with sortable filters: Lowest bid, preferred carriers, delivery time, rating, KYC/compliance status.
+	•	Admin may set auto-award rules (lowest, preferred, or hybrid). Auto-award is a configurable business rule requiring Admin opt-in.
+
+⸻
+
+7) AWARD & ASSIGNMENT
+
+Trigger: Admin awards the bid → set load state Awarded.
+
+System actions:
+	•	Notify chosen Carrier with award notice and Accept / Decline options.
+	•	On Carrier Accept: request driver details, vehicle RC, DL, FASTag confirmation; change state to In_Transit once verified and pickup confirmed.
+	•	On Carrier Decline or no response: Admin can re-award or re-open bidding.
+
+Data & compliance:
+	•	Require e-way bill number if applicable before In_Transit. Platform can provide e-way generation integration or instruct shipper/carrier to upload.
+	•	GPS tracking / driver check-ins enabled.
+
+⸻
+
+8) AUDIT, LOCKING & DATA CONSISTENCY
+	•	Use optimistic versioning for the load & invoice objects (version number on every update). If a stale update occurs, reject with conflict response and show latest version.
+	•	All state transitions must be atomic and logged in an immutable audit trail (who, what, when).
+	•	Maintain T+N day logs for dispute resolution (retain docs, messages, GPS trail).
+
+⸻
+
+9) NOTIFICATIONS & CHANNELS (India-first)
+	•	In-app push (primary)
+	•	SMS gateway (secondary) — template with Devanagari-safe encoding for Hindi/English.
+	•	WhatsApp Business (optional) — invoice link & quick actions.
+	•	Email (PDF attachment) for legal/finance records.
+	•	Voice IVR alert for large-value loads (optional).
+
+Templates must include INR symbol (₹), invoice id, load id, and secure link.
+
+⸻
+
+10) VALIDATIONS (prevent bad states)
+
+Before sending invoice / opening bidding:
+	•	Price must be locked by Admin (no floating estimates).
+	•	Required documents present (PO or value confirmation) if invoice > ₹50,000 and e-way required.
+	•	Truck types and lane compatibility checked (e.g., no 32 ft on narrow lanes).
+	•	GST calculation validated (rounding rules per tax law).
+	•	Carrier KYC flagged (if carrier has unresolved compliance, hide from bidding until cleared).
+
+⸻
+
+11) ERROR HANDLING & Escalations
+	•	If invoice push fails (SMS/email gateway down), mark invoice status Push_Failed, retry with exponential backoff and notify Admin to re-send manually.
+	•	If shipper disputes invoice after Approved, create Dispute record, freeze load change to On Hold until resolution.
+	•	Dispute resolution workflow: creation → Admin mediation → Accept/Reject → Final state update.
+
+⸻
+
+12) DASHBOARD SYNCHRONIZATION RULES (real-time)
+	•	All frontends subscribe to a single event bus (events: price_locked, invoice_sent, shipper_approved, load_opened_for_bid, bid_placed, award_made, carrier_accepted). When event processed, update UI caches and lists.
+	•	UI components must not query stale lists — use event-driven UI refresh and optimistic UI patterns with conflict handlers.
+	•	Provide last_updated_at and last_updated_by on every load/invoice row for transparency.
+
+⸻
+
+13) REPORTING & KPIs (show on Admin home)
+	•	Time from PriceLocked → InvoiceViewed
+	•	InvoiceApproval Rate (%)
+	•	Time from Approved → BidOpen
+	•	Average Bids per Load
+	•	Award Acceptance Rate
+	•	Disputes per 100 loads
+
+Make KPIs configurable per client and exportable (CSV/PDF).
+
+⸻
+
+14) SECURITY & Compliance (India specifics)
+	•	Data encryption at rest & transit.
+	•	Role-based access control (Admin / Ops / Shipper / Carrier / Auditor).
+	•	Log e-way numbers and GSTIN for invoicing records.
+	•	Retain documents according to Indian statutory retention periods (configurable).
+
+⸻
+
+15) UX MICRO-CONSTRAINTS (practical rules)
+	•	Disable Open for Bid button until invoice Approved.
+	•	Show a prominent status pill in every load row (color-coded by state).
+	•	Provide a single-click View Invoice + Bidding History modal for each load.
+	•	Give Admin “Revoke Price” only with a mandatory reason field; revoking creates a new priced version and notifies the Shipper.
+
+⸻
+
+16) Quick sample notification copy (use for templates)
+	•	To Shipper (Invoice Sent):
+“Invoice ₹ created for Load <LOAD_ID> (Pickup: <CITY_A> → Drop: <CITY_B>). Review & Approve: .”
+	•	To Carriers (Open for Bid):
+“New load open for bid: <Load_ID>, →,  km, <Truck_Type>. Quick bid: .”
+	•	To Carrier (Award):
+“You’ve been awarded Load <Load_ID>. Accept & upload driver + RC within .”
+
+⸻
+
+FINAL NOTES (actionable checklist)
+	•	Implement state machine & event bus first — this single piece guarantees synchronization.
+	•	Build invoice generator tied to price lock (atomic).
+	•	Make shipper response UI a first-class feature (approve / negotiate / query).
+	•	Publish to carrier feed only on Approved state.
+	•	Enforce validations to avoid legal and operational friction in India (e-way, GST, FASTag, DL/RC).

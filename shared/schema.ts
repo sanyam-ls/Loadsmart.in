@@ -8,9 +8,40 @@ import { z } from "zod";
 export const userRoles = ["shipper", "carrier", "admin"] as const;
 export type UserRole = typeof userRoles[number];
 
-// Load status enum (updated for Admin-as-Mediator flow)
-export const loadStatuses = ["draft", "submitted_to_admin", "pending_admin_review", "admin_priced", "awaiting_shipper_confirmation", "posted", "posted_open", "posted_invite", "assigned", "bidding", "in_transit", "delivered", "cancelled", "archived"] as const;
+// Load status enum - Canonical 12-state lifecycle per specification
+export const loadStatuses = [
+  "draft",                      // 1. Initial creation state
+  "pending",                    // 2. Created by Shipper or Admin, awaiting pricing
+  "priced",                     // 3. Admin assigned/locked cost
+  "invoice_sent",               // 4. Invoice pushed to Shipper
+  "awaiting_shipper_response",  // 5. Shipper has viewed, pending approval/negotiation
+  "approved",                   // 6. Shipper approved invoice
+  "open_for_bid",               // 7. Carriers can see & bid
+  "bidding_closed",             // 8. Admin has awarded
+  "awarded",                    // 9. Carrier accepted
+  "in_transit",                 // 10. Shipment underway
+  "delivered",                  // 11. Delivery confirmed
+  "closed",                     // 12. Final state (completed)
+  "cancelled"                   // 12. Final state (cancelled)
+] as const;
 export type LoadStatus = typeof loadStatuses[number];
+
+// Valid state transitions map - enforced by storage layer
+export const validStateTransitions: Record<LoadStatus, LoadStatus[]> = {
+  draft: ["pending", "cancelled"],
+  pending: ["priced", "cancelled"],
+  priced: ["invoice_sent", "pending", "cancelled"], // Can revert to pending if price revoked
+  invoice_sent: ["awaiting_shipper_response", "approved", "cancelled"],
+  awaiting_shipper_response: ["approved", "priced", "cancelled"], // Can go back to priced if negotiated
+  approved: ["open_for_bid", "cancelled"],
+  open_for_bid: ["bidding_closed", "cancelled"],
+  bidding_closed: ["awarded", "open_for_bid", "cancelled"], // Can re-open if carrier declines
+  awarded: ["in_transit", "open_for_bid", "cancelled"], // Can re-open if carrier declines
+  in_transit: ["delivered", "cancelled"],
+  delivered: ["closed"],
+  closed: [],
+  cancelled: [],
+};
 
 // Admin post mode enum
 export const adminPostModes = ["open", "invite", "assign"] as const;
@@ -87,12 +118,14 @@ export const trucks = pgTable("trucks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Loads table (updated for Admin-as-Mediator flow)
+// Loads table (updated for 12-state canonical lifecycle)
 export const loads = pgTable("loads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   shipperId: varchar("shipper_id").notNull().references(() => users.id),
   assignedCarrierId: varchar("assigned_carrier_id").references(() => users.id),
   assignedTruckId: varchar("assigned_truck_id").references(() => trucks.id),
+  
+  // Location details
   pickupAddress: text("pickup_address").notNull(),
   pickupCity: text("pickup_city").notNull(),
   pickupLat: decimal("pickup_lat", { precision: 10, scale: 7 }),
@@ -102,29 +135,75 @@ export const loads = pgTable("loads", {
   dropoffLat: decimal("dropoff_lat", { precision: 10, scale: 7 }),
   dropoffLng: decimal("dropoff_lng", { precision: 10, scale: 7 }),
   distance: decimal("distance", { precision: 10, scale: 2 }),
+  
+  // Cargo details
   weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
-  weightUnit: text("weight_unit").default("tons"),
+  weightUnit: text("weight_unit").default("MT"), // Metric Tons
   cargoDescription: text("cargo_description"),
+  materialType: text("material_type"), // Type of goods
   requiredTruckType: text("required_truck_type"),
+  
+  // Pricing
   estimatedPrice: decimal("estimated_price", { precision: 12, scale: 2 }),
   finalPrice: decimal("final_price", { precision: 12, scale: 2 }),
-  pickupDate: timestamp("pickup_date"),
-  deliveryDate: timestamp("delivery_date"),
-  status: text("status").default("draft"),
-  isTemplate: boolean("is_template").default(false),
-  templateName: text("template_name"),
   adminSuggestedPrice: decimal("admin_suggested_price", { precision: 12, scale: 2 }),
   adminFinalPrice: decimal("admin_final_price", { precision: 12, scale: 2 }),
-  adminPostMode: text("admin_post_mode"),
+  
+  // Price lock fields (per specification)
+  priceLocked: boolean("price_locked").default(false),
+  priceLockedBy: varchar("price_locked_by").references(() => users.id),
+  priceLockedAt: timestamp("price_locked_at"),
+  priceBreakdown: jsonb("price_breakdown"), // Detailed cost components
+  
+  // Dates
+  pickupDate: timestamp("pickup_date"),
+  deliveryDate: timestamp("delivery_date"),
+  
+  // Canonical state machine status
+  status: text("status").default("draft"),
+  previousStatus: text("previous_status"),
+  statusChangedBy: varchar("status_changed_by"),
+  statusChangedAt: timestamp("status_changed_at"),
+  statusNote: text("status_note"),
+  
+  // Invoice reference (after price lock)
+  invoiceId: varchar("invoice_id"),
+  invoiceSentAt: timestamp("invoice_sent_at"),
+  invoiceApprovedAt: timestamp("invoice_approved_at"),
+  
+  // Bidding fields
+  openForBidAt: timestamp("open_for_bid_at"),
+  biddingClosedAt: timestamp("bidding_closed_at"),
+  awardedAt: timestamp("awarded_at"),
+  awardedBidId: varchar("awarded_bid_id"),
+  
+  // Admin workflow
+  adminPostMode: text("admin_post_mode"), // open, invite, assign
   adminId: varchar("admin_id").references(() => users.id),
   adminDecisionId: varchar("admin_decision_id"),
   invitedCarrierIds: text("invited_carrier_ids").array(),
-  allowCounterBids: boolean("allow_counter_bids").default(false),
+  allowCounterBids: boolean("allow_counter_bids").default(true),
+  
+  // GST and compliance (India-specific)
+  gstApplicable: boolean("gst_applicable").default(true),
+  ewayBillRequired: boolean("eway_bill_required").default(false),
+  ewayBillNumber: text("eway_bill_number"),
+  
+  // Template and misc
+  isTemplate: boolean("is_template").default(false),
+  templateName: text("template_name"),
   kycVerified: boolean("kyc_verified").default(false),
   priority: text("priority").default("normal"),
+  
+  // Optimistic locking
+  version: integer("version").default(1),
+  
+  // Timestamps
   submittedAt: timestamp("submitted_at"),
   postedAt: timestamp("posted_at"),
+  lastUpdatedBy: varchar("last_updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Admin Decisions table (immutable audit trail)
@@ -190,9 +269,25 @@ export const adminPricings = pgTable("admin_pricings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Invoice status enum
-export const invoiceStatuses = ["draft", "sent", "viewed", "paid", "overdue", "cancelled"] as const;
+// Invoice status enum - aligned with load lifecycle
+export const invoiceStatuses = [
+  "draft",           // Initial creation
+  "sent",            // Sent to shipper
+  "viewed",          // Shipper has viewed
+  "approved",        // Shipper approved
+  "negotiating",     // Under negotiation
+  "revised",         // Revised after negotiation
+  "paid",            // Payment received
+  "overdue",         // Past due date
+  "disputed",        // Shipper raised dispute
+  "push_failed",     // Delivery failed, needs retry
+  "cancelled"        // Cancelled
+] as const;
 export type InvoiceStatus = typeof invoiceStatuses[number];
+
+// Shipper response types for invoice
+export const shipperResponseTypes = ["approve", "negotiate", "query", "reject"] as const;
+export type ShipperResponseType = typeof shipperResponseTypes[number];
 
 // Invoices table (Admin-generated invoices for shippers)
 export const invoices = pgTable("invoices", {
@@ -202,6 +297,18 @@ export const invoices = pgTable("invoices", {
   shipperId: varchar("shipper_id").notNull().references(() => users.id),
   adminId: varchar("admin_id").notNull().references(() => users.id),
   pricingId: varchar("pricing_id").references(() => adminPricings.id),
+  
+  // Line item breakdown
+  baseFreight: decimal("base_freight", { precision: 12, scale: 2 }).default("0"),
+  ratePerKm: decimal("rate_per_km", { precision: 10, scale: 2 }),
+  distanceKm: decimal("distance_km", { precision: 10, scale: 2 }),
+  dieselAdjustment: decimal("diesel_adjustment", { precision: 12, scale: 2 }).default("0"),
+  tollEstimate: decimal("toll_estimate", { precision: 12, scale: 2 }).default("0"),
+  driverBata: decimal("driver_bata", { precision: 12, scale: 2 }).default("0"),
+  loadingCharges: decimal("loading_charges", { precision: 12, scale: 2 }).default("0"),
+  unloadingCharges: decimal("unloading_charges", { precision: 12, scale: 2 }).default("0"),
+  
+  // Legacy fields for compatibility
   subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
   fuelSurcharge: decimal("fuel_surcharge", { precision: 12, scale: 2 }).default("0"),
   tollCharges: decimal("toll_charges", { precision: 12, scale: 2 }).default("0"),
@@ -209,29 +316,76 @@ export const invoices = pgTable("invoices", {
   insuranceFee: decimal("insurance_fee", { precision: 12, scale: 2 }).default("0"),
   discountAmount: decimal("discount_amount", { precision: 12, scale: 2 }).default("0"),
   discountReason: text("discount_reason"),
+  
+  // GST and tax fields (India-specific)
+  gstApplicable: boolean("gst_applicable").default(true),
+  gstPercent: decimal("gst_percent", { precision: 5, scale: 2 }).default("18"),
+  cgstAmount: decimal("cgst_amount", { precision: 12, scale: 2 }).default("0"),
+  sgstAmount: decimal("sgst_amount", { precision: 12, scale: 2 }).default("0"),
+  igstAmount: decimal("igst_amount", { precision: 12, scale: 2 }).default("0"),
+  hsnSacCode: text("hsn_sac_code"), // HSN/SAC code for GST
+  shipperGstin: text("shipper_gstin"),
+  carrierGstin: text("carrier_gstin"),
+  
+  // Legacy tax fields
   taxPercent: decimal("tax_percent", { precision: 5, scale: 2 }).default("18"),
   taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }).default("0"),
+  
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-  paymentTerms: text("payment_terms").default("Net 30"),
+  
+  // E-way bill (required if goods > Rs.50,000)
+  ewayBillRequired: boolean("eway_bill_required").default(false),
+  ewayBillNumber: text("eway_bill_number"),
+  ewayBillValidUntil: timestamp("eway_bill_valid_until"),
+  
+  // Payment terms
+  paymentTerms: text("payment_terms").default("Net 30"), // T+X days or COD
+  paymentTermsDays: integer("payment_terms_days").default(30),
   dueDate: timestamp("due_date"),
   status: text("status").default("draft"),
   notes: text("notes"),
   lineItems: jsonb("line_items"),
+  
+  // Shipper response tracking
+  shipperResponseType: text("shipper_response_type"), // approve, negotiate, query
+  shipperResponseMessage: text("shipper_response_message"),
+  shipperCounterAmount: decimal("shipper_counter_amount", { precision: 12, scale: 2 }),
+  negotiationThreadId: varchar("negotiation_thread_id"),
+  
+  // Timestamps
   sentAt: timestamp("sent_at"),
   viewedAt: timestamp("viewed_at"),
+  approvedAt: timestamp("approved_at"),
   paidAt: timestamp("paid_at"),
   paidAmount: decimal("paid_amount", { precision: 12, scale: 2 }),
   paymentMethod: text("payment_method"),
   paymentReference: text("payment_reference"),
+  
+  // Shipper confirmation
   shipperConfirmed: boolean("shipper_confirmed").default(false),
   shipperConfirmedAt: timestamp("shipper_confirmed_at"),
+  shipperConfirmedBy: varchar("shipper_confirmed_by"),
+  
+  // Document attachments
   pdfUrl: text("pdf_url"),
+  attachments: jsonb("attachments"), // PO, packing list, insurance docs
+  
+  // Idempotency and versioning
   idempotencyKey: text("idempotency_key"),
   revisionNumber: integer("revision_number").default(1),
   previousInvoiceId: varchar("previous_invoice_id"),
+  version: integer("version").default(1), // Optimistic locking
+  
+  // Platform margin
   platformMargin: decimal("platform_margin", { precision: 12, scale: 2 }).default("0"),
   estimatedCarrierPayout: decimal("estimated_carrier_payout", { precision: 12, scale: 2 }).default("0"),
   currency: text("currency").default("INR"),
+  
+  // Audit fields
+  priceLockedBy: varchar("price_locked_by"),
+  priceLockedAt: timestamp("price_locked_at"),
+  lastUpdatedBy: varchar("last_updated_by"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -295,6 +449,37 @@ export const adminAuditLogs = pgTable("admin_audit_logs", {
   userAgent: text("user_agent"),
   sessionId: text("session_id"),
   metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Load State Change Log table (immutable audit trail for state machine)
+export const loadStateChangeLogs = pgTable("load_state_change_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  fromStatus: text("from_status").notNull(),
+  toStatus: text("to_status").notNull(),
+  reason: text("reason"),
+  metadata: jsonb("metadata"), // Additional context like price breakdown, invoice details
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Shipper Invoice Responses table (for negotiation thread)
+export const shipperInvoiceResponses = pgTable("shipper_invoice_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  shipperId: varchar("shipper_id").notNull().references(() => users.id),
+  responseType: text("response_type").notNull(), // approve, negotiate, query
+  message: text("message"),
+  counterAmount: decimal("counter_amount", { precision: 12, scale: 2 }),
+  attachments: jsonb("attachments"),
+  adminResponse: text("admin_response"),
+  adminRespondedAt: timestamp("admin_responded_at"),
+  adminId: varchar("admin_id"),
+  status: text("status").default("pending"), // pending, resolved, escalated
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -854,6 +1039,8 @@ export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit
 export const insertApiLogSchema = createInsertSchema(apiLogs).omit({ id: true, createdAt: true });
 export const insertAdminActionsQueueSchema = createInsertSchema(adminActionsQueue).omit({ id: true, createdAt: true });
 export const insertFeatureFlagSchema = createInsertSchema(featureFlags).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertLoadStateChangeLogSchema = createInsertSchema(loadStateChangeLogs).omit({ id: true, createdAt: true });
+export const insertShipperInvoiceResponseSchema = createInsertSchema(shipperInvoiceResponses).omit({ id: true, createdAt: true });
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -910,6 +1097,10 @@ export type InsertAdminActionsQueue = z.infer<typeof insertAdminActionsQueueSche
 export type AdminActionsQueue = typeof adminActionsQueue.$inferSelect;
 export type InsertFeatureFlag = z.infer<typeof insertFeatureFlagSchema>;
 export type FeatureFlag = typeof featureFlags.$inferSelect;
+export type InsertLoadStateChangeLog = z.infer<typeof insertLoadStateChangeLogSchema>;
+export type LoadStateChangeLog = typeof loadStateChangeLogs.$inferSelect;
+export type InsertShipperInvoiceResponse = z.infer<typeof insertShipperInvoiceResponseSchema>;
+export type ShipperInvoiceResponse = typeof shipperInvoiceResponses.$inferSelect;
 
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {

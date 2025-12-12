@@ -20,6 +20,9 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  Send,
+  Receipt,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,6 +79,9 @@ export default function AdminLoadsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isPushModalOpen, setIsPushModalOpen] = useState(false);
+  const [isPushing, setIsPushing] = useState(false);
+  const [isSendingInvoice, setIsSendingInvoice] = useState(false);
   const [formData, setFormData] = useState({
     pickup: "",
     drop: "",
@@ -208,6 +214,61 @@ export default function AdminLoadsPage() {
       });
       setIsStatusModalOpen(false);
       setSelectedLoad(null);
+    }
+  };
+
+  const handlePushToCarriers = async () => {
+    if (!selectedLoad) return;
+    
+    setIsPushing(true);
+    try {
+      updateLoadStatus(selectedLoad.loadId, "Bidding");
+      addActivity({
+        type: "load",
+        message: `Load ${selectedLoad.loadId} pushed to carrier marketplace`,
+        entityId: selectedLoad.loadId,
+        severity: "success",
+      });
+      
+      toast({
+        title: "Load Pushed to Carriers",
+        description: `Load ${selectedLoad.loadId} is now available for carriers to bid`,
+      });
+      setIsPushModalOpen(false);
+      setSelectedLoad(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to push load to carriers",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPushing(false);
+    }
+  };
+
+  const handleSendInvoice = async (load: AdminLoad) => {
+    setIsSendingInvoice(true);
+    try {
+      addActivity({
+        type: "transaction",
+        message: `Invoice sent to ${load.shipperName} for load ${load.loadId}`,
+        entityId: load.loadId,
+        severity: "success",
+      });
+      
+      toast({
+        title: "Invoice Sent",
+        description: `Invoice for load ${load.loadId} sent to ${load.shipperName}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingInvoice(false);
     }
   };
 
@@ -523,6 +584,23 @@ export default function AdminLoadsPage() {
                                 Assign Carrier
                               </DropdownMenuItem>
                             )}
+                            {!load.assignedCarrier && load.status !== "Bidding" && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedLoad(load);
+                                setIsPushModalOpen(true);
+                              }} data-testid={`menu-push-${load.loadId}`}>
+                                <Users className="h-4 w-4 mr-2" />
+                                Push to Carriers
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              handleSendInvoice(load);
+                            }} data-testid={`menu-invoice-${load.loadId}`}>
+                              <Receipt className="h-4 w-4 mr-2" />
+                              Send Invoice
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               setSelectedLoad(load);
@@ -776,6 +854,50 @@ export default function AdminLoadsPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteLoad} data-testid="button-confirm-delete">
               Cancel Load
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPushModalOpen} onOpenChange={(open) => { if (!open) { setIsPushModalOpen(false); setSelectedLoad(null); } }}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Push Load to Carriers
+            </DialogTitle>
+            <DialogDescription>
+              Make load {selectedLoad?.loadId} available to all carriers for bidding.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedLoad && (
+              <div className="space-y-3 p-4 bg-muted rounded-lg">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Route</span>
+                  <span className="font-medium">{selectedLoad.pickup} - {selectedLoad.drop}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Shipper</span>
+                  <span className="font-medium">{selectedLoad.shipperName}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Price</span>
+                  <span className="font-medium">{formatCurrency(selectedLoad.spending)}</span>
+                </div>
+              </div>
+            )}
+            <p className="mt-4 text-sm text-muted-foreground">
+              Once pushed, carriers will be able to view and bid on this load in their marketplace.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsPushModalOpen(false); setSelectedLoad(null); }}>
+              Cancel
+            </Button>
+            <Button onClick={handlePushToCarriers} disabled={isPushing} data-testid="button-confirm-push">
+              {isPushing ? "Pushing..." : "Push to Carriers"}
+              <Send className="h-4 w-4 ml-2" />
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -225,6 +225,45 @@ export const invoices = pgTable("invoices", {
   paymentReference: text("payment_reference"),
   shipperConfirmed: boolean("shipper_confirmed").default(false),
   shipperConfirmedAt: timestamp("shipper_confirmed_at"),
+  pdfUrl: text("pdf_url"),
+  idempotencyKey: text("idempotency_key"),
+  revisionNumber: integer("revision_number").default(1),
+  previousInvoiceId: varchar("previous_invoice_id"),
+  platformMargin: decimal("platform_margin", { precision: 12, scale: 2 }).default("0"),
+  estimatedCarrierPayout: decimal("estimated_carrier_payout", { precision: 12, scale: 2 }).default("0"),
+  currency: text("currency").default("INR"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Invoice History table for audit trail
+export const invoiceHistory = pgTable("invoice_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  action: text("action").notNull(), // create, edit, send, acknowledge, pay, dispute, cancel, revise
+  payload: jsonb("payload"),
+  previousValues: jsonb("previous_values"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Carrier Proposal table for edited estimations sent to carriers
+export const carrierProposals = pgTable("carrier_proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  proposedPayout: decimal("proposed_payout", { precision: 12, scale: 2 }).notNull(),
+  lineItems: jsonb("line_items"),
+  message: text("message"),
+  expiresAt: timestamp("expires_at"),
+  status: text("status").default("pending"), // pending, accepted, rejected, countered, expired
+  counterAmount: decimal("counter_amount", { precision: 12, scale: 2 }),
+  counterMessage: text("counter_message"),
+  respondedAt: timestamp("responded_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -808,6 +847,8 @@ export const insertTelematicsAlertSchema = createInsertSchema(telematicsAlerts).
 export const insertGpsBreadcrumbSchema = createInsertSchema(gpsBreadcrumbs).omit({ id: true, createdAt: true });
 export const insertRouteEtaPredictionSchema = createInsertSchema(routeEtaPredictions).omit({ id: true });
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertInvoiceHistorySchema = createInsertSchema(invoiceHistory).omit({ id: true, createdAt: true });
+export const insertCarrierProposalSchema = createInsertSchema(carrierProposals).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCarrierSettlementSchema = createInsertSchema(carrierSettlements).omit({ id: true, createdAt: true });
 export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit({ id: true, createdAt: true });
 export const insertApiLogSchema = createInsertSchema(apiLogs).omit({ id: true, createdAt: true });
@@ -855,6 +896,10 @@ export type InsertRouteEtaPrediction = z.infer<typeof insertRouteEtaPredictionSc
 export type RouteEtaPrediction = typeof routeEtaPredictions.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoiceHistory = z.infer<typeof insertInvoiceHistorySchema>;
+export type InvoiceHistory = typeof invoiceHistory.$inferSelect;
+export type InsertCarrierProposal = z.infer<typeof insertCarrierProposalSchema>;
+export type CarrierProposal = typeof carrierProposals.$inferSelect;
 export type InsertCarrierSettlement = z.infer<typeof insertCarrierSettlementSchema>;
 export type CarrierSettlement = typeof carrierSettlements.$inferSelect;
 export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;

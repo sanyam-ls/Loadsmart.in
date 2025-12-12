@@ -5,6 +5,7 @@ import {
   messages, documents, notifications, ratings, carrierProfiles, adminDecisions,
   pricingTemplates, adminPricings, invoices, carrierSettlements,
   adminAuditLogs, apiLogs, adminActionsQueue, featureFlags,
+  invoiceHistory, carrierProposals,
   type User, type InsertUser,
   type Truck, type InsertTruck,
   type Load, type InsertLoad,
@@ -20,6 +21,8 @@ import {
   type PricingTemplate, type InsertPricingTemplate,
   type AdminPricing, type InsertAdminPricing,
   type Invoice, type InsertInvoice,
+  type InvoiceHistory, type InsertInvoiceHistory,
+  type CarrierProposal, type InsertCarrierProposal,
   type CarrierSettlement, type InsertCarrierSettlement,
   type AdminAuditLog, type InsertAdminAuditLog,
   type ApiLog, type InsertApiLog,
@@ -121,6 +124,21 @@ export interface IStorage {
   sendInvoice(id: string): Promise<Invoice | undefined>;
   markInvoicePaid(id: string, paymentDetails: { paidAmount: string; paymentMethod: string; paymentReference?: string }): Promise<Invoice | undefined>;
   generateInvoiceNumber(): Promise<string>;
+  getInvoiceByIdempotencyKey(key: string): Promise<Invoice | undefined>;
+
+  // Invoice History methods (audit trail)
+  createInvoiceHistory(entry: InsertInvoiceHistory): Promise<InvoiceHistory>;
+  getInvoiceHistory(invoiceId: string): Promise<InvoiceHistory[]>;
+
+  // Carrier Proposal methods
+  createCarrierProposal(proposal: InsertCarrierProposal): Promise<CarrierProposal>;
+  getCarrierProposal(id: string): Promise<CarrierProposal | undefined>;
+  getCarrierProposalsByLoad(loadId: string): Promise<CarrierProposal[]>;
+  getCarrierProposalsByCarrier(carrierId: string): Promise<CarrierProposal[]>;
+  getPendingCarrierProposals(carrierId: string): Promise<CarrierProposal[]>;
+  updateCarrierProposal(id: string, updates: Partial<CarrierProposal>): Promise<CarrierProposal | undefined>;
+  acceptCarrierProposal(id: string): Promise<CarrierProposal | undefined>;
+  counterCarrierProposal(id: string, counterAmount: string, counterMessage: string): Promise<CarrierProposal | undefined>;
 
   // Carrier Settlement methods
   getSettlement(id: string): Promise<CarrierSettlement | undefined>;
@@ -599,6 +617,89 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.select({ count: sql<number>`count(*)` }).from(invoices);
     const sequence = String((result?.count || 0) + 1).padStart(5, '0');
     return `INV-${year}${month}-${sequence}`;
+  }
+
+  async getInvoiceByIdempotencyKey(key: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.idempotencyKey, key));
+    return invoice;
+  }
+
+  // Invoice History methods (audit trail)
+  async createInvoiceHistory(entry: InsertInvoiceHistory): Promise<InvoiceHistory> {
+    const [historyEntry] = await db.insert(invoiceHistory).values(entry).returning();
+    return historyEntry;
+  }
+
+  async getInvoiceHistory(invoiceId: string): Promise<InvoiceHistory[]> {
+    return db.select().from(invoiceHistory)
+      .where(eq(invoiceHistory.invoiceId, invoiceId))
+      .orderBy(desc(invoiceHistory.createdAt));
+  }
+
+  // Carrier Proposal methods
+  async createCarrierProposal(proposal: InsertCarrierProposal): Promise<CarrierProposal> {
+    const [created] = await db.insert(carrierProposals).values(proposal).returning();
+    return created;
+  }
+
+  async getCarrierProposal(id: string): Promise<CarrierProposal | undefined> {
+    const [proposal] = await db.select().from(carrierProposals).where(eq(carrierProposals.id, id));
+    return proposal;
+  }
+
+  async getCarrierProposalsByLoad(loadId: string): Promise<CarrierProposal[]> {
+    return db.select().from(carrierProposals)
+      .where(eq(carrierProposals.loadId, loadId))
+      .orderBy(desc(carrierProposals.createdAt));
+  }
+
+  async getCarrierProposalsByCarrier(carrierId: string): Promise<CarrierProposal[]> {
+    return db.select().from(carrierProposals)
+      .where(eq(carrierProposals.carrierId, carrierId))
+      .orderBy(desc(carrierProposals.createdAt));
+  }
+
+  async getPendingCarrierProposals(carrierId: string): Promise<CarrierProposal[]> {
+    return db.select().from(carrierProposals)
+      .where(and(
+        eq(carrierProposals.carrierId, carrierId),
+        eq(carrierProposals.status, 'pending')
+      ))
+      .orderBy(desc(carrierProposals.createdAt));
+  }
+
+  async updateCarrierProposal(id: string, updates: Partial<CarrierProposal>): Promise<CarrierProposal | undefined> {
+    const [updated] = await db.update(carrierProposals)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(carrierProposals.id, id))
+      .returning();
+    return updated;
+  }
+
+  async acceptCarrierProposal(id: string): Promise<CarrierProposal | undefined> {
+    const [updated] = await db.update(carrierProposals)
+      .set({ 
+        status: 'accepted', 
+        respondedAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(carrierProposals.id, id))
+      .returning();
+    return updated;
+  }
+
+  async counterCarrierProposal(id: string, counterAmount: string, counterMessage: string): Promise<CarrierProposal | undefined> {
+    const [updated] = await db.update(carrierProposals)
+      .set({ 
+        status: 'countered', 
+        counterAmount,
+        counterMessage,
+        respondedAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(carrierProposals.id, id))
+      .returning();
+    return updated;
   }
 
   // Carrier Settlement methods

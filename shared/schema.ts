@@ -8,21 +8,24 @@ import { z } from "zod";
 export const userRoles = ["shipper", "carrier", "admin"] as const;
 export type UserRole = typeof userRoles[number];
 
-// Load status enum - Canonical 12-state lifecycle per specification
+// Load status enum - Canonical lifecycle per specification
+// Supports both Admin-as-Mediator workflow and direct carrier marketplace
 export const loadStatuses = [
   "draft",                      // 1. Initial creation state
-  "pending",                    // 2. Created by Shipper or Admin, awaiting pricing
+  "pending",                    // 2. Created by Shipper, awaiting admin review/pricing
   "priced",                     // 3. Admin assigned/locked cost
   "invoice_sent",               // 4. Invoice pushed to Shipper
   "awaiting_shipper_response",  // 5. Shipper has viewed, pending approval/negotiation
   "approved",                   // 6. Shipper approved invoice
-  "open_for_bid",               // 7. Carriers can see & bid
-  "bidding_closed",             // 8. Admin has awarded
-  "awarded",                    // 9. Carrier accepted
-  "in_transit",                 // 10. Shipment underway
-  "delivered",                  // 11. Delivery confirmed
-  "closed",                     // 12. Final state (completed)
-  "cancelled"                   // 12. Final state (cancelled)
+  "posted_to_carriers",         // 7. Admin clicked Price & Post, visible to carriers
+  "open_for_bid",               // 8. Carriers can see & bid (bidding_open)
+  "counter_received",           // 9. Carrier submitted counter-offer, awaiting admin
+  "bidding_closed",             // 10. Admin has selected a bid
+  "awarded",                    // 11. Carrier accepted/assigned
+  "in_transit",                 // 12. Shipment underway
+  "delivered",                  // 13. Delivery confirmed
+  "closed",                     // 14. Final state (completed)
+  "cancelled"                   // 14. Final state (cancelled)
 ] as const;
 export type LoadStatus = typeof loadStatuses[number];
 
@@ -30,11 +33,13 @@ export type LoadStatus = typeof loadStatuses[number];
 export const validStateTransitions: Record<LoadStatus, LoadStatus[]> = {
   draft: ["pending", "cancelled"],
   pending: ["priced", "cancelled"],
-  priced: ["invoice_sent", "pending", "cancelled"], // Can revert to pending if price revoked
+  priced: ["invoice_sent", "posted_to_carriers", "pending", "cancelled"], // Can post directly or send invoice first
   invoice_sent: ["awaiting_shipper_response", "approved", "cancelled"],
   awaiting_shipper_response: ["approved", "priced", "cancelled"], // Can go back to priced if negotiated
-  approved: ["open_for_bid", "cancelled"],
-  open_for_bid: ["bidding_closed", "cancelled"],
+  approved: ["posted_to_carriers", "open_for_bid", "cancelled"], // After shipper approval, post to carriers
+  posted_to_carriers: ["open_for_bid", "awarded", "cancelled"], // Carriers can now see it
+  open_for_bid: ["counter_received", "bidding_closed", "awarded", "cancelled"], // Active bidding
+  counter_received: ["open_for_bid", "bidding_closed", "awarded", "cancelled"], // Admin reviewing counter
   bidding_closed: ["awarded", "open_for_bid", "cancelled"], // Can re-open if carrier declines
   awarded: ["in_transit", "open_for_bid", "cancelled"], // Can re-open if carrier declines
   in_transit: ["delivered", "cancelled"],

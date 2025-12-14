@@ -1926,44 +1926,55 @@ export async function registerRoutes(
           // Auto-send invoice to shipper
           await storage.sendInvoice(invoice.id);
           invoiceCreated = true;
-
-          // Update load to 'invoice_sent' status (canonical state)
-          await storage.updateLoad(load.id, {
-            status: 'invoice_sent',
-            previousStatus: 'priced',
-            statusChangedBy: user.id,
-            statusChangedAt: new Date(),
-          });
-
-          // Notify shipper - they need to confirm the invoice before bidding begins
-          await storage.createNotification({
-            userId: load.shipperId,
-            title: "Invoice Ready - Approval Required",
-            message: `Invoice ${invoiceNumber} for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. 18% GST) requires your approval before carriers can bid.`,
-            type: "payment",
-            relatedLoadId: load.id,
-          });
         }
       } catch (invoiceError) {
         console.error("Invoice creation error:", invoiceError);
       }
 
-      // Notify shipper about pending approval
+      // CRITICAL FIX: Set status to 'posted_to_carriers' so carriers can see the load immediately
+      // This ensures the success message in the UI is accurate - no fake success states
+      await storage.updateLoad(load.id, {
+        status: 'posted_to_carriers',
+        previousStatus: 'priced',
+        adminFinalPrice: finalPrice.toString(),
+        adminPostMode: post_mode,
+        adminId: user.id,
+        allowCounterBids: allow_counter_bids !== false,
+        invitedCarrierIds: invite_carrier_ids || [],
+        postedAt: new Date(),
+        statusChangedBy: user.id,
+        statusChangedAt: new Date(),
+      });
+
+      // Notify shipper that load has been posted
       await storage.createNotification({
         userId: load.shipperId,
-        title: "Load Priced - Approval Needed",
-        message: `Your load has been priced at Rs. ${finalPrice.toLocaleString('en-IN')}. Please review and approve the invoice to begin carrier bidding.`,
-        type: "warning",
+        title: "Load Posted to Carriers",
+        message: `Your load from ${load.pickupCity} to ${load.dropoffCity} has been priced at Rs. ${finalPrice.toLocaleString('en-IN')} and is now visible to carriers.`,
+        type: "success",
         relatedLoadId: pricing.loadId,
       });
 
-      // NOTE: Carriers are NOT notified here - they will be notified when shipper approves
+      // Notify carriers based on post mode
+      if (post_mode === 'open') {
+        // For open mode, carriers will see it when they refresh the load board
+      } else if (post_mode === 'invite' && invite_carrier_ids?.length > 0) {
+        for (const carrierId of invite_carrier_ids) {
+          await storage.createNotification({
+            userId: carrierId,
+            title: "Invited to Bid on Load",
+            message: `You have been invited to bid on a load from ${load.pickupCity} to ${load.dropoffCity}`,
+            type: "info",
+            relatedLoadId: load.id,
+          });
+        }
+      }
 
       res.json({ 
         success: true, 
         pricing: updatedPricing,
         requires_approval: false,
-        load_status: 'invoice_sent',
+        load_status: 'posted_to_carriers',
         invoice_created: invoiceCreated,
       });
     } catch (error) {
@@ -2003,9 +2014,9 @@ export async function registerRoutes(
       const finalPrice = parseFloat(pricing.finalPrice?.toString() || '0');
       const mode = post_mode || pricing.postMode || 'open';
 
-      // Set to 'priced' status - carriers will only see after shipper approves invoice
+      // Set to 'posted_to_carriers' status - carriers can see the load immediately
       await storage.updateLoad(pricing.loadId, {
-        status: 'priced',
+        status: 'posted_to_carriers',
         previousStatus: load.status,
         adminFinalPrice: finalPrice.toString(),
         adminPostMode: mode,
@@ -2014,6 +2025,7 @@ export async function registerRoutes(
         invitedCarrierIds: invite_carrier_ids || pricing.invitedCarrierIds || [],
         priceLockedAt: new Date(),
         priceLockedBy: user.id,
+        postedAt: new Date(),
         statusChangedBy: user.id,
         statusChangedAt: new Date(),
       });
@@ -2031,14 +2043,14 @@ export async function registerRoutes(
         actionType: 'approve_and_post',
       });
 
-      // Update pricing status to locked (not posted yet - waiting for shipper confirmation)
-      await storage.updateAdminPricing(pricing_id, { status: 'locked' });
+      // Update pricing status to posted
+      await storage.updateAdminPricing(pricing_id, { status: 'posted' });
 
       // Notify original admin
       await storage.createNotification({
         userId: pricing.adminId,
         title: "Pricing Override Approved",
-        message: `Pricing approved. Awaiting shipper confirmation before carrier bidding begins.`,
+        message: `Pricing approved. Load is now visible to carriers.`,
         type: "success",
         relatedLoadId: pricing.loadId,
       });
@@ -2078,35 +2090,38 @@ export async function registerRoutes(
 
           await storage.sendInvoice(invoice.id);
           invoiceCreated = true;
-
-          // Notify shipper - they need to confirm before bidding begins
-          await storage.createNotification({
-            userId: load.shipperId,
-            title: "Invoice Ready - Confirmation Required",
-            message: `Invoice ${invoiceNumber} for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. 18% GST) requires your confirmation before carriers can bid.`,
-            type: "payment",
-            relatedLoadId: load.id,
-          });
         }
       } catch (invoiceError) {
         console.error("Invoice creation error:", invoiceError);
       }
 
-      // Notify shipper about pending confirmation
+      // Notify shipper that load is posted
       await storage.createNotification({
         userId: load.shipperId,
-        title: "Load Priced - Confirmation Needed",
-        message: `Your load has been priced at Rs. ${finalPrice.toLocaleString('en-IN')}. Please confirm the invoice to begin carrier bidding.`,
-        type: "warning",
+        title: "Load Posted to Carriers",
+        message: `Your load from ${load.pickupCity} to ${load.dropoffCity} has been priced at Rs. ${finalPrice.toLocaleString('en-IN')} and is now visible to carriers.`,
+        type: "success",
         relatedLoadId: pricing.loadId,
       });
 
-      // NOTE: Carriers are NOT notified here - they will be notified when shipper confirms
+      // Notify carriers based on post mode
+      if (mode === 'invite' && (invite_carrier_ids || pricing.invitedCarrierIds)?.length > 0) {
+        const carrierIds = invite_carrier_ids || pricing.invitedCarrierIds || [];
+        for (const carrierId of carrierIds) {
+          await storage.createNotification({
+            userId: carrierId,
+            title: "Invited to Bid on Load",
+            message: `You have been invited to bid on a load from ${load.pickupCity} to ${load.dropoffCity}`,
+            type: "info",
+            relatedLoadId: load.id,
+          });
+        }
+      }
 
       res.json({ 
         success: true, 
         pricing: approvedPricing, 
-        load_status: 'awaiting_shipper_confirmation',
+        load_status: 'posted_to_carriers',
         invoice_created: invoiceCreated,
       });
     } catch (error) {

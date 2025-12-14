@@ -425,8 +425,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAdminPostedLoads(): Promise<Load[]> {
+    // Query canonical lifecycle states for loads visible to carriers
     return db.select().from(loads)
-      .where(sql`${loads.status} IN ('open_for_bids', 'bidding_active', 'awarded', 'in_transit', 'posted', 'posted_open', 'posted_invite', 'assigned') AND ${loads.adminId} IS NOT NULL`)
+      .where(sql`${loads.status} IN ('posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'in_transit') AND ${loads.adminId} IS NOT NULL`)
       .orderBy(desc(loads.postedAt));
   }
 

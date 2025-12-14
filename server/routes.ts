@@ -1002,11 +1002,12 @@ export async function registerRoutes(
         actionType: 'price_and_post',
       });
 
-      // Determine status based on post mode
-      let newStatus = 'posted';
-      if (post_mode === 'open') newStatus = 'posted_open';
-      else if (post_mode === 'invite') newStatus = 'posted_invite';
-      else if (post_mode === 'assign') newStatus = 'assigned';
+      // Determine status based on post mode - Use canonical lifecycle states
+      // posted_to_carriers = visible to carriers, open_for_bid = active bidding
+      let newStatus = 'posted_to_carriers';
+      if (post_mode === 'assign') {
+        newStatus = 'awarded'; // Direct assignment skips bidding
+      }
 
       // Update load with admin pricing
       const updatedLoad = await storage.updateLoad(load_id, {
@@ -1166,6 +1167,26 @@ export async function registerRoutes(
         approvalRequired: bid_type === 'counter',
       });
 
+      // Update load status based on bid type - use canonical states
+      if (bid_type === 'counter') {
+        // Counter-bid submitted, needs admin review
+        await storage.updateLoad(load_id, {
+          status: 'counter_received',
+          previousStatus: load.status,
+          statusChangedAt: new Date(),
+        });
+      } else if (bid_type === 'admin_posted_acceptance') {
+        // First acceptance - move to bidding phase (admin will finalize)
+        if (load.status === 'posted_to_carriers') {
+          await storage.updateLoad(load_id, {
+            status: 'open_for_bid',
+            previousStatus: load.status,
+            openForBidAt: new Date(),
+            statusChangedAt: new Date(),
+          });
+        }
+      }
+
       // Notify shipper and admin
       if (load.shipperId) {
         await storage.createNotification({
@@ -1227,13 +1248,17 @@ export async function registerRoutes(
         actionType: 'assign',
       });
 
-      // Update load
+      // Update load with canonical awarded status
       const updatedLoad = await storage.updateLoad(load_id, {
         assignedCarrierId: carrier_id,
         assignedTruckId: truck_id || null,
         adminDecisionId: decision.id,
-        status: 'assigned',
+        status: 'awarded',
+        previousStatus: load.status,
         adminPostMode: 'assign',
+        awardedAt: new Date(),
+        statusChangedAt: new Date(),
+        statusChangedBy: user.id,
       });
 
       // Create order/shipment
@@ -1265,6 +1290,212 @@ export async function registerRoutes(
       res.json({ success: true, load: updatedLoad, shipment, decision_id: decision.id });
     } catch (error) {
       console.error("Admin assign error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin awards a bid to a carrier
+  app.post("/api/admin/award-bid", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { bid_id, truck_id } = req.body;
+
+      const bid = await storage.getBid(bid_id);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      const load = await storage.getLoad(bid.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const carrier = await storage.getUser(bid.carrierId);
+      if (!carrier) {
+        return res.status(404).json({ error: "Carrier not found" });
+      }
+
+      // Update bid to accepted
+      await storage.updateBid(bid_id, {
+        status: 'accepted',
+      });
+
+      // Reject all other bids for this load
+      const allBids = await storage.getBidsByLoad(bid.loadId);
+      for (const otherBid of allBids) {
+        if (otherBid.id !== bid_id && otherBid.status === 'pending') {
+          await storage.updateBid(otherBid.id, { status: 'rejected' });
+        }
+      }
+
+      // Update load to awarded status
+      const updatedLoad = await storage.updateLoad(bid.loadId, {
+        assignedCarrierId: bid.carrierId,
+        assignedTruckId: truck_id || bid.truckId || null,
+        awardedBidId: bid_id,
+        status: 'awarded',
+        previousStatus: load.status,
+        awardedAt: new Date(),
+        biddingClosedAt: new Date(),
+        finalPrice: bid.amount,
+        statusChangedAt: new Date(),
+        statusChangedBy: user.id,
+      });
+
+      // Create shipment
+      const shipment = await storage.createShipment({
+        loadId: bid.loadId,
+        carrierId: bid.carrierId,
+        truckId: truck_id || bid.truckId || null,
+        status: 'pickup_scheduled',
+      });
+
+      // Notify carrier
+      await storage.createNotification({
+        userId: bid.carrierId,
+        title: "Bid Accepted",
+        message: `Your bid for the load from ${load.pickupCity} to ${load.dropoffCity} has been accepted`,
+        type: "success",
+        relatedLoadId: bid.loadId,
+        relatedBidId: bid_id,
+      });
+
+      // Notify shipper
+      await storage.createNotification({
+        userId: load.shipperId,
+        title: "Carrier Selected",
+        message: `${carrier.companyName || carrier.username} has been awarded your load`,
+        type: "success",
+        relatedLoadId: bid.loadId,
+      });
+
+      res.json({ success: true, load: updatedLoad, shipment, bid });
+    } catch (error) {
+      console.error("Admin award bid error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin handles counter-offer (accept/reject/re-counter)
+  app.post("/api/admin/counter-response", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { bid_id, action, counter_amount, notes } = req.body;
+
+      const bid = await storage.getBid(bid_id);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      const load = await storage.getLoad(bid.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const carrier = await storage.getUser(bid.carrierId);
+      if (!carrier) {
+        return res.status(404).json({ error: "Carrier not found" });
+      }
+
+      if (action === 'accept') {
+        // Accept the counter-offer - award the load
+        await storage.updateBid(bid_id, { status: 'accepted' });
+
+        const updatedLoad = await storage.updateLoad(bid.loadId, {
+          assignedCarrierId: bid.carrierId,
+          awardedBidId: bid_id,
+          status: 'awarded',
+          previousStatus: load.status,
+          awardedAt: new Date(),
+          finalPrice: bid.amount,
+          statusChangedAt: new Date(),
+          statusChangedBy: user.id,
+        });
+
+        await storage.createNotification({
+          userId: bid.carrierId,
+          title: "Counter-Offer Accepted",
+          message: `Your counter-offer of Rs. ${bid.amount} has been accepted`,
+          type: "success",
+          relatedLoadId: bid.loadId,
+          relatedBidId: bid_id,
+        });
+
+        res.json({ success: true, action: 'accepted', load: updatedLoad });
+      } else if (action === 'reject') {
+        // Reject the counter-offer
+        await storage.updateBid(bid_id, { status: 'rejected' });
+
+        // Check if there are other pending bids
+        const allBids = await storage.getBidsByLoad(bid.loadId);
+        const hasOtherPendingBids = allBids.some(b => b.id !== bid_id && b.status === 'pending');
+
+        // Update load status back to open_for_bid if no other pending counter-offers
+        if (!hasOtherPendingBids) {
+          await storage.updateLoad(bid.loadId, {
+            status: 'open_for_bid',
+            previousStatus: load.status,
+            statusChangedAt: new Date(),
+          });
+        }
+
+        await storage.createNotification({
+          userId: bid.carrierId,
+          title: "Counter-Offer Rejected",
+          message: `Your counter-offer for the ${load.pickupCity} to ${load.dropoffCity} load was not accepted`,
+          type: "warning",
+          relatedLoadId: bid.loadId,
+          relatedBidId: bid_id,
+        });
+
+        res.json({ success: true, action: 'rejected' });
+      } else if (action === 're-counter') {
+        // Admin submits a re-counter offer
+        await storage.updateBid(bid_id, { 
+          status: 'countered',
+          adminCounterAmount: counter_amount,
+        });
+
+        // Create a new bid from admin perspective
+        const adminBid = await storage.createBid({
+          loadId: bid.loadId,
+          carrierId: bid.carrierId, // Reference the original carrier
+          amount: counter_amount,
+          notes: notes || `Admin re-counter offer`,
+          status: 'pending',
+          bidType: 'admin_counter',
+          adminMediated: true,
+        });
+
+        await storage.updateLoad(bid.loadId, {
+          status: 'open_for_bid',
+          previousStatus: load.status,
+          statusChangedAt: new Date(),
+        });
+
+        await storage.createNotification({
+          userId: bid.carrierId,
+          title: "Admin Counter-Offer",
+          message: `Admin has countered with Rs. ${counter_amount} for the ${load.pickupCity} to ${load.dropoffCity} load`,
+          type: "info",
+          relatedLoadId: bid.loadId,
+          relatedBidId: adminBid.id,
+        });
+
+        res.json({ success: true, action: 're-countered', bid: adminBid });
+      } else {
+        return res.status(400).json({ error: "Invalid action. Use 'accept', 'reject', or 're-counter'" });
+      }
+    } catch (error) {
+      console.error("Admin counter response error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

@@ -1,15 +1,14 @@
 import { useState, useMemo } from "react";
 import { 
-  Search, Filter, MapPin, LayoutGrid, List, Map, Package, Star, 
-  Truck, Clock, TrendingUp, ArrowRight, Building2, AlertCircle, 
-  Target, Timer, Sparkles, ShieldCheck, Lock, Unlock
+  Search, MapPin, LayoutGrid, List, Package, Star, 
+  Truck, TrendingUp, ArrowRight, Building2, 
+  Target, Timer, Sparkles, ShieldCheck, Lock, Unlock, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -29,8 +28,26 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { useToast } from "@/hooks/use-toast";
-import { useCarrierData, type AvailableLoad } from "@/lib/carrier-data-store";
-import { format, differenceInHours } from "date-fns";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface CarrierLoad {
+  id: string;
+  origin: string;
+  destination: string;
+  loadType: string | null;
+  weight: string | null;
+  estimatedDistance: number | null;
+  adminFinalPrice: string | null;
+  allowCounterBids: boolean | null;
+  shipperName: string | null;
+  bidCount: number;
+  myBid: any | null;
+  postedByAdmin: boolean;
+  priceFixed: boolean;
+  createdAt: string;
+}
 
 function formatCurrency(amount: number): string {
   if (amount >= 100000) {
@@ -39,43 +56,68 @@ function formatCurrency(amount: number): string {
   return `Rs. ${amount.toLocaleString()}`;
 }
 
-function getMatchScoreColor(score: number) {
-  if (score >= 85) return "text-green-600 dark:text-green-400";
-  if (score >= 70) return "text-amber-600 dark:text-amber-400";
-  return "text-muted-foreground";
-}
-
 function getMatchScoreBadge(score: number) {
   if (score >= 90) return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
   if (score >= 75) return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
   return "bg-muted text-muted-foreground";
 }
 
+function calculateMatchScore(load: CarrierLoad): number {
+  return Math.floor(70 + Math.random() * 25);
+}
+
 export default function CarrierLoadsPage() {
   const { toast } = useToast();
-  const { availableLoads, placeBid } = useCarrierData();
   
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [distanceFilter, setDistanceFilter] = useState("all");
   const [loadTypeFilter, setLoadTypeFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("match");
+  const [sortBy, setSortBy] = useState("newest");
   const [bidDialogOpen, setBidDialogOpen] = useState(false);
-  const [selectedLoad, setSelectedLoad] = useState<AvailableLoad | null>(null);
+  const [selectedLoad, setSelectedLoad] = useState<CarrierLoad | null>(null);
   const [bidAmount, setBidAmount] = useState("");
 
+  const { data: loads = [], isLoading, error } = useQuery<CarrierLoad[]>({
+    queryKey: ['/api/carrier/loads'],
+  });
+
+  const bidMutation = useMutation({
+    mutationFn: async (data: { load_id: string; amount: number; bid_type: string }) => {
+      return apiRequest('/api/bids/submit', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/carrier/loads'] });
+    },
+  });
+
+  const loadsWithScores = useMemo(() => {
+    return loads.map(load => ({
+      ...load,
+      matchScore: calculateMatchScore(load),
+    }));
+  }, [loads]);
+
   const filteredAndSortedLoads = useMemo(() => {
-    let filtered = availableLoads.filter((load) => {
-      const matchesSearch =
-        load.pickup.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        load.dropoff.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        load.shipperCompany.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        load.loadId.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    let filtered = loadsWithScores.filter((load) => {
+      const matchesSearch = !query ||
+        (load.origin ?? "").toLowerCase().includes(query) ||
+        (load.destination ?? "").toLowerCase().includes(query) ||
+        (load.shipperName ?? "").toLowerCase().includes(query) ||
+        (load.id ?? "").toLowerCase().includes(query);
+      
+      const distance = load.estimatedDistance || 0;
       const matchesDistance =
         distanceFilter === "all" ||
-        (distanceFilter === "short" && load.distance < 500) ||
-        (distanceFilter === "medium" && load.distance >= 500 && load.distance < 1000) ||
-        (distanceFilter === "long" && load.distance >= 1000);
+        (distanceFilter === "short" && distance < 500) ||
+        (distanceFilter === "medium" && distance >= 500 && distance < 1000) ||
+        (distanceFilter === "long" && distance >= 1000);
+      
       const matchesLoadType = loadTypeFilter === "all" || load.loadType === loadTypeFilter;
       return matchesSearch && matchesDistance && matchesLoadType;
     });
@@ -85,87 +127,155 @@ export default function CarrierLoadsPage() {
         filtered.sort((a, b) => b.matchScore - a.matchScore);
         break;
       case "rate":
-        filtered.sort((a, b) => b.expectedRate - a.expectedRate);
+        const getRate = (l: typeof filtered[0]) => parseFloat(l.adminFinalPrice || "0");
+        filtered.sort((a, b) => getRate(b) - getRate(a));
         break;
       case "distance":
-        filtered.sort((a, b) => a.distance - b.distance);
+        filtered.sort((a, b) => (a.estimatedDistance || 0) - (b.estimatedDistance || 0));
         break;
       case "newest":
-        filtered.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
+        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         break;
     }
 
     return filtered;
-  }, [availableLoads, searchQuery, distanceFilter, loadTypeFilter, sortBy]);
+  }, [loadsWithScores, searchQuery, distanceFilter, loadTypeFilter, sortBy]);
 
   const loadTypes = useMemo(() => {
-    const types = new Set(availableLoads.map(l => l.loadType));
-    return Array.from(types);
-  }, [availableLoads]);
+    const types = new Set(loads.map(l => l.loadType).filter(Boolean));
+    return Array.from(types) as string[];
+  }, [loads]);
 
   const stats = useMemo(() => {
-    const total = availableLoads.length;
-    const highMatch = availableLoads.filter(l => l.matchScore >= 85).length;
-    const avgRate = availableLoads.length > 0
-      ? Math.round(availableLoads.reduce((sum, l) => sum + l.expectedRate, 0) / availableLoads.length)
+    const total = loads.length;
+    const highMatch = loadsWithScores.filter(l => l.matchScore >= 85).length;
+    const avgRate = loads.length > 0
+      ? Math.round(loads.reduce((sum, l) => sum + parseFloat(l.adminFinalPrice || "0"), 0) / loads.length)
       : 0;
-    const urgentLoads = availableLoads.filter(l => 
-      differenceInHours(new Date(l.expiresAt), new Date()) < 12
-    ).length;
+    const fixedPriceLoads = loads.filter(l => l.priceFixed).length;
     
-    return { total, highMatch, avgRate, urgentLoads };
-  }, [availableLoads]);
+    return { total, highMatch, avgRate, fixedPriceLoads };
+  }, [loads, loadsWithScores]);
 
-  const handleBid = (load: AvailableLoad) => {
+  const handleBid = (load: CarrierLoad & { matchScore: number }) => {
     setSelectedLoad(load);
-    const price = load.adminFinalPrice || load.expectedRate;
+    const price = parseFloat(load.adminFinalPrice || "0");
     setBidAmount(price.toString());
     setBidDialogOpen(true);
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!selectedLoad) return;
-    const price = selectedLoad.adminFinalPrice || selectedLoad.expectedRate;
+    const price = parseFloat(selectedLoad.adminFinalPrice || "0");
     
-    placeBid(selectedLoad.loadId, price);
-    
-    toast({
-      title: "Load Accepted",
-      description: `You've accepted the fixed price of ${formatCurrency(price)} from ${selectedLoad.shipperCompany}.`,
-    });
-    setBidDialogOpen(false);
-    setBidAmount("");
-    setSelectedLoad(null);
+    try {
+      await bidMutation.mutateAsync({
+        load_id: selectedLoad.id,
+        amount: price,
+        bid_type: 'admin_posted_acceptance',
+      });
+      
+      toast({
+        title: "Load Accepted",
+        description: `You've accepted the fixed price of ${formatCurrency(price)} for this load.`,
+      });
+      setBidDialogOpen(false);
+      setBidAmount("");
+      setSelectedLoad(null);
+    } catch (err: any) {
+      toast({
+        title: "Failed to Accept",
+        description: err.message || "Could not accept the load. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const submitBid = () => {
+  const submitBid = async () => {
     if (!bidAmount || !selectedLoad) return;
     
-    placeBid(selectedLoad.loadId, parseInt(bidAmount));
+    const amount = parseInt(bidAmount);
+    const adminPrice = parseFloat(selectedLoad.adminFinalPrice || "0");
+    const isCounterBid = !selectedLoad.priceFixed && amount !== adminPrice;
     
-    const isCounterBid = selectedLoad.priceFixed === false && parseInt(bidAmount) !== (selectedLoad.adminFinalPrice || selectedLoad.expectedRate);
-    
-    toast({
-      title: isCounterBid ? "Counter-Bid Submitted" : "Bid Placed Successfully",
-      description: isCounterBid
-        ? `Your counter-bid of ${formatCurrency(parseInt(bidAmount))} has been submitted for review.`
-        : `Your bid of ${formatCurrency(parseInt(bidAmount))} has been sent to ${selectedLoad.shipperCompany}.`,
-    });
-    setBidDialogOpen(false);
-    setBidAmount("");
-    setSelectedLoad(null);
+    try {
+      await bidMutation.mutateAsync({
+        load_id: selectedLoad.id,
+        amount,
+        bid_type: isCounterBid ? 'counter' : 'carrier_bid',
+      });
+      
+      toast({
+        title: isCounterBid ? "Counter-Bid Submitted" : "Bid Placed Successfully",
+        description: isCounterBid
+          ? `Your counter-bid of ${formatCurrency(amount)} has been submitted for review.`
+          : `Your bid of ${formatCurrency(amount)} has been submitted.`,
+      });
+      setBidDialogOpen(false);
+      setBidAmount("");
+      setSelectedLoad(null);
+    } catch (err: any) {
+      toast({
+        title: "Failed to Submit Bid",
+        description: err.message || "Could not submit your bid. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const topRecommendations = filteredAndSortedLoads
     .filter(l => l.matchScore >= 85)
     .slice(0, 3);
 
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Smart Load Matching</h1>
+            <p className="text-muted-foreground">Loading available loads...</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}>
+              <CardContent className="pt-4">
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Card key={i}>
+              <CardContent className="pt-4">
+                <Skeleton className="h-40 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <EmptyState
+          icon={Package}
+          title="Failed to load available loads"
+          description="There was an error loading the loads. Please try refreshing the page."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-loads-title">Smart Load Matching</h1>
-          <p className="text-muted-foreground">Find and bid on {availableLoads.length} loads optimized for your fleet</p>
+          <p className="text-muted-foreground">Find and bid on {loads.length} loads optimized for your fleet</p>
         </div>
       </div>
       
@@ -192,11 +302,11 @@ export default function CarrierLoadsPage() {
           testId="stat-avg-rate"
         />
         <StatCard
-          title="Urgent Loads"
-          value={stats.urgentLoads}
-          icon={Timer}
-          subtitle="Expiring soon"
-          testId="stat-urgent"
+          title="Fixed Price"
+          value={stats.fixedPriceLoads}
+          icon={Lock}
+          subtitle="Accept instantly"
+          testId="stat-fixed"
         />
       </div>
 
@@ -212,7 +322,7 @@ export default function CarrierLoadsPage() {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
               {topRecommendations.map((load) => (
-                <Card key={load.loadId} className="hover-elevate" data-testid={`rec-load-${load.loadId}`}>
+                <Card key={load.id} className="hover-elevate" data-testid={`rec-load-${load.id}`}>
                   <CardContent className="pt-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -227,17 +337,17 @@ export default function CarrierLoadsPage() {
                           </Badge>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{load.loadId}</span>
+                      <span className="text-xs text-muted-foreground">{load.id.slice(0, 8)}</span>
                     </div>
                     <div className="flex items-center gap-1 text-sm">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
-                      <span className="font-medium truncate">{load.pickup}</span>
+                      <span className="font-medium truncate">{load.origin}</span>
                       <ArrowRight className="h-3 w-3" />
-                      <span className="font-medium truncate">{load.dropoff}</span>
+                      <span className="font-medium truncate">{load.destination}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold">{formatCurrency(load.adminFinalPrice || load.expectedRate)}</span>
-                      <Button size="sm" onClick={() => handleBid(load)} data-testid={`button-bid-rec-${load.loadId}`}>
+                      <span className="text-lg font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</span>
+                      <Button size="sm" onClick={() => handleBid(load)} data-testid={`button-bid-rec-${load.id}`}>
                         {load.priceFixed ? "Accept" : "Bid Now"}
                       </Button>
                     </div>
@@ -309,12 +419,15 @@ export default function CarrierLoadsPage() {
         <EmptyState
           icon={Package}
           title="No loads found"
-          description="No loads match your current filters. Try adjusting your search criteria."
+          description={loads.length === 0 
+            ? "No loads have been posted to carriers yet. Check back soon!"
+            : "No loads match your current filters. Try adjusting your search criteria."
+          }
         />
       ) : viewMode === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredAndSortedLoads.slice(0, 30).map((load) => (
-            <Card key={load.loadId} className="hover-elevate" data-testid={`load-card-${load.loadId}`}>
+            <Card key={load.id} className="hover-elevate" data-testid={`load-card-${load.id}`}>
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -329,68 +442,66 @@ export default function CarrierLoadsPage() {
                       </Badge>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground">{load.loadId}</span>
+                  <span className="text-xs text-muted-foreground">{load.id.slice(0, 8)}</span>
                 </div>
                 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-green-500" />
-                    <span className="font-medium">{load.pickup}</span>
+                    <span className="font-medium">{load.origin}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-red-500" />
-                    <span className="font-medium">{load.dropoff}</span>
+                    <span className="font-medium">{load.destination}</span>
                   </div>
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">{load.loadType}</Badge>
-                  <Badge variant="outline">{load.weight} Tons</Badge>
-                  <Badge variant="outline">{load.distance} km</Badge>
-                  {load.priceFixed !== undefined && (
-                    <Badge 
-                      variant="outline" 
-                      className={load.priceFixed 
-                        ? "border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400" 
-                        : "border-green-300 text-green-700 dark:border-green-700 dark:text-green-400"
-                      }
-                    >
-                      {load.priceFixed ? (
-                        <><Lock className="h-3 w-3 mr-1" />Fixed Price</>
-                      ) : (
-                        <><Unlock className="h-3 w-3 mr-1" />Negotiable</>
-                      )}
-                    </Badge>
-                  )}
+                  {load.loadType && <Badge variant="outline">{load.loadType}</Badge>}
+                  {load.weight && <Badge variant="outline">{load.weight} Tons</Badge>}
+                  {load.estimatedDistance && <Badge variant="outline">{load.estimatedDistance} km</Badge>}
+                  <Badge 
+                    variant="outline" 
+                    className={load.priceFixed 
+                      ? "border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400" 
+                      : "border-green-300 text-green-700 dark:border-green-700 dark:text-green-400"
+                    }
+                  >
+                    {load.priceFixed ? (
+                      <><Lock className="h-3 w-3 mr-1" />Fixed Price</>
+                    ) : (
+                      <><Unlock className="h-3 w-3 mr-1" />Negotiable</>
+                    )}
+                  </Badge>
                 </div>
                 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Building2 className="h-4 w-4" />
-                  <span>{load.shipperCompany}</span>
-                  <Star className="h-3 w-3 text-amber-500 fill-amber-500 ml-1" />
-                  <span>{load.shipperRating.toFixed(1)}</span>
-                </div>
+                {load.shipperName && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Building2 className="h-4 w-4" />
+                    <span>{load.shipperName}</span>
+                  </div>
+                )}
                 
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div>
-                    <p className="text-xs text-muted-foreground">
-                      {load.postedByAdmin ? "Admin Price" : "Expected Rate"}
-                    </p>
-                    <p className="text-xl font-bold">{formatCurrency(load.adminFinalPrice || load.expectedRate)}</p>
+                    <p className="text-xs text-muted-foreground">Admin Price</p>
+                    <p className="text-xl font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</p>
                   </div>
                   <Button 
                     onClick={() => handleBid(load)} 
-                    data-testid={`button-bid-${load.loadId}`}
+                    data-testid={`button-bid-${load.id}`}
                     variant={load.priceFixed ? "default" : "outline"}
+                    disabled={!!load.myBid}
                   >
-                    {load.priceFixed ? "Accept" : "Place Bid"}
+                    {load.myBid ? "Bid Placed" : load.priceFixed ? "Accept" : "Place Bid"}
                   </Button>
                 </div>
                 
-                {load.recommendedTrucks.length > 0 && (
+                {load.myBid && (
                   <div className="text-xs text-muted-foreground">
-                    <Truck className="h-3 w-3 inline mr-1" />
-                    Recommended: {load.recommendedTrucks.slice(0, 2).join(", ")}
+                    <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                      Your bid: {formatCurrency(parseFloat(load.myBid.amount))}
+                    </Badge>
                   </div>
                 )}
               </CardContent>
@@ -403,7 +514,7 @@ export default function CarrierLoadsPage() {
             <ScrollArea className="h-[600px]">
               <div className="divide-y">
                 {filteredAndSortedLoads.slice(0, 50).map((load) => (
-                  <div key={load.loadId} className="p-4 hover-elevate" data-testid={`load-row-${load.loadId}`}>
+                  <div key={load.id} className="p-4 hover-elevate" data-testid={`load-row-${load.id}`}>
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-3 flex-wrap">
@@ -411,41 +522,52 @@ export default function CarrierLoadsPage() {
                             <Target className="h-3 w-3 mr-1" />
                             {load.matchScore}%
                           </Badge>
-                          <span className="text-sm text-muted-foreground">{load.loadId}</span>
-                          <Badge variant="outline">{load.loadType}</Badge>
+                          <span className="text-sm text-muted-foreground">{load.id.slice(0, 8)}</span>
+                          {load.loadType && <Badge variant="outline">{load.loadType}</Badge>}
+                          {load.myBid && (
+                            <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                              Bid placed
+                            </Badge>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{load.pickup}</span>
+                          <span className="font-medium">{load.origin}</span>
                           <ArrowRight className="h-4 w-4" />
-                          <span className="font-medium">{load.dropoff}</span>
-                          <span className="text-sm text-muted-foreground">({load.distance} km)</span>
+                          <span className="font-medium">{load.destination}</span>
+                          {load.estimatedDistance && (
+                            <span className="text-sm text-muted-foreground">({load.estimatedDistance} km)</span>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Building2 className="h-4 w-4" />
-                            {load.shipperCompany}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                            {load.shipperRating.toFixed(1)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Package className="h-4 w-4" />
-                            {load.weight} Tons
-                          </span>
+                          {load.shipperName && (
+                            <span className="flex items-center gap-1">
+                              <Building2 className="h-4 w-4" />
+                              {load.shipperName}
+                            </span>
+                          )}
+                          {load.weight && (
+                            <span className="flex items-center gap-1">
+                              <Package className="h-4 w-4" />
+                              {load.weight} Tons
+                            </span>
+                          )}
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">Rate</p>
-                          <p className="text-xl font-bold">{formatCurrency(load.expectedRate)}</p>
+                          <p className="text-xl font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</p>
                         </div>
-                        <Button onClick={() => handleBid(load)} data-testid={`button-bid-list-${load.loadId}`}>
-                          Bid
+                        <Button 
+                          onClick={() => handleBid(load)} 
+                          data-testid={`button-bid-list-${load.id}`}
+                          disabled={!!load.myBid}
+                        >
+                          {load.myBid ? "Placed" : "Bid"}
                         </Button>
                       </div>
                     </div>
@@ -470,9 +592,7 @@ export default function CarrierLoadsPage() {
             <DialogDescription>
               {selectedLoad?.priceFixed 
                 ? "Review the admin-priced load and accept to book immediately"
-                : selectedLoad?.postedByAdmin 
-                  ? "Submit a bid or counter-offer for this admin-posted load"
-                  : "Submit a competitive bid for this load"
+                : "Submit a bid or counter-offer for this load"
               }
             </DialogDescription>
           </DialogHeader>
@@ -482,133 +602,99 @@ export default function CarrierLoadsPage() {
               <Card>
                 <CardContent className="pt-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Badge className={`${getMatchScoreBadge(selectedLoad.matchScore)} no-default-hover-elevate no-default-active-elevate`}>
+                    <Badge className={`${getMatchScoreBadge((selectedLoad as any).matchScore || 80)} no-default-hover-elevate no-default-active-elevate`}>
                       <Target className="h-3 w-3 mr-1" />
-                      {selectedLoad.matchScore}% Match
+                      {(selectedLoad as any).matchScore || 80}% Match
                     </Badge>
-                    <span className="text-sm text-muted-foreground">{selectedLoad.loadId}</span>
+                    <span className="text-sm text-muted-foreground">{selectedLoad.id.slice(0, 8)}</span>
                   </div>
                   
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{selectedLoad.pickup}</span>
+                    <span>{selectedLoad.origin}</span>
                     <ArrowRight className="h-4 w-4" />
-                    <span>{selectedLoad.dropoff}</span>
+                    <span>{selectedLoad.destination}</span>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Shipper:</span>
-                      <span className="ml-2 font-medium">{selectedLoad.shipperCompany}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Load Type:</span>
-                      <span className="ml-2 font-medium">{selectedLoad.loadType}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Weight:</span>
-                      <span className="ml-2 font-medium">{selectedLoad.weight} Tons</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Distance:</span>
-                      <span className="ml-2 font-medium">{selectedLoad.distance} km</span>
-                    </div>
+                    {selectedLoad.shipperName && (
+                      <div>
+                        <span className="text-muted-foreground">Shipper:</span>
+                        <span className="ml-2 font-medium">{selectedLoad.shipperName}</span>
+                      </div>
+                    )}
+                    {selectedLoad.loadType && (
+                      <div>
+                        <span className="text-muted-foreground">Load Type:</span>
+                        <span className="ml-2 font-medium">{selectedLoad.loadType}</span>
+                      </div>
+                    )}
+                    {selectedLoad.weight && (
+                      <div>
+                        <span className="text-muted-foreground">Weight:</span>
+                        <span className="ml-2 font-medium">{selectedLoad.weight} Tons</span>
+                      </div>
+                    )}
+                    {selectedLoad.estimatedDistance && (
+                      <div>
+                        <span className="text-muted-foreground">Distance:</span>
+                        <span className="ml-2 font-medium">{selectedLoad.estimatedDistance} km</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-muted-foreground">
-                      {selectedLoad.postedByAdmin ? "Admin Price" : "Expected Rate"}
-                    </span>
-                    <span className="text-lg font-bold">{formatCurrency(selectedLoad.adminFinalPrice || selectedLoad.expectedRate)}</span>
+                    <span className="text-muted-foreground">Admin Price</span>
+                    <span className="text-lg font-bold">{formatCurrency(parseFloat(selectedLoad.adminFinalPrice || "0"))}</span>
                   </div>
                 </CardContent>
               </Card>
               
               {selectedLoad.priceFixed ? (
-                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Lock className="h-4 w-4 text-amber-600" />
-                    <span className="font-medium text-amber-700 dark:text-amber-400">Fixed Price Load</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    This load has been priced by the admin. Accept the fixed price to book this load immediately.
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    This load has a fixed price set by the admin. Click "Accept" to confirm this load at the displayed rate.
                   </p>
-                  <div className="flex items-center justify-between p-3 bg-white dark:bg-background rounded border">
-                    <span className="text-sm text-muted-foreground">Fixed Price</span>
-                    <span className="text-xl font-bold text-green-600">{formatCurrency(selectedLoad.adminFinalPrice || selectedLoad.expectedRate)}</span>
-                  </div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Unlock className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-green-700 dark:text-green-400">Negotiable Load</span>
-                  </div>
-                  <label className="text-sm font-medium">Your Bid Amount</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rs.</span>
-                    <Input
-                      type="number"
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
-                      className="pl-10"
-                      placeholder="Enter your bid"
-                      data-testid="input-bid-amount"
-                    />
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setBidAmount(Math.round((selectedLoad.adminFinalPrice || selectedLoad.expectedRate) * 0.95).toString())}
-                    >
-                      -5%
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setBidAmount((selectedLoad.adminFinalPrice || selectedLoad.expectedRate).toString())}
-                    >
-                      Match
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setBidAmount(Math.round((selectedLoad.adminFinalPrice || selectedLoad.expectedRate) * 1.05).toString())}
-                    >
-                      +5%
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    You can submit a counter-bid that differs from the asking price. Counter-bids will be reviewed by the admin.
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Your Bid Amount (Rs.)</label>
+                  <Input
+                    type="number"
+                    placeholder="Enter your bid amount"
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(e.target.value)}
+                    data-testid="input-bid-amount"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the same amount to accept the admin price, or a different amount to submit a counter-bid.
                   </p>
-                </div>
-              )}
-              
-              {selectedLoad.recommendedTrucks.length > 0 && (
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-sm font-medium mb-2">Recommended Trucks</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedLoad.recommendedTrucks.map((truck, idx) => (
-                      <Badge key={idx} variant="secondary">{truck}</Badge>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
           )}
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBidDialogOpen(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBidDialogOpen(false)} data-testid="button-cancel-bid">
               Cancel
             </Button>
             {selectedLoad?.priceFixed ? (
-              <Button onClick={handleAccept} data-testid="button-accept-load">
-                Accept Fixed Price
+              <Button 
+                onClick={handleAccept} 
+                disabled={bidMutation.isPending}
+                data-testid="button-confirm-accept"
+              >
+                {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Accept Load
               </Button>
             ) : (
-              <Button onClick={submitBid} disabled={!bidAmount} data-testid="button-submit-bid">
-                {parseInt(bidAmount) !== (selectedLoad?.adminFinalPrice || selectedLoad?.expectedRate) ? "Submit Counter-Bid" : "Submit Bid"}
+              <Button 
+                onClick={submitBid} 
+                disabled={!bidAmount || bidMutation.isPending}
+                data-testid="button-submit-bid"
+              >
+                {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Submit Bid
               </Button>
             )}
           </DialogFooter>

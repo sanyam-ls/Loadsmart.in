@@ -47,7 +47,147 @@ interface CarrierLoad {
   postedByAdmin: boolean;
   priceFixed: boolean;
   createdAt: string;
+  isSimulated?: boolean;
 }
+
+const simulatedLoads: CarrierLoad[] = [
+  {
+    id: "DEMO-001",
+    origin: "Mumbai, Maharashtra",
+    destination: "Delhi, NCR",
+    loadType: "32 ft MXL",
+    weight: "18",
+    estimatedDistance: 1420,
+    adminFinalPrice: "125000",
+    allowCounterBids: true,
+    shipperName: "Reliance Industries",
+    bidCount: 3,
+    myBid: null,
+    postedByAdmin: true,
+    priceFixed: false,
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    isSimulated: true,
+  },
+  {
+    id: "DEMO-002",
+    origin: "Bengaluru, Karnataka",
+    destination: "Chennai, Tamil Nadu",
+    loadType: "Container 20ft",
+    weight: "12",
+    estimatedDistance: 350,
+    adminFinalPrice: "45000",
+    allowCounterBids: false,
+    shipperName: "Tata Motors",
+    bidCount: 5,
+    myBid: null,
+    postedByAdmin: true,
+    priceFixed: true,
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+    isSimulated: true,
+  },
+  {
+    id: "DEMO-003",
+    origin: "Ahmedabad, Gujarat",
+    destination: "Jaipur, Rajasthan",
+    loadType: "Taurus 21T",
+    weight: "22",
+    estimatedDistance: 680,
+    adminFinalPrice: "78000",
+    allowCounterBids: true,
+    shipperName: "Adani Group",
+    bidCount: 2,
+    myBid: null,
+    postedByAdmin: true,
+    priceFixed: false,
+    createdAt: new Date(Date.now() - 1800000).toISOString(),
+    isSimulated: true,
+  },
+  {
+    id: "DEMO-004",
+    origin: "Kolkata, West Bengal",
+    destination: "Guwahati, Assam",
+    loadType: "32 ft SXL",
+    weight: "20",
+    estimatedDistance: 980,
+    adminFinalPrice: "92000",
+    allowCounterBids: false,
+    shipperName: "ITC Limited",
+    bidCount: 4,
+    myBid: null,
+    postedByAdmin: true,
+    priceFixed: true,
+    createdAt: new Date(Date.now() - 5400000).toISOString(),
+    isSimulated: true,
+  },
+  {
+    id: "DEMO-005",
+    origin: "Pune, Maharashtra",
+    destination: "Hyderabad, Telangana",
+    loadType: "28 ft MXL",
+    weight: "15",
+    estimatedDistance: 560,
+    adminFinalPrice: "62000",
+    allowCounterBids: true,
+    shipperName: "Mahindra Logistics",
+    bidCount: 6,
+    myBid: null,
+    postedByAdmin: true,
+    priceFixed: false,
+    createdAt: new Date(Date.now() - 900000).toISOString(),
+    isSimulated: true,
+  },
+  {
+    id: "DEMO-006",
+    origin: "Ludhiana, Punjab",
+    destination: "Delhi, NCR",
+    loadType: "Open Truck",
+    weight: "25",
+    estimatedDistance: 310,
+    adminFinalPrice: "38000",
+    allowCounterBids: false,
+    shipperName: "Hero MotoCorp",
+    bidCount: 8,
+    myBid: null,
+    postedByAdmin: true,
+    priceFixed: true,
+    createdAt: new Date(Date.now() - 10800000).toISOString(),
+    isSimulated: true,
+  },
+  {
+    id: "DEMO-007",
+    origin: "Coimbatore, Tamil Nadu",
+    destination: "Kochi, Kerala",
+    loadType: "Container 40ft",
+    weight: "28",
+    estimatedDistance: 190,
+    adminFinalPrice: "32000",
+    allowCounterBids: true,
+    shipperName: "Asian Paints",
+    bidCount: 1,
+    myBid: null,
+    postedByAdmin: true,
+    priceFixed: false,
+    createdAt: new Date(Date.now() - 14400000).toISOString(),
+    isSimulated: true,
+  },
+  {
+    id: "DEMO-008",
+    origin: "Nagpur, Maharashtra",
+    destination: "Bhopal, Madhya Pradesh",
+    loadType: "Trailer 20ft",
+    weight: "16",
+    estimatedDistance: 350,
+    adminFinalPrice: "48000",
+    allowCounterBids: false,
+    shipperName: "Ultratech Cement",
+    bidCount: 3,
+    myBid: null,
+    postedByAdmin: true,
+    priceFixed: true,
+    createdAt: new Date(Date.now() - 21600000).toISOString(),
+    isSimulated: true,
+  },
+];
 
 function formatCurrency(amount: number): string {
   if (amount >= 100000) {
@@ -78,9 +218,13 @@ export default function CarrierLoadsPage() {
   const [selectedLoad, setSelectedLoad] = useState<CarrierLoad | null>(null);
   const [bidAmount, setBidAmount] = useState("");
 
-  const { data: loads = [], isLoading, error } = useQuery<CarrierLoad[]>({
+  const { data: apiLoads = [], isLoading, error } = useQuery<CarrierLoad[]>({
     queryKey: ['/api/carrier/loads'],
   });
+
+  const loads = useMemo(() => {
+    return [...apiLoads, ...simulatedLoads];
+  }, [apiLoads]);
 
   const bidMutation = useMutation({
     mutationFn: async (data: { load_id: string; amount: number; bid_type: string }) => {
@@ -158,6 +302,7 @@ export default function CarrierLoadsPage() {
   }, [loads, loadsWithScores]);
 
   const handleBid = (load: CarrierLoad & { matchScore: number }) => {
+    if (load.isSimulated) return;
     setSelectedLoad(load);
     const price = parseFloat(load.adminFinalPrice || "0");
     setBidAmount(price.toString());
@@ -165,7 +310,7 @@ export default function CarrierLoadsPage() {
   };
 
   const handleAccept = async () => {
-    if (!selectedLoad) return;
+    if (!selectedLoad || selectedLoad.isSimulated) return;
     const price = parseFloat(selectedLoad.adminFinalPrice || "0");
     
     try {
@@ -192,7 +337,7 @@ export default function CarrierLoadsPage() {
   };
 
   const submitBid = async () => {
-    if (!bidAmount || !selectedLoad) return;
+    if (!bidAmount || !selectedLoad || selectedLoad.isSimulated) return;
     
     const amount = parseInt(bidAmount);
     const adminPrice = parseFloat(selectedLoad.adminFinalPrice || "0");
@@ -330,7 +475,12 @@ export default function CarrierLoadsPage() {
                           <Target className="h-3 w-3 mr-1" />
                           {load.matchScore}% Match
                         </Badge>
-                        {load.postedByAdmin && (
+                        {load.isSimulated && (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 no-default-hover-elevate no-default-active-elevate">
+                            Demo
+                          </Badge>
+                        )}
+                        {load.postedByAdmin && !load.isSimulated && (
                           <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">
                             <ShieldCheck className="h-3 w-3 mr-1" />
                             Admin
@@ -347,8 +497,14 @@ export default function CarrierLoadsPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</span>
-                      <Button size="sm" onClick={() => handleBid(load)} data-testid={`button-bid-rec-${load.id}`}>
-                        {load.priceFixed ? "Accept" : "Bid Now"}
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleBid(load)} 
+                        data-testid={`button-bid-rec-${load.id}`}
+                        disabled={load.isSimulated}
+                        title={load.isSimulated ? "Demo load - for display only" : undefined}
+                      >
+                        {load.isSimulated ? "Demo" : load.priceFixed ? "Accept" : "Bid Now"}
                       </Button>
                     </div>
                   </CardContent>
@@ -435,7 +591,12 @@ export default function CarrierLoadsPage() {
                       <Target className="h-3 w-3 mr-1" />
                       {load.matchScore}% Match
                     </Badge>
-                    {load.postedByAdmin && (
+                    {load.isSimulated && (
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 no-default-hover-elevate no-default-active-elevate">
+                        Demo
+                      </Badge>
+                    )}
+                    {load.postedByAdmin && !load.isSimulated && (
                       <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">
                         <ShieldCheck className="h-3 w-3 mr-1" />
                         Posted by Admin
@@ -491,9 +652,10 @@ export default function CarrierLoadsPage() {
                     onClick={() => handleBid(load)} 
                     data-testid={`button-bid-${load.id}`}
                     variant={load.priceFixed ? "default" : "outline"}
-                    disabled={!!load.myBid}
+                    disabled={!!load.myBid || load.isSimulated}
+                    title={load.isSimulated ? "Demo load - for display only" : undefined}
                   >
-                    {load.myBid ? "Bid Placed" : load.priceFixed ? "Accept" : "Place Bid"}
+                    {load.isSimulated ? "Demo" : load.myBid ? "Bid Placed" : load.priceFixed ? "Accept" : "Place Bid"}
                   </Button>
                 </div>
                 
@@ -522,6 +684,11 @@ export default function CarrierLoadsPage() {
                             <Target className="h-3 w-3 mr-1" />
                             {load.matchScore}%
                           </Badge>
+                          {load.isSimulated && (
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 no-default-hover-elevate no-default-active-elevate">
+                              Demo
+                            </Badge>
+                          )}
                           <span className="text-sm text-muted-foreground">{load.id.slice(0, 8)}</span>
                           {load.loadType && <Badge variant="outline">{load.loadType}</Badge>}
                           {load.myBid && (
@@ -565,9 +732,10 @@ export default function CarrierLoadsPage() {
                         <Button 
                           onClick={() => handleBid(load)} 
                           data-testid={`button-bid-list-${load.id}`}
-                          disabled={!!load.myBid}
+                          disabled={!!load.myBid || load.isSimulated}
+                          title={load.isSimulated ? "Demo load - for display only" : undefined}
                         >
-                          {load.myBid ? "Placed" : "Bid"}
+                          {load.isSimulated ? "Demo" : load.myBid ? "Placed" : "Bid"}
                         </Button>
                       </div>
                     </div>

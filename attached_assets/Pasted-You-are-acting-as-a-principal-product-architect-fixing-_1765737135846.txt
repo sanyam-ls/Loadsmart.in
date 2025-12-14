@@ -1,0 +1,232 @@
+You are acting as a principal product architect fixing a fragmented workflow in a trucking marketplace platform.
+
+The UI, modals, dashboards, and features already exist.
+Your task is to re-wire the sequence, visibility, and state transitions so the system works as one continuous flow.
+
+You must not remove, redesign, or add new features.
+You must only fix how existing actions connect across portals.
+
+⸻
+
+1. CORE PROBLEM TO SOLVE (ACKNOWLEDGE FIRST)
+
+Currently:
+	•	Admin actions are split across multiple screens
+	•	Invoice flow is detached from load posting
+	•	Shipper sees loads but not invoices
+	•	Carrier receives notifications but cannot open the actual load
+	•	Loads show as “posted” but do not appear in the marketplace
+	•	Actions say “No action required” when action is actually required
+
+This is a segmentation bug, not a feature gap.
+
+⸻
+
+2. SINGLE CONTINUOUS WORKFLOW (MANDATORY)
+
+There must be ONE linear operational flow:
+
+Admin → Carrier → Shipper
+
+No parallel dead ends.
+No screen that ends the journey.
+
+⸻
+
+3. ADMIN CONSOLE — ACTION CONSOLIDATION
+
+Admin Load Actions MUST be unified into ONE operational surface
+
+For every load in Admin Console, the Actions column must always show:
+	•	Price & Post Load
+	•	Send Invoice to Shipper
+	•	View Carrier Responses
+
+These are not separate workflows.
+They are steps of the same workflow.
+
+Rule:
+
+Admin should never need to leave the load context to:
+	•	Post the load
+	•	Send invoice
+	•	Track carrier responses
+
+⸻
+
+4. ADMIN “PRICE & POST” — MUST DO BOTH
+
+When Admin clicks Price & Post:
+
+It must:
+	1.	Post the load to the Carrier Marketplace
+	2.	Generate the invoice draft
+	3.	Prepare the load for carrier bidding
+
+It must not:
+	•	Only post the load
+	•	Or only create an invoice
+	•	Or stop at a toast message
+
+Posting a load without invoice linkage is invalid.
+
+⸻
+
+5. INVOICE FLOW — ADMIN → SHIPPER (FIX THIS)
+
+Shipper MUST have an Invoice view in their portal
+
+Rules:
+	•	Shipper portal must show:
+	•	Load
+	•	Linked Invoice
+	•	Invoice status (Pending / Approved / Paid)
+
+Current behavior (invoice only in admin) is incorrect.
+
+When Admin sends invoice:
+	•	Shipper sees it immediately
+	•	Invoice opens from Shipper portal
+	•	Invoice approval/unapproval updates load status
+
+Invoice is not a separate system — it is a child of the load.
+
+⸻
+
+6. SHIPPER PORTAL — CLEAN & COMPLETE
+
+Shipper portal must show for each load:
+	•	Load details
+	•	Invoice (linked)
+	•	Status updates
+
+Shipper actions:
+	•	Approve invoice
+	•	Reject / counter invoice (if allowed)
+	•	Track load after assignment
+
+Shipper must not be blocked from seeing invoices.
+
+⸻
+
+7. CARRIER PORTAL — NOTIFICATION → LOAD ACCESS (CRITICAL FIX)
+
+Current broken behavior:
+
+Carrier receives notification
+BUT cannot:
+	•	Open the load
+	•	Find it in marketplace
+	•	Act on it
+
+This is unacceptable.
+
+Required behavior:
+
+Every carrier notification must:
+	•	Deep-link to the actual load
+	•	Open either:
+	•	Accept Fixed Price modal, or
+	•	Place Bid modal
+
+Carrier must also be able to:
+	•	Search the same load by Load ID
+	•	Find it in “Available Loads”
+
+A notification without access is a broken promise.
+
+⸻
+
+8. CARRIER MARKETPLACE — LOAD VISIBILITY RULES
+
+A load is visible to carriers only if:
+	•	Admin has clicked Price & Post
+	•	Invoice is generated (even if pending shipper approval)
+
+Once visible:
+	•	Carrier can accept or counter
+	•	Modal behavior remains unchanged
+	•	Actions update shared load state
+
+⸻
+
+9. REMOVE “NO ACTION REQUIRED” FALSE STATES
+
+If a load is:
+	•	Pending invoice
+	•	Pending carrier response
+	•	Pending shipper approval
+
+Then an action is required.
+
+“No action required” must appear only when:
+	•	Load is completed
+	•	Or fully idle
+
+Any other usage is incorrect.
+
+⸻
+
+10. STATE SYNCHRONIZATION (NO NEW STATES)
+
+Do not add new states.
+Just ensure existing ones propagate correctly.
+
+When:
+	•	Admin posts load → Carrier sees it
+	•	Carrier bids → Admin sees it
+	•	Admin assigns → Shipper sees carrier
+	•	Admin sends invoice → Shipper sees invoice
+	•	Shipper approves → Carrier proceeds
+
+One action → all portals update.
+
+⸻
+
+11. MODALS MUST STAY EXACTLY AS THEY ARE
+	•	Accept Fixed Price modal stays
+	•	Place Bid modal stays
+	•	Invoice Builder stays
+
+Only requirement:
+
+They must now actually move the workflow forward.
+
+No modal should ever close without:
+	•	A real state change, or
+	•	A visible error
+
+⸻
+
+12. ACCEPTANCE CHECK (SYSTEM MUST PASS)
+
+For a single load:
+	1.	Admin prices & posts load
+	2.	Load appears in carrier marketplace
+	3.	Carrier opens load from notification
+	4.	Carrier accepts or counters
+	5.	Admin sees response
+	6.	Admin sends invoice
+	7.	Shipper sees invoice
+	8.	Shipper approves
+	9.	Carrier proceeds with trip
+
+If any step requires guessing where to go next → FAIL.
+
+⸻
+
+FINAL DIRECTIVE
+
+You are not building features.
+You are removing friction between existing ones.
+
+The system must feel like:
+
+“I click once, and the next person sees it immediately.”
+
+No dead ends.
+No ghost loads.
+No invisible invoices.
+No notifications without access.
+
+Fix the flow — keep everything else untouched.

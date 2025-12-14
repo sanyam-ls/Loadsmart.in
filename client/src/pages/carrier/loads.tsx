@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { 
   Search, MapPin, LayoutGrid, List, Package, Star, 
   Truck, TrendingUp, ArrowRight, Building2, 
@@ -208,6 +209,8 @@ function calculateMatchScore(load: CarrierLoad): number {
 
 export default function CarrierLoadsPage() {
   const { toast } = useToast();
+  const searchString = useSearch();
+  const highlightLoadId = new URLSearchParams(searchString).get("highlight");
   
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
@@ -218,6 +221,21 @@ export default function CarrierLoadsPage() {
   const [selectedLoad, setSelectedLoad] = useState<CarrierLoad | null>(null);
   const [bidAmount, setBidAmount] = useState("");
   const [simulatedLoadStates, setSimulatedLoadStates] = useState<Record<string, { myBid?: { amount: string }, status?: string }>>({});
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (highlightLoadId) {
+      setHighlightedId(highlightLoadId);
+      setTimeout(() => {
+        const element = document.querySelector(`[data-testid="load-card-${highlightLoadId}"]`) 
+          || document.querySelector(`[data-testid="load-row-${highlightLoadId}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 500);
+      setTimeout(() => setHighlightedId(null), 5000);
+    }
+  }, [highlightLoadId]);
 
   const { data: apiLoads = [], isLoading, error } = useQuery<CarrierLoad[]>({
     queryKey: ['/api/carrier/loads'],
@@ -628,7 +646,7 @@ export default function CarrierLoadsPage() {
       ) : viewMode === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredAndSortedLoads.slice(0, 30).map((load) => (
-            <Card key={load.id} className="hover-elevate" data-testid={`load-card-${load.id}`}>
+            <Card key={load.id} className={`hover-elevate ${highlightedId === load.id ? "ring-2 ring-primary ring-offset-2 animate-pulse" : ""}`} data-testid={`load-card-${load.id}`}>
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -720,7 +738,7 @@ export default function CarrierLoadsPage() {
             <ScrollArea className="h-[600px]">
               <div className="divide-y">
                 {filteredAndSortedLoads.slice(0, 50).map((load) => (
-                  <div key={load.id} className="p-4 hover-elevate" data-testid={`load-row-${load.id}`}>
+                  <div key={load.id} className={`p-4 hover-elevate ${highlightedId === load.id ? "ring-2 ring-primary ring-offset-2 animate-pulse" : ""}`} data-testid={`load-row-${load.id}`}>
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-3 flex-wrap">

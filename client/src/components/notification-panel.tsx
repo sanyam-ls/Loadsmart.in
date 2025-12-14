@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bell, Check, Package, Gavel, MapPin, FileText, Truck } from "lucide-react";
+import { useLocation } from "wouter";
+import { Bell, Check, Package, Gavel, MapPin, FileText, Truck, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useMockData, type MockNotification } from "@/lib/mock-data-store";
+import { useAuth } from "@/lib/auth-context";
 
 function getNotificationIcon(type: string) {
   switch (type) {
@@ -48,9 +50,26 @@ function getTypeLabel(type: string): string {
 }
 
 export function NotificationPanel() {
+  const [, navigate] = useLocation();
+  const { user } = useAuth();
   const { notifications, markNotificationRead, markAllNotificationsRead, getUnreadNotificationCount } = useMockData();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+
+  const handleNotificationClick = (notification: MockNotification) => {
+    markNotificationRead(notification.id);
+    setIsOpen(false);
+    
+    if (notification.loadId) {
+      if (user?.role === "admin") {
+        navigate(`/admin/load-queue?highlight=${notification.loadId}`);
+      } else if (user?.role === "carrier") {
+        navigate(`/carrier/loads?highlight=${notification.loadId}`);
+      } else if (user?.role === "shipper") {
+        navigate(`/shipper/loads/${notification.loadId}`);
+      }
+    }
+  };
 
   const unreadCount = getUnreadNotificationCount();
 
@@ -159,7 +178,7 @@ export function NotificationPanel() {
                       className={`p-4 hover-elevate cursor-pointer ${
                         !notification.isRead ? "bg-primary/5" : ""
                       }`}
-                      onClick={() => markNotificationRead(notification.id)}
+                      onClick={() => handleNotificationClick(notification)}
                       data-testid={`notification-item-${notification.id}`}
                     >
                       <div className="flex gap-3">

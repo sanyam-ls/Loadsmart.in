@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Clock, 
@@ -17,7 +17,9 @@ import {
   Send,
   Calculator,
   Users,
-  Receipt
+  Receipt,
+  Gavel,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,12 +143,21 @@ function getCanonicalStateDisplay(status: string): { label: string; variant: "de
   return stateMap[status.toLowerCase()] || { label: status, variant: "outline" };
 }
 
-function getAdminActionForState(status: string): { action: string; buttonLabel: string } | null {
-  const actionMap: Record<string, { action: string; buttonLabel: string }> = {
-    "pending": { action: "price", buttonLabel: "Price Load" },
-    "priced": { action: "send_invoice", buttonLabel: "Send Invoice" },
-    "invoice_rejected": { action: "reprice", buttonLabel: "Revise Price" },
-    "invoice_negotiation": { action: "negotiate", buttonLabel: "Review Counter" },
+function getAdminActionForState(status: string): { action: string; buttonLabel: string; icon?: string } | null {
+  const actionMap: Record<string, { action: string; buttonLabel: string; icon?: string }> = {
+    "pending": { action: "price", buttonLabel: "Price Load", icon: "calculator" },
+    "priced": { action: "send_invoice", buttonLabel: "Send Invoice", icon: "send" },
+    "invoice_rejected": { action: "reprice", buttonLabel: "Revise Price", icon: "calculator" },
+    "invoice_negotiation": { action: "negotiate", buttonLabel: "Review Counter", icon: "users" },
+    "invoice_sent": { action: "view_invoice", buttonLabel: "View Invoice", icon: "receipt" },
+    "invoice_approved": { action: "push_to_carriers", buttonLabel: "Push to Carriers", icon: "truck" },
+    "posted_to_carriers": { action: "view_bids", buttonLabel: "View Bids", icon: "gavel" },
+    "open_for_bid": { action: "view_bids", buttonLabel: "View Bids", icon: "gavel" },
+    "open_for_bids": { action: "view_bids", buttonLabel: "View Bids", icon: "gavel" },
+    "bidding_active": { action: "view_bids", buttonLabel: "View Bids", icon: "gavel" },
+    "counter_received": { action: "view_bids", buttonLabel: "Review Counter", icon: "gavel" },
+    "awarded": { action: "track_shipment", buttonLabel: "Track Shipment", icon: "mappin" },
+    "in_transit": { action: "track_shipment", buttonLabel: "Track Shipment", icon: "mappin" },
   };
   return actionMap[status.toLowerCase()] || null;
 }
@@ -256,6 +267,7 @@ function calculateSuggestedPrice(load: MockLoad): {
 
 export default function LoadQueuePage() {
   const [, navigate] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
   const { loads, updateLoad } = useMockData();
   const [searchQuery, setSearchQuery] = useState("");
@@ -280,6 +292,37 @@ export default function LoadQueuePage() {
     queryKey: ["/api/admin/queue"],
     refetchInterval: 30000,
   });
+
+  // Handle highlight query param from notifications - auto-open drawer for that load
+  const [highlightHandled, setHighlightHandled] = useState(false);
+  useEffect(() => {
+    if (highlightHandled) return;
+    const params = new URLSearchParams(searchString || "");
+    const highlightId = params.get("highlight");
+    if (!highlightId) return;
+    
+    // Wait for real loads to finish loading before attempting to match
+    if (isLoadingReal) return;
+    
+    // Search in real loads (full ID, prefix match, or uppercase short ID comparison)
+    const matchingLoad = realLoads.find(l => 
+      l.id === highlightId || 
+      l.id.startsWith(highlightId) || 
+      l.id.slice(0, 8).toUpperCase() === highlightId.slice(0, 8).toUpperCase()
+    );
+    
+    if (matchingLoad) {
+      setSelectedRealLoad(matchingLoad);
+      setPricingDrawerOpen(true);
+      setHighlightHandled(true);
+      // Clear query param after drawer opens
+      setTimeout(() => navigate("/admin/load-queue", { replace: true }), 200);
+    } else {
+      // No matching load found after data loaded - clear param and mark handled
+      setHighlightHandled(true);
+      navigate("/admin/load-queue", { replace: true });
+    }
+  }, [searchString, realLoads, isLoadingReal, highlightHandled, navigate]);
 
   const convertToDrawerFormat = (load: MockLoad) => ({
     id: load.loadId,
@@ -492,24 +535,43 @@ export default function LoadQueuePage() {
                         {(() => {
                           const adminAction = getAdminActionForState(load.status);
                           if (adminAction) {
+                            const handleAction = () => {
+                              if (adminAction.action === "price" || adminAction.action === "reprice" || adminAction.action === "send_invoice" || adminAction.action === "push_to_carriers") {
+                                openRealLoadPricingDrawer(load);
+                              } else if (adminAction.action === "view_bids" || adminAction.action === "negotiate" || adminAction.action === "track_shipment" || adminAction.action === "view_invoice") {
+                                openRealLoadPricingDrawer(load);
+                              } else {
+                                openRealLoadPricingDrawer(load);
+                              }
+                            };
                             return (
                               <Button 
                                 size="sm" 
-                                onClick={() => openRealLoadPricingDrawer(load)}
+                                onClick={handleAction}
                                 data-testid={`button-action-real-${load.id.slice(0, 8)}`}
                               >
                                 {adminAction.action === "price" && <Calculator className="h-4 w-4 mr-1" />}
                                 {adminAction.action === "send_invoice" && <Send className="h-4 w-4 mr-1" />}
                                 {adminAction.action === "reprice" && <Calculator className="h-4 w-4 mr-1" />}
                                 {adminAction.action === "negotiate" && <Users className="h-4 w-4 mr-1" />}
+                                {adminAction.action === "view_invoice" && <Receipt className="h-4 w-4 mr-1" />}
+                                {adminAction.action === "push_to_carriers" && <Truck className="h-4 w-4 mr-1" />}
+                                {adminAction.action === "view_bids" && <Gavel className="h-4 w-4 mr-1" />}
+                                {adminAction.action === "track_shipment" && <MapPin className="h-4 w-4 mr-1" />}
                                 {adminAction.buttonLabel}
                               </Button>
                             );
                           }
                           return (
-                            <Badge variant="outline" className="text-xs">
-                              No action required
-                            </Badge>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => navigate(`/admin/loads/${load.id}`)}
+                              data-testid={`button-view-real-${load.id.slice(0, 8)}`}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View Details
+                            </Button>
                           );
                         })()}
                       </TableCell>

@@ -1,0 +1,148 @@
+You must retain and enforce the existing carrier interaction modals exactly as they appear today, while ensuring they are fully connected to real system state.
+
+These modals are not optional UI — they are the carrier’s primary transaction surface.
+
+⸻
+
+1. FIXED PRICE LOAD — ACCEPT FLOW (MANDATORY)
+
+When a carrier clicks Accept on a fixed-price, admin-posted load:
+
+The system must:
+	•	Open the “Accept Fixed Price Load” modal (unchanged layout)
+	•	Display:
+	•	Match percentage
+	•	Route
+	•	Shipper name
+	•	Load type, weight, distance
+	•	Admin price (read-only)
+	•	Recommended trucks
+	•	Clearly state that this is an admin-priced load
+
+On “Accept Fixed Price”:
+	•	Carrier intent is recorded
+	•	Load state moves to:
+	•	ASSIGNED or AWAITING_ADMIN_FINAL_CONFIRMATION
+	•	Admin is immediately notified
+	•	Carrier sees confirmation state
+	•	Load disappears from “Available Loads” for other carriers
+
+The modal must not close with success unless the state actually updates system-wide.
+
+⸻
+
+2. NEGOTIABLE LOAD — PLACE BID FLOW (MANDATORY)
+
+When a carrier clicks Place Bid on a negotiable admin-posted load:
+
+The system must:
+	•	Open the “Place Your Bid” modal (unchanged layout)
+	•	Pre-fill:
+	•	Admin price
+	•	Bid input field
+	•	Provide:
+	•	-5%, Match, +5% quick actions
+	•	Recommended trucks
+	•	Clearly label the load as Negotiable
+
+On “Submit Bid”:
+	•	A bid record is created against the same load
+	•	Load state moves to COUNTER_RECEIVED
+	•	Admin sees:
+	•	Carrier name
+	•	Bid amount
+	•	Timestamp
+	•	Carrier sees bid as “Pending Admin Decision”
+
+No silent submission. No UI-only confirmation.
+
+⸻
+
+3. MODALS MUST WORK FOR BOTH LOAD TYPES
+
+Both real admin-posted loads and simulated loads must:
+	•	Open the same modals
+	•	Use the same accept / bid flows
+	•	Behave identically in UI
+
+Difference:
+	•	Simulated loads may auto-resolve internally
+	•	Real loads must notify admin and require decisions
+
+From carrier perspective:
+
+There is no difference.
+
+⸻
+
+4. STATE CONSISTENCY RULE (CRITICAL)
+
+If a carrier:
+	•	Accepts a fixed price load, or
+	•	Submits a counter bid
+
+Then:
+	•	That action must update the shared Load entity
+	•	The change must reflect immediately in:
+	•	Admin Console
+	•	Carrier Portal
+	•	(Where relevant) Shipper Portal
+
+If the modal closes but the load remains unchanged → this is a system failure.
+
+⸻
+
+5. NO MODAL REGRESSION ALLOWED
+
+You are not allowed to:
+	•	Remove these modals
+	•	Replace them with inline actions
+	•	Simplify them
+	•	Turn them into static demos
+
+These modals are locked UX.
+
+You may only:
+	•	Connect them to real state
+	•	Enforce real outcomes
+	•	Block false success
+
+⸻
+
+6. FAILURE HANDLING (STRICT)
+
+If any accept or bid action fails:
+	•	Keep modal open
+	•	Show a clear error
+	•	Do not update load state
+	•	Do not show success feedback
+
+Examples:
+	•	“Failed to submit bid — admin not reachable”
+	•	“Accept failed — load already assigned”
+
+⸻
+
+7. ACCEPTANCE CHECK (NON-NEGOTIABLE)
+
+For both modals:
+	•	Modal opens ✔
+	•	Action submits ✔
+	•	Load state updates ✔
+	•	Admin sees action ✔
+	•	Carrier sees confirmation ✔
+
+If any step breaks, the modal is considered non-functional.
+
+⸻
+
+FINAL DIRECTIVE
+
+These modals must continue to open exactly like this,
+but now they must actually do something real.
+
+No cosmetic success.
+No UI illusions.
+Only state-true actions.
+
+⸻

@@ -217,6 +217,7 @@ export default function CarrierLoadsPage() {
   const [bidDialogOpen, setBidDialogOpen] = useState(false);
   const [selectedLoad, setSelectedLoad] = useState<CarrierLoad | null>(null);
   const [bidAmount, setBidAmount] = useState("");
+  const [simulatedLoadStates, setSimulatedLoadStates] = useState<Record<string, { myBid?: { amount: string }, status?: string }>>({});
 
   const { data: apiLoads = [], isLoading, error } = useQuery<CarrierLoad[]>({
     queryKey: ['/api/carrier/loads'],
@@ -228,11 +229,7 @@ export default function CarrierLoadsPage() {
 
   const bidMutation = useMutation({
     mutationFn: async (data: { load_id: string; amount: number; bid_type: string }) => {
-      return apiRequest('/api/bids/submit', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return apiRequest('POST', '/api/bids/submit', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/carrier/loads'] });
@@ -240,11 +237,15 @@ export default function CarrierLoadsPage() {
   });
 
   const loadsWithScores = useMemo(() => {
-    return loads.map(load => ({
-      ...load,
-      matchScore: calculateMatchScore(load),
-    }));
-  }, [loads]);
+    return loads.map(load => {
+      const simState = load.isSimulated ? simulatedLoadStates[load.id] : undefined;
+      return {
+        ...load,
+        matchScore: calculateMatchScore(load),
+        myBid: simState?.myBid || load.myBid,
+      };
+    });
+  }, [loads, simulatedLoadStates]);
 
   const filteredAndSortedLoads = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -302,16 +303,56 @@ export default function CarrierLoadsPage() {
   }, [loads, loadsWithScores]);
 
   const handleBid = (load: CarrierLoad & { matchScore: number }) => {
-    if (load.isSimulated) return;
     setSelectedLoad(load);
     const price = parseFloat(load.adminFinalPrice || "0");
     setBidAmount(price.toString());
     setBidDialogOpen(true);
   };
 
+  const handleSimulatedAccept = (load: CarrierLoad, price: number) => {
+    setSimulatedLoadStates(prev => ({
+      ...prev,
+      [load.id]: {
+        myBid: { amount: price.toString() },
+        status: 'awarded'
+      }
+    }));
+    toast({
+      title: "Load Accepted",
+      description: `You've accepted the fixed price of ${formatCurrency(price)} for this load. Admin has been notified.`,
+    });
+    setBidDialogOpen(false);
+    setBidAmount("");
+    setSelectedLoad(null);
+  };
+
+  const handleSimulatedBid = (load: CarrierLoad, amount: number, isCounter: boolean) => {
+    setSimulatedLoadStates(prev => ({
+      ...prev,
+      [load.id]: {
+        myBid: { amount: amount.toString() },
+        status: isCounter ? 'counter_received' : 'bidding'
+      }
+    }));
+    toast({
+      title: isCounter ? "Counter-Bid Submitted" : "Bid Placed Successfully",
+      description: isCounter
+        ? `Your counter-bid of ${formatCurrency(amount)} has been submitted. Pending admin decision.`
+        : `Your bid of ${formatCurrency(amount)} has been submitted.`,
+    });
+    setBidDialogOpen(false);
+    setBidAmount("");
+    setSelectedLoad(null);
+  };
+
   const handleAccept = async () => {
-    if (!selectedLoad || selectedLoad.isSimulated) return;
+    if (!selectedLoad) return;
     const price = parseFloat(selectedLoad.adminFinalPrice || "0");
+    
+    if (selectedLoad.isSimulated) {
+      handleSimulatedAccept(selectedLoad, price);
+      return;
+    }
     
     try {
       await bidMutation.mutateAsync({
@@ -322,7 +363,7 @@ export default function CarrierLoadsPage() {
       
       toast({
         title: "Load Accepted",
-        description: `You've accepted the fixed price of ${formatCurrency(price)} for this load.`,
+        description: `You've accepted the fixed price of ${formatCurrency(price)} for this load. Admin has been notified.`,
       });
       setBidDialogOpen(false);
       setBidAmount("");
@@ -337,11 +378,16 @@ export default function CarrierLoadsPage() {
   };
 
   const submitBid = async () => {
-    if (!bidAmount || !selectedLoad || selectedLoad.isSimulated) return;
+    if (!bidAmount || !selectedLoad) return;
     
     const amount = parseInt(bidAmount);
     const adminPrice = parseFloat(selectedLoad.adminFinalPrice || "0");
     const isCounterBid = !selectedLoad.priceFixed && amount !== adminPrice;
+    
+    if (selectedLoad.isSimulated) {
+      handleSimulatedBid(selectedLoad, amount, isCounterBid);
+      return;
+    }
     
     try {
       await bidMutation.mutateAsync({
@@ -501,10 +547,9 @@ export default function CarrierLoadsPage() {
                         size="sm" 
                         onClick={() => handleBid(load)} 
                         data-testid={`button-bid-rec-${load.id}`}
-                        disabled={load.isSimulated}
-                        title={load.isSimulated ? "Demo load - for display only" : undefined}
+                        disabled={!!load.myBid}
                       >
-                        {load.isSimulated ? "Demo" : load.priceFixed ? "Accept" : "Bid Now"}
+                        {load.myBid ? "Bid Placed" : load.priceFixed ? "Accept" : "Bid Now"}
                       </Button>
                     </div>
                   </CardContent>
@@ -652,10 +697,9 @@ export default function CarrierLoadsPage() {
                     onClick={() => handleBid(load)} 
                     data-testid={`button-bid-${load.id}`}
                     variant={load.priceFixed ? "default" : "outline"}
-                    disabled={!!load.myBid || load.isSimulated}
-                    title={load.isSimulated ? "Demo load - for display only" : undefined}
+                    disabled={!!load.myBid}
                   >
-                    {load.isSimulated ? "Demo" : load.myBid ? "Bid Placed" : load.priceFixed ? "Accept" : "Place Bid"}
+                    {load.myBid ? "Bid Placed" : load.priceFixed ? "Accept" : "Place Bid"}
                   </Button>
                 </div>
                 
@@ -732,10 +776,9 @@ export default function CarrierLoadsPage() {
                         <Button 
                           onClick={() => handleBid(load)} 
                           data-testid={`button-bid-list-${load.id}`}
-                          disabled={!!load.myBid || load.isSimulated}
-                          title={load.isSimulated ? "Demo load - for display only" : undefined}
+                          disabled={!!load.myBid}
                         >
-                          {load.isSimulated ? "Demo" : load.myBid ? "Placed" : "Bid"}
+                          {load.myBid ? "Placed" : "Bid"}
                         </Button>
                       </div>
                     </div>

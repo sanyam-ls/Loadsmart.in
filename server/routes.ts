@@ -1461,7 +1461,7 @@ export async function registerRoutes(
         // Admin submits a re-counter offer
         await storage.updateBid(bid_id, { 
           status: 'countered',
-          adminCounterAmount: counter_amount,
+          counterAmount: counter_amount,
         });
 
         // Create a new bid from admin perspective

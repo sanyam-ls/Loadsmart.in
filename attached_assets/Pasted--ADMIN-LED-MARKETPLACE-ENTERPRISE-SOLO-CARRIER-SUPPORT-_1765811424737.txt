@@ -1,0 +1,268 @@
+(ADMIN-LED MARKETPLACE + ENTERPRISE & SOLO CARRIER SUPPORT)
+
+You are acting as a principal system architect finalizing the operational workflow of a trucking marketplace.
+
+The system already has:
+	•	Admin Console (central authority)
+	•	Carrier Portal (enterprise fleets)
+	•	Shipper Portal
+	•	Load posting, pricing, invoices, and bidding wired
+
+Your task is to extend and synchronize the workflow without changing existing features or UI, only behavior and sequencing.
+
+You must not write code.
+You must give precise behavioral instructions only.
+
+⸻
+
+1. CORE BUSINESS RULE (OVERRIDE ALL PREVIOUS ASSUMPTIONS)
+
+No invoice is sent to the shipper until:
+	•	A carrier has bid
+	•	Admin has negotiated (if needed)
+	•	A carrier is finalized for the load
+
+Invoices are the output of negotiation, not the trigger.
+
+⸻
+
+2. LOAD VISIBILITY — ONE LOAD, TWO CARRIER PERSONAS
+
+Every admin-posted load must be visible to:
+
+A. Enterprise Carriers
+	•	Fleet owners
+	•	Transport companies
+	•	Multi-truck operators
+
+B. Solo Truck Drivers (BlackBuck-style)
+	•	Single vehicle owners
+	•	Individual drivers
+	•	Minimal dashboard, mobile-first
+
+Same load. Same price. Same bidding logic.
+
+Only the UI surface differs, not the load itself.
+
+⸻
+
+3. CARRIER TYPES — DEFINE CLEARLY
+
+Each carrier account must be tagged internally as:
+	•	ENTERPRISE_CARRIER
+	•	SOLO_DRIVER
+
+This tag affects:
+	•	Dashboard complexity
+	•	Data density
+	•	Navigation depth
+
+It must not affect:
+	•	Load access
+	•	Ability to bid
+	•	Ability to accept
+	•	Negotiation rights
+
+⸻
+
+4. LOAD POSTING — ADMIN STILL CONTROLS ENTRY
+
+Workflow:
+	1.	Shipper submits load (no price)
+	2.	Load goes to Admin as PENDING_PRICING
+	3.	Admin prices load
+	4.	Admin clicks Post to Carriers
+
+At this point:
+	•	Load becomes visible in both:
+	•	Enterprise Carrier Marketplace
+	•	Solo Driver Load Feed
+
+But:
+	•	Load is marked as “Awaiting Carrier Bid”
+	•	No invoice exists yet
+	•	Shipper cannot see pricing yet
+
+⸻
+
+5. CARRIER BIDDING — BOTH SIDES, SAME LOGIC
+
+Enterprise Carrier:
+	•	Sees load in marketplace
+	•	Can:
+	•	Accept admin price
+	•	Place counter bid
+
+Solo Driver:
+	•	Sees load in simplified feed
+	•	Can:
+	•	Accept price
+	•	Place counter bid (simple amount + note)
+
+Both actions must:
+	•	Create a bid record
+	•	Attach bid to the same load
+	•	Notify Admin immediately
+
+⸻
+
+6. ADMIN NEGOTIATION DASHBOARD — CRITICAL UPGRADE
+
+Admin must have a single negotiation view per load showing:
+
+For each bid:
+	•	Carrier name
+	•	Carrier type (Enterprise / Solo)
+	•	Bid amount
+	•	Timestamp
+	•	Notes
+	•	Vehicle/truck info (if available)
+
+Admin actions per bid:
+	•	Accept
+	•	Reject
+	•	Counter-offer
+
+Admin can negotiate with multiple carriers simultaneously, but can finalize only one.
+
+⸻
+
+7. NEGOTIATION LOOP — STRICT RULES
+
+While negotiation is ongoing:
+	•	Load status = NEGOTIATION_IN_PROGRESS
+	•	Load remains visible to carriers
+	•	New bids are allowed
+
+Once admin accepts one carrier:
+	•	All other bids are auto-rejected
+	•	Load becomes locked to selected carrier
+	•	Load status = CARRIER_FINALIZED
+
+⸻
+
+8. FINAL CARRIER SELECTION — SINGLE SOURCE OF TRUTH
+
+Once a carrier is finalized:
+	•	That carrier sees:
+	•	“You have been awarded this load”
+	•	Other carriers see:
+	•	“Load no longer available”
+
+Solo and Enterprise carriers must receive identical clarity.
+
+⸻
+
+9. INVOICE GENERATION — ONLY AFTER FINALIZATION
+
+Only now does the invoice workflow begin.
+
+Admin must:
+	•	Generate final invoice
+	•	Invoice must reference:
+	•	Final carrier
+	•	Final negotiated price
+	•	Margin breakdown
+
+Invoice is then:
+	•	Sent to Shipper Portal
+	•	Visible under the specific load
+
+⸻
+
+10. SHIPPER PORTAL — POST-FINALIZATION ONLY
+
+Shipper must see:
+	•	Load details
+	•	Assigned carrier name
+	•	Final price
+	•	Invoice (view / approve / reject)
+
+Shipper must not:
+	•	See bidding
+	•	See rejected carriers
+	•	See negotiation history
+
+Shipper approval moves load to execution.
+
+⸻
+
+11. DASHBOARDS — ENTERPRISE VS SOLO
+
+Enterprise Carrier Dashboard:
+	•	Load marketplace
+	•	Bid management
+	•	Negotiation history
+	•	Fleet & driver data
+	•	Active trips
+	•	Revenue analytics
+
+Solo Driver Dashboard:
+	•	Simple “Available Loads”
+	•	My Bids
+	•	My Trips
+	•	Earnings summary
+	•	Minimal navigation
+
+Same backend. Different surface.
+
+⸻
+
+12. NOTIFICATIONS — MUST BE DEEP-LINKED
+
+Every notification must:
+	•	Open the exact load
+	•	Open the correct state:
+	•	Bid pending
+	•	Counter received
+	•	Load awarded
+	•	Invoice approved
+
+Notifications without access are invalid.
+
+⸻
+
+13. STATE SYNCHRONIZATION — NO FRAGMENTATION
+
+Any action by:
+	•	Carrier
+	•	Admin
+	•	Shipper
+
+Must update:
+	•	Load state
+	•	Visibility
+	•	Available actions
+	•	Notifications
+
+Across all portals, instantly.
+
+⸻
+
+14. ACCEPTANCE TEST (NON-NEGOTIABLE)
+
+A single load must be able to:
+	1.	Be posted by admin
+	2.	Appear for enterprise carrier
+	3.	Appear for solo driver
+	4.	Receive bids from both
+	5.	Be negotiated by admin
+	6.	Be finalized with one carrier
+	7.	Generate invoice
+	8.	Appear in shipper portal
+	9.	Proceed to execution
+
+If any step requires manual workaround → FAIL.
+
+⸻
+
+FINAL DIRECTIVE
+
+You are building a real freight marketplace, not a demo.
+
+Admin is the price-setter and negotiator.
+Carriers compete fairly.
+Shipper sees only finalized truth.
+Solo drivers and enterprises coexist on the same loads.
+
+One load. One flow. Zero fragmentation.

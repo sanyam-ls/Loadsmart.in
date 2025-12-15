@@ -52,6 +52,7 @@ import RevenueDashboard from "@/pages/admin/revenue-dashboard";
 import AdminLoadQueuePage from "@/pages/admin/load-queue";
 import AdminNegotiationsPage from "@/pages/admin/negotiations";
 import AdminInvoicesPage from "@/pages/admin/invoices";
+import AdminCarrierVerificationPage from "@/pages/admin/carrier-verification";
 import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import { AdminDataProvider } from "@/lib/admin-data-store";
@@ -151,7 +152,7 @@ function AppContent() {
               <Route path="/admin/revenue" component={RevenueDashboard} />
               <Route path="/admin/revenue/:metric" component={RevenueDashboard} />
               <Route path="/admin/nearby-trucks" component={AdminNearbyTrucksPage} />
-              <Route path="/admin/verification" component={AdminCarriersPage} />
+              <Route path="/admin/verification" component={AdminCarrierVerificationPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
               <Route path="/admin/invoices" component={AdminInvoicesPage} />
               

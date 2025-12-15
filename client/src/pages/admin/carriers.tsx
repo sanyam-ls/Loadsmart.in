@@ -84,8 +84,16 @@ export default function AdminCarriersPage() {
   });
   const itemsPerPage = 10;
 
+  const verifiedCarriers = useMemo(() => {
+    return carriers.filter(c => c.verificationStatus === "verified");
+  }, [carriers]);
+
+  const pendingCount = useMemo(() => {
+    return carriers.filter(c => c.verificationStatus === "pending").length;
+  }, [carriers]);
+
   const filteredCarriers = useMemo(() => {
-    let result = [...carriers];
+    let result = [...verifiedCarriers];
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -94,10 +102,6 @@ export default function AdminCarriersPage() {
         carrier.email?.toLowerCase().includes(query) ||
         carrier.serviceZones?.some(z => z.toLowerCase().includes(query))
       );
-    }
-    
-    if (statusFilter !== "all") {
-      result = result.filter(carrier => carrier.verificationStatus === statusFilter);
     }
     
     if (activityFilter !== "all") {
@@ -121,7 +125,7 @@ export default function AdminCarriersPage() {
     });
     
     return result;
-  }, [carriers, searchQuery, statusFilter, activityFilter, sortField, sortDirection]);
+  }, [verifiedCarriers, searchQuery, activityFilter, sortField, sortDirection]);
 
   const paginatedCarriers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -229,30 +233,25 @@ export default function AdminCarriersPage() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold">Carriers Management</h1>
+            <h1 className="text-2xl font-bold">Carrier Directory</h1>
           </div>
-          <p className="text-muted-foreground ml-10">Manage carrier verification and profiles ({carriers.length} total)</p>
+          <p className="text-muted-foreground ml-10">Verified carriers only ({verifiedCarriers.length} total)</p>
         </div>
-        <Button variant="outline" onClick={refreshFromShipperPortal} data-testid="button-sync-carriers">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Sync
-        </Button>
+        <div className="flex items-center gap-2">
+          {pendingCount > 0 && (
+            <Button onClick={() => setLocation("/admin/verification")} data-testid="button-view-pending">
+              <ShieldAlert className="h-4 w-4 mr-2" />
+              {pendingCount} Pending Verification
+            </Button>
+          )}
+          <Button variant="outline" onClick={refreshFromShipperPortal} data-testid="button-sync-carriers">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sync
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Carriers</p>
-                <p className="text-xl font-bold">{carriers.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
@@ -260,8 +259,8 @@ export default function AdminCarriersPage() {
                 <ShieldCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Verified</p>
-                <p className="text-xl font-bold">{carriers.filter(c => c.verificationStatus === "verified").length}</p>
+                <p className="text-sm text-muted-foreground">Verified Carriers</p>
+                <p className="text-xl font-bold">{verifiedCarriers.length}</p>
               </div>
             </div>
           </CardContent>
@@ -269,12 +268,12 @@ export default function AdminCarriersPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-xl font-bold">{carriers.filter(c => c.verificationStatus === "pending").length}</p>
+                <p className="text-sm text-muted-foreground">Total Fleet</p>
+                <p className="text-xl font-bold">{verifiedCarriers.reduce((sum, c) => sum + c.fleetSize, 0)}</p>
               </div>
             </div>
           </CardContent>
@@ -286,8 +285,21 @@ export default function AdminCarriersPage() {
                 <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Fleet</p>
-                <p className="text-xl font-bold">{carriers.reduce((sum, c) => sum + c.fleetSize, 0)}</p>
+                <p className="text-sm text-muted-foreground">High Activity</p>
+                <p className="text-xl font-bold">{verifiedCarriers.filter(c => c.activityLevel === "high").length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <Star className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Avg Rating</p>
+                <p className="text-xl font-bold">{(verifiedCarriers.reduce((sum, c) => sum + c.rating, 0) / Math.max(1, verifiedCarriers.length)).toFixed(1)}</p>
               </div>
             </div>
           </CardContent>

@@ -50,6 +50,7 @@ import CarrierProfilePage from "@/pages/admin/carrier-profile";
 import AdminVolumeAnalytics from "@/pages/admin/volume-analytics";
 import RevenueDashboard from "@/pages/admin/revenue-dashboard";
 import AdminLoadQueuePage from "@/pages/admin/load-queue";
+import AdminNegotiationsPage from "@/pages/admin/negotiations";
 import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import { AdminDataProvider } from "@/lib/admin-data-store";
@@ -137,6 +138,7 @@ function AppContent() {
               
               <Route path="/admin" component={AdminOverview} />
               <Route path="/admin/queue" component={AdminLoadQueuePage} />
+              <Route path="/admin/negotiations" component={AdminNegotiationsPage} />
               <Route path="/admin/users" component={AdminUsersPage} />
               <Route path="/admin/users/:id" component={AdminUsersPage} />
               <Route path="/admin/loads" component={AdminLoadsPage} />

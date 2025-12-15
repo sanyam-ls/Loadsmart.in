@@ -435,8 +435,13 @@ export async function registerRoutes(
       const user = await storage.getUser(req.session.userId!);
       if (!user) return res.status(401).json({ error: "Unauthorized" });
 
+      const { action, status, reason, counterAmount, notes } = req.body;
+
       // Use workflow service for bid acceptance (auto-closes other bids + awards load)
-      if (req.body.status === "accepted") {
+      if (action === "accept" || status === "accepted") {
+        if (user.role !== "admin") {
+          return res.status(403).json({ error: "Only admin can accept bids" });
+        }
         const result = await acceptBid(req.params.id, user.id);
         if (!result.success) {
           return res.status(400).json({ error: result.error });
@@ -445,12 +450,42 @@ export async function registerRoutes(
       }
 
       // Use workflow service for bid rejection
-      if (req.body.status === "rejected") {
-        const result = await rejectBid(req.params.id, user.id, req.body.reason);
+      if (action === "reject" || status === "rejected") {
+        if (user.role !== "admin") {
+          return res.status(403).json({ error: "Only admin can reject bids" });
+        }
+        const result = await rejectBid(req.params.id, user.id, reason);
         if (!result.success) {
           return res.status(400).json({ error: result.error });
         }
         return res.json(result.bid);
+      }
+
+      // Handle counter offer from admin
+      if (action === "counter") {
+        if (user.role !== "admin") {
+          return res.status(403).json({ error: "Only admin can counter bids" });
+        }
+        const bid = await storage.getBid(req.params.id);
+        if (!bid) {
+          return res.status(404).json({ error: "Bid not found" });
+        }
+        
+        // Update bid with counter offer
+        const updatedBid = await storage.updateBid(req.params.id, {
+          status: "countered",
+          notes: notes || `Admin counter: $${counterAmount}`,
+        });
+        
+        // Update load state to counter_received (negotiation active)
+        if (bid.loadId) {
+          await storage.updateLoad(bid.loadId, { 
+            status: "counter_received",
+            statusNote: `Admin countered with $${counterAmount}`
+          });
+        }
+        
+        return res.json(updatedBid);
       }
 
       // For other updates, use storage directly

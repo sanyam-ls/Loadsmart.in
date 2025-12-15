@@ -67,6 +67,7 @@ const soloItems = [
 const adminItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
   { title: "Load Queue", url: "/admin/queue", icon: ClipboardList },
+  { title: "Negotiations", url: "/admin/negotiations", icon: Gavel },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "All Loads", url: "/admin/loads", icon: Package },
   { title: "Carriers", url: "/admin/carriers", icon: Truck },

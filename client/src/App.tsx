@@ -22,8 +22,8 @@ import ShipperLoadsPage from "@/pages/shipper/loads";
 import LoadDetailPage from "@/pages/shipper/load-detail";
 import TrackingPage from "@/pages/shipper/tracking";
 import ShipperDocumentsPage from "@/pages/shipper/documents";
-import NearbyTrucksPage from "@/pages/shipper/nearby-trucks";
 import ShipperInvoicesPage from "@/pages/shipper/invoices";
+import AdminNearbyTrucksPage from "@/pages/admin/nearby-trucks";
 
 import CarrierDashboard from "@/pages/carrier/dashboard";
 import AddTruckPage from "@/pages/carrier/add-truck";
@@ -147,7 +147,7 @@ function AppContent() {
               <Route path="/admin/analytics" component={AdminVolumeAnalytics} />
               <Route path="/admin/revenue" component={RevenueDashboard} />
               <Route path="/admin/revenue/:metric" component={RevenueDashboard} />
-              <Route path="/admin/nearby-trucks" component={NearbyTrucksPage} />
+              <Route path="/admin/nearby-trucks" component={AdminNearbyTrucksPage} />
               <Route path="/admin/verification" component={AdminCarriersPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
               

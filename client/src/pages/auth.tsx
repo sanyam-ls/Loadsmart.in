@@ -41,9 +41,18 @@ const registerSchema = z.object({
   role: z.enum(["shipper", "carrier", "admin"]),
   companyName: z.string().optional(),
   phone: z.string().optional(),
+  carrierType: z.enum(["solo", "enterprise"]).optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine((data) => {
+  if (data.role === "carrier") {
+    return !!data.carrierType;
+  }
+  return true;
+}, {
+  message: "Carrier type is required for carriers",
+  path: ["carrierType"],
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -71,8 +80,11 @@ export default function AuthPage() {
       role: "shipper",
       companyName: "",
       phone: "",
+      carrierType: undefined,
     },
   });
+
+  const selectedRole = registerForm.watch("role");
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -101,6 +113,7 @@ export default function AuthPage() {
         role: data.role as UserRole,
         companyName: data.companyName,
         phone: data.phone,
+        carrierType: data.carrierType,
       });
       if (success) {
         toast({ title: "Account created!", description: "Welcome to FreightFlow." });
@@ -259,6 +272,29 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
+                      {selectedRole === "carrier" && (
+                        <FormField
+                          control={registerForm.control}
+                          name="carrierType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Carrier Type</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-carrier-type">
+                                    <SelectValue placeholder="Select carrier type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="solo">Solo Driver (Owner-Operator)</SelectItem>
+                                  <SelectItem value="enterprise">Fleet / Company</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={registerForm.control}

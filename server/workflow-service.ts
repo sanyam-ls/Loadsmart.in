@@ -292,9 +292,9 @@ export async function acceptBid(
           totalAmount: (parseFloat(finalAmount) * 1.18).toFixed(2),
           paymentTerms: "Net 30",
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          notes: `Invoice generated for load ${load.loadId} after carrier finalization`,
+          notes: `Invoice generated for load ${load.id} after carrier finalization`,
           lineItems: [{
-            description: `Freight services: ${load.pickup} to ${load.drop}`,
+            description: `Freight services: ${load.pickupCity} to ${load.dropoffCity}`,
             quantity: 1,
             rate: finalAmount,
             amount: finalAmount

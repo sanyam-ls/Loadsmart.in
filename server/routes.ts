@@ -86,7 +86,7 @@ export async function registerRoutes(
       if (user.role === "carrier") {
         await storage.createCarrierProfile({
           userId: user.id,
-          fleetSize: 1,
+          fleetSize: user.carrierType === "solo" ? 1 : 1,
           serviceZones: [],
           reliabilityScore: "0",
           communicationScore: "0",

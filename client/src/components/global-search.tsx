@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMockData } from "@/lib/mock-data-store";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth-context";
 
 interface MockCarrier {
   id: string;
@@ -46,7 +47,9 @@ export function GlobalSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const { loads, bids } = useMockData();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const carriers = staticCarriers;
+  const isShipper = user?.role === "shipper";
 
   const searchAll = useCallback((searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -81,49 +84,51 @@ export function GlobalSearch() {
       }
     });
 
-    bids.forEach((bid) => {
-      if (
-        bid.bidId.toLowerCase().includes(q) ||
-        bid.carrierName.toLowerCase().includes(q) ||
-        bid.loadId.toLowerCase().includes(q) ||
-        bid.status.toLowerCase().includes(q)
-      ) {
-        searchResults.push({
-          id: bid.bidId,
-          type: "bid",
-          title: `${bid.carrierName} - $${bid.bidPrice.toLocaleString()}`,
-          subtitle: `Bid on ${bid.loadId}`,
-          route: `/shipper/pending-bids`,
-          status: bid.status,
-          statusVariant: bid.status === "Pending" 
-            ? "default" 
-            : bid.status === "Accepted" 
-            ? "secondary"
-            : bid.status === "Countered"
-            ? "outline"
-            : "destructive",
-        });
-      }
-    });
+    if (!isShipper) {
+      bids.forEach((bid) => {
+        if (
+          bid.bidId.toLowerCase().includes(q) ||
+          bid.carrierName.toLowerCase().includes(q) ||
+          bid.loadId.toLowerCase().includes(q) ||
+          bid.status.toLowerCase().includes(q)
+        ) {
+          searchResults.push({
+            id: bid.bidId,
+            type: "bid",
+            title: `${bid.carrierName} - $${bid.bidPrice.toLocaleString()}`,
+            subtitle: `Bid on ${bid.loadId}`,
+            route: `/admin/bids`,
+            status: bid.status,
+            statusVariant: bid.status === "Pending" 
+              ? "default" 
+              : bid.status === "Accepted" 
+              ? "secondary"
+              : bid.status === "Countered"
+              ? "outline"
+              : "destructive",
+          });
+        }
+      });
 
-    carriers.forEach((carrier) => {
-      if (
-        carrier.name.toLowerCase().includes(q) ||
-        carrier.mcNumber.toLowerCase().includes(q) ||
-        carrier.location.toLowerCase().includes(q) ||
-        carrier.fleet.toLowerCase().includes(q)
-      ) {
-        searchResults.push({
-          id: carrier.id,
-          type: "carrier",
-          title: carrier.name,
-          subtitle: `${carrier.location} • ${carrier.fleet}`,
-          route: `/shipper/carriers`,
-          status: carrier.status,
-          statusVariant: carrier.status === "Approved" ? "secondary" : "outline",
-        });
-      }
-    });
+      carriers.forEach((carrier) => {
+        if (
+          carrier.name.toLowerCase().includes(q) ||
+          carrier.mcNumber.toLowerCase().includes(q) ||
+          carrier.location.toLowerCase().includes(q) ||
+          carrier.fleet.toLowerCase().includes(q)
+        ) {
+          searchResults.push({
+            id: carrier.id,
+            type: "carrier",
+            title: carrier.name,
+            subtitle: `${carrier.location} • ${carrier.fleet}`,
+            route: `/admin/carriers`,
+            status: carrier.status,
+            statusVariant: carrier.status === "Approved" ? "secondary" : "outline",
+          });
+        }
+      });
+    }
 
     const mockDocuments = [
       { id: "doc-1", name: "Bill of Lading - LD-001", type: "BOL", loadId: "LD-001" },
@@ -150,7 +155,7 @@ export function GlobalSearch() {
     });
 
     setResults(searchResults.slice(0, 10));
-  }, [loads, bids, carriers]);
+  }, [loads, bids, carriers, isShipper]);
 
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
@@ -216,7 +221,7 @@ export function GlobalSearch() {
         data-testid="button-global-search"
       >
         <Search className="h-4 w-4" />
-        <span className="flex-1 text-left">Search loads, carriers...</span>
+        <span className="flex-1 text-left">{isShipper ? "Search loads, documents..." : "Search loads, carriers..."}</span>
         <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
           <span className="text-xs">Ctrl</span>K
         </kbd>
@@ -230,7 +235,7 @@ export function GlobalSearch() {
           <div className="flex items-center border-b px-3">
             <Search className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
             <Input
-              placeholder="Search loads, carriers, bids, documents..."
+              placeholder={isShipper ? "Search loads, documents..." : "Search loads, carriers, bids, documents..."}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="border-0 focus-visible:ring-0 flex-1"
@@ -254,7 +259,7 @@ export function GlobalSearch() {
               <div className="p-8 text-center text-muted-foreground">
                 <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No results found for "{query}"</p>
-                <p className="text-sm mt-1">Try searching for load IDs, carrier names, or routes</p>
+                <p className="text-sm mt-1">{isShipper ? "Try searching for load IDs or routes" : "Try searching for load IDs, carrier names, or routes"}</p>
               </div>
             )}
 
@@ -262,33 +267,67 @@ export function GlobalSearch() {
               <div className="p-4 space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Quick Actions</p>
                 <div className="space-y-1">
-                  <button
-                    className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
-                    onClick={() => { setLocation("/shipper/post-load"); setOpen(false); }}
-                    data-testid="search-quick-post-load"
-                  >
-                    <Package className="h-4 w-4 text-primary" />
-                    <span className="text-sm">Post a new load</span>
-                    <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
-                    onClick={() => { setLocation("/shipper/pending-bids"); setOpen(false); }}
-                    data-testid="search-quick-pending-bids"
-                  >
-                    <DollarSign className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">View pending bids</span>
-                    <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
-                    onClick={() => { setLocation("/shipper/in-transit"); setOpen(false); }}
-                    data-testid="search-quick-in-transit"
-                  >
-                    <MapPin className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm">Track in-transit loads</span>
-                    <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
-                  </button>
+                  {isShipper ? (
+                    <>
+                      <button
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                        onClick={() => { setLocation("/shipper/post-load"); setOpen(false); }}
+                        data-testid="search-quick-post-load"
+                      >
+                        <Package className="h-4 w-4 text-primary" />
+                        <span className="text-sm">Post a new load</span>
+                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </button>
+                      <button
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                        onClick={() => { setLocation("/shipper/loads"); setOpen(false); }}
+                        data-testid="search-quick-my-loads"
+                      >
+                        <Package className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm">View my loads</span>
+                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </button>
+                      <button
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                        onClick={() => { setLocation("/shipper/tracking"); setOpen(false); }}
+                        data-testid="search-quick-tracking"
+                      >
+                        <MapPin className="h-4 w-4 text-green-500" />
+                        <span className="text-sm">Track shipments</span>
+                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                        onClick={() => { setLocation("/admin/load-queue"); setOpen(false); }}
+                        data-testid="search-quick-load-queue"
+                      >
+                        <Package className="h-4 w-4 text-primary" />
+                        <span className="text-sm">View load queue</span>
+                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </button>
+                      <button
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                        onClick={() => { setLocation("/admin/carriers"); setOpen(false); }}
+                        data-testid="search-quick-carriers"
+                      >
+                        <Truck className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm">Manage carriers</span>
+                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </button>
+                      <button
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                        onClick={() => { setLocation("/admin/bids"); setOpen(false); }}
+                        data-testid="search-quick-bids"
+                      >
+                        <DollarSign className="h-4 w-4 text-green-500" />
+                        <span className="text-sm">View bids</span>
+                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}

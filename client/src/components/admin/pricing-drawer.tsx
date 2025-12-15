@@ -314,8 +314,9 @@ export function PricingDrawer({
 
     setIsLocking(true);
     
-    // Check if this is a mock load (starts with "LD-") vs a real database load (UUID)
-    const isMockLoad = load.id.startsWith("LD-") || (load.loadId && load.loadId.startsWith("LD-"));
+    // Check if this is a mock load (id starts with "LD-") vs a real database load (UUID/numeric)
+    // Note: Real loads have numeric/UUID id but also have loadId field with "LD-xxx" format for display
+    const isMockLoad = typeof load.id === 'string' && load.id.startsWith("LD-");
     
     if (isMockLoad) {
       // Handle mock loads locally without API calls

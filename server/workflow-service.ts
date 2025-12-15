@@ -257,7 +257,7 @@ export async function acceptBid(
     }
   }
 
-  // Transition load to awarded state
+  // Transition load to awarded state and create invoice
   const load = await storage.getLoad(bid.loadId);
   if (load) {
     await transitionLoadState(bid.loadId, "awarded", acceptedBy, `Bid ${bidId} accepted`);
@@ -267,6 +267,44 @@ export async function acceptBid(
       finalPrice: bid.amount,
       awardedBidId: bidId,
     });
+
+    // Create invoice now that carrier is finalized (if not already exists)
+    try {
+      const existingInvoice = await storage.getInvoiceByLoad(load.id);
+      if (!existingInvoice) {
+        const invoiceNumber = await storage.generateInvoiceNumber();
+        const finalAmount = bid.amount || load.adminFinalPrice || "0";
+        
+        await storage.createInvoice({
+          invoiceNumber,
+          loadId: load.id,
+          shipperId: load.shipperId,
+          adminId: acceptedBy,
+          subtotal: finalAmount,
+          fuelSurcharge: "0",
+          tollCharges: "0",
+          handlingFee: "0",
+          insuranceFee: "0",
+          discountAmount: "0",
+          discountReason: null,
+          taxPercent: "18",
+          taxAmount: (parseFloat(finalAmount) * 0.18).toFixed(2),
+          totalAmount: (parseFloat(finalAmount) * 1.18).toFixed(2),
+          paymentTerms: "Net 30",
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          notes: `Invoice generated for load ${load.loadId} after carrier finalization`,
+          lineItems: [{
+            description: `Freight services: ${load.pickup} to ${load.drop}`,
+            quantity: 1,
+            rate: finalAmount,
+            amount: finalAmount
+          }],
+          status: "draft",
+        });
+      }
+    } catch (invoiceError) {
+      console.error("Failed to create invoice after bid acceptance:", invoiceError);
+    }
   }
 
   return { success: true, bid: updatedBid };

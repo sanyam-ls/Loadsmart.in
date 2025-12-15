@@ -564,7 +564,7 @@ export default function LoadQueuePage() {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => navigate(`/admin/loads/${load.id}`)}
+                              onClick={() => openRealLoadPricingDrawer(load)}
                               data-testid={`button-view-real-${load.id.slice(0, 8)}`}
                             >
                               <Eye className="h-4 w-4 mr-1" />

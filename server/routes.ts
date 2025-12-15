@@ -4,6 +4,14 @@ import session from "express-session";
 import { storage } from "./storage";
 import { insertUserSchema, insertLoadSchema, insertTruckSchema, insertBidSchema } from "@shared/schema";
 import { z } from "zod";
+import { 
+  getLoadsForRole, 
+  checkCarrierEligibility, 
+  canUserBidOnLoad, 
+  acceptBid, 
+  rejectBid,
+  transitionLoadState
+} from "./workflow-service";
 import { setupTelemetryWebSocket } from "./websocket-telemetry";
 import {
   getAllVehiclesTelemetry,
@@ -155,19 +163,14 @@ export async function registerRoutes(
     });
   });
 
+  // GET /api/loads - Role-based load visibility (enforced at API level)
   app.get("/api/loads", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
       if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-      let loadsList;
-      if (user.role === "shipper") {
-        loadsList = await storage.getLoadsByShipper(user.id);
-      } else if (user.role === "carrier") {
-        loadsList = await storage.getAvailableLoads();
-      } else {
-        loadsList = await storage.getAllLoads();
-      }
+      // Use workflow service for role-based visibility
+      const loadsList = await getLoadsForRole(user);
 
       const loadsWithBids = await Promise.all(
         loadsList.map(async (load) => {

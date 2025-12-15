@@ -1,0 +1,206 @@
+(REMOVE SHIPPER–CARRIER SURFACES · ADMIN-ONLY INTELLIGENCE · SIMULATED DATA)
+
+You are acting as a Principal System Architect refining a production trucking marketplace.
+
+The core workflow (admin-led bidding, negotiation, carrier finalization, invoicing) is already approved and must remain unchanged.
+
+Your task is to remove conflicting surfaces, relocate intelligence to Admin, and enforce strict role isolation — without redesigning UI components or introducing new features.
+
+You must not write code.
+You must only instruct behavioral and visibility changes.
+
+⸻
+
+1. REMOVE “NEGOTIATIONS” PAGE FROM SHIPPER PORTAL (HARD DELETE)
+
+Directive
+
+The Negotiations page must be completely removed from the Shipper Portal.
+
+Rationale
+	•	Shippers are not negotiators
+	•	All negotiation is Admin ↔ Carrier only
+	•	This page violates the admin-intermediary rule
+
+Enforcement
+	•	Remove navigation entry
+	•	Remove route access
+	•	Remove any deep links
+	•	Remove any notification that could lead to it
+
+If the page exists in UI but is hidden → FAIL
+It must be functionally inaccessible.
+
+⸻
+
+2. REMOVE “CARRIERS / CARRIER DIRECTORY” FROM SHIPPER PORTAL (FULL REMOVAL)
+
+Directive
+
+The Carriers / Carrier Directory / Request Quote / View Profile functionality must be entirely removed from the Shipper Portal.
+
+Shipper must NEVER be able to:
+	•	Browse carriers
+	•	View carrier ratings
+	•	View carrier fleet sizes
+	•	Request quotes
+	•	View carrier profiles
+	•	See carrier service zones
+
+Enforcement
+	•	Remove “Carriers” from navigation
+	•	Remove carrier cards
+	•	Remove request-quote buttons
+	•	Remove carrier profile routes
+
+Shipper must not know carriers exist as selectable entities.
+
+⸻
+
+3. SHIPPER PORTAL — FINAL ALLOWED PAGES ONLY
+
+After cleanup, the Shipper Portal must contain only:
+
+✅ Dashboard
+✅ Post Load (submission only, no pricing)
+✅ My Loads (status tracking only)
+✅ Invoices (final invoice only, post-carrier-finalization)
+✅ Track Shipments (post-assignment only)
+✅ Documents
+
+If any page enables carrier discovery or negotiation → FAIL
+
+⸻
+
+4. NEARBY TRUCKS — MOVE TO ADMIN ONLY (SIMULATED INTELLIGENCE)
+
+Directive
+
+The Nearby Trucks feature must be removed from the Shipper Portal and relocated entirely to Admin Console.
+
+New Behavior (Admin Side Only)
+
+Admin must see a Nearby Trucks / Availability Intelligence panel that:
+	•	Shows simulated carrier availability
+	•	Is used only for:
+	•	Pricing confidence
+	•	Negotiation leverage
+	•	Allocation intelligence
+
+Data Rules
+	•	Data is simulated
+	•	No live GPS dependency required
+	•	Display:
+	•	Approximate truck counts
+	•	Vehicle types
+	•	Regional density
+	•	Estimated pickup readiness
+
+Shipper Access
+	•	Shipper must never see nearby trucks
+	•	Shipper must never infer supply-side dynamics
+
+⸻
+
+5. SHIPPER ROLE — LOCKED & PASSIVE (STRICT)
+
+Shipper must be completely passive in market mechanics.
+
+Shipper CAN:
+	•	Submit load
+	•	View load status
+	•	View assigned carrier (after admin finalization)
+	•	View & approve invoice
+	•	Track shipment
+
+Shipper CANNOT:
+
+❌ Start bidding
+❌ View bids
+❌ Trigger negotiations
+❌ See carrier supply
+❌ Request quotes
+❌ Message carriers
+❌ Select carriers
+
+If any shipper action influences carrier flow → FAIL
+
+⸻
+
+6. ADMIN — SOLE MARKET OPERATOR (REINFORCED)
+
+Admin must be the only entity that can:
+	•	See carrier supply intelligence
+	•	Post loads to carriers
+	•	Open & close bidding
+	•	Negotiate pricing
+	•	Select final carrier
+	•	Generate invoices
+	•	Control margins
+
+All intelligence surfaces (pricing, trucks, supply, bids) must live only in Admin Console.
+
+⸻
+
+7. CARRIER EXPERIENCE — UNCHANGED BUT CLEAN
+
+Carrier Portal (Enterprise + Solo) remains unchanged in UI, but behavior must ensure:
+	•	Loads appear only when admin posts
+	•	All bids go only to admin
+	•	No carrier ever sees shipper pricing actions
+	•	No carrier ever communicates with shipper
+
+Carrier → Admin → System → Shipper
+Never any other path.
+
+⸻
+
+8. NOTIFICATIONS — ROLE-ISOLATED (FINAL PASS)
+
+Shipper Notifications
+	•	“Your load is under admin review”
+	•	“Carrier assigned”
+	•	“Invoice available”
+	•	“Shipment in transit”
+
+Carrier Notifications
+	•	“New admin-posted load”
+	•	“Admin counter-offer”
+	•	“You’ve been awarded the load”
+
+No shipper notification may reference:
+	•	Bids
+	•	Carriers competing
+	•	Market activity
+
+⸻
+
+9. ACCEPTANCE CHECK (HARD FAIL CONDITIONS)
+
+❌ Shipper can browse carriers
+❌ Shipper sees nearby trucks
+❌ Shipper negotiates pricing
+❌ Shipper requests quotes
+❌ Shipper accesses negotiations page
+
+✅ Admin controls all intelligence
+✅ Carrier bids visible only to admin
+✅ Shipper sees only finalized outcomes
+
+⸻
+
+FINAL GOVERNANCE STATEMENT
+
+This platform is not a marketplace UI for shippers.
+It is a managed freight exchange.
+	•	Admin runs the market
+	•	Carriers compete
+	•	Shippers submit & approve
+
+No discovery. No negotiation. No supply insight for shippers.
+
+One flow.
+One authority.
+Zero leakage.
+
+Execute these changes without altering any other feature or workflow.

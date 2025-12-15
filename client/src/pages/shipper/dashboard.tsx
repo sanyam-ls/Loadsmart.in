@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Package, DollarSign, Truck, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, FileText } from "lucide-react";
+import { Package, DollarSign, Truck, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, FileText, Receipt } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,39 +19,28 @@ import {
 } from "recharts";
 
 
-const mockTopCarriers = [
-  { id: "c1", name: "FastHaul Logistics", rating: 4.9, deliveries: 234 },
-  { id: "c2", name: "Swift Transport", rating: 4.8, deliveries: 189 },
-  { id: "c3", name: "Premier Freight", rating: 4.7, deliveries: 156 },
-];
-
-
 export default function ShipperDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { 
-    loads, 
     getActiveLoads, 
-    getPendingBids, 
     getInTransitLoads, 
-    spend,
-    trucks
+    spend
   } = useMockData();
   const { getExpiringDocuments, getExpiredDocuments } = useDocumentVault();
 
   const activeLoads = getActiveLoads();
-  const pendingBids = getPendingBids();
   const inTransitLoads = getInTransitLoads();
   const expiringDocs = getExpiringDocuments();
   const expiredDocs = getExpiredDocuments();
   
-  const recentLoads = activeLoads.slice(0, 3);
+  const recentLoads = activeLoads.slice(0, 5);
 
   const spendChange = spend.percentChange;
 
   const dashboardAlerts = [
     { id: "delay-1", type: "delay", message: "Shipment LD-T001 may be delayed by 30 mins", time: "5 mins ago" },
-    { id: "bid-1", type: "bid", message: "New bid received for load LD-002", time: "12 mins ago" },
+    { id: "status-1", type: "status", message: "Carrier assigned for load LD-003", time: "1 hour ago" },
     ...expiredDocs.slice(0, 2).map((doc, i) => ({
       id: `expired-${i}`,
       type: "document" as const,
@@ -91,19 +80,11 @@ export default function ShipperDashboard() {
           testId="stat-active-loads"
         />
         <StatCard
-          title="Pending Bids"
-          value={pendingBids.length}
-          icon={Clock}
-          subtitle="Awaiting your response"
-          onClick={() => navigate("/shipper/pending-bids")}
-          testId="stat-pending-bids"
-        />
-        <StatCard
           title="In Transit"
           value={inTransitLoads.length}
           icon={Truck}
           trend={{ value: 8, isPositive: true }}
-          onClick={() => navigate("/shipper/in-transit")}
+          onClick={() => navigate("/shipper/tracking")}
           testId="stat-in-transit"
         />
         <StatCard
@@ -111,8 +92,16 @@ export default function ShipperDashboard() {
           value={`Rs. ${spend.totalAmount.toLocaleString('en-IN')}`}
           icon={DollarSign}
           trend={{ value: Math.abs(spendChange), isPositive: spendChange > 0 }}
-          onClick={() => navigate("/shipper/spend")}
+          onClick={() => navigate("/shipper/invoices")}
           testId="stat-monthly-spend"
+        />
+        <StatCard
+          title="Documents"
+          value={expiringDocs.length + expiredDocs.length}
+          icon={FileText}
+          subtitle="Need attention"
+          onClick={() => navigate("/shipper/documents")}
+          testId="stat-documents"
         />
       </div>
 
@@ -185,7 +174,7 @@ export default function ShipperDashboard() {
                       <FileText className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500" />
                     ) : (
                       <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                        alert.type === "delay" ? "text-red-500" : "text-blue-500"
+                        alert.type === "delay" ? "text-red-500" : "text-green-500"
                       }`} />
                     )}
                     <div className="flex-1 min-w-0">
@@ -236,9 +225,9 @@ export default function ShipperDashboard() {
                         <Badge 
                           variant="secondary" 
                           className={`text-xs ${
-                            load.status === "Active" 
+                            load.status === "En Route" 
                               ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
-                              : load.status === "Bidding" 
+                              : load.status === "Pending Admin Review" 
                                 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                 : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                           }`}
@@ -247,11 +236,10 @@ export default function ShipperDashboard() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
-                        {load.pickup} → {load.drop}
+                        {load.pickup} to {load.drop}
                       </p>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="font-medium">Rs. {(load.estimatedPrice ?? 0).toLocaleString('en-IN')}</p>
                       <p className="text-xs text-muted-foreground">{load.weight.toLocaleString('en-IN')} {load.weightUnit}</p>
                     </div>
                   </div>
@@ -261,80 +249,45 @@ export default function ShipperDashboard() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-              <CardTitle className="text-lg">Nearby Trucks</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/nearby-trucks")} data-testid="link-view-nearby-trucks">
-                Find Trucks
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {trucks.filter(t => t.availabilityStatus === "Available").slice(0, 4).map((truck) => (
-                  <div
-                    key={truck.truckId}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                    onClick={() => navigate("/shipper/nearby-trucks")}
-                    data-testid={`nearby-truck-${truck.truckId}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Truck className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <span className="font-medium text-sm">{truck.carrierName}</span>
-                        <p className="text-xs text-muted-foreground">{truck.currentLocation}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">{truck.truckType}</Badge>
-                      <Badge 
-                        className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate"
-                      >
-                        {truck.reliabilityScore}%
-                      </Badge>
-                    </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
+            <CardTitle className="text-lg">Recent Invoices</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/invoices")} data-testid="link-view-invoices">
+              View All
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer" onClick={() => navigate("/shipper/invoices")} data-testid="invoice-recent-1">
+                <div className="flex items-center gap-3">
+                  <Receipt className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="font-medium text-sm">INV-2024-001</span>
+                    <p className="text-xs text-muted-foreground">Dec 10, 2024</p>
                   </div>
-                ))}
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">Rs. 45,000</p>
+                  <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate">Paid</Badge>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                {trucks.filter(t => t.availabilityStatus === "Available").length} trucks available near your loads
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-              <CardTitle className="text-lg">Top Carriers</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/carriers")} data-testid="link-view-all-carriers">
-                View All
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {mockTopCarriers.map((carrier, index) => (
-                  <div
-                    key={carrier.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                    data-testid={`top-carrier-${carrier.id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-medium">
-                        {index + 1}
-                      </div>
-                      <span className="font-medium">{carrier.name}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="text-amber-500">* {carrier.rating}</span>
-                      <span className="text-muted-foreground">{carrier.deliveries} trips</span>
-                    </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer" onClick={() => navigate("/shipper/invoices")} data-testid="invoice-recent-2">
+                <div className="flex items-center gap-3">
+                  <Receipt className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="font-medium text-sm">INV-2024-002</span>
+                    <p className="text-xs text-muted-foreground">Dec 12, 2024</p>
                   </div>
-                ))}
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">Rs. 32,500</p>
+                  <Badge className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 no-default-hover-elevate no-default-active-elevate">Pending</Badge>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

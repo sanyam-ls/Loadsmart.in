@@ -20,11 +20,8 @@ import ShipperDashboard from "@/pages/shipper/dashboard";
 import PostLoadPage from "@/pages/shipper/post-load";
 import ShipperLoadsPage from "@/pages/shipper/loads";
 import LoadDetailPage from "@/pages/shipper/load-detail";
-import NegotiationsPage from "@/pages/shipper/negotiations";
 import TrackingPage from "@/pages/shipper/tracking";
-import CarriersPage from "@/pages/shipper/carriers";
 import ShipperDocumentsPage from "@/pages/shipper/documents";
-import SpendAnalyticsPage from "@/pages/shipper/spend";
 import NearbyTrucksPage from "@/pages/shipper/nearby-trucks";
 import ShipperInvoicesPage from "@/pages/shipper/invoices";
 
@@ -53,12 +50,10 @@ import CarrierProfilePage from "@/pages/admin/carrier-profile";
 import AdminVolumeAnalytics from "@/pages/admin/volume-analytics";
 import RevenueDashboard from "@/pages/admin/revenue-dashboard";
 import AdminLoadQueuePage from "@/pages/admin/load-queue";
-import InTransitPage from "@/pages/in-transit";
 import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import { AdminDataProvider } from "@/lib/admin-data-store";
 import { CarrierDataProvider } from "@/lib/carrier-data-store";
-import PendingBidsPage from "@/pages/shipper/pending-bids";
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -119,12 +114,7 @@ function AppContent() {
               <Route path="/shipper/post-load" component={PostLoadPage} />
               <Route path="/shipper/loads" component={ShipperLoadsPage} />
               <Route path="/shipper/loads/:id" component={LoadDetailPage} />
-              <Route path="/shipper/spend" component={SpendAnalyticsPage} />
-              <Route path="/shipper/pending-bids" component={PendingBidsPage} />
-              <Route path="/shipper/negotiations" component={NegotiationsPage} />
               <Route path="/shipper/tracking" component={TrackingPage} />
-              <Route path="/shipper/carriers" component={CarriersPage} />
-              <Route path="/shipper/nearby-trucks" component={NearbyTrucksPage} />
               <Route path="/shipper/documents" component={ShipperDocumentsPage} />
               <Route path="/shipper/invoices" component={ShipperInvoicesPage} />
               
@@ -157,10 +147,9 @@ function AppContent() {
               <Route path="/admin/analytics" component={AdminVolumeAnalytics} />
               <Route path="/admin/revenue" component={RevenueDashboard} />
               <Route path="/admin/revenue/:metric" component={RevenueDashboard} />
+              <Route path="/admin/nearby-trucks" component={NearbyTrucksPage} />
               <Route path="/admin/verification" component={AdminCarriersPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
-              
-              <Route path="/shipper/in-transit" component={InTransitPage} />
               
               <Route path="/settings" component={SettingsPage} />
               

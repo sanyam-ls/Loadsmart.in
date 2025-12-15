@@ -40,12 +40,8 @@ const shipperItems = [
   { title: "Post Load", url: "/shipper/post-load", icon: Plus },
   { title: "My Loads", url: "/shipper/loads", icon: Package },
   { title: "Invoices", url: "/shipper/invoices", icon: FileText },
-  { title: "Nearby Trucks", url: "/shipper/nearby-trucks", icon: MapPin },
-  { title: "Negotiations", url: "/shipper/negotiations", icon: MessageSquare },
   { title: "Track Shipments", url: "/shipper/tracking", icon: Route },
-  { title: "In-Transit", url: "/shipper/in-transit", icon: Radio },
-  { title: "Carriers", url: "/shipper/carriers", icon: Truck },
-  { title: "Documents", url: "/shipper/documents", icon: DollarSign },
+  { title: "Documents", url: "/shipper/documents", icon: FileText },
 ];
 
 const carrierItems = [
@@ -74,6 +70,7 @@ const adminItems = [
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "All Loads", url: "/admin/loads", icon: Package },
   { title: "Carriers", url: "/admin/carriers", icon: Truck },
+  { title: "Nearby Trucks", url: "/admin/nearby-trucks", icon: MapPin },
   { title: "Verification", url: "/admin/verification", icon: Shield },
   { title: "Reports", url: "/admin/reports", icon: BarChart3 },
 ];

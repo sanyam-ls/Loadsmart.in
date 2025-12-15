@@ -2,7 +2,10 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertUserSchema, insertLoadSchema, insertTruckSchema, insertBidSchema } from "@shared/schema";
+import { 
+  insertUserSchema, insertLoadSchema, insertTruckSchema, insertBidSchema,
+  insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema
+} from "@shared/schema";
 import { z } from "zod";
 import { 
   getLoadsForRole, 
@@ -3967,6 +3970,545 @@ export async function registerRoutes(
       res.json({ success: true, action: processed });
     } catch (error) {
       console.error("Process queue action error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ==================== CARRIER VERIFICATION ROUTES ====================
+
+  // GET /api/admin/verifications - Get all carrier verifications
+  app.get("/api/admin/verifications", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const verifications = await storage.getAllCarrierVerifications();
+      
+      // Enrich with carrier info and documents
+      const enrichedVerifications = await Promise.all(
+        verifications.map(async (v) => {
+          const carrier = await storage.getUser(v.carrierId);
+          const profile = await storage.getCarrierProfile(v.carrierId);
+          const documents = await storage.getVerificationDocuments(v.id);
+          return {
+            ...v,
+            carrier: carrier ? { username: carrier.username, companyName: carrier.companyName, email: carrier.email } : null,
+            profile,
+            documents,
+          };
+        })
+      );
+
+      res.json(enrichedVerifications);
+    } catch (error) {
+      console.error("Get verifications error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/verifications/pending - Get pending verifications
+  app.get("/api/admin/verifications/pending", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const verifications = await storage.getCarrierVerificationsByStatus("pending");
+      
+      const enrichedVerifications = await Promise.all(
+        verifications.map(async (v) => {
+          const carrier = await storage.getUser(v.carrierId);
+          const profile = await storage.getCarrierProfile(v.carrierId);
+          const documents = await storage.getVerificationDocuments(v.id);
+          return {
+            ...v,
+            carrier: carrier ? { username: carrier.username, companyName: carrier.companyName, email: carrier.email } : null,
+            profile,
+            documents,
+          };
+        })
+      );
+
+      res.json(enrichedVerifications);
+    } catch (error) {
+      console.error("Get pending verifications error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/verifications/:id/approve - Approve carrier verification
+  app.post("/api/admin/verifications/:id/approve", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const verification = await storage.getCarrierVerification(req.params.id);
+      if (!verification) {
+        return res.status(404).json({ error: "Verification not found" });
+      }
+
+      // Validate request body - only allow safe fields
+      const approveSchema = z.object({
+        notes: z.string().optional(),
+      });
+
+      const validatedBody = approveSchema.parse(req.body);
+
+      // Update verification status with server-controlled sensitive fields
+      const updated = await storage.updateCarrierVerification(req.params.id, {
+        status: "approved", // Server-controlled
+        reviewedBy: user.id, // Always use authenticated admin
+        reviewedAt: new Date(), // Server timestamp
+        notes: validatedBody.notes,
+      });
+
+      // Also mark the user as verified
+      await storage.updateUser(verification.carrierId, { isVerified: true });
+
+      // Create audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        userId: verification.carrierId,
+        actionType: "approve_verification",
+        actionDescription: `Approved carrier verification for ${verification.carrierId}`,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Approve verification error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/verifications/:id/reject - Reject carrier verification
+  app.post("/api/admin/verifications/:id/reject", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const verification = await storage.getCarrierVerification(req.params.id);
+      if (!verification) {
+        return res.status(404).json({ error: "Verification not found" });
+      }
+
+      // Validate request body - only allow safe fields
+      const rejectSchema = z.object({
+        reason: z.string().min(1, "Rejection reason is required"),
+        notes: z.string().optional(),
+      });
+
+      const validatedBody = rejectSchema.parse(req.body);
+
+      // Update verification with server-controlled sensitive fields
+      const updated = await storage.updateCarrierVerification(req.params.id, {
+        status: "rejected", // Server-controlled
+        reviewedBy: user.id, // Always use authenticated admin
+        reviewedAt: new Date(), // Server timestamp
+        rejectionReason: validatedBody.reason,
+        notes: validatedBody.notes,
+      });
+
+      // Create audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        userId: verification.carrierId,
+        actionType: "reject_verification",
+        actionDescription: `Rejected carrier verification for ${verification.carrierId}: ${validatedBody.reason}`,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Reject verification error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/carrier/verification - Submit carrier verification request
+  app.post("/api/carrier/verification", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Check for existing pending verification
+      const existing = await storage.getCarrierVerificationByCarrier(user.id);
+      if (existing && existing.status === "pending") {
+        return res.status(400).json({ error: "You already have a pending verification request" });
+      }
+
+      // Strict schema - ONLY user-controlled fields, using .strict() to reject unknown keys
+      const userInputSchema = z.object({
+        carrierType: z.enum(["solo", "enterprise"]).optional().default("solo"),
+        fleetSize: z.number().int().min(1).optional().default(1),
+        notes: z.string().optional(),
+      }).strict();
+
+      const userInput = userInputSchema.parse(req.body);
+
+      // Build final payload with ONLY server-controlled sensitive fields
+      const verification = await storage.createCarrierVerification({
+        carrierId: user.id,
+        carrierType: userInput.carrierType,
+        fleetSize: userInput.fleetSize,
+        status: "pending",
+        notes: userInput.notes,
+      });
+
+      res.json(verification);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Submit verification error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier/verification - Get carrier's own verification status
+  app.get("/api/carrier/verification", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const verification = await storage.getCarrierVerificationByCarrier(user.id);
+      if (!verification) {
+        return res.json(null);
+      }
+
+      const documents = await storage.getVerificationDocuments(verification.id);
+      res.json({ ...verification, documents });
+    } catch (error) {
+      console.error("Get carrier verification error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/carrier/verification/documents - Upload verification document
+  app.post("/api/carrier/verification/documents", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const verification = await storage.getCarrierVerificationByCarrier(user.id);
+      if (!verification) {
+        return res.status(400).json({ error: "No verification request found. Please submit a verification request first." });
+      }
+
+      // Strict schema - ONLY user-controlled fields
+      const userInputSchema = z.object({
+        documentType: z.enum(["license", "rc", "insurance", "pan", "gst", "aadhar", "fleet_proof", "other"]),
+        fileName: z.string().min(1),
+        fileUrl: z.string().url(),
+        fileSize: z.number().int().optional(),
+        expiryDate: z.string().optional(),
+      });
+
+      const userInput = userInputSchema.parse(req.body);
+
+      // Build final payload - server controls verificationId and carrierId
+      const document = await storage.createVerificationDocument({
+        verificationId: verification.id,
+        carrierId: user.id,
+        documentType: userInput.documentType,
+        fileName: userInput.fileName,
+        fileUrl: userInput.fileUrl,
+        fileSize: userInput.fileSize,
+        expiryDate: userInput.expiryDate ? new Date(userInput.expiryDate) : null,
+      });
+
+      res.json(document);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Upload verification document error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ==================== BID NEGOTIATION ROUTES ====================
+
+  // GET /api/bids/:id/negotiations - Get bid negotiation history
+  app.get("/api/bids/:id/negotiations", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+      const bid = await storage.getBid(req.params.id);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      const load = await storage.getLoad(bid.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Authorization: Only bid carrier, load shipper, or admin can view negotiations
+      const isCarrier = user.id === bid.carrierId;
+      const isShipper = user.id === load.shipperId;
+      const isAdmin = user.role === "admin";
+
+      if (!isCarrier && !isShipper && !isAdmin) {
+        return res.status(403).json({ error: "Not authorized to view these negotiations" });
+      }
+
+      const negotiations = await storage.getBidNegotiations(req.params.id);
+      
+      // Enrich with sender info
+      const enrichedNegotiations = await Promise.all(
+        negotiations.map(async (n) => {
+          const sender = await storage.getUser(n.senderId);
+          return {
+            ...n,
+            sender: sender ? { username: sender.username, companyName: sender.companyName } : null,
+          };
+        })
+      );
+
+      res.json(enrichedNegotiations);
+    } catch (error) {
+      console.error("Get bid negotiations error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/bids/:id/negotiate - Add negotiation message/counter offer
+  app.post("/api/bids/:id/negotiate", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+      const bid = await storage.getBid(req.params.id);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      const load = await storage.getLoad(bid.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Authorization: Only bid carrier, load shipper, or admin can negotiate
+      const isCarrier = user.id === bid.carrierId;
+      const isShipper = user.id === load.shipperId;
+      const isAdmin = user.role === "admin";
+
+      if (!isCarrier && !isShipper && !isAdmin) {
+        return res.status(403).json({ error: "Not authorized to negotiate on this bid" });
+      }
+
+      // Strict schema - ONLY user-controlled fields
+      const userInputSchema = z.object({
+        messageType: z.enum(["message", "counter_offer", "accept", "reject"]).optional().default("message"),
+        message: z.string().optional(),
+        amount: z.string().optional(),
+      });
+
+      const userInput = userInputSchema.parse(req.body);
+
+      // Build final payload - server controls senderId and senderRole from session
+      const negotiation = await storage.createBidNegotiation({
+        bidId: bid.id,
+        loadId: bid.loadId,
+        senderId: user.id,
+        senderRole: user.role,
+        messageType: userInput.messageType,
+        message: userInput.message,
+        amount: userInput.amount,
+      });
+
+      // Update bid if this is a counter offer
+      if (userInput.messageType === "counter_offer" && userInput.amount) {
+        await storage.updateBid(bid.id, {
+          status: "countered",
+          counterAmount: userInput.amount,
+        });
+
+        // Update load status if needed
+        if (load.status === "open_for_bid") {
+          await storage.updateLoad(load.id, { status: "counter_received" });
+        }
+      }
+
+      res.json(negotiation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Create bid negotiation error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ==================== INVOICE RESPONSE ROUTES ====================
+
+  // GET /api/invoices/:id/responses - Get invoice responses/negotiation history
+  app.get("/api/invoices/:id/responses", requireAuth, async (req, res) => {
+    try {
+      const responses = await storage.getShipperInvoiceResponses(req.params.id);
+      res.json(responses);
+    } catch (error) {
+      console.error("Get invoice responses error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/invoices/:id/respond - Submit shipper response to invoice
+  app.post("/api/invoices/:id/respond", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Authorization: Verify shipper owns this invoice
+      if (user.role !== "shipper" || user.id !== invoice.shipperId) {
+        return res.status(403).json({ error: "Not authorized to respond to this invoice" });
+      }
+
+      // Validate allowed status transitions
+      const allowedStatusesForResponse = ["pending", "sent", "viewed", "negotiating", "disputed"];
+      if (!allowedStatusesForResponse.includes(invoice.status)) {
+        return res.status(400).json({ error: `Cannot respond to invoice in ${invoice.status} status` });
+      }
+
+      // Strict schema - ONLY user-controlled fields
+      const userInputSchema = z.object({
+        responseType: z.enum(["approve", "negotiate", "query"]),
+        message: z.string().optional(),
+        counterAmount: z.string().optional(),
+      });
+
+      const userInput = userInputSchema.parse(req.body);
+
+      // Build final payload - server controls invoiceId, loadId, shipperId
+      const response = await storage.createShipperInvoiceResponse({
+        invoiceId: invoice.id,
+        loadId: invoice.loadId,
+        shipperId: user.id,
+        responseType: userInput.responseType,
+        message: userInput.message,
+        counterAmount: userInput.counterAmount,
+      });
+
+      // Update invoice status based on response type - server-controlled transitions
+      if (userInput.responseType === "approve") {
+        await storage.updateInvoice(invoice.id, {
+          status: "approved",
+          approvedAt: new Date(),
+          shipperResponseType: "approve",
+        });
+      } else if (userInput.responseType === "negotiate") {
+        await storage.updateInvoice(invoice.id, {
+          status: "negotiating",
+          shipperResponseType: "negotiate",
+          shipperCounterAmount: userInput.counterAmount,
+          shipperResponseMessage: userInput.message,
+        });
+      } else if (userInput.responseType === "query") {
+        await storage.updateInvoice(invoice.id, {
+          status: "disputed",
+          shipperResponseType: "query",
+          shipperResponseMessage: userInput.message,
+        });
+      }
+
+      // Create invoice history entry
+      await storage.createInvoiceHistory({
+        invoiceId: invoice.id,
+        userId: user.id,
+        action: `shipper_${userInput.responseType}`,
+        payload: { message: userInput.message, counterAmount: userInput.counterAmount },
+      });
+
+      res.json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Submit invoice response error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/invoices/:id/respond - Admin responds to shipper query/negotiation
+  app.post("/api/admin/invoices/:id/respond", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Get the pending response
+      const responses = await storage.getShipperInvoiceResponses(invoice.id);
+      const pendingResponse = responses.find((r) => r.status === "pending");
+
+      if (pendingResponse) {
+        await storage.updateShipperInvoiceResponse(pendingResponse.id, {
+          status: "resolved",
+          adminResponse: req.body.message,
+          adminRespondedAt: new Date(),
+          adminId: user.id,
+        });
+      }
+
+      // Update invoice based on admin action
+      if (req.body.action === "accept_counter") {
+        await storage.updateInvoice(invoice.id, {
+          totalAmount: req.body.newAmount || invoice.shipperCounterAmount,
+          status: "approved",
+          approvedAt: new Date(),
+        });
+      } else if (req.body.action === "reject_counter") {
+        await storage.updateInvoice(invoice.id, {
+          status: "sent", // Back to sent status for re-review
+        });
+      }
+
+      // Create audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        actionType: "invoice_response",
+        actionDescription: `Admin responded to invoice ${invoice.invoiceNumber}: ${req.body.action}`,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        metadata: { invoiceId: invoice.id, action: req.body.action },
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Admin invoice response error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

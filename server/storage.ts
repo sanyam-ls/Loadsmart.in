@@ -6,6 +6,7 @@ import {
   pricingTemplates, adminPricings, invoices, carrierSettlements,
   adminAuditLogs, apiLogs, adminActionsQueue, featureFlags,
   invoiceHistory, carrierProposals, loadStateChangeLogs, shipperInvoiceResponses,
+  carrierVerifications, carrierVerificationDocuments, bidNegotiations,
   validStateTransitions,
   type User, type InsertUser,
   type Truck, type InsertTruck,
@@ -31,6 +32,9 @@ import {
   type FeatureFlag, type InsertFeatureFlag,
   type LoadStateChangeLog, type InsertLoadStateChangeLog,
   type ShipperInvoiceResponse, type InsertShipperInvoiceResponse,
+  type CarrierVerification, type InsertCarrierVerification,
+  type CarrierVerificationDocument, type InsertCarrierVerificationDocument,
+  type BidNegotiation, type InsertBidNegotiation,
   type LoadStatus,
 } from "@shared/schema";
 
@@ -198,6 +202,25 @@ export interface IStorage {
   getPricedLoads(): Promise<Load[]>;
   getApprovedLoads(): Promise<Load[]>;
   getOpenForBidLoads(): Promise<Load[]>;
+  
+  // Carrier Verification methods
+  createCarrierVerification(verification: InsertCarrierVerification): Promise<CarrierVerification>;
+  getCarrierVerification(id: string): Promise<CarrierVerification | undefined>;
+  getCarrierVerificationByCarrier(carrierId: string): Promise<CarrierVerification | undefined>;
+  getCarrierVerificationsByStatus(status: string): Promise<CarrierVerification[]>;
+  getAllCarrierVerifications(): Promise<CarrierVerification[]>;
+  updateCarrierVerification(id: string, updates: Partial<CarrierVerification>): Promise<CarrierVerification | undefined>;
+  
+  // Carrier Verification Document methods
+  createVerificationDocument(doc: InsertCarrierVerificationDocument): Promise<CarrierVerificationDocument>;
+  getVerificationDocuments(verificationId: string): Promise<CarrierVerificationDocument[]>;
+  getVerificationDocumentsByCarrier(carrierId: string): Promise<CarrierVerificationDocument[]>;
+  updateVerificationDocument(id: string, updates: Partial<CarrierVerificationDocument>): Promise<CarrierVerificationDocument | undefined>;
+  
+  // Bid Negotiation methods
+  createBidNegotiation(negotiation: InsertBidNegotiation): Promise<BidNegotiation>;
+  getBidNegotiations(bidId: string): Promise<BidNegotiation[]>;
+  getBidNegotiationsByLoad(loadId: string): Promise<BidNegotiation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1024,11 +1047,99 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getApprovedLoads(): Promise<Load[]> {
-    return this.getLoadsByStatus('approved');
+    return this.getLoadsByStatus('awarded');
   }
 
   async getOpenForBidLoads(): Promise<Load[]> {
     return this.getLoadsByStatus('open_for_bid');
+  }
+
+  // Carrier Verification methods
+  async createCarrierVerification(verification: InsertCarrierVerification): Promise<CarrierVerification> {
+    const [newVerification] = await db.insert(carrierVerifications).values(verification).returning();
+    return newVerification;
+  }
+
+  async getCarrierVerification(id: string): Promise<CarrierVerification | undefined> {
+    const [verification] = await db.select().from(carrierVerifications).where(eq(carrierVerifications.id, id));
+    return verification;
+  }
+
+  async getCarrierVerificationByCarrier(carrierId: string): Promise<CarrierVerification | undefined> {
+    const [verification] = await db.select()
+      .from(carrierVerifications)
+      .where(eq(carrierVerifications.carrierId, carrierId))
+      .orderBy(desc(carrierVerifications.createdAt));
+    return verification;
+  }
+
+  async getCarrierVerificationsByStatus(status: string): Promise<CarrierVerification[]> {
+    return db.select()
+      .from(carrierVerifications)
+      .where(eq(carrierVerifications.status, status))
+      .orderBy(desc(carrierVerifications.createdAt));
+  }
+
+  async getAllCarrierVerifications(): Promise<CarrierVerification[]> {
+    return db.select()
+      .from(carrierVerifications)
+      .orderBy(desc(carrierVerifications.createdAt));
+  }
+
+  async updateCarrierVerification(id: string, updates: Partial<CarrierVerification>): Promise<CarrierVerification | undefined> {
+    const [updated] = await db.update(carrierVerifications)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(carrierVerifications.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Carrier Verification Document methods
+  async createVerificationDocument(doc: InsertCarrierVerificationDocument): Promise<CarrierVerificationDocument> {
+    const [newDoc] = await db.insert(carrierVerificationDocuments).values(doc).returning();
+    return newDoc;
+  }
+
+  async getVerificationDocuments(verificationId: string): Promise<CarrierVerificationDocument[]> {
+    return db.select()
+      .from(carrierVerificationDocuments)
+      .where(eq(carrierVerificationDocuments.verificationId, verificationId))
+      .orderBy(desc(carrierVerificationDocuments.createdAt));
+  }
+
+  async getVerificationDocumentsByCarrier(carrierId: string): Promise<CarrierVerificationDocument[]> {
+    return db.select()
+      .from(carrierVerificationDocuments)
+      .where(eq(carrierVerificationDocuments.carrierId, carrierId))
+      .orderBy(desc(carrierVerificationDocuments.createdAt));
+  }
+
+  async updateVerificationDocument(id: string, updates: Partial<CarrierVerificationDocument>): Promise<CarrierVerificationDocument | undefined> {
+    const [updated] = await db.update(carrierVerificationDocuments)
+      .set(updates)
+      .where(eq(carrierVerificationDocuments.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Bid Negotiation methods
+  async createBidNegotiation(negotiation: InsertBidNegotiation): Promise<BidNegotiation> {
+    const [newNegotiation] = await db.insert(bidNegotiations).values(negotiation).returning();
+    return newNegotiation;
+  }
+
+  async getBidNegotiations(bidId: string): Promise<BidNegotiation[]> {
+    return db.select()
+      .from(bidNegotiations)
+      .where(eq(bidNegotiations.bidId, bidId))
+      .orderBy(bidNegotiations.createdAt);
+  }
+
+  async getBidNegotiationsByLoad(loadId: string): Promise<BidNegotiation[]> {
+    return db.select()
+      .from(bidNegotiations)
+      .where(eq(bidNegotiations.loadId, loadId))
+      .orderBy(bidNegotiations.createdAt);
   }
 }
 

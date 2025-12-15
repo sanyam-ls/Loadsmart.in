@@ -1,31 +1,48 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Bell, Check, Package, Gavel, MapPin, FileText, Truck, ExternalLink } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Bell, Check, Package, Gavel, MapPin, FileText, Truck, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useMockData, type MockNotification } from "@/lib/mock-data-store";
 import { useAuth } from "@/lib/auth-context";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Notification } from "@shared/schema";
 
 function getNotificationIcon(type: string) {
   switch (type) {
     case "bid":
+    case "bid_received":
+    case "bid_accepted":
+    case "bid_rejected":
+    case "counter_offer":
       return <Gavel className="h-4 w-4" />;
     case "shipment":
+    case "shipment_update":
+    case "load_assigned":
+    case "delivery_complete":
       return <Truck className="h-4 w-4" />;
     case "document":
+    case "document_uploaded":
+    case "pod_uploaded":
+      return <FileText className="h-4 w-4" />;
+    case "invoice":
+    case "invoice_generated":
+    case "payment_received":
       return <FileText className="h-4 w-4" />;
     default:
       return <Package className="h-4 w-4" />;
   }
 }
 
-function getTimeAgo(date: Date): string {
+function getTimeAgo(dateStr: string | Date): string {
+  const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
   if (seconds < 60) return "just now";
   const minutes = Math.floor(seconds / 60);
@@ -36,28 +53,53 @@ function getTimeAgo(date: Date): string {
   return `${days}d ago`;
 }
 
-function getTypeLabel(type: string): string {
-  switch (type) {
-    case "bid":
-      return "Bids";
-    case "shipment":
-      return "Shipments";
-    case "document":
-      return "Documents";
-    default:
-      return "General";
+function getCategoryFromType(type: string): "bid" | "shipment" | "document" | "other" {
+  if (type.includes("bid") || type.includes("counter") || type.includes("negotiat")) {
+    return "bid";
   }
+  if (type.includes("shipment") || type.includes("delivery") || type.includes("load") || type.includes("pickup") || type.includes("transit")) {
+    return "shipment";
+  }
+  if (type.includes("document") || type.includes("pod") || type.includes("invoice")) {
+    return "document";
+  }
+  return "other";
 }
 
 export function NotificationPanel() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const { notifications, markNotificationRead, markAllNotificationsRead, getUnreadNotificationCount } = useMockData();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
 
-  const handleNotificationClick = (notification: MockNotification) => {
-    markNotificationRead(notification.id);
+  const { data: notifications = [], isLoading, refetch } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("PATCH", `/api/notifications/${id}/read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/notifications/read-all", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.isRead) {
+      markReadMutation.mutate(notification.id);
+    }
     setIsOpen(false);
     
     // Use actionUrl if provided for direct navigation
@@ -67,21 +109,25 @@ export function NotificationPanel() {
     }
 
     // Build deep-link based on context type and user role
-    const loadId = notification.loadId;
+    const loadId = notification.relatedLoadId;
     const contextType = notification.contextType || notification.type;
-    const contextTab = notification.contextTab;
 
     if (user?.role === "admin") {
       switch (contextType) {
         case "invoice":
+        case "invoice_generated":
+        case "payment_received":
           navigate(`/admin/invoices${loadId ? `?load=${loadId}` : ''}`);
           break;
         case "bid":
+        case "bid_received":
+        case "counter_offer":
         case "negotiation":
-          navigate(`/admin/negotiations${loadId ? `?load=${loadId}` : ''}`);
+          navigate(`/admin/load-queue${loadId ? `?highlight=${loadId}` : ''}`);
           break;
         case "carrier":
-          navigate('/admin/carriers');
+        case "verification":
+          navigate('/admin/carrier-verification');
           break;
         default:
           navigate(`/admin/load-queue${loadId ? `?highlight=${loadId}` : ''}`);
@@ -89,10 +135,18 @@ export function NotificationPanel() {
     } else if (user?.role === "carrier") {
       switch (contextType) {
         case "bid":
-        case "negotiation":
+        case "bid_accepted":
+        case "bid_rejected":
+        case "counter_offer":
           navigate(`/carrier/marketplace${loadId ? `?load=${loadId}` : ''}`);
           break;
         case "invoice":
+        case "invoice_generated":
+        case "payment_received":
+          navigate(`/carrier/loads`);
+          break;
+        case "load_assigned":
+        case "shipment":
           navigate(`/carrier/loads${loadId ? `?load=${loadId}` : ''}`);
           break;
         default:
@@ -101,14 +155,26 @@ export function NotificationPanel() {
     } else if (user?.role === "shipper") {
       switch (contextType) {
         case "invoice":
+        case "invoice_generated":
           navigate('/shipper/invoices');
           break;
         case "shipment":
+        case "shipment_update":
+        case "delivery_complete":
           navigate(`/shipper/tracking${loadId ? `?load=${loadId}` : ''}`);
+          break;
+        case "bid":
+        case "bid_received":
+        case "counter_offer":
+          if (loadId) {
+            navigate(`/shipper/loads/${loadId}?tab=bids`);
+          } else {
+            navigate('/shipper/loads');
+          }
           break;
         default:
           if (loadId) {
-            navigate(`/shipper/loads/${loadId}${contextTab ? `?tab=${contextTab}` : ''}`);
+            navigate(`/shipper/loads/${loadId}`);
           } else {
             navigate('/shipper/loads');
           }
@@ -116,15 +182,15 @@ export function NotificationPanel() {
     }
   };
 
-  const unreadCount = getUnreadNotificationCount();
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const filteredNotifications = activeTab === "all" 
     ? notifications 
-    : notifications.filter(n => n.type === activeTab);
+    : notifications.filter(n => getCategoryFromType(n.type || "other") === activeTab);
 
-  const bidNotifications = notifications.filter(n => n.type === "bid");
-  const shipmentNotifications = notifications.filter(n => n.type === "shipment");
-  const documentNotifications = notifications.filter(n => n.type === "document");
+  const bidNotifications = notifications.filter(n => getCategoryFromType(n.type || "other") === "bid");
+  const shipmentNotifications = notifications.filter(n => getCategoryFromType(n.type || "other") === "shipment");
+  const documentNotifications = notifications.filter(n => getCategoryFromType(n.type || "other") === "document");
 
   const unreadByType = {
     bid: bidNotifications.filter(n => !n.isRead).length,
@@ -139,7 +205,7 @@ export function NotificationPanel() {
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
-              {unreadCount}
+              {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
         </Button>
@@ -147,18 +213,30 @@ export function NotificationPanel() {
       <PopoverContent align="end" className="w-96 p-0">
         <div className="flex items-center justify-between gap-2 p-4 border-b border-border">
           <h3 className="font-semibold">Notifications</h3>
-          {unreadCount > 0 && (
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              onClick={markAllNotificationsRead}
+              onClick={() => refetch()}
               className="text-xs h-auto py-1"
-              data-testid="button-mark-all-read"
+              data-testid="button-refresh-notifications"
             >
-              <Check className="h-3 w-3 mr-1" />
-              Mark all read
+              <RefreshCw className="h-3 w-3" />
             </Button>
-          )}
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markAllReadMutation.mutate()}
+                disabled={markAllReadMutation.isPending}
+                className="text-xs h-auto py-1"
+                data-testid="button-mark-all-read"
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Mark all read
+              </Button>
+            )}
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -210,7 +288,13 @@ export function NotificationPanel() {
 
           <TabsContent value={activeTab} className="mt-0">
             <ScrollArea className="h-80">
-              {filteredNotifications.length === 0 ? (
+              {isLoading ? (
+                <div className="space-y-2 p-4">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : filteredNotifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6">
                   <Bell className="h-12 w-12 mb-2 opacity-50" />
                   <p className="text-sm">No {activeTab === "all" ? "" : activeTab} notifications</p>
@@ -230,7 +314,7 @@ export function NotificationPanel() {
                         <div className={`flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-full ${
                           !notification.isRead ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                         }`}>
-                          {getNotificationIcon(notification.type)}
+                          {getNotificationIcon(notification.type || "other")}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
@@ -244,11 +328,11 @@ export function NotificationPanel() {
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-muted-foreground">
-                              {getTimeAgo(notification.createdAt)}
+                              {notification.createdAt ? getTimeAgo(notification.createdAt) : ""}
                             </span>
-                            {notification.loadId && (
+                            {notification.relatedLoadId && (
                               <span className="text-xs text-primary">
-                                {notification.loadId}
+                                {notification.relatedLoadId}
                               </span>
                             )}
                           </div>

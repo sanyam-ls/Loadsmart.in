@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Truck, Search, FileText, ChevronLeft, Eye,
   ShieldCheck, ShieldX, ShieldAlert, Clock,
-  CheckCircle, XCircle, User, Building2, MapPin, Phone, Mail
+  CheckCircle, XCircle, User, Building2, MapPin, Phone
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -22,118 +24,150 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useAdminData, type AdminCarrier } from "@/lib/admin-data-store";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
+
+interface CarrierVerification {
+  id: string;
+  carrierId: string;
+  carrierType: "solo" | "enterprise";
+  fleetSize: number;
+  status: "pending" | "approved" | "rejected";
+  notes?: string;
+  rejectionReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  carrier?: {
+    id: string;
+    username: string;
+    companyName: string;
+    email: string;
+    phone?: string;
+    serviceZones?: string[];
+  };
+  documents?: VerificationDocument[];
+}
 
 interface VerificationDocument {
   id: string;
-  type: string;
+  documentType: string;
   fileName: string;
-  uploadedAt: Date;
-  status: "pending" | "approved" | "rejected";
-  rejectionReason?: string;
+  fileUrl: string;
+  uploadedAt: string;
+  status?: "pending" | "approved" | "rejected";
 }
-
-const simulatedDocuments: Record<string, VerificationDocument[]> = {
-  "CAR-001": [
-    { id: "doc-1", type: "RC Certificate", fileName: "rc_certificate.pdf", uploadedAt: new Date("2024-01-15"), status: "approved" },
-    { id: "doc-2", type: "Insurance", fileName: "insurance_policy.pdf", uploadedAt: new Date("2024-01-15"), status: "approved" },
-    { id: "doc-3", type: "Fitness Certificate", fileName: "fitness_cert.pdf", uploadedAt: new Date("2024-01-16"), status: "pending" },
-  ],
-  "CAR-002": [
-    { id: "doc-4", type: "RC Certificate", fileName: "vehicle_rc.pdf", uploadedAt: new Date("2024-02-01"), status: "pending" },
-    { id: "doc-5", type: "Driver License", fileName: "license.pdf", uploadedAt: new Date("2024-02-01"), status: "pending" },
-  ],
-  "CAR-003": [
-    { id: "doc-6", type: "RC Certificate", fileName: "rc.pdf", uploadedAt: new Date("2024-01-20"), status: "rejected", rejectionReason: "Document expired" },
-    { id: "doc-7", type: "Insurance", fileName: "insurance.pdf", uploadedAt: new Date("2024-01-20"), status: "rejected", rejectionReason: "Invalid policy number" },
-  ],
-};
 
 export default function CarrierVerificationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { carriers, verifyCarrier, rejectCarrier } = useAdminData();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("pending");
-  const [selectedCarrier, setSelectedCarrier] = useState<AdminCarrier | null>(null);
+  const [selectedVerification, setSelectedVerification] = useState<CarrierVerification | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  const pendingCarriers = useMemo(() => {
-    return carriers.filter(c => c.verificationStatus === "pending");
-  }, [carriers]);
+  const { data: verifications = [], isLoading } = useQuery<CarrierVerification[]>({
+    queryKey: ["/api/admin/verifications"],
+  });
 
-  const rejectedCarriers = useMemo(() => {
-    return carriers.filter(c => c.verificationStatus === "rejected");
-  }, [carriers]);
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/admin/verifications/${id}/approve`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+      toast({
+        title: "Carrier Verified",
+        description: "The carrier has been verified and added to the directory.",
+      });
+      setDetailsOpen(false);
+      setSelectedVerification(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to approve verification",
+      });
+    },
+  });
 
-  const filteredCarriers = useMemo(() => {
-    const list = activeTab === "pending" ? pendingCarriers : rejectedCarriers;
-    if (!searchQuery) return list;
-    
-    const query = searchQuery.toLowerCase();
-    return list.filter(carrier => 
-      carrier.companyName?.toLowerCase().includes(query) ||
-      carrier.email?.toLowerCase().includes(query)
-    );
-  }, [activeTab, pendingCarriers, rejectedCarriers, searchQuery]);
-
-  const handleApprove = (carrier: AdminCarrier) => {
-    verifyCarrier(carrier.carrierId);
-    toast({
-      title: "Carrier Verified",
-      description: `${carrier.companyName} has been verified and added to the directory.`,
-    });
-    setDetailsOpen(false);
-    setSelectedCarrier(null);
-  };
-
-  const handleReject = () => {
-    if (selectedCarrier) {
-      rejectCarrier(selectedCarrier.carrierId, rejectReason);
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      return apiRequest("POST", `/api/admin/verifications/${id}/reject`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
       toast({
         title: "Verification Rejected",
-        description: `${selectedCarrier.companyName} verification has been rejected.`,
+        description: "The carrier verification has been rejected.",
       });
       setRejectDialogOpen(false);
       setDetailsOpen(false);
-      setSelectedCarrier(null);
+      setSelectedVerification(null);
       setRejectReason("");
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to reject verification",
+      });
+    },
+  });
+
+  const pendingVerifications = useMemo(() => {
+    return verifications.filter(v => v.status === "pending");
+  }, [verifications]);
+
+  const rejectedVerifications = useMemo(() => {
+    return verifications.filter(v => v.status === "rejected");
+  }, [verifications]);
+
+  const filteredVerifications = useMemo(() => {
+    const list = activeTab === "pending" ? pendingVerifications : rejectedVerifications;
+    if (!searchQuery) return list;
+    
+    const query = searchQuery.toLowerCase();
+    return list.filter(v => 
+      v.carrier?.companyName?.toLowerCase().includes(query) ||
+      v.carrier?.email?.toLowerCase().includes(query)
+    );
+  }, [activeTab, pendingVerifications, rejectedVerifications, searchQuery]);
+
+  const handleApprove = (verification: CarrierVerification) => {
+    approveMutation.mutate(verification.id);
+  };
+
+  const handleReject = () => {
+    if (selectedVerification && rejectReason.trim()) {
+      rejectMutation.mutate({ id: selectedVerification.id, reason: rejectReason });
     }
   };
 
-  const openDetails = (carrier: AdminCarrier) => {
-    setSelectedCarrier(carrier);
+  const openDetails = (verification: CarrierVerification) => {
+    setSelectedVerification(verification);
     setDetailsOpen(true);
   };
 
-  const getCarrierTypeDisplay = (carrier: AdminCarrier) => {
-    if (carrier.fleetSize === 1) {
+  const getCarrierTypeDisplay = (verification: CarrierVerification) => {
+    if (verification.carrierType === "solo" || verification.fleetSize === 1) {
       return { label: "Solo Owner-Operator", icon: User, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" };
     }
-    return { label: `Fleet (${carrier.fleetSize} trucks)`, icon: Building2, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" };
+    return { label: `Fleet (${verification.fleetSize} trucks)`, icon: Building2, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" };
   };
 
-  const getDocuments = (carrierId: string): VerificationDocument[] => {
-    return simulatedDocuments[carrierId] || [
-      { id: `auto-${carrierId}-1`, type: "RC Certificate", fileName: "rc_certificate.pdf", uploadedAt: new Date(), status: "pending" },
-      { id: `auto-${carrierId}-2`, type: "Insurance", fileName: "insurance.pdf", uploadedAt: new Date(), status: "pending" },
-      { id: `auto-${carrierId}-3`, type: "Driver License", fileName: "license.pdf", uploadedAt: new Date(), status: "pending" },
-    ];
-  };
-
-  const renderCarrierCard = (carrier: AdminCarrier) => {
-    const carrierType = getCarrierTypeDisplay(carrier);
+  const renderVerificationCard = (verification: CarrierVerification) => {
+    const carrierType = getCarrierTypeDisplay(verification);
     const CarrierIcon = carrierType.icon;
-    const documents = getDocuments(carrier.carrierId);
-    const pendingDocs = documents.filter(d => d.status === "pending").length;
-    const rejectedDocs = documents.filter(d => d.status === "rejected").length;
+    const documents = verification.documents || [];
 
     return (
-      <Card key={carrier.carrierId} className="hover-elevate" data-testid={`verification-card-${carrier.carrierId}`}>
+      <Card key={verification.id} className="hover-elevate" data-testid={`verification-card-${verification.id}`}>
         <CardContent className="p-5">
           <div className="flex flex-col lg:flex-row lg:items-start gap-4">
             <div className="flex-1 space-y-3">
@@ -142,10 +176,10 @@ export default function CarrierVerificationPage() {
                   <Truck className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <h3 className="font-semibold" data-testid={`text-carrier-name-${carrier.carrierId}`}>
-                    {carrier.companyName}
+                  <h3 className="font-semibold" data-testid={`text-carrier-name-${verification.id}`}>
+                    {verification.carrier?.companyName || "Unknown Carrier"}
                   </h3>
-                  <p className="text-sm text-muted-foreground">{carrier.email}</p>
+                  <p className="text-sm text-muted-foreground">{verification.carrier?.email}</p>
                 </div>
                 <Badge className={`${carrierType.color} no-default-hover-elevate no-default-active-elevate`}>
                   <CarrierIcon className="h-3 w-3 mr-1" />
@@ -156,19 +190,19 @@ export default function CarrierVerificationPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Phone className="h-4 w-4" />
-                  <span>{carrier.phone || "Not provided"}</span>
+                  <span>{verification.carrier?.phone || "Not provided"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
-                  <span>{carrier.serviceZones?.slice(0, 2).join(", ") || "Not specified"}</span>
+                  <span>{verification.carrier?.serviceZones?.slice(0, 2).join(", ") || "Not specified"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Truck className="h-4 w-4" />
-                  <span>{carrier.fleetSize} truck(s)</span>
+                  <span>{verification.fleetSize} truck(s)</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="h-4 w-4" />
-                  <span>Applied {format(new Date(carrier.dateJoined), "MMM d, yyyy")}</span>
+                  <span>Applied {format(new Date(verification.createdAt), "MMM d, yyyy")}</span>
                 </div>
               </div>
 
@@ -177,16 +211,10 @@ export default function CarrierVerificationPage() {
                   <FileText className="h-3 w-3" />
                   {documents.length} Documents
                 </Badge>
-                {pendingDocs > 0 && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Clock className="h-3 w-3" />
-                    {pendingDocs} Pending Review
-                  </Badge>
-                )}
-                {rejectedDocs > 0 && (
+                {verification.status === "rejected" && verification.rejectionReason && (
                   <Badge variant="destructive" className="gap-1">
                     <XCircle className="h-3 w-3" />
-                    {rejectedDocs} Rejected
+                    Rejected: {verification.rejectionReason}
                   </Badge>
                 )}
               </div>
@@ -195,17 +223,18 @@ export default function CarrierVerificationPage() {
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => openDetails(carrier)}
-                data-testid={`button-view-details-${carrier.carrierId}`}
+                onClick={() => openDetails(verification)}
+                data-testid={`button-view-details-${verification.id}`}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Review
               </Button>
-              {carrier.verificationStatus === "pending" && (
+              {verification.status === "pending" && (
                 <>
                   <Button 
-                    onClick={() => handleApprove(carrier)}
-                    data-testid={`button-quick-approve-${carrier.carrierId}`}
+                    onClick={() => handleApprove(verification)}
+                    disabled={approveMutation.isPending}
+                    data-testid={`button-quick-approve-${verification.id}`}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Approve
@@ -213,10 +242,10 @@ export default function CarrierVerificationPage() {
                   <Button 
                     variant="destructive"
                     onClick={() => {
-                      setSelectedCarrier(carrier);
+                      setSelectedVerification(verification);
                       setRejectDialogOpen(true);
                     }}
-                    data-testid={`button-quick-reject-${carrier.carrierId}`}
+                    data-testid={`button-quick-reject-${verification.id}`}
                   >
                     <XCircle className="h-4 w-4" />
                   </Button>
@@ -228,6 +257,24 @@ export default function CarrierVerificationPage() {
       </Card>
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-4">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -255,7 +302,7 @@ export default function CarrierVerificationPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Pending Review</p>
-                <p className="text-2xl font-bold" data-testid="stat-pending">{pendingCarriers.length}</p>
+                <p className="text-2xl font-bold" data-testid="stat-pending">{pendingVerifications.length}</p>
               </div>
             </div>
           </CardContent>
@@ -268,7 +315,7 @@ export default function CarrierVerificationPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Rejected</p>
-                <p className="text-2xl font-bold" data-testid="stat-rejected">{rejectedCarriers.length}</p>
+                <p className="text-2xl font-bold" data-testid="stat-rejected">{rejectedVerifications.length}</p>
               </div>
             </div>
           </CardContent>
@@ -280,9 +327,9 @@ export default function CarrierVerificationPage() {
                 <ShieldCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Verified Today</p>
+                <p className="text-sm text-muted-foreground">Total Verified</p>
                 <p className="text-2xl font-bold" data-testid="stat-verified-today">
-                  {carriers.filter(c => c.verificationStatus === "verified").length}
+                  {verifications.filter(v => v.status === "approved").length}
                 </p>
               </div>
             </div>
@@ -307,16 +354,16 @@ export default function CarrierVerificationPage() {
         <TabsList>
           <TabsTrigger value="pending" data-testid="tab-pending" className="gap-2">
             <ShieldAlert className="h-4 w-4" />
-            Pending ({pendingCarriers.length})
+            Pending ({pendingVerifications.length})
           </TabsTrigger>
           <TabsTrigger value="rejected" data-testid="tab-rejected" className="gap-2">
             <ShieldX className="h-4 w-4" />
-            Rejected ({rejectedCarriers.length})
+            Rejected ({rejectedVerifications.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-4 space-y-4">
-          {filteredCarriers.length === 0 ? (
+          {filteredVerifications.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <ShieldCheck className="h-12 w-12 mx-auto text-green-500 mb-4" />
@@ -325,12 +372,12 @@ export default function CarrierVerificationPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredCarriers.map(carrier => renderCarrierCard(carrier))
+            filteredVerifications.map(verification => renderVerificationCard(verification))
           )}
         </TabsContent>
 
         <TabsContent value="rejected" className="mt-4 space-y-4">
-          {filteredCarriers.length === 0 ? (
+          {filteredVerifications.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <XCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -339,7 +386,7 @@ export default function CarrierVerificationPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredCarriers.map(carrier => renderCarrierCard(carrier))
+            filteredVerifications.map(verification => renderVerificationCard(verification))
           )}
         </TabsContent>
       </Tabs>
@@ -349,14 +396,14 @@ export default function CarrierVerificationPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5" />
-              {selectedCarrier?.companyName}
+              {selectedVerification?.carrier?.companyName || "Carrier Details"}
             </DialogTitle>
             <DialogDescription>
               Review carrier details and uploaded documents
             </DialogDescription>
           </DialogHeader>
           
-          {selectedCarrier && (
+          {selectedVerification && (
             <ScrollArea className="flex-1 pr-4">
               <div className="space-y-6">
                 <Card>
@@ -366,30 +413,36 @@ export default function CarrierVerificationPage() {
                   <CardContent className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <Label className="text-muted-foreground">Company Name</Label>
-                      <p className="font-medium">{selectedCarrier.companyName}</p>
+                      <p className="font-medium">{selectedVerification.carrier?.companyName || "N/A"}</p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">Type</Label>
                       <p className="font-medium">
-                        {selectedCarrier.fleetSize === 1 ? "Solo Owner-Operator" : `Fleet (${selectedCarrier.fleetSize} trucks)`}
+                        {selectedVerification.carrierType === "solo" ? "Solo Owner-Operator" : `Fleet (${selectedVerification.fleetSize} trucks)`}
                       </p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">Email</Label>
-                      <p className="font-medium">{selectedCarrier.email}</p>
+                      <p className="font-medium">{selectedVerification.carrier?.email || "N/A"}</p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">Phone</Label>
-                      <p className="font-medium">{selectedCarrier.phone || "Not provided"}</p>
+                      <p className="font-medium">{selectedVerification.carrier?.phone || "Not provided"}</p>
                     </div>
                     <div className="col-span-2">
                       <Label className="text-muted-foreground">Service Zones</Label>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedCarrier.serviceZones?.map((zone, i) => (
+                        {selectedVerification.carrier?.serviceZones?.map((zone, i) => (
                           <Badge key={i} variant="outline">{zone}</Badge>
                         )) || <span className="text-muted-foreground">Not specified</span>}
                       </div>
                     </div>
+                    {selectedVerification.notes && (
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground">Notes from Carrier</Label>
+                        <p className="font-medium">{selectedVerification.notes}</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -400,39 +453,32 @@ export default function CarrierVerificationPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {getDocuments(selectedCarrier.carrierId).map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">{doc.type}</p>
-                              <p className="text-sm text-muted-foreground">{doc.fileName}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Uploaded {format(doc.uploadedAt, "MMM d, yyyy")}
-                              </p>
+                      {(selectedVerification.documents || []).length === 0 ? (
+                        <p className="text-muted-foreground text-center py-4">No documents uploaded yet</p>
+                      ) : (
+                        selectedVerification.documents?.map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium">{doc.documentType}</p>
+                                <p className="text-sm text-muted-foreground">{doc.fileName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Uploaded {format(new Date(doc.uploadedAt), "MMM d, yyyy")}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                                  <Eye className="h-4 w-4" />
+                                </a>
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {doc.status === "pending" && (
-                              <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
-                            )}
-                            {doc.status === "approved" && (
-                              <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>
-                            )}
-                            {doc.status === "rejected" && (
-                              <div className="text-right">
-                                <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
-                                {doc.rejectionReason && (
-                                  <p className="text-xs text-destructive mt-1">{doc.rejectionReason}</p>
-                                )}
-                              </div>
-                            )}
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -444,7 +490,7 @@ export default function CarrierVerificationPage() {
             <Button variant="outline" onClick={() => setDetailsOpen(false)}>
               Close
             </Button>
-            {selectedCarrier?.verificationStatus === "pending" && (
+            {selectedVerification?.status === "pending" && (
               <>
                 <Button 
                   variant="destructive"
@@ -457,7 +503,8 @@ export default function CarrierVerificationPage() {
                   Reject
                 </Button>
                 <Button 
-                  onClick={() => handleApprove(selectedCarrier)}
+                  onClick={() => handleApprove(selectedVerification)}
+                  disabled={approveMutation.isPending}
                   data-testid="button-approve-carrier"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
@@ -474,7 +521,7 @@ export default function CarrierVerificationPage() {
           <DialogHeader>
             <DialogTitle>Reject Verification</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting {selectedCarrier?.companyName}'s verification.
+              Please provide a reason for rejecting {selectedVerification?.carrier?.companyName}'s verification.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -496,7 +543,7 @@ export default function CarrierVerificationPage() {
             <Button 
               variant="destructive" 
               onClick={handleReject}
-              disabled={!rejectReason.trim()}
+              disabled={!rejectReason.trim() || rejectMutation.isPending}
               data-testid="button-confirm-reject"
             >
               Reject Verification

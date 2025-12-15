@@ -1010,7 +1010,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         carrierId: bidsForLoad.find(b => b.status === "Accepted")?.carrierId || null,
         createdDate: new Date(load.createdAt),
         eta: load.eta,
-        spending: load.finalPrice || load.estimatedPrice,
+        spending: load.finalPrice || load.estimatedPrice || 0,
         bidCount: bidsForLoad.length,
         distance: randomBetween(200, 1500),
         dimensions: `${randomBetween(6, 18)}ft x ${randomBetween(6, 10)}ft x ${randomBetween(6, 10)}ft`,

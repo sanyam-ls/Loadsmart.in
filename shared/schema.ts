@@ -1032,8 +1032,100 @@ export const featureFlagsRelations = relations(featureFlags, ({ one }) => ({
   }),
 }));
 
+// Carrier Verification table (for pending/rejected verification queue)
+export const carrierVerifications = pgTable("carrier_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  status: text("status").default("pending"), // pending, approved, rejected, expired
+  carrierType: text("carrier_type").default("solo"), // solo or fleet
+  fleetSize: integer("fleet_size").default(1),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  rejectionReason: text("rejection_reason"),
+  expiresAt: timestamp("expires_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Carrier Verification Documents table
+export const carrierVerificationDocuments = pgTable("carrier_verification_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  verificationId: varchar("verification_id").notNull().references(() => carrierVerifications.id),
+  carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  documentType: text("document_type").notNull(), // license, rc, insurance, pan, gst, aadhar, fleet_proof
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileSize: integer("file_size"),
+  expiryDate: timestamp("expiry_date"),
+  status: text("status").default("pending"), // pending, approved, rejected
+  rejectionReason: text("rejection_reason"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Bid Negotiations table (for chat-style negotiation history)
+export const bidNegotiations = pgTable("bid_negotiations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bidId: varchar("bid_id").notNull().references(() => bids.id),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  senderRole: text("sender_role").notNull(), // carrier, admin, shipper
+  messageType: text("message_type").default("message"), // message, counter_offer, accept, reject
+  message: text("message"),
+  amount: decimal("amount", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations for new tables
+export const carrierVerificationsRelations = relations(carrierVerifications, ({ one, many }) => ({
+  carrier: one(users, {
+    fields: [carrierVerifications.carrierId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [carrierVerifications.reviewedBy],
+    references: [users.id],
+  }),
+  documents: many(carrierVerificationDocuments),
+}));
+
+export const carrierVerificationDocumentsRelations = relations(carrierVerificationDocuments, ({ one }) => ({
+  verification: one(carrierVerifications, {
+    fields: [carrierVerificationDocuments.verificationId],
+    references: [carrierVerifications.id],
+  }),
+  carrier: one(users, {
+    fields: [carrierVerificationDocuments.carrierId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [carrierVerificationDocuments.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const bidNegotiationsRelations = relations(bidNegotiations, ({ one }) => ({
+  bid: one(bids, {
+    fields: [bidNegotiations.bidId],
+    references: [bids.id],
+  }),
+  load: one(loads, {
+    fields: [bidNegotiations.loadId],
+    references: [loads.id],
+  }),
+  sender: one(users, {
+    fields: [bidNegotiations.senderId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertCarrierVerificationSchema = createInsertSchema(carrierVerifications).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCarrierVerificationDocumentSchema = createInsertSchema(carrierVerificationDocuments).omit({ id: true, createdAt: true });
+export const insertBidNegotiationSchema = createInsertSchema(bidNegotiations).omit({ id: true, createdAt: true });
 export const insertCarrierProfileSchema = createInsertSchema(carrierProfiles).omit({ id: true });
 export const insertTruckSchema = createInsertSchema(trucks).omit({ id: true, createdAt: true });
 export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, createdAt: true });
@@ -1122,6 +1214,12 @@ export type InsertLoadStateChangeLog = z.infer<typeof insertLoadStateChangeLogSc
 export type LoadStateChangeLog = typeof loadStateChangeLogs.$inferSelect;
 export type InsertShipperInvoiceResponse = z.infer<typeof insertShipperInvoiceResponseSchema>;
 export type ShipperInvoiceResponse = typeof shipperInvoiceResponses.$inferSelect;
+export type InsertCarrierVerification = z.infer<typeof insertCarrierVerificationSchema>;
+export type CarrierVerification = typeof carrierVerifications.$inferSelect;
+export type InsertCarrierVerificationDocument = z.infer<typeof insertCarrierVerificationDocumentSchema>;
+export type CarrierVerificationDocument = typeof carrierVerificationDocuments.$inferSelect;
+export type InsertBidNegotiation = z.infer<typeof insertBidNegotiationSchema>;
+export type BidNegotiation = typeof bidNegotiations.$inferSelect;
 
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {

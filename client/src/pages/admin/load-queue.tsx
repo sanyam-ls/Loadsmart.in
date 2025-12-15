@@ -128,6 +128,7 @@ interface RealLoad {
 function getCanonicalStateDisplay(status: string): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string } {
   const stateMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
     "draft": { label: "Draft", variant: "outline" },
+    "submitted_to_admin": { label: "Pending Review", variant: "default", className: "bg-amber-500 text-white" },
     "pending": { label: "Pending Review", variant: "default", className: "bg-amber-500 text-white" },
     "priced": { label: "Priced", variant: "secondary", className: "bg-blue-500 text-white" },
     "invoice_sent": { label: "Invoice Sent", variant: "secondary", className: "bg-indigo-500 text-white" },
@@ -145,6 +146,7 @@ function getCanonicalStateDisplay(status: string): { label: string; variant: "de
 
 function getAdminActionForState(status: string): { action: string; buttonLabel: string; icon?: string } | null {
   const actionMap: Record<string, { action: string; buttonLabel: string; icon?: string }> = {
+    "submitted_to_admin": { action: "price", buttonLabel: "Price Load", icon: "calculator" },
     "pending": { action: "price", buttonLabel: "Price Load", icon: "calculator" },
     "priced": { action: "send_invoice", buttonLabel: "Send Invoice", icon: "send" },
     "invoice_rejected": { action: "reprice", buttonLabel: "Revise Price", icon: "calculator" },

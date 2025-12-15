@@ -1216,6 +1216,47 @@ export async function registerRoutes(
     }
   });
 
+  // Solo carrier available loads - same as enterprise loads
+  app.get("/api/carrier/available-loads", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const adminPostedLoads = await storage.getAdminPostedLoads();
+      
+      // Filter based on posting mode (same logic as /api/carrier/loads)
+      const visibleLoads = adminPostedLoads.filter(load => {
+        if (load.adminPostMode === 'open') return true;
+        if (load.adminPostMode === 'invite' && load.invitedCarrierIds?.includes(user.id)) return true;
+        if (load.adminPostMode === 'assign' && load.assignedCarrierId === user.id) return true;
+        return false;
+      });
+
+      const enrichedLoads = await Promise.all(
+        visibleLoads.map(async (load) => {
+          const shipper = await storage.getUser(load.shipperId);
+          const loadBids = await storage.getBidsByLoad(load.id);
+          const myBid = loadBids.find(b => b.carrierId === user.id);
+          return {
+            ...load,
+            shipperName: shipper?.companyName || shipper?.username,
+            bidCount: loadBids.length,
+            myBid: myBid || null,
+            postedByAdmin: true,
+            priceFixed: !load.allowCounterBids,
+          };
+        })
+      );
+
+      res.json(enrichedLoads);
+    } catch (error) {
+      console.error("Get carrier available loads error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Carrier accepts admin price or submits counter bid
   app.post("/api/bids/submit", requireAuth, async (req, res) => {
     try {

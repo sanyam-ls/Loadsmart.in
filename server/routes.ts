@@ -432,24 +432,29 @@ export async function registerRoutes(
 
   app.patch("/api/bids/:id", requireAuth, async (req, res) => {
     try {
-      const bid = await storage.updateBid(req.params.id, req.body);
-      
-      if (req.body.status === "accepted" && bid) {
-        await storage.updateLoad(bid.loadId, {
-          status: "assigned",
-          assignedCarrierId: bid.carrierId,
-          assignedTruckId: bid.truckId,
-          finalPrice: bid.amount,
-        });
-        
-        const otherBids = await storage.getBidsByLoad(bid.loadId);
-        for (const otherBid of otherBids) {
-          if (otherBid.id !== bid.id && otherBid.status === "pending") {
-            await storage.updateBid(otherBid.id, { status: "rejected" });
-          }
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+      // Use workflow service for bid acceptance (auto-closes other bids + awards load)
+      if (req.body.status === "accepted") {
+        const result = await acceptBid(req.params.id, user.id);
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
         }
+        return res.json(result.bid);
       }
 
+      // Use workflow service for bid rejection
+      if (req.body.status === "rejected") {
+        const result = await rejectBid(req.params.id, user.id, req.body.reason);
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+        return res.json(result.bid);
+      }
+
+      // For other updates, use storage directly
+      const bid = await storage.updateBid(req.params.id, req.body);
       res.json(bid);
     } catch (error) {
       console.error("Update bid error:", error);
@@ -1178,7 +1183,7 @@ export async function registerRoutes(
     }
   });
 
-  // Get admin-posted loads for carriers
+  // Get admin-posted loads for carriers (with eligibility filters)
   app.get("/api/carrier/loads", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -1188,16 +1193,17 @@ export async function registerRoutes(
 
       const adminPostedLoads = await storage.getAdminPostedLoads();
       
-      // Filter based on posting mode
-      const visibleLoads = adminPostedLoads.filter(load => {
-        if (load.adminPostMode === 'open') return true;
-        if (load.adminPostMode === 'invite' && load.invitedCarrierIds?.includes(user.id)) return true;
-        if (load.adminPostMode === 'assign' && load.assignedCarrierId === user.id) return true;
-        return false;
-      });
+      // Apply full carrier eligibility checks from workflow service
+      const eligibleLoads: typeof adminPostedLoads = [];
+      for (const load of adminPostedLoads) {
+        const eligibility = await checkCarrierEligibility(user.id, load);
+        if (eligibility.eligible) {
+          eligibleLoads.push(load);
+        }
+      }
 
       const enrichedLoads = await Promise.all(
-        visibleLoads.map(async (load) => {
+        eligibleLoads.map(async (load) => {
           const shipper = await storage.getUser(load.shipperId);
           const loadBids = await storage.getBidsByLoad(load.id);
           const myBid = loadBids.find(b => b.carrierId === user.id);
@@ -1219,7 +1225,7 @@ export async function registerRoutes(
     }
   });
 
-  // Solo carrier available loads - same as enterprise loads
+  // Solo carrier available loads - same as enterprise loads (with eligibility filters)
   app.get("/api/carrier/available-loads", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -1229,16 +1235,17 @@ export async function registerRoutes(
 
       const adminPostedLoads = await storage.getAdminPostedLoads();
       
-      // Filter based on posting mode (same logic as /api/carrier/loads)
-      const visibleLoads = adminPostedLoads.filter(load => {
-        if (load.adminPostMode === 'open') return true;
-        if (load.adminPostMode === 'invite' && load.invitedCarrierIds?.includes(user.id)) return true;
-        if (load.adminPostMode === 'assign' && load.assignedCarrierId === user.id) return true;
-        return false;
-      });
+      // Apply full carrier eligibility checks from workflow service
+      const eligibleLoads: typeof adminPostedLoads = [];
+      for (const load of adminPostedLoads) {
+        const eligibility = await checkCarrierEligibility(user.id, load);
+        if (eligibility.eligible) {
+          eligibleLoads.push(load);
+        }
+      }
 
       const enrichedLoads = await Promise.all(
-        visibleLoads.map(async (load) => {
+        eligibleLoads.map(async (load) => {
           const shipper = await storage.getUser(load.shipperId);
           const loadBids = await storage.getBidsByLoad(load.id);
           const myBid = loadBids.find(b => b.carrierId === user.id);
@@ -1273,6 +1280,12 @@ export async function registerRoutes(
       const load = await storage.getLoad(load_id);
       if (!load) {
         return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Use workflow service to check carrier eligibility
+      const canBid = await canUserBidOnLoad(user.id, load_id);
+      if (!canBid.allowed) {
+        return res.status(403).json({ error: canBid.reason });
       }
 
       // Check if load allows counter bids

@@ -88,6 +88,30 @@ export async function checkCarrierEligibility(
 ): Promise<CarrierEligibilityResult> {
   const reasons: string[] = [];
   
+  const loadStatus = (load.status || "draft") as LoadStatus;
+  
+  // Allow assigned carrier to see their awarded/in-progress loads
+  const isAssignedCarrier = load.assignedCarrierId === carrierId;
+  const assignedCarrierVisibleStates: LoadStatus[] = [
+    "awarded", "invoice_sent", "invoice_approved", "in_transit", "delivered"
+  ];
+  
+  if (isAssignedCarrier && assignedCarrierVisibleStates.includes(loadStatus)) {
+    // Assigned carrier can always see their loads in execution states
+    return { eligible: true, reasons: [] };
+  }
+
+  // 0. Check load is in carrier-visible state for bidding
+  const carrierBiddableStates: LoadStatus[] = ["posted_to_carriers", "open_for_bid"];
+  if (!carrierBiddableStates.includes(loadStatus)) {
+    reasons.push(`Load not open for bidding (status: ${loadStatus})`);
+  }
+
+  // 0b. Skip if already awarded to another carrier
+  if (load.assignedCarrierId && load.assignedCarrierId !== carrierId) {
+    reasons.push("Load already assigned to another carrier");
+  }
+  
   const carrier = await storage.getUser(carrierId);
   if (!carrier) {
     return { eligible: false, reasons: ["Carrier not found"] };
@@ -170,27 +194,10 @@ async function getEligibleLoadsForCarrier(
   carrier: User,
   allLoads: Load[]
 ): Promise<Load[]> {
-  // Carrier-visible states only
-  const carrierVisibleStates: LoadStatus[] = [
-    "posted_to_carriers", "open_for_bid"
-  ];
-
   const eligibleLoads: Load[] = [];
 
   for (const load of allLoads) {
-    const status = (load.status || "draft") as LoadStatus;
-    
-    // Skip if not in carrier-visible state
-    if (!carrierVisibleStates.includes(status)) {
-      continue;
-    }
-
-    // Skip if already awarded to another carrier
-    if (load.assignedCarrierId && load.assignedCarrierId !== carrier.id) {
-      continue;
-    }
-
-    // Check full eligibility
+    // Check full eligibility (includes status, assignment, posting mode, and carrier checks)
     const eligibility = await checkCarrierEligibility(carrier.id, load);
     if (eligibility.eligible) {
       eligibleLoads.push(load);

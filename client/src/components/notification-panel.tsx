@@ -143,7 +143,7 @@ export function NotificationPanel() {
         case "invoice":
         case "invoice_generated":
         case "payment_received":
-          navigate(`/carrier/loads`);
+          navigate(`/carrier/revenue`);
           break;
         case "load_assigned":
         case "shipment":

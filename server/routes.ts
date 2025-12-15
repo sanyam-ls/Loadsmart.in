@@ -2426,81 +2426,56 @@ export async function registerRoutes(
         shipperConfirmed: true,
         shipperConfirmedAt: new Date(),
         shipperResponseType: 'approve',
-        status: 'confirmed',
+        status: 'approved',
+        approvedAt: new Date(),
       });
 
-      // Get the load and post it for carrier bidding
+      // Get the load
       const load = await storage.getLoad(invoice.loadId);
       if (!load) {
         return res.status(404).json({ error: "Load not found" });
       }
 
-      // First transition to 'invoice_approved' then to 'open_for_bids' (canonical states)
-      const postMode = load.adminPostMode || 'open';
-      
-      // Update load status - NOW carriers can see and bid (using canonical 'open_for_bids')
+      // NEW WORKFLOW: Invoice comes AFTER carrier finalization
+      // So when shipper approves invoice, we transition to invoice_approved (ready for transit)
+      // Bidding/carrier assignment has already happened before the invoice was sent
       await storage.updateLoad(load.id, {
-        status: 'open_for_bids',
+        status: 'invoice_approved',
         previousStatus: load.status,
-        postedAt: new Date(),
+        invoiceApprovedAt: new Date(),
         statusChangedBy: user.id,
         statusChangedAt: new Date(),
-        statusNote: 'Invoice approved by shipper - load opened for carrier bidding',
+        statusNote: 'Invoice approved by shipper - ready for transit',
       });
-
-      // Update pricing status to posted
-      const pricing = await storage.getAdminPricingByLoad(load.id);
-      if (pricing) {
-        await storage.updateAdminPricing(pricing.id, { status: 'posted' });
-      }
-
-      const finalPrice = parseFloat(load.adminFinalPrice?.toString() || '0');
 
       // Notify shipper of confirmation
       await storage.createNotification({
         userId: user.id,
-        title: "Invoice Confirmed",
-        message: `You have confirmed the invoice. Your load is now posted for carrier bidding.`,
+        title: "Invoice Approved",
+        message: `You have approved the invoice for ${load.pickupCity} → ${load.dropoffCity}. The shipment is ready to begin.`,
         type: "success",
         relatedLoadId: load.id,
       });
 
-      // NOW notify carriers - this is when bidding begins
-      if (postMode === 'open') {
-        const allUsers = await storage.getAllUsers();
-        const carriers = allUsers.filter(u => u.role === 'carrier');
-        for (const carrier of carriers.slice(0, 20)) {
-          await storage.createNotification({
-            userId: carrier.id,
-            title: "New Load Available",
-            message: `New load available: ${load.pickupCity} → ${load.dropoffCity} at Rs. ${finalPrice.toLocaleString('en-IN')}`,
-            type: "info",
-            relatedLoadId: load.id,
-          });
-        }
+      // Notify assigned carrier that shipper approved - they can start transit
+      if (load.assignedCarrierId) {
+        await storage.createNotification({
+          userId: load.assignedCarrierId,
+          title: "Shipment Approved - Ready for Pickup",
+          message: `The shipper has approved the invoice. You can now begin the shipment: ${load.pickupCity} → ${load.dropoffCity}`,
+          type: "success",
+          relatedLoadId: load.id,
+        });
       }
 
-      // If invite mode, notify invited carriers
-      if (postMode === 'invite' && load.invitedCarrierIds?.length) {
-        for (const carrierId of load.invitedCarrierIds) {
-          await storage.createNotification({
-            userId: carrierId,
-            title: "New Load Invitation",
-            message: `You've been invited to bid on a load: ${load.pickupCity} → ${load.dropoffCity} at Rs. ${finalPrice.toLocaleString('en-IN')}`,
-            type: "info",
-            relatedLoadId: load.id,
-          });
-        }
-      }
-
-      // Notify admins that shipper confirmed
+      // Notify admins
       const allUsers = await storage.getAllUsers();
       const admins = allUsers.filter(u => u.role === 'admin');
       for (const admin of admins) {
         await storage.createNotification({
           userId: admin.id,
-          title: "Shipper Confirmed Invoice",
-          message: `Shipper ${user.companyName || user.username} confirmed invoice. Load is now open for carrier bidding.`,
+          title: "Shipper Approved Invoice",
+          message: `Shipper ${user.companyName || user.username} approved invoice for ${load.pickupCity} → ${load.dropoffCity}. Ready for transit.`,
           type: "success",
           relatedLoadId: load.id,
         });
@@ -2509,8 +2484,8 @@ export async function registerRoutes(
       res.json({ 
         success: true, 
         invoice: updatedInvoice,
-        load_status: 'open_for_bids',
-        message: "Invoice approved. Load is now open for carrier bidding.",
+        load_status: 'invoice_approved',
+        message: "Invoice approved. Shipment is ready to begin.",
       });
     } catch (error) {
       console.error("Invoice confirm error:", error);

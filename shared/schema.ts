@@ -8,40 +8,38 @@ import { z } from "zod";
 export const userRoles = ["shipper", "carrier", "admin"] as const;
 export type UserRole = typeof userRoles[number];
 
-// Load status enum - Canonical lifecycle per specification
-// Supports both Admin-as-Mediator workflow and direct carrier marketplace
+// Load status enum - Admin-Managed Freight Exchange Lifecycle
+// Per specification: Invoice comes AFTER carrier finalization, not before
+// Flow: Shipper submits → Admin prices → Post to Carriers → Bidding → Carrier Finalized → Invoice to Shipper
 export const loadStatuses = [
   "draft",                      // 1. Initial creation state
-  "pending",                    // 2. Created by Shipper, awaiting admin review/pricing
-  "priced",                     // 3. Admin assigned/locked cost
-  "invoice_sent",               // 4. Invoice pushed to Shipper
-  "awaiting_shipper_response",  // 5. Shipper has viewed, pending approval/negotiation
-  "approved",                   // 6. Shipper approved invoice
-  "posted_to_carriers",         // 7. Admin clicked Price & Post, visible to carriers
-  "open_for_bid",               // 8. Carriers can see & bid (bidding_open)
-  "counter_received",           // 9. Carrier submitted counter-offer, awaiting admin
-  "bidding_closed",             // 10. Admin has selected a bid
-  "awarded",                    // 11. Carrier accepted/assigned
-  "in_transit",                 // 12. Shipment underway
-  "delivered",                  // 13. Delivery confirmed
-  "closed",                     // 14. Final state (completed)
-  "cancelled"                   // 14. Final state (cancelled)
+  "pending",                    // 2. SUBMITTED_BY_SHIPPER - awaiting admin review/pricing
+  "priced",                     // 3. PRICING_IN_PROGRESS - Admin assigned internal cost
+  "posted_to_carriers",         // 4. POSTED_TO_CARRIERS - visible to carriers
+  "open_for_bid",               // 5. AWAITING_BIDS - Carriers can see & bid
+  "counter_received",           // 6. NEGOTIATION_IN_PROGRESS - Carrier submitted counter-offer
+  "awarded",                    // 7. CARRIER_FINALIZED - Carrier accepted/assigned
+  "invoice_sent",               // 8. INVOICE_SENT - Invoice pushed to Shipper (AFTER carrier finalized!)
+  "invoice_approved",           // 9. INVOICE_APPROVED - Shipper approved invoice
+  "in_transit",                 // 10. IN_TRANSIT - Shipment underway
+  "delivered",                  // 11. COMPLETED - Delivery confirmed
+  "closed",                     // 12. Final state (completed)
+  "cancelled"                   // 13. Final state (cancelled)
 ] as const;
 export type LoadStatus = typeof loadStatuses[number];
 
-// Valid state transitions map - enforced by storage layer
+// Valid state transitions map - Admin-Managed Freight Exchange workflow
+// CRITICAL: Invoice comes AFTER carrier finalization per business rules
 export const validStateTransitions: Record<LoadStatus, LoadStatus[]> = {
   draft: ["pending", "cancelled"],
   pending: ["priced", "cancelled"],
-  priced: ["invoice_sent", "posted_to_carriers", "pending", "cancelled"], // Can post directly or send invoice first
-  invoice_sent: ["awaiting_shipper_response", "approved", "cancelled"],
-  awaiting_shipper_response: ["approved", "priced", "cancelled"], // Can go back to priced if negotiated
-  approved: ["posted_to_carriers", "open_for_bid", "cancelled"], // After shipper approval, post to carriers
-  posted_to_carriers: ["open_for_bid", "awarded", "cancelled"], // Carriers can now see it
-  open_for_bid: ["counter_received", "bidding_closed", "awarded", "cancelled"], // Active bidding
-  counter_received: ["open_for_bid", "bidding_closed", "awarded", "cancelled"], // Admin reviewing counter
-  bidding_closed: ["awarded", "open_for_bid", "cancelled"], // Can re-open if carrier declines
-  awarded: ["in_transit", "open_for_bid", "cancelled"], // Can re-open if carrier declines
+  priced: ["posted_to_carriers", "pending", "cancelled"],
+  posted_to_carriers: ["open_for_bid", "awarded", "cancelled"],
+  open_for_bid: ["counter_received", "awarded", "cancelled"],
+  counter_received: ["open_for_bid", "awarded", "cancelled"],
+  awarded: ["invoice_sent", "open_for_bid", "cancelled"],
+  invoice_sent: ["invoice_approved", "awarded", "cancelled"],
+  invoice_approved: ["in_transit", "cancelled"],
   in_transit: ["delivered", "cancelled"],
   delivered: ["closed"],
   closed: [],

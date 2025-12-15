@@ -128,38 +128,34 @@ interface RealLoad {
 function getCanonicalStateDisplay(status: string): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string } {
   const stateMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
     "draft": { label: "Draft", variant: "outline" },
-    "submitted_to_admin": { label: "Pending Review", variant: "default", className: "bg-amber-500 text-white" },
     "pending": { label: "Pending Review", variant: "default", className: "bg-amber-500 text-white" },
-    "priced": { label: "Priced", variant: "secondary", className: "bg-blue-500 text-white" },
+    "priced": { label: "Priced - Ready to Post", variant: "secondary", className: "bg-blue-500 text-white" },
+    "posted_to_carriers": { label: "Posted to Carriers", variant: "secondary", className: "bg-cyan-500 text-white" },
+    "open_for_bid": { label: "Awaiting Bids", variant: "secondary", className: "bg-purple-500 text-white" },
+    "counter_received": { label: "Negotiation", variant: "secondary", className: "bg-orange-500 text-white" },
+    "awarded": { label: "Carrier Finalized", variant: "secondary", className: "bg-emerald-500 text-white" },
     "invoice_sent": { label: "Invoice Sent", variant: "secondary", className: "bg-indigo-500 text-white" },
     "invoice_approved": { label: "Invoice Approved", variant: "secondary", className: "bg-green-500 text-white" },
-    "invoice_rejected": { label: "Invoice Rejected", variant: "destructive" },
-    "invoice_negotiation": { label: "Negotiating", variant: "secondary", className: "bg-orange-500 text-white" },
-    "open_for_bids": { label: "Open for Bids", variant: "secondary", className: "bg-cyan-500 text-white" },
-    "bidding_active": { label: "Bidding Active", variant: "secondary", className: "bg-purple-500 text-white" },
-    "awarded": { label: "Awarded", variant: "secondary", className: "bg-emerald-500 text-white" },
     "in_transit": { label: "In Transit", variant: "secondary", className: "bg-blue-600 text-white" },
-    "completed": { label: "Completed", variant: "secondary", className: "bg-gray-500 text-white" },
+    "delivered": { label: "Delivered", variant: "secondary", className: "bg-teal-500 text-white" },
+    "closed": { label: "Completed", variant: "secondary", className: "bg-gray-500 text-white" },
+    "cancelled": { label: "Cancelled", variant: "destructive" },
   };
   return stateMap[status.toLowerCase()] || { label: status, variant: "outline" };
 }
 
 function getAdminActionForState(status: string): { action: string; buttonLabel: string; icon?: string } | null {
   const actionMap: Record<string, { action: string; buttonLabel: string; icon?: string }> = {
-    "submitted_to_admin": { action: "price", buttonLabel: "Price Load", icon: "calculator" },
     "pending": { action: "price", buttonLabel: "Price Load", icon: "calculator" },
-    "priced": { action: "send_invoice", buttonLabel: "Send Invoice", icon: "send" },
-    "invoice_rejected": { action: "reprice", buttonLabel: "Revise Price", icon: "calculator" },
-    "invoice_negotiation": { action: "negotiate", buttonLabel: "Review Counter", icon: "users" },
-    "invoice_sent": { action: "view_invoice", buttonLabel: "View Invoice", icon: "receipt" },
-    "invoice_approved": { action: "push_to_carriers", buttonLabel: "Push to Carriers", icon: "truck" },
+    "priced": { action: "post_to_carriers", buttonLabel: "Post to Carriers", icon: "truck" },
     "posted_to_carriers": { action: "view_bids", buttonLabel: "View Bids", icon: "gavel" },
     "open_for_bid": { action: "view_bids", buttonLabel: "View Bids", icon: "gavel" },
-    "open_for_bids": { action: "view_bids", buttonLabel: "View Bids", icon: "gavel" },
-    "bidding_active": { action: "view_bids", buttonLabel: "View Bids", icon: "gavel" },
-    "counter_received": { action: "view_bids", buttonLabel: "Review Counter", icon: "gavel" },
-    "awarded": { action: "track_shipment", buttonLabel: "Track Shipment", icon: "mappin" },
+    "counter_received": { action: "review_counter", buttonLabel: "Review Counter", icon: "gavel" },
+    "awarded": { action: "send_invoice", buttonLabel: "Send Invoice", icon: "send" },
+    "invoice_sent": { action: "view_invoice", buttonLabel: "View Invoice", icon: "receipt" },
+    "invoice_approved": { action: "start_transit", buttonLabel: "Start Transit", icon: "truck" },
     "in_transit": { action: "track_shipment", buttonLabel: "Track Shipment", icon: "mappin" },
+    "delivered": { action: "close_load", buttonLabel: "Close Load", icon: "check" },
   };
   return actionMap[status.toLowerCase()] || null;
 }

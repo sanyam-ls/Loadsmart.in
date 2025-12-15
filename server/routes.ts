@@ -86,7 +86,7 @@ export async function registerRoutes(
       if (user.role === "carrier") {
         await storage.createCarrierProfile({
           userId: user.id,
-          fleetSize: user.carrierType === "solo" ? 1 : 1,
+          fleetSize: 0,
           serviceZones: [],
           reliabilityScore: "0",
           communicationScore: "0",
@@ -2641,7 +2641,7 @@ export async function registerRoutes(
     }
   });
 
-  // POST /api/admin/invoices - Create new invoice
+  // POST /api/admin/invoices - Create new invoice (ONLY for loads in awarded state or later)
   app.post("/api/admin/invoices", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -2655,6 +2655,18 @@ export async function registerRoutes(
 
       if (!loadId || !shipperId || !subtotal || !totalAmount) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const load = await storage.getLoad(loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const allowedStatesForInvoice = ['awarded', 'in_transit', 'delivered', 'completed'];
+      if (!allowedStatesForInvoice.includes(load.status)) {
+        return res.status(400).json({ 
+          error: "Invoice can only be created after carrier finalization (awarded state or later)" 
+        });
       }
 
       const invoiceNumber = await storage.generateInvoiceNumber();
@@ -2782,7 +2794,7 @@ export async function registerRoutes(
     }
   });
 
-  // POST /api/admin/invoices/generate - Generate invoice from Invoice Builder
+  // POST /api/admin/invoices/generate - Generate invoice from Invoice Builder (ONLY for awarded+ loads)
   app.post("/api/admin/invoices/generate", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -2793,6 +2805,19 @@ export async function registerRoutes(
       const { loadId, shipperId, lineItems, subtotal, discountAmount, discountReason,
               taxPercent, taxAmount, totalAmount, paymentTerms, dueDate, notes,
               platformMargin, estimatedCarrierPayout, status, sendToShipper, idempotencyKey } = req.body;
+
+      // CRITICAL: Verify load is in awarded state or later before allowing invoice creation
+      const load = await storage.getLoad(loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const allowedStatesForInvoice = ['awarded', 'in_transit', 'delivered', 'completed'];
+      if (!allowedStatesForInvoice.includes(load.status)) {
+        return res.status(400).json({ 
+          error: "Invoice can only be created after carrier finalization (awarded state or later)" 
+        });
+      }
 
       // Check idempotency
       if (idempotencyKey) {
@@ -3526,7 +3551,7 @@ export async function registerRoutes(
     }
   });
 
-  // POST /api/admin/troubleshoot/generate-invoice/:loadId - Generate standalone invoice
+  // POST /api/admin/troubleshoot/generate-invoice/:loadId - Generate standalone invoice (ONLY for awarded+ loads)
   app.post("/api/admin/troubleshoot/generate-invoice/:loadId", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -3538,6 +3563,14 @@ export async function registerRoutes(
       const load = await storage.getLoad(req.params.loadId);
       if (!load) {
         return res.status(404).json({ error: "Load not found" });
+      }
+
+      // CRITICAL: Verify load is in awarded state or later before allowing invoice creation
+      const allowedStatesForInvoice = ['awarded', 'in_transit', 'delivered', 'completed'];
+      if (!allowedStatesForInvoice.includes(load.status)) {
+        return res.status(400).json({ 
+          error: "Invoice can only be created after carrier finalization (awarded state or later)" 
+        });
       }
 
       // Check for existing invoice

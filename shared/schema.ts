@@ -8,23 +8,25 @@ import { z } from "zod";
 export const userRoles = ["shipper", "carrier", "admin"] as const;
 export type UserRole = typeof userRoles[number];
 
-// Load status enum - Admin-Managed Freight Exchange Lifecycle
+// Load status enum - Admin-Managed Freight Exchange Lifecycle (12 Core States + Terminal)
 // Per specification: Invoice comes AFTER carrier finalization, not before
-// Flow: Shipper submits → Admin prices → Post to Carriers → Bidding → Carrier Finalized → Invoice to Shipper
+// Flow: Shipper submits → Admin prices → Post to Carriers → Bidding → Carrier Finalized → Invoice Created → Sent → Acknowledged → Paid → In Transit → Completed
 export const loadStatuses = [
-  "draft",                      // 1. Initial creation state
-  "pending",                    // 2. SUBMITTED_BY_SHIPPER - awaiting admin review/pricing
-  "priced",                     // 3. PRICING_IN_PROGRESS - Admin assigned internal cost
-  "posted_to_carriers",         // 4. POSTED_TO_CARRIERS - visible to carriers
-  "open_for_bid",               // 5. AWAITING_BIDS - Carriers can see & bid
-  "counter_received",           // 6. NEGOTIATION_IN_PROGRESS - Carrier submitted counter-offer
-  "awarded",                    // 7. CARRIER_FINALIZED - Carrier accepted/assigned
-  "invoice_sent",               // 8. INVOICE_SENT - Invoice pushed to Shipper (AFTER carrier finalized!)
-  "invoice_approved",           // 9. INVOICE_APPROVED - Shipper approved invoice
-  "in_transit",                 // 10. IN_TRANSIT - Shipment underway
-  "delivered",                  // 11. COMPLETED - Delivery confirmed
-  "closed",                     // 12. Final state (completed)
-  "cancelled"                   // 13. Final state (cancelled)
+  "draft",                      // 0. Initial creation state (internal)
+  "pending",                    // 1. SUBMITTED_BY_SHIPPER - awaiting admin review/pricing
+  "priced",                     // 2. PRICING_BY_ADMIN - Admin assigned internal cost
+  "posted_to_carriers",         // 3. POSTED_TO_MARKETPLACE - visible to carriers
+  "open_for_bid",               // 4. BIDDING_OPEN - Carriers can see & bid
+  "counter_received",           // 5. NEGOTIATION_ACTIVE - Active negotiation in progress
+  "awarded",                    // 6. CARRIER_FINALIZED - Carrier accepted/assigned
+  "invoice_created",            // 7. INVOICE_CREATED - Admin created invoice (unlocked after finalization)
+  "invoice_sent",               // 8. INVOICE_SENT - Invoice pushed to Shipper
+  "invoice_acknowledged",       // 9. INVOICE_ACKNOWLEDGED - Shipper acknowledged invoice
+  "invoice_paid",               // 10. INVOICE_PAID - Payment confirmed
+  "in_transit",                 // 11. IN_TRANSIT - Shipment underway
+  "delivered",                  // 12. COMPLETED - Delivery confirmed
+  "closed",                     // Terminal state (completed)
+  "cancelled"                   // Terminal state (cancelled)
 ] as const;
 export type LoadStatus = typeof loadStatuses[number];
 
@@ -37,9 +39,11 @@ export const validStateTransitions: Record<LoadStatus, LoadStatus[]> = {
   posted_to_carriers: ["open_for_bid", "awarded", "cancelled"],
   open_for_bid: ["counter_received", "awarded", "cancelled"],
   counter_received: ["open_for_bid", "awarded", "cancelled"],
-  awarded: ["invoice_sent", "open_for_bid", "cancelled"],
-  invoice_sent: ["invoice_approved", "awarded", "cancelled"],
-  invoice_approved: ["in_transit", "cancelled"],
+  awarded: ["invoice_created", "open_for_bid", "cancelled"],
+  invoice_created: ["invoice_sent", "awarded", "cancelled"],
+  invoice_sent: ["invoice_acknowledged", "invoice_created", "cancelled"],
+  invoice_acknowledged: ["invoice_paid", "invoice_sent", "cancelled"],
+  invoice_paid: ["in_transit", "cancelled"],
   in_transit: ["delivered", "cancelled"],
   delivered: ["closed"],
   closed: [],
@@ -634,6 +638,10 @@ export const documents = pgTable("documents", {
 });
 
 // Notifications table
+// Notification context types for deep-linking
+export const notificationContextTypes = ["load", "bid", "negotiation", "invoice", "shipment", "document", "carrier", "general"] as const;
+export type NotificationContextType = typeof notificationContextTypes[number];
+
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -642,6 +650,10 @@ export const notifications = pgTable("notifications", {
   type: text("type").default("info"),
   relatedLoadId: varchar("related_load_id").references(() => loads.id),
   relatedBidId: varchar("related_bid_id").references(() => bids.id),
+  relatedInvoiceId: varchar("related_invoice_id"),
+  contextType: text("context_type").default("load"),
+  contextTab: text("context_tab"),
+  actionUrl: text("action_url"),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

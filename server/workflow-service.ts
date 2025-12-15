@@ -5,14 +5,16 @@ import type { Load, Bid, User } from "@shared/schema";
 /**
  * Workflow Service - Centralized business logic for the Admin-Managed Freight Exchange
  * 
- * LOAD LIFECYCLE:
- * draft → pending → priced → posted_to_carriers → open_for_bid → counter_received → awarded → invoice_sent → invoice_approved → in_transit → delivered → closed
+ * LOAD LIFECYCLE (12 Core States):
+ * draft → pending → priced → posted_to_carriers → open_for_bid → counter_received → awarded 
+ *      → invoice_created → invoice_sent → invoice_acknowledged → invoice_paid → in_transit → delivered → closed
  * 
  * RULES:
  * 1. State transitions must follow validStateTransitions map
  * 2. Role-based visibility enforced at query level
  * 3. Carrier eligibility verified before showing loads
  * 4. Bid states properly managed with auto-close on acceptance
+ * 5. Invoice unlocked ONLY after CARRIER_FINALIZED (awarded state)
  */
 
 // ============================================================================
@@ -55,9 +57,10 @@ export async function getLoadsForRole(
 
     case "shipper":
       // Shipper sees only their own loads in specific states
+      // NOTE: Shipper can only see invoice after it's SENT (not created)
       const shipperVisibleStates: LoadStatus[] = [
-        "pending", "priced", "awarded", "invoice_sent", "invoice_approved", 
-        "in_transit", "delivered", "closed"
+        "pending", "priced", "awarded", "invoice_created", "invoice_sent", 
+        "invoice_acknowledged", "invoice_paid", "in_transit", "delivered", "closed"
       ];
       return allLoads.filter(load => 
         load.shipperId === user.id && 
@@ -93,7 +96,7 @@ export async function checkCarrierEligibility(
   // Allow assigned carrier to see their awarded/in-progress loads
   const isAssignedCarrier = load.assignedCarrierId === carrierId;
   const assignedCarrierVisibleStates: LoadStatus[] = [
-    "awarded", "invoice_sent", "invoice_approved", "in_transit", "delivered"
+    "awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "in_transit", "delivered"
   ];
   
   if (isAssignedCarrier && assignedCarrierVisibleStates.includes(loadStatus)) {

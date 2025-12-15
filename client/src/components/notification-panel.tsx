@@ -60,13 +60,58 @@ export function NotificationPanel() {
     markNotificationRead(notification.id);
     setIsOpen(false);
     
-    if (notification.loadId) {
-      if (user?.role === "admin") {
-        navigate(`/admin/load-queue?highlight=${notification.loadId}`);
-      } else if (user?.role === "carrier") {
-        navigate(`/carrier/loads?highlight=${notification.loadId}`);
-      } else if (user?.role === "shipper") {
-        navigate(`/shipper/loads/${notification.loadId}`);
+    // Use actionUrl if provided for direct navigation
+    if (notification.actionUrl) {
+      navigate(notification.actionUrl);
+      return;
+    }
+
+    // Build deep-link based on context type and user role
+    const loadId = notification.loadId;
+    const contextType = notification.contextType || notification.type;
+    const contextTab = notification.contextTab;
+
+    if (user?.role === "admin") {
+      switch (contextType) {
+        case "invoice":
+          navigate(`/admin/invoices${loadId ? `?load=${loadId}` : ''}`);
+          break;
+        case "bid":
+        case "negotiation":
+          navigate(`/admin/negotiations${loadId ? `?load=${loadId}` : ''}`);
+          break;
+        case "carrier":
+          navigate('/admin/carriers');
+          break;
+        default:
+          navigate(`/admin/load-queue${loadId ? `?highlight=${loadId}` : ''}`);
+      }
+    } else if (user?.role === "carrier") {
+      switch (contextType) {
+        case "bid":
+        case "negotiation":
+          navigate(`/carrier/marketplace${loadId ? `?load=${loadId}` : ''}`);
+          break;
+        case "invoice":
+          navigate(`/carrier/loads${loadId ? `?load=${loadId}` : ''}`);
+          break;
+        default:
+          navigate(`/carrier/loads${loadId ? `?highlight=${loadId}` : ''}`);
+      }
+    } else if (user?.role === "shipper") {
+      switch (contextType) {
+        case "invoice":
+          navigate('/shipper/invoices');
+          break;
+        case "shipment":
+          navigate(`/shipper/tracking${loadId ? `?load=${loadId}` : ''}`);
+          break;
+        default:
+          if (loadId) {
+            navigate(`/shipper/loads/${loadId}${contextTab ? `?tab=${contextTab}` : ''}`);
+          } else {
+            navigate('/shipper/loads');
+          }
       }
     }
   };

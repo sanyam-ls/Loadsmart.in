@@ -2350,6 +2350,7 @@ export async function registerRoutes(
   });
 
   // GET /api/invoices/shipper - Get invoices for current shipper
+  // RULE: Shipper only sees invoices AFTER they are SENT (not draft/created)
   app.get("/api/invoices/shipper", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -2358,7 +2359,10 @@ export async function registerRoutes(
       }
 
       const invoices = await storage.getInvoicesByShipper(user.id);
-      res.json(invoices);
+      // Filter to only show sent/approved/paid invoices (not draft/created)
+      const visibleStatuses = ['sent', 'approved', 'acknowledged', 'paid', 'overdue', 'disputed'];
+      const visibleInvoices = invoices.filter(inv => visibleStatuses.includes(inv.status || ''));
+      res.json(visibleInvoices);
     } catch (error) {
       console.error("Get shipper invoices error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -2404,16 +2408,16 @@ export async function registerRoutes(
       }
 
       // NEW WORKFLOW: Invoice comes AFTER carrier finalization
-      // So when shipper approves invoice, we transition to invoice_approved (ready for transit)
-      // Bidding/carrier assignment has already happened before the invoice was sent
-      await storage.updateLoad(load.id, {
-        status: 'invoice_approved',
-        previousStatus: load.status,
-        invoiceApprovedAt: new Date(),
-        statusChangedBy: user.id,
-        statusChangedAt: new Date(),
-        statusNote: 'Invoice approved by shipper - ready for transit',
-      });
+      // Shipper acknowledges invoice → then pays → then transit begins
+      const transitionResult = await transitionLoadState(
+        load.id,
+        'invoice_acknowledged',
+        user.id,
+        'Invoice acknowledged by shipper - awaiting payment'
+      );
+      if (!transitionResult.success) {
+        console.warn(`Load state transition warning: ${transitionResult.error}`);
+      }
 
       // Notify shipper of confirmation
       await storage.createNotification({
@@ -2451,8 +2455,8 @@ export async function registerRoutes(
       res.json({ 
         success: true, 
         invoice: updatedInvoice,
-        load_status: 'invoice_approved',
-        message: "Invoice approved. Shipment is ready to begin.",
+        load_status: 'invoice_acknowledged',
+        message: "Invoice acknowledged. Awaiting payment to proceed.",
       });
     } catch (error) {
       console.error("Invoice confirm error:", error);
@@ -2662,8 +2666,9 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Load not found" });
       }
 
-      const allowedStatesForInvoice = ['awarded', 'in_transit', 'delivered', 'completed'];
-      if (!allowedStatesForInvoice.includes(load.status)) {
+      // Invoice creation allowed at awarded state (creates invoice_created) or later invoice states
+      const allowedStatesForInvoice = ['awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid', 'in_transit', 'delivered', 'closed'];
+      if (!load.status || !allowedStatesForInvoice.includes(load.status)) {
         return res.status(400).json({ 
           error: "Invoice can only be created after carrier finalization (awarded state or later)" 
         });
@@ -2692,6 +2697,17 @@ export async function registerRoutes(
         lineItems,
         status: "draft",
       });
+
+      // Transition load state to invoice_created (if still in awarded state)
+      if (load.status === 'awarded') {
+        await storage.updateLoad(load.id, {
+          status: 'invoice_created',
+          previousStatus: load.status,
+          statusChangedBy: user.id,
+          statusChangedAt: new Date(),
+          statusNote: 'Invoice created by admin',
+        });
+      }
 
       res.status(201).json(invoice);
     } catch (error) {
@@ -2740,8 +2756,21 @@ export async function registerRoutes(
 
       const updated = await storage.sendInvoice(req.params.id);
       
-      // Create notification for shipper
+      // Transition load state to invoice_sent using centralized validation
       const load = await storage.getLoad(invoice.loadId);
+      if (load) {
+        const transitionResult = await transitionLoadState(
+          load.id,
+          'invoice_sent',
+          user.id,
+          'Invoice sent to shipper'
+        );
+        if (!transitionResult.success) {
+          console.warn(`Load state transition warning: ${transitionResult.error}`);
+        }
+      }
+      
+      // Create notification for shipper
       await storage.createNotification({
         userId: invoice.shipperId,
         title: "New Invoice Received",
@@ -2770,11 +2799,41 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Missing payment details" });
       }
 
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
       const updated = await storage.markInvoicePaid(req.params.id, {
         paidAmount,
         paymentMethod,
         paymentReference,
       });
+
+      // Transition load state to invoice_paid using centralized validation
+      const load = await storage.getLoad(invoice.loadId);
+      if (load) {
+        const transitionResult = await transitionLoadState(
+          load.id,
+          'invoice_paid',
+          user.id,
+          'Invoice paid - ready for transit'
+        );
+        if (!transitionResult.success) {
+          console.warn(`Load state transition warning: ${transitionResult.error}`);
+        }
+
+        // Notify carrier that payment is complete and they can begin
+        if (load.assignedCarrierId) {
+          await storage.createNotification({
+            userId: load.assignedCarrierId,
+            title: "Payment Received - Ready for Pickup",
+            message: `Payment confirmed for ${load.pickupCity} → ${load.dropoffCity}. You can now schedule pickup.`,
+            type: "success",
+            relatedLoadId: load.id,
+          });
+        }
+      }
 
       res.json(updated);
     } catch (error) {
@@ -2812,8 +2871,9 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Load not found" });
       }
 
-      const allowedStatesForInvoice = ['awarded', 'in_transit', 'delivered', 'completed'];
-      if (!allowedStatesForInvoice.includes(load.status)) {
+      // Invoice creation allowed at awarded state (creates invoice_created) or later invoice states
+      const allowedStatesForInvoice = ['awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid', 'in_transit', 'delivered', 'closed'];
+      if (!load.status || !allowedStatesForInvoice.includes(load.status)) {
         return res.status(400).json({ 
           error: "Invoice can only be created after carrier finalization (awarded state or later)" 
         });
@@ -2861,6 +2921,17 @@ export async function registerRoutes(
         idempotencyKey,
       });
 
+      // Transition load state to invoice_created (if still in awarded state)
+      if (load.status === 'awarded') {
+        await storage.updateLoad(load.id, {
+          status: 'invoice_created',
+          previousStatus: load.status,
+          statusChangedBy: user.id,
+          statusChangedAt: new Date(),
+          statusNote: 'Invoice created by admin',
+        });
+      }
+
       // Create audit log
       await storage.createInvoiceHistory({
         invoiceId: invoice.id,
@@ -2873,7 +2944,15 @@ export async function registerRoutes(
       if (sendToShipper) {
         await storage.updateInvoice(invoice.id, { status: "sent", sentAt: new Date() });
         
-        const load = await storage.getLoad(loadId);
+        // Transition load state to invoice_sent
+        await storage.updateLoad(load.id, {
+          status: 'invoice_sent',
+          previousStatus: 'invoice_created',
+          statusChangedBy: user.id,
+          statusChangedAt: new Date(),
+          statusNote: 'Invoice sent to shipper',
+        });
+        
         await storage.createNotification({
           userId: shipperId,
           title: "Invoice Received",
@@ -2931,6 +3010,17 @@ export async function registerRoutes(
         viewedAt: new Date(),
       });
 
+      // Transition load state to invoice_acknowledged using centralized validation
+      const transitionResult = await transitionLoadState(
+        invoice.loadId,
+        'invoice_acknowledged',
+        user.id,
+        'Invoice acknowledged by shipper'
+      );
+      if (!transitionResult.success) {
+        console.warn(`Load state transition warning: ${transitionResult.error}`);
+      }
+
       await storage.createInvoiceHistory({
         invoiceId: invoice.id,
         userId: user.id,
@@ -2979,6 +3069,17 @@ export async function registerRoutes(
         paymentReference,
       });
 
+      // Transition load state to invoice_paid using centralized validation
+      const transitionResult = await transitionLoadState(
+        invoice.loadId,
+        'invoice_paid',
+        user.id,
+        'Invoice paid by shipper - ready for transit'
+      );
+      if (!transitionResult.success) {
+        console.warn(`Load state transition warning: ${transitionResult.error}`);
+      }
+
       await storage.createInvoiceHistory({
         invoiceId: invoice.id,
         userId: user.id,
@@ -2995,6 +3096,18 @@ export async function registerRoutes(
           message: `Payment of Rs. ${parseFloat(invoice.totalAmount).toLocaleString('en-IN')} received for invoice ${invoice.invoiceNumber}`,
           type: "success",
           relatedLoadId: invoice.loadId,
+        });
+      }
+
+      // Notify carrier that payment is complete and they can begin transit
+      const load = await storage.getLoad(invoice.loadId);
+      if (load?.assignedCarrierId) {
+        await storage.createNotification({
+          userId: load.assignedCarrierId,
+          title: "Payment Received - Ready for Pickup",
+          message: `Payment confirmed for ${load.pickupCity} → ${load.dropoffCity}. You can now schedule pickup.`,
+          type: "success",
+          relatedLoadId: load.id,
         });
       }
 
@@ -3566,8 +3679,8 @@ export async function registerRoutes(
       }
 
       // CRITICAL: Verify load is in awarded state or later before allowing invoice creation
-      const allowedStatesForInvoice = ['awarded', 'in_transit', 'delivered', 'completed'];
-      if (!allowedStatesForInvoice.includes(load.status)) {
+      const allowedStatesForInvoice = ['awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid', 'in_transit', 'delivered', 'closed'];
+      if (!load.status || !allowedStatesForInvoice.includes(load.status)) {
         return res.status(400).json({ 
           error: "Invoice can only be created after carrier finalization (awarded state or later)" 
         });

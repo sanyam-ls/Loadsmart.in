@@ -90,11 +90,15 @@ export interface MockNotification {
   id: string;
   title: string;
   message: string;
-  type: "bid" | "shipment" | "document" | "general";
+  type: "bid" | "shipment" | "document" | "general" | "invoice" | "negotiation" | "success" | "info";
   isRead: boolean;
   createdAt: Date;
   loadId?: string;
   bidId?: string;
+  invoiceId?: string;
+  contextType?: "load" | "bid" | "negotiation" | "invoice" | "shipment" | "document" | "carrier" | "general";
+  contextTab?: string;
+  actionUrl?: string;
 }
 
 export interface ChatMessage {

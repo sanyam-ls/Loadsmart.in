@@ -58,6 +58,7 @@ export interface MockBid {
   counterPrice: number | null;
   counterMessage: string | null;
   createdAt: string;
+  carrierType?: "enterprise" | "solo";
 }
 
 export interface MockInTransit {

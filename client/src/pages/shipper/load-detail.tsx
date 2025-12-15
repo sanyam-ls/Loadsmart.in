@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { 
   ChevronLeft, MapPin, Package, Calendar, DollarSign, Truck, 
-  Users, Edit, Copy, X, CheckCircle, AlertCircle, Star, FileText
+  Users, Copy, X, CheckCircle, AlertCircle, Star, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,14 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useMockData } from "@/lib/mock-data-store";
 import { DocumentManager } from "@/components/document-manager";
@@ -40,14 +32,6 @@ function getStatusColor(status: string | null) {
   }
 }
 
-function getBidStatusColor(status: string | null) {
-  switch (status) {
-    case "Pending": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-    case "Accepted": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-    case "Rejected": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-    default: return "bg-muted text-muted-foreground";
-  }
-}
 
 function formatDate(date: Date | string | null) {
   if (!date) return "TBD";
@@ -78,20 +62,15 @@ export default function LoadDetailPage() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
   const [cancelDialog, setCancelDialog] = useState(false);
-  const [acceptBidDialog, setAcceptBidDialog] = useState<{ open: boolean; bidId: string | null }>({ open: false, bidId: null });
 
   const { 
     getLoadById, 
-    getBidsForLoad, 
     cancelLoad, 
     duplicateLoad, 
-    acceptBid, 
-    rejectBid,
     getShipmentByLoadId
   } = useMockData();
 
   const load = getLoadById(params.id || "");
-  const bids = getBidsForLoad(params.id || "");
   const shipment = getShipmentByLoadId(params.id || "");
 
   const handleCancel = () => {
@@ -113,19 +92,6 @@ export default function LoadDetailPage() {
     }
   };
 
-  const handleAcceptBid = () => {
-    if (acceptBidDialog.bidId) {
-      acceptBid(acceptBidDialog.bidId);
-      toast({ title: "Bid accepted", description: "The carrier has been notified and assigned to this load." });
-      setAcceptBidDialog({ open: false, bidId: null });
-    }
-  };
-
-  const handleRejectBid = (bidId: string) => {
-    rejectBid(bidId);
-    toast({ title: "Bid declined" });
-  };
-
   if (!load) {
     return (
       <div className="p-6 max-w-6xl mx-auto">
@@ -138,10 +104,6 @@ export default function LoadDetailPage() {
       </div>
     );
   }
-
-  const pendingBids = bids.filter(b => b.status === "Pending");
-  const lowestBid = pendingBids.length > 0 ? Math.min(...pendingBids.map(b => b.bidPrice)) : null;
-  const avgBid = pendingBids.length > 0 ? pendingBids.reduce((sum, b) => sum + b.bidPrice, 0) / pendingBids.length : null;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -221,101 +183,25 @@ export default function LoadDetailPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4">
-              <CardTitle className="text-lg">Bids ({bids.length})</CardTitle>
-              {pendingBids.length > 0 && (
-                <div className="flex items-center gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Lowest:</span>
-                    <span className="font-semibold ml-1 text-green-600 dark:text-green-400">${lowestBid?.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Avg:</span>
-                    <span className="font-semibold ml-1">${Math.round(avgBid || 0).toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
+              <CardTitle className="text-lg">Carrier Selection</CardTitle>
             </CardHeader>
             <CardContent>
-              {bids.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-sm text-muted-foreground">No bids yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Carriers will start bidding once your load is posted</p>
+              {load.status === "Assigned" || load.status === "En Route" || load.status === "Delivered" ? (
+                <div className="text-center py-4">
+                  <CheckCircle className="h-12 w-12 mx-auto text-green-600 dark:text-green-400 mb-3" />
+                  <p className="font-medium">Carrier Assigned</p>
+                  <p className="text-sm text-muted-foreground mt-1">A carrier has been selected for this load</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Carrier</TableHead>
-                      <TableHead>Bid Amount</TableHead>
-                      <TableHead>ETA</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Submitted</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bids.map((bid) => (
-                      <TableRow key={bid.bidId} data-testid={`row-bid-${bid.bidId}`}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-sm">
-                              {bid.carrierName.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">{bid.carrierName}</p>
-                              <div className="flex items-center gap-1 text-xs text-amber-500">
-                                <Star className="h-3 w-3 fill-current" />
-                                4.8
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`font-semibold ${bid.bidPrice === lowestBid ? "text-green-600" : ""}`}>
-                            ${bid.bidPrice.toLocaleString()}
-                          </span>
-                          {bid.bidPrice === lowestBid && (
-                            <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                              Best
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">{bid.eta}</TableCell>
-                        <TableCell>
-                          <Badge className={`${getBidStatusColor(bid.status)} no-default-hover-elevate no-default-active-elevate`}>
-                            {bid.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatTimeAgo(bid.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          {bid.status === "Pending" && (
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                size="sm" 
-                                onClick={() => setAcceptBidDialog({ open: true, bidId: bid.bidId })}
-                                data-testid={`button-accept-bid-${bid.bidId}`}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Accept
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handleRejectBid(bid.bidId)}
-                                data-testid={`button-decline-bid-${bid.bidId}`}
-                              >
-                                Decline
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="font-medium">Admin-Managed Selection</p>
+                  <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                    Our logistics team is reviewing carrier bids and will select the best carrier for your load. 
+                    You'll be notified when a carrier is assigned.
+                  </p>
+                  <Badge variant="outline" className="mt-4">In Review</Badge>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -341,7 +227,7 @@ export default function LoadDetailPage() {
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Estimated Price</span>
-                <span className="font-semibold text-lg">${load.estimatedPrice.toLocaleString()}</span>
+                <span className="font-semibold text-lg">${(load.estimatedPrice || 0).toLocaleString()}</span>
               </div>
               {load.finalPrice && (
                 <>

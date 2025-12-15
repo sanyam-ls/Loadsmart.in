@@ -628,6 +628,7 @@ export default function AdminLoadDetailsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Carrier</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Submitted</TableHead>
@@ -638,6 +639,18 @@ export default function AdminLoadDetailsPage() {
                   {detailedLoad.bids.map((bid) => (
                     <TableRow key={bid.bidId}>
                       <TableCell className="font-medium">{bid.carrierName}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline" 
+                          className={bid.carrierType === "solo" 
+                            ? "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700" 
+                            : "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700"
+                          }
+                          data-testid={`badge-carrier-type-${bid.bidId}`}
+                        >
+                          {bid.carrierType === "solo" ? "Solo" : "Enterprise"}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{formatCurrency(bid.amount)}</TableCell>
                       <TableCell>
                         <Badge variant={

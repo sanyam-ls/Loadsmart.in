@@ -1,4 +1,4 @@
-import { DollarSign, Calendar, Clock, CheckCircle, XCircle, RefreshCw, User } from "lucide-react";
+import { DollarSign, Calendar, Clock, CheckCircle, XCircle, RefreshCw, User, Building2, UserCircle } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,20 @@ export function BidCard({ bid, variant = "shipper", onAccept, onReject, onCounte
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{bid.carrier.companyName || bid.carrier.username}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{bid.carrier.companyName || bid.carrier.username}</p>
+                  <Badge 
+                    variant="outline" 
+                    className={bid.carrierType === "solo" 
+                      ? "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700 text-xs" 
+                      : "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700 text-xs"
+                    }
+                    data-testid={`badge-carrier-type-${bid.id}`}
+                  >
+                    {bid.carrierType === "solo" ? <UserCircle className="h-3 w-3 mr-1" /> : <Building2 className="h-3 w-3 mr-1" />}
+                    {bid.carrierType === "solo" ? "Solo" : "Enterprise"}
+                  </Badge>
+                </div>
                 <p className="text-xs text-muted-foreground">Carrier</p>
               </div>
             </div>

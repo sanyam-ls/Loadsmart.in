@@ -216,12 +216,25 @@ export async function registerRoutes(
 
   app.get("/api/loads/:id", requireAuth, async (req, res) => {
     try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
       const load = await storage.getLoad(req.params.id);
       if (!load) {
         return res.status(404).json({ error: "Load not found" });
       }
-      const loadBids = await storage.getBidsByLoad(load.id);
-      res.json({ ...load, bids: loadBids });
+      
+      // Admin-as-Mediator: Shippers can only see bids on finalized loads
+      const isFinalized = ["assigned", "in_transit", "delivered"].includes(load.status || "");
+      const shouldIncludeBids = user.role !== "shipper" || isFinalized;
+      
+      if (shouldIncludeBids) {
+        const loadBids = await storage.getBidsByLoad(load.id);
+        res.json({ ...load, bids: loadBids });
+      } else {
+        // Hide bids and pricing info from shippers pre-finalization
+        res.json({ ...load, bids: [], bidCount: 0 });
+      }
     } catch (error) {
       console.error("Get load error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -326,9 +339,13 @@ export async function registerRoutes(
       if (user.role === "carrier") {
         bidsList = await storage.getBidsByCarrier(user.id);
       } else if (user.role === "shipper") {
+        // Admin-as-Mediator: Shippers can only see bids on finalized loads (assigned, in_transit, delivered)
         const shipperLoads = await storage.getLoadsByShipper(user.id);
+        const finalizedLoads = shipperLoads.filter(load => 
+          ["assigned", "in_transit", "delivered"].includes(load.status || "")
+        );
         const allBids = await Promise.all(
-          shipperLoads.map(load => storage.getBidsByLoad(load.id))
+          finalizedLoads.map(load => storage.getBidsByLoad(load.id))
         );
         bidsList = allBids.flat();
       } else {
@@ -353,6 +370,17 @@ export async function registerRoutes(
 
   app.get("/api/loads/:loadId/bids", requireAuth, async (req, res) => {
     try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+      // Admin-as-Mediator: Shippers cannot access bids on non-finalized loads
+      if (user.role === "shipper") {
+        const load = await storage.getLoad(req.params.loadId);
+        if (load && !["assigned", "in_transit", "delivered"].includes(load.status || "")) {
+          return res.json([]); // Return empty array for non-finalized loads
+        }
+      }
+
       const bidsList = await storage.getBidsByLoad(req.params.loadId);
       
       const bidsWithCarriers = await Promise.all(

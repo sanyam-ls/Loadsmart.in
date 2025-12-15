@@ -84,6 +84,7 @@ export interface LoadBidRecord {
   submittedAt: Date;
   counterOffer?: number;
   notes?: string;
+  carrierType?: "enterprise" | "solo";
 }
 
 export interface LoadNegotiationMessage {

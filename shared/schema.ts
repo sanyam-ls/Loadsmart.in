@@ -80,6 +80,10 @@ export type DocumentType = typeof documentTypes[number];
 export const alertTypes = ["overheating", "low_fuel", "overspeed", "low_battery", "harsh_brake", "sudden_acceleration", "route_deviation", "unexpected_stop", "idle_time"] as const;
 export type AlertType = typeof alertTypes[number];
 
+// Carrier types enum - Enterprise fleets vs Solo owner-operators
+export const carrierTypes = ["enterprise", "solo"] as const;
+export type CarrierType = typeof carrierTypes[number];
+
 // Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -98,6 +102,7 @@ export const users = pgTable("users", {
 export const carrierProfiles = pgTable("carrier_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  carrierType: text("carrier_type").default("enterprise"), // enterprise or solo
   fleetSize: integer("fleet_size").default(1),
   serviceZones: text("service_zones").array(),
   reliabilityScore: decimal("reliability_score", { precision: 3, scale: 2 }).default("0"),
@@ -569,6 +574,7 @@ export const bids = pgTable("bids", {
   notes: text("notes"),
   status: text("status").default("pending"),
   bidType: text("bid_type").default("carrier_bid"),
+  carrierType: text("carrier_type").default("enterprise"), // enterprise or solo - tracks bid source
   approvalRequired: boolean("approval_required").default(false),
   adminMediated: boolean("admin_mediated").default(false),
   createdAt: timestamp("created_at").defaultNow(),

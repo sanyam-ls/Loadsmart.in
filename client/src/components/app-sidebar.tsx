@@ -61,6 +61,13 @@ const carrierItems = [
   { title: "Documents", url: "/carrier/documents", icon: FileText },
 ];
 
+const soloItems = [
+  { title: "Load Feed", url: "/solo", icon: Route },
+  { title: "My Bids", url: "/solo/bids", icon: Gavel },
+  { title: "My Trips", url: "/solo/trips", icon: Truck },
+  { title: "Earnings", url: "/solo/earnings", icon: DollarSign },
+];
+
 const adminItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
   { title: "Load Queue", url: "/admin/queue", icon: ClipboardList },
@@ -75,7 +82,10 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
 
+  const isSoloPortal = location.startsWith("/solo");
+
   const getNavItems = () => {
+    if (isSoloPortal) return soloItems;
     switch (user?.role) {
       case "shipper":
         return shipperItems;
@@ -89,6 +99,7 @@ export function AppSidebar() {
   };
 
   const getRoleLabel = () => {
+    if (isSoloPortal) return "Solo Driver";
     switch (user?.role) {
       case "shipper":
         return "Shipper Portal";

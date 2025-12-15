@@ -1196,7 +1196,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Only carriers can submit bids" });
       }
 
-      const { load_id, amount, bid_type, notes, truck_id } = req.body;
+      const { load_id, amount, bid_type, notes, truck_id, carrier_type } = req.body;
 
       const load = await storage.getLoad(load_id);
       if (!load) {
@@ -1217,6 +1217,9 @@ export async function registerRoutes(
         finalBidType = 'admin_posted_acceptance';
       }
 
+      // Get carrier type from request or default to enterprise
+      const finalCarrierType = carrier_type || 'enterprise';
+
       const bid = await storage.createBid({
         loadId: load_id,
         carrierId: user.id,
@@ -1225,6 +1228,7 @@ export async function registerRoutes(
         notes: notes || null,
         status: 'pending',
         bidType: finalBidType,
+        carrierType: finalCarrierType,
         adminMediated: !!load.adminId,
         approvalRequired: bid_type === 'counter',
       });

@@ -2024,46 +2024,9 @@ export async function registerRoutes(
       // Update pricing status to locked (not posted yet)
       await storage.updateAdminPricing(pricing_id, { status: 'locked' });
 
-      // Generate invoice for shipper - they need to confirm this before bidding begins
-      let invoiceCreated = false;
-      try {
-        const existingInvoice = await storage.getInvoiceByLoad(load.id);
-        if (!existingInvoice) {
-          const taxRate = 0.18; // 18% GST
-          const taxAmount = Math.round(finalPrice * taxRate);
-          const totalAmount = finalPrice + taxAmount;
-          
-          const invoiceNumber = await storage.generateInvoiceNumber();
-          const invoice = await storage.createInvoice({
-            invoiceNumber,
-            loadId: load.id,
-            shipperId: load.shipperId,
-            adminId: user.id,
-            subtotal: finalPrice.toString(),
-            taxPercent: '18',
-            taxAmount: taxAmount.toString(),
-            totalAmount: totalAmount.toString(),
-            status: 'draft',
-            paymentTerms: 'Net 30',
-            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            lineItems: [
-              { 
-                description: `Freight Transportation: ${load.pickupCity} to ${load.dropoffCity}`, 
-                quantity: 1,
-                rate: finalPrice,
-                amount: finalPrice 
-              }
-            ],
-            notes: `Load ID: ${load.id}`,
-          });
-
-          // Auto-send invoice to shipper
-          await storage.sendInvoice(invoice.id);
-          invoiceCreated = true;
-        }
-      } catch (invoiceError) {
-        console.error("Invoice creation error:", invoiceError);
-      }
+      // NOTE: Invoice is NOT created at pricing time per Admin-as-Mediator workflow
+      // Invoice will be generated ONLY after carrier finalization (bid accepted)
+      // This happens in acceptBid() in workflow-service.ts
 
       // CRITICAL FIX: Set status to 'posted_to_carriers' so carriers can see the load immediately
       // This ensures the success message in the UI is accurate - no fake success states
@@ -2109,7 +2072,7 @@ export async function registerRoutes(
         pricing: updatedPricing,
         requires_approval: false,
         load_status: 'posted_to_carriers',
-        invoice_created: invoiceCreated,
+        invoice_note: 'Invoice will be generated after carrier is finalized',
       });
     } catch (error) {
       console.error("Pricing lock error:", error);
@@ -2189,45 +2152,9 @@ export async function registerRoutes(
         relatedLoadId: pricing.loadId,
       });
 
-      // Generate invoice for shipper
-      let invoiceCreated = false;
-      try {
-        const existingInvoice = await storage.getInvoiceByLoad(load.id);
-        if (!existingInvoice) {
-          const taxRate = 0.18;
-          const taxAmount = Math.round(finalPrice * taxRate);
-          const totalAmount = finalPrice + taxAmount;
-          
-          const invoiceNumber = await storage.generateInvoiceNumber();
-          const invoice = await storage.createInvoice({
-            invoiceNumber,
-            loadId: load.id,
-            shipperId: load.shipperId,
-            adminId: user.id,
-            subtotal: finalPrice.toString(),
-            taxPercent: '18',
-            taxAmount: taxAmount.toString(),
-            totalAmount: totalAmount.toString(),
-            status: 'draft',
-            paymentTerms: 'Net 30',
-            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            lineItems: [
-              { 
-                description: `Freight Transportation: ${load.pickupCity} to ${load.dropoffCity}`, 
-                quantity: 1,
-                rate: finalPrice,
-                amount: finalPrice 
-              }
-            ],
-            notes: `Load ID: ${load.id}`,
-          });
-
-          await storage.sendInvoice(invoice.id);
-          invoiceCreated = true;
-        }
-      } catch (invoiceError) {
-        console.error("Invoice creation error:", invoiceError);
-      }
+      // NOTE: Invoice is NOT created at pricing approval time per Admin-as-Mediator workflow
+      // Invoice will be generated ONLY after carrier finalization (bid accepted)
+      // This happens in acceptBid() in workflow-service.ts
 
       // Notify shipper that load is posted
       await storage.createNotification({
@@ -2256,7 +2183,7 @@ export async function registerRoutes(
         success: true, 
         pricing: approvedPricing, 
         load_status: 'posted_to_carriers',
-        invoice_created: invoiceCreated,
+        invoice_note: 'Invoice will be generated after carrier is finalized',
       });
     } catch (error) {
       console.error("Pricing approve error:", error);

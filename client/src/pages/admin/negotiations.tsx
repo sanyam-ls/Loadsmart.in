@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
+import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { 
   Gavel, 
   Check, 
@@ -38,11 +40,33 @@ import {
   Search,
   RefreshCw,
   Package,
+  Send,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/empty-state";
+
+type ChatMessage = {
+  id: string;
+  sender: "admin" | "carrier";
+  message: string;
+  amount?: string;
+  timestamp: Date;
+  isSimulated?: boolean;
+};
+
+const SIMULATED_CARRIER_RESPONSES = [
+  "I can consider that rate, but could you go slightly higher?",
+  "That's a bit lower than my costs. Can we meet in the middle?",
+  "I appreciate the offer. Let me check my schedule and get back to you.",
+  "I can do this load if you can increase the rate by 5%.",
+  "Fair enough, I'll accept this if it's the final offer.",
+  "I've done similar routes before. Your rate seems reasonable.",
+  "Can you guarantee quick loading/unloading times?",
+  "I'm interested but my truck is available in 2 days. Would that work?",
+];
 
 type Bid = {
   id: string;
@@ -88,6 +112,7 @@ type LoadWithBids = {
 
 export default function AdminNegotiationsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [counterDialogOpen, setCounterDialogOpen] = useState(false);
@@ -98,6 +123,81 @@ export default function AdminNegotiationsPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [chatBid, setChatBid] = useState<Bid | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (user?.id && user?.role === "admin") {
+      connectMarketplace("admin", user.id);
+      
+      const unsubscribeBid = onMarketplaceEvent("bid_received", (data) => {
+        toast({
+          title: "New Bid Received",
+          description: `${data.bid?.carrierName || "Carrier"} submitted a bid for Rs. ${parseFloat(data.bid?.amount || "0").toLocaleString("en-IN")}`,
+        });
+        refetch();
+      });
+
+      return () => {
+        unsubscribeBid();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, toast]);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  const openChatDialog = useCallback((bid: Bid) => {
+    setChatBid(bid);
+    setChatMessages([
+      {
+        id: "initial",
+        sender: "carrier",
+        message: `Hi, I'm interested in this load from ${bid.load?.pickupCity} to ${bid.load?.dropoffCity}. My initial offer is Rs. ${parseFloat(bid.amount).toLocaleString("en-IN")}.`,
+        amount: bid.amount,
+        timestamp: new Date(bid.createdAt),
+        isSimulated: false,
+      },
+    ]);
+    setChatDialogOpen(true);
+  }, []);
+
+  const sendChatMessage = useCallback((message: string, amount?: string) => {
+    if (!chatBid || !message.trim()) return;
+
+    const adminMessage: ChatMessage = {
+      id: `admin-${Date.now()}`,
+      sender: "admin",
+      message,
+      amount,
+      timestamp: new Date(),
+    };
+    setChatMessages(prev => [...prev, adminMessage]);
+    setChatInput("");
+
+    setIsTyping(true);
+    setTimeout(() => {
+      const response = SIMULATED_CARRIER_RESPONSES[Math.floor(Math.random() * SIMULATED_CARRIER_RESPONSES.length)];
+      const carrierResponse: ChatMessage = {
+        id: `carrier-${Date.now()}`,
+        sender: "carrier",
+        message: response,
+        timestamp: new Date(),
+        isSimulated: true,
+      };
+      setChatMessages(prev => [...prev, carrierResponse]);
+      setIsTyping(false);
+    }, 1500 + Math.random() * 2000);
+  }, [chatBid]);
 
   const { data: bids = [], isLoading, refetch } = useQuery<Bid[]>({
     queryKey: ["/api/bids"],
@@ -285,46 +385,57 @@ export default function AdminNegotiationsPage() {
             </div>
           </div>
           
-          {bid.status === "pending" && (
-            <div className="flex gap-2 flex-shrink-0">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedBid(bid);
-                  setCounterAmount(bid.amount);
-                  setCounterDialogOpen(true);
-                }}
-                data-testid={`button-counter-${bid.id}`}
-              >
-                <MessageSquare className="h-4 w-4 mr-1" />
-                Counter
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedBid(bid);
-                  setRejectDialogOpen(true);
-                }}
-                data-testid={`button-reject-${bid.id}`}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Reject
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setSelectedBid(bid);
-                  setAcceptDialogOpen(true);
-                }}
-                data-testid={`button-accept-${bid.id}`}
-              >
-                <Check className="h-4 w-4 mr-1" />
-                Accept
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2 flex-shrink-0 flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openChatDialog(bid)}
+              data-testid={`button-negotiate-${bid.id}`}
+            >
+              <MessageSquare className="h-4 w-4 mr-1" />
+              Negotiate
+            </Button>
+            {bid.status === "pending" && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedBid(bid);
+                    setCounterAmount(bid.amount);
+                    setCounterDialogOpen(true);
+                  }}
+                  data-testid={`button-counter-${bid.id}`}
+                >
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  Counter
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedBid(bid);
+                    setRejectDialogOpen(true);
+                  }}
+                  data-testid={`button-reject-${bid.id}`}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Reject
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setSelectedBid(bid);
+                    setAcceptDialogOpen(true);
+                  }}
+                  data-testid={`button-accept-${bid.id}`}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Accept
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

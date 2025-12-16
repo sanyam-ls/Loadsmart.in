@@ -16,7 +16,15 @@ import {
   transitionLoadState
 } from "./workflow-service";
 import { setupTelemetryWebSocket } from "./websocket-telemetry";
-import { broadcastLoadPosted, broadcastLoadUpdated, broadcastBidReceived } from "./websocket-marketplace";
+import { 
+  broadcastLoadPosted, 
+  broadcastLoadUpdated, 
+  broadcastBidReceived,
+  broadcastBidCountered,
+  broadcastBidAccepted,
+  broadcastInvoiceEvent,
+  broadcastNegotiationMessage
+} from "./websocket-marketplace";
 import {
   getAllVehiclesTelemetry,
   getVehicleTelemetry,
@@ -1343,6 +1351,15 @@ export async function registerRoutes(
         contextType: "counter_offer",
       });
 
+      // Broadcast real-time counter event to carrier
+      broadcastBidCountered(bid.carrierId, loadId, {
+        bidId,
+        counterAmount,
+        message: message || `Counter offer: Rs. ${Number(counterAmount).toLocaleString('en-IN')}`,
+        loadPickup: load.pickupCity,
+        loadDropoff: load.dropoffCity,
+      });
+
       res.json({ success: true, message: negotiationMessage });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1441,6 +1458,15 @@ export async function registerRoutes(
         message: `A carrier has been assigned for your load from ${load.pickupCity} to ${load.dropoffCity}`,
         type: "success",
         relatedLoadId: loadId,
+      });
+
+      // Broadcast real-time bid accepted event to carrier
+      broadcastBidAccepted(bid.carrierId, loadId, {
+        bidId,
+        finalAmount,
+        loadPickup: load.pickupCity,
+        loadDropoff: load.dropoffCity,
+        carrierName: carrier?.companyName || carrier?.username,
       });
 
       res.json({ 
@@ -1764,6 +1790,17 @@ export async function registerRoutes(
           relatedBidId: bid.id,
         });
       }
+
+      // Broadcast real-time bid received event to admins
+      broadcastBidReceived(load_id, {
+        bidId: bid.id,
+        carrierId: user.id,
+        carrierName: user.companyName || user.username,
+        amount: finalAmount,
+        bidType: finalBidType,
+        loadPickup: load.pickupCity,
+        loadDropoff: load.dropoffCity,
+      });
 
       res.json({ success: true, bid });
     } catch (error) {

@@ -146,4 +146,77 @@ export function broadcastBidReceived(loadId: string, bidData: any): void {
       sendToClient(ws, message);
     }
   });
+  console.log(`Broadcasted bid_received event for load ${loadId}`);
+}
+
+export function broadcastBidCountered(carrierId: string, loadId: string, bidData: any): void {
+  const message = {
+    type: "bid_countered",
+    loadId,
+    bid: bidData,
+    timestamp: new Date().toISOString(),
+  };
+
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.role === "carrier" && client.userId === carrierId) {
+      sendToClient(ws, message);
+    }
+  });
+  console.log(`Broadcasted bid_countered event to carrier ${carrierId}`);
+}
+
+export function broadcastBidAccepted(carrierId: string, loadId: string, bidData: any): void {
+  const message = {
+    type: "bid_accepted",
+    loadId,
+    bid: bidData,
+    timestamp: new Date().toISOString(),
+  };
+
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.role === "carrier" && client.userId === carrierId) {
+      sendToClient(ws, message);
+    }
+  });
+  console.log(`Broadcasted bid_accepted event to carrier ${carrierId}`);
+}
+
+export function broadcastInvoiceEvent(shipperId: string, invoiceId: string, event: string, invoiceData?: any): void {
+  const message = {
+    type: "invoice_update",
+    invoiceId,
+    event,
+    invoice: invoiceData,
+    timestamp: new Date().toISOString(),
+  };
+
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      if (event === "invoice_sent" && client.role === "shipper" && client.userId === shipperId) {
+        sendToClient(ws, message);
+      }
+      if (["invoice_opened", "invoice_paid", "invoice_countered"].includes(event) && client.role === "admin") {
+        sendToClient(ws, message);
+      }
+    }
+  });
+  console.log(`Broadcasted invoice_${event} event for invoice ${invoiceId}`);
+}
+
+export function broadcastNegotiationMessage(targetRole: "carrier" | "admin", targetUserId: string | null, bidId: string, messageData: any): void {
+  const message = {
+    type: "negotiation_message",
+    bidId,
+    negotiation: messageData,
+    timestamp: new Date().toISOString(),
+  };
+
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.role === targetRole) {
+      if (targetUserId === null || client.userId === targetUserId) {
+        sendToClient(ws, message);
+      }
+    }
+  });
+  console.log(`Broadcasted negotiation_message to ${targetRole}`);
 }

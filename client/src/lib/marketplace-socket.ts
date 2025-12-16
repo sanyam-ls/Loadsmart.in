@@ -59,6 +59,41 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         bidHandlers?.forEach(handler => handler(message));
       }
 
+      if (message.type === "bid_countered") {
+        queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/bids"] });
+        
+        const counterHandlers = handlers.get("bid_countered");
+        counterHandlers?.forEach(handler => handler(message));
+      }
+
+      if (message.type === "bid_accepted") {
+        queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/bids"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/loads"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+        
+        const acceptHandlers = handlers.get("bid_accepted");
+        acceptHandlers?.forEach(handler => handler(message));
+      }
+
+      if (message.type === "invoice_update") {
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
+        
+        const invoiceHandlers = handlers.get("invoice_update");
+        invoiceHandlers?.forEach(handler => handler(message));
+      }
+
+      if (message.type === "negotiation_message") {
+        queryClient.invalidateQueries({ queryKey: ["/api/bids/negotiations"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/negotiations"] });
+        
+        const negotiationHandlers = handlers.get("negotiation_message");
+        negotiationHandlers?.forEach(handler => handler(message));
+      }
+
       const typeHandlers = handlers.get(message.type);
       if (typeHandlers) {
         typeHandlers.forEach(handler => handler(message));

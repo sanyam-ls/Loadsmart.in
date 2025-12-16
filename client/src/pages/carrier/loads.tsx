@@ -5,6 +5,8 @@ import {
   Truck, TrendingUp, ArrowRight, Building2, 
   Target, Timer, Sparkles, ShieldCheck, Lock, Unlock, Loader2
 } from "lucide-react";
+import { connectMarketplace, onMarketplaceEvent, disconnectMarketplace } from "@/lib/marketplace-socket";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -209,6 +211,7 @@ function calculateMatchScore(load: CarrierLoad): number {
 
 export default function CarrierLoadsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const searchString = useSearch();
   const highlightLoadId = new URLSearchParams(searchString).get("highlight");
   
@@ -222,6 +225,24 @@ export default function CarrierLoadsPage() {
   const [bidAmount, setBidAmount] = useState("");
   const [simulatedLoadStates, setSimulatedLoadStates] = useState<Record<string, { myBid?: { amount: string }, status?: string }>>({});
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.id && user?.role === "carrier") {
+      connectMarketplace("carrier", user.id);
+      
+      const unsubscribe = onMarketplaceEvent("load_posted", (loadData) => {
+        toast({
+          title: "New Load Available",
+          description: `Load from ${loadData.pickupCity} to ${loadData.dropoffCity} - Rs. ${parseFloat(loadData.adminFinalPrice || "0").toLocaleString("en-IN")}`,
+        });
+      });
+
+      return () => {
+        unsubscribe();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, toast]);
 
   useEffect(() => {
     if (highlightLoadId) {

@@ -51,6 +51,24 @@ draft → pending → priced → posted_to_carriers → open_for_bid → counter
 - `acceptBid()`: Accepts bid, auto-creates shipment and invoice, closes other bids
 - `checkCarrierEligibility()`: Validates carrier can bid on a load
 
+### Real-time Marketplace Updates
+
+The platform uses WebSockets for real-time updates between portals:
+
+**WebSocket Endpoints:**
+- `/ws/marketplace` - Marketplace events (load posting, bid updates)
+- `/ws/telemetry` - Vehicle telematics streaming
+
+**Real-time Load Updates:**
+- When admin posts a load via "Price & Post", server broadcasts `load_posted` event
+- Carrier's "Available Loads" page receives the event and auto-refreshes
+- Toast notification shows new load details immediately
+
+**Implementation:**
+- Server: `server/websocket-marketplace.ts` - WebSocket server with broadcast functions
+- Client: `client/src/lib/marketplace-socket.ts` - Connection management and event handlers
+- Events: `load_posted`, `load_updated`, `bid_received`
+
 ### Vehicle Telematics System (Shipper Portal Exclusive)
 
 The Shipper Portal includes a CAN-Bus GPS + Telematics system. It provides real-time vehicle tracking, CAN-Bus diagnostics (speed, RPM, fuel, etc.), ETA predictions with AI, and driver behavior insights. The AI Concierge integrates with telematics data to answer queries about fleet status, alerts, ETAs, and driver performance.

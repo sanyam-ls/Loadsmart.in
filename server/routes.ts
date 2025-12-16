@@ -16,6 +16,7 @@ import {
   transitionLoadState
 } from "./workflow-service";
 import { setupTelemetryWebSocket } from "./websocket-telemetry";
+import { broadcastLoadPosted, broadcastLoadUpdated, broadcastBidReceived } from "./websocket-marketplace";
 import {
   getAllVehiclesTelemetry,
   getVehicleTelemetry,
@@ -1125,6 +1126,18 @@ export async function registerRoutes(
             relatedLoadId: load_id,
           });
         }
+      }
+
+      // Broadcast real-time update to carrier clients
+      if (newStatus === 'posted_to_carriers') {
+        broadcastLoadPosted({
+          id: load_id,
+          pickupCity: load.pickupCity,
+          dropoffCity: load.dropoffCity,
+          adminFinalPrice: final_price,
+          requiredTruckType: load.requiredTruckType,
+          status: newStatus,
+        });
       }
 
       res.json({ 
@@ -2475,6 +2488,16 @@ export async function registerRoutes(
         }
       }
 
+      // Broadcast real-time update to carrier clients
+      broadcastLoadPosted({
+        id: load.id,
+        pickupCity: load.pickupCity,
+        dropoffCity: load.dropoffCity,
+        adminFinalPrice: finalPrice.toString(),
+        requiredTruckType: load.requiredTruckType,
+        status: 'posted_to_carriers',
+      });
+
       res.json({ 
         success: true, 
         pricing: updatedPricing,
@@ -2586,6 +2609,16 @@ export async function registerRoutes(
           });
         }
       }
+
+      // Broadcast real-time update to carrier clients
+      broadcastLoadPosted({
+        id: pricing.loadId,
+        pickupCity: load.pickupCity,
+        dropoffCity: load.dropoffCity,
+        adminFinalPrice: finalPrice.toString(),
+        requiredTruckType: load.requiredTruckType,
+        status: 'posted_to_carriers',
+      });
 
       res.json({ 
         success: true, 

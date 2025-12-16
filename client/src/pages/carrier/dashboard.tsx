@@ -3,7 +3,6 @@ import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight,
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { useAuth } from "@/lib/auth-context";
 import { useTrucks, useBids, useLoads, useShipments, useSettlements } from "@/lib/api-hooks";
@@ -79,14 +78,26 @@ export default function CarrierDashboard() {
   const activeTripsCount = shipments.filter((s: Shipment) => s.status === "in_transit").length;
   const driversEnRoute = activeTripsCount;
   
-  const currentMonthRevenue = carrierSettlements
-    .filter((s: any) => s.status === 'paid')
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
+  const currentMonthSettlements = carrierSettlements.filter((s: any) => {
+    if (s.status !== 'paid' || !s.paidAt) return false;
+    const paidDate = new Date(s.paidAt);
+    return paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear;
+  });
+  
+  const currentMonthRevenue = currentMonthSettlements
     .reduce((sum: number, s: any) => sum + parseFloat(s.carrierPayoutAmount?.toString() || '0'), 0);
   
-  const hasRevenueData = carrierSettlements.length > 0;
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonthName = monthNames[currentMonth];
+  
+  const hasRevenueData = currentMonthSettlements.length > 0;
   
   const monthlyRevenueData = hasRevenueData 
-    ? [{ month: 'Dec', revenue: currentMonthRevenue, fullMonth: 'December (Current)' }]
+    ? [{ month: currentMonthName, revenue: currentMonthRevenue, fullMonth: `${monthNames[currentMonth]} (Current Month)` }]
     : [];
 
   const revenueChange = 0;
@@ -120,13 +131,6 @@ export default function CarrierDashboard() {
         totalDistance: load?.distance ? parseFloat(load.distance) : null,
       };
     });
-
-  const performance = {
-    reliability: 4.8,
-    communication: 4.9,
-    onTime: 4.7,
-    overall: 4.8,
-  };
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -269,67 +273,12 @@ export default function CarrierDashboard() {
             </Tooltip>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center mb-6">
-              <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-primary/10">
-                <div className="text-center">
-                  <Star className="h-6 w-6 text-amber-500 mx-auto mb-1 fill-current" />
-                  <span className="text-3xl font-bold">{performance.overall}</span>
-                  <span className="text-sm text-muted-foreground">/5.0</span>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-muted-foreground cursor-help flex items-center gap-1">
-                        Reliability
-                        <Info className="h-3 w-3" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>{performanceTooltips.reliability}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <span className="font-medium">{performance.reliability}</span>
-                </div>
-                <Progress value={performance.reliability * 20} className="h-2" />
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-muted-foreground cursor-help flex items-center gap-1">
-                        Communication
-                        <Info className="h-3 w-3" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>{performanceTooltips.communication}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <span className="font-medium">{performance.communication}</span>
-                </div>
-                <Progress value={performance.communication * 20} className="h-2" />
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-muted-foreground cursor-help flex items-center gap-1">
-                        On-Time Delivery
-                        <Info className="h-3 w-3" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>{performanceTooltips.onTime}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <span className="font-medium">{performance.onTime}</span>
-                </div>
-                <Progress value={performance.onTime * 20} className="h-2" />
-              </div>
+            <div className="flex flex-col items-center justify-center h-64">
+              <Star className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="font-medium text-muted-foreground">Performance data unavailable</p>
+              <p className="text-sm text-muted-foreground text-center mt-1">
+                Complete more trips to build your performance score
+              </p>
             </div>
           </CardContent>
         </Card>

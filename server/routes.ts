@@ -459,14 +459,15 @@ export async function registerRoutes(
       const user = await storage.getUser(req.session.userId!);
       if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-      const { action, status, reason, counterAmount, notes } = req.body;
+      const { action, status, reason, counterAmount, notes, finalPrice } = req.body;
 
       // Use workflow service for bid acceptance (auto-closes other bids + awards load)
       if (action === "accept" || status === "accepted") {
         if (user.role !== "admin") {
           return res.status(403).json({ error: "Only admin can accept bids" });
         }
-        const result = await acceptBid(req.params.id, user.id);
+        // Pass the final negotiated price if provided (from counter-offer negotiations)
+        const result = await acceptBid(req.params.id, user.id, finalPrice);
         if (!result.success) {
           return res.status(400).json({ error: result.error });
         }

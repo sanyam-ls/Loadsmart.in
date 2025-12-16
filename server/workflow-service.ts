@@ -237,7 +237,8 @@ export function canTransitionBid(current: BidStatus, next: BidStatus): boolean {
 
 export async function acceptBid(
   bidId: string,
-  acceptedBy: string
+  acceptedBy: string,
+  finalPrice?: number  // Optional: the final negotiated price from counter-offers
 ): Promise<{ success: boolean; error?: string; bid?: Bid }> {
   const bid = await storage.getBid(bidId);
   if (!bid) {
@@ -252,10 +253,14 @@ export async function acceptBid(
     };
   }
 
+  // Use the final negotiated price if provided, otherwise use the original bid amount
+  const acceptedAmount = finalPrice != null ? finalPrice.toString() : bid.amount;
+
   // Accept this bid (use only existing schema fields)
   const updatedBid = await storage.updateBid(bidId, { 
     status: "accepted",
-    notes: `Accepted by ${acceptedBy} at ${new Date().toISOString()}`
+    amount: acceptedAmount,  // Update bid amount to reflect negotiated price
+    notes: `Accepted by ${acceptedBy} at ${new Date().toISOString()} for Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`
   });
 
   // Auto-close all other bids for this load
@@ -272,11 +277,11 @@ export async function acceptBid(
   // Transition load to awarded state and create invoice
   const load = await storage.getLoad(bid.loadId);
   if (load) {
-    await transitionLoadState(bid.loadId, "awarded", acceptedBy, `Bid ${bidId} accepted`);
+    await transitionLoadState(bid.loadId, "awarded", acceptedBy, `Bid ${bidId} accepted at Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
     await storage.updateLoad(bid.loadId, {
       assignedCarrierId: bid.carrierId,
       assignedTruckId: bid.truckId,
-      finalPrice: bid.amount,
+      finalPrice: acceptedAmount,  // Use the negotiated final price
       awardedBidId: bidId,
     });
 
@@ -300,7 +305,7 @@ export async function acceptBid(
       const existingInvoice = await storage.getInvoiceByLoad(load.id);
       if (!existingInvoice) {
         const invoiceNumber = await storage.generateInvoiceNumber();
-        const finalAmount = bid.amount || load.adminFinalPrice || "0";
+        const finalAmount = acceptedAmount || load.adminFinalPrice || "0";  // Use negotiated price
         
         await storage.createInvoice({
           invoiceNumber,

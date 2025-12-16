@@ -130,6 +130,7 @@ export default function AdminNegotiationsPage() {
   const [chatInput, setChatInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [finalNegotiatedPrice, setFinalNegotiatedPrice] = useState<number | null>(null);
 
   useEffect(() => {
     if (user?.id && user?.role === "admin") {
@@ -273,14 +274,18 @@ export default function AdminNegotiationsPage() {
   });
 
   const acceptMutation = useMutation({
-    mutationFn: async (bidId: string) => {
-      return apiRequest("PATCH", `/api/bids/${bidId}`, { action: "accept" });
+    mutationFn: async ({ bidId, finalPrice }: { bidId: string; finalPrice?: number }) => {
+      return apiRequest("PATCH", `/api/bids/${bidId}`, { 
+        action: "accept",
+        finalPrice: finalPrice  // Pass the negotiated final price
+      });
     },
     onSuccess: () => {
       toast({
         title: "Bid Accepted",
         description: "The carrier has been finalized for this load. You can now send the invoice to the shipper.",
       });
+      setFinalNegotiatedPrice(null);  // Reset after successful accept
       queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
       setAcceptDialogOpen(false);
@@ -781,9 +786,19 @@ export default function AdminNegotiationsPage() {
                 <span className="font-medium">{selectedBid.carrier?.companyName || selectedBid.carrier?.username}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Amount:</span>
-                <span className="font-semibold text-green-600">${parseFloat(selectedBid.amount).toLocaleString()}</span>
+                <span className="text-muted-foreground">Final Agreed Price:</span>
+                <span className="font-semibold text-green-600">
+                  Rs. {(finalNegotiatedPrice ?? parseFloat(selectedBid.amount)).toLocaleString("en-IN")}
+                </span>
               </div>
+              {finalNegotiatedPrice && finalNegotiatedPrice !== parseFloat(selectedBid.amount) && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Original Bid:</span>
+                  <span className="text-muted-foreground line-through">
+                    Rs. {parseFloat(selectedBid.amount).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Load:</span>
                 <span>{selectedBid.load?.pickupCity} to {selectedBid.load?.dropoffCity}</span>
@@ -793,7 +808,10 @@ export default function AdminNegotiationsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAcceptDialogOpen(false)}>Cancel</Button>
             <Button
-              onClick={() => selectedBid && acceptMutation.mutate(selectedBid.id)}
+              onClick={() => selectedBid && acceptMutation.mutate({ 
+                bidId: selectedBid.id,
+                finalPrice: finalNegotiatedPrice ?? parseFloat(selectedBid.amount)
+              })}
               disabled={acceptMutation.isPending}
               data-testid="button-confirm-accept"
             >
@@ -997,6 +1015,12 @@ export default function AdminNegotiationsPage() {
             <Button
               onClick={() => {
                 if (chatBid) {
+                  // Find the latest counter amount from the negotiation messages
+                  const messagesWithAmount = chatMessages.filter(m => m.amount != null);
+                  const latestPrice = messagesWithAmount.length > 0 
+                    ? messagesWithAmount[messagesWithAmount.length - 1].amount 
+                    : parseFloat(chatBid.amount);
+                  setFinalNegotiatedPrice(latestPrice ?? parseFloat(chatBid.amount));
                   setSelectedBid(chatBid);
                   setChatDialogOpen(false);
                   setAcceptDialogOpen(true);

@@ -1516,7 +1516,11 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     const carrier = carriersRef.current.find(c => c.carrierId === carrierId);
     if (!carrier) return null;
 
-    const truckTypes: CarrierTruck["type"][] = ["Mini-truck", "Pickup", "20ft Container", "32ft Container", "Flatbed", "Trailer", "Reefer", "Tanker"];
+    const truckTypes: CarrierTruck["type"][] = [
+      "Open - 17 Feet", "Open - 20 Feet", "Open - 10 Wheeler", "Open - 14 Wheeler",
+      "Container - 20 Ft", "Container - 32 Ft", "LCV - Tata Ace", "LCV - 14 Feet",
+      "Trailer - 40 Ft", "Tipper - 10 Wheeler", "Tanker - Oil/Fuel", "Bulker - Cement"
+    ];
     const truckModels = ["Tata Prima", "Ashok Leyland 2820", "Mahindra Blazo", "BharatBenz 3143", "Eicher Pro", "Volvo FM", "Scania R-Series", "MAN CLA"];
     
     const basicInfo: CarrierBasicInfo = {
@@ -1544,7 +1548,11 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         truckNumber: `${randomFrom(["MH", "DL", "KA", "TN", "GJ", "RJ", "UP", "MP"])} ${randomBetween(1, 99)} ${randomFrom(["AB", "CD", "EF", "GH"])} ${randomBetween(1000, 9999)}`,
         type: truckType,
         model: randomFrom(truckModels),
-        capacity: truckType === "Mini-truck" ? "2 tons" : truckType === "Pickup" ? "5 tons" : truckType === "Tanker" ? "20,000 L" : `${randomBetween(10, 30)} tons`,
+        capacity: truckType.includes("LCV") ? `${randomBetween(2, 7)} tons` : 
+                  truckType.includes("Tanker") ? `${randomBetween(10, 24)} KL` : 
+                  truckType.includes("17 Feet") || truckType.includes("20 Feet") ? `${randomBetween(8, 15)} tons` :
+                  truckType.includes("Container") ? `${randomBetween(15, 30)} tons` :
+                  `${randomBetween(16, 40)} tons`,
         rcStatus: Math.random() > 0.15 ? "Valid" : Math.random() > 0.5 ? "Expired" : "Missing",
         insuranceStatus: Math.random() > 0.1 ? "Valid" : Math.random() > 0.5 ? "Expired" : "Missing",
         fitnessStatus: Math.random() > 0.2 ? "Valid" : Math.random() > 0.5 ? "Expired" : "Missing",
@@ -1555,14 +1563,14 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     }
 
     const fleetComposition: CarrierFleetComposition = {
-      miniTruck: trucks.filter(t => t.type === "Mini-truck").length,
-      pickup: trucks.filter(t => t.type === "Pickup").length,
-      container20ft: trucks.filter(t => t.type === "20ft Container").length,
-      container32ft: trucks.filter(t => t.type === "32ft Container").length,
-      flatbed: trucks.filter(t => t.type === "Flatbed").length,
-      trailer: trucks.filter(t => t.type === "Trailer").length,
-      reefer: trucks.filter(t => t.type === "Reefer").length,
-      tanker: trucks.filter(t => t.type === "Tanker").length,
+      miniTruck: trucks.filter(t => t.type.includes("LCV")).length,
+      pickup: trucks.filter(t => t.type.includes("17 Feet") || t.type.includes("20 Feet")).length,
+      container20ft: trucks.filter(t => t.type.includes("Container")).length,
+      container32ft: trucks.filter(t => t.type.includes("Container - 32")).length,
+      flatbed: trucks.filter(t => t.type.includes("Open - 10") || t.type.includes("Open - 14")).length,
+      trailer: trucks.filter(t => t.type.includes("Trailer")).length,
+      reefer: trucks.filter(t => t.type.includes("Bulker")).length,
+      tanker: trucks.filter(t => t.type.includes("Tanker")).length,
     };
 
     const fleetUtilization: CarrierFleetUtilization = {

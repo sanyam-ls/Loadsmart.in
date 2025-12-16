@@ -18,7 +18,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -36,14 +38,24 @@ const truckFormSchema = z.object({
 
 type TruckFormData = z.infer<typeof truckFormSchema>;
 
-const truckTypes = [
-  { value: "dry_van", label: "Dry Van", description: "Standard enclosed trailer for general cargo" },
-  { value: "flatbed", label: "Flatbed", description: "Open deck for oversized or heavy loads" },
-  { value: "refrigerated", label: "Refrigerated", description: "Temperature-controlled for perishables" },
-  { value: "tanker", label: "Tanker", description: "Liquid cargo transport" },
-  { value: "container", label: "Container", description: "Intermodal shipping container" },
-  { value: "open_deck", label: "Open Deck", description: "Heavy equipment and machinery" },
-];
+import { indianTruckTypes, truckCategories } from "@shared/schema";
+
+const truckTypesByCategory = truckCategories.reduce((acc, category) => {
+  acc[category] = indianTruckTypes.filter(t => t.category === category);
+  return acc;
+}, {} as Record<string, typeof indianTruckTypes[number][]>);
+
+const categoryLabels: Record<string, string> = {
+  open: "Open Body (7.5-43 Ton)",
+  container: "Container (7.5-30 Ton)",
+  lcv: "LCV (2.5-7 Ton)",
+  mini_pickup: "Mini/Pickup (0.75-2 Ton)",
+  trailer: "Trailer (16-43 Ton)",
+  tipper: "Tipper (9-30 Ton)",
+  tanker: "Tanker (8-36 Ton)",
+  dumper: "Dumper (9-36 Ton)",
+  bulker: "Bulker (20-36 Ton)",
+};
 
 export default function AddTruckPage() {
   const [, navigate] = useLocation();
@@ -117,14 +129,18 @@ export default function AddTruckPage() {
                           <SelectValue placeholder="Select truck type" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        {truckTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            <div>
-                              <p>{type.label}</p>
-                              <p className="text-xs text-muted-foreground">{type.description}</p>
-                            </div>
-                          </SelectItem>
+                      <SelectContent className="max-h-[300px]">
+                        {truckCategories.map((category) => (
+                          <SelectGroup key={category}>
+                            <SelectLabel className="text-xs font-semibold text-muted-foreground">
+                              {categoryLabels[category]}
+                            </SelectLabel>
+                            {truckTypesByCategory[category]?.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         ))}
                       </SelectContent>
                     </Select>

@@ -21,7 +21,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -47,14 +49,29 @@ const loadFormSchema = z.object({
 
 type LoadFormData = z.infer<typeof loadFormSchema>;
 
-const truckTypes = [
-  { value: "Dry Van", label: "Dry Van", description: "Standard enclosed trailer" },
-  { value: "Flatbed", label: "Flatbed", description: "Open deck for oversized loads" },
-  { value: "Refrigerated", label: "Refrigerated", description: "Temperature-controlled" },
-  { value: "Tanker", label: "Tanker", description: "Liquid cargo transport" },
-  { value: "Container", label: "Container", description: "Intermodal shipping" },
-  { value: "Open Deck", label: "Open Deck", description: "Heavy equipment & machinery" },
-];
+import { indianTruckTypes, truckCategories } from "@shared/schema";
+
+const truckTypesByCategory = truckCategories.reduce((acc, category) => {
+  acc[category] = indianTruckTypes.filter(t => t.category === category);
+  return acc;
+}, {} as Record<string, typeof indianTruckTypes[number][]>);
+
+const categoryLabels: Record<string, string> = {
+  open: "Open Body (7.5-43 Ton)",
+  container: "Container (7.5-30 Ton)",
+  lcv: "LCV (2.5-7 Ton)",
+  mini_pickup: "Mini/Pickup (0.75-2 Ton)",
+  trailer: "Trailer (16-43 Ton)",
+  tipper: "Tipper (9-30 Ton)",
+  tanker: "Tanker (8-36 Ton)",
+  dumper: "Dumper (9-36 Ton)",
+  bulker: "Bulker (20-36 Ton)",
+};
+
+function getTruckLabel(value: string): string {
+  const truck = indianTruckTypes.find(t => t.value === value);
+  return truck?.label || value;
+}
 
 const savedTemplates = [
   { id: "t1", name: "Mumbai to Delhi Regular", pickup: "Mumbai, MH", dropoff: "Delhi, DL" },
@@ -78,11 +95,18 @@ function calculateDistance(from: string, to: string): number {
 
 function suggestTruckType(weight: number, description: string): string {
   const desc = description.toLowerCase();
-  if (desc.includes("frozen") || desc.includes("cold") || desc.includes("perishable")) return "Refrigerated";
-  if (desc.includes("liquid") || desc.includes("oil") || desc.includes("fuel")) return "Tanker";
-  if (desc.includes("machine") || desc.includes("equipment") || desc.includes("vehicle")) return "Flatbed";
-  if (weight > 40) return "Flatbed";
-  return "Dry Van";
+  if (desc.includes("frozen") || desc.includes("cold") || desc.includes("perishable")) return "container_20ft";
+  if (desc.includes("liquid") || desc.includes("oil") || desc.includes("fuel")) return "tanker_oil";
+  if (desc.includes("cement") || desc.includes("powder") || desc.includes("bulk")) return "bulker_cement";
+  if (desc.includes("sand") || desc.includes("gravel") || desc.includes("stone")) return "dumper_hyva";
+  if (desc.includes("machine") || desc.includes("equipment") || desc.includes("vehicle")) return "trailer_40ft";
+  if (weight > 35) return "open_18_wheeler";
+  if (weight > 25) return "open_14_wheeler";
+  if (weight > 15) return "open_10_wheeler";
+  if (weight > 7) return "open_20_feet";
+  if (weight > 2) return "lcv_17ft";
+  if (weight > 1) return "lcv_tata_ace";
+  return "mini_pickup";
 }
 
 export default function PostLoadPage() {
@@ -435,18 +459,25 @@ export default function PostLoadPage() {
                                 <SelectValue placeholder="Select type" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              {truckTypes.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                  {type.label}
-                                </SelectItem>
+                            <SelectContent className="max-h-[300px]">
+                              {truckCategories.map((category) => (
+                                <SelectGroup key={category}>
+                                  <SelectLabel className="text-xs font-semibold text-muted-foreground">
+                                    {categoryLabels[category]}
+                                  </SelectLabel>
+                                  {truckTypesByCategory[category]?.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
                               ))}
                             </SelectContent>
                           </Select>
                           {estimation?.suggestedTruck && !field.value && (
                             <FormDescription className="flex items-center gap-1 text-primary">
                               <Sparkles className="h-3 w-3" />
-                              Suggested: {estimation.suggestedTruck}
+                              Suggested: {getTruckLabel(estimation.suggestedTruck)}
                             </FormDescription>
                           )}
                           <FormMessage />
@@ -555,7 +586,7 @@ export default function PostLoadPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Suggested Truck</span>
                     <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                      {estimation.suggestedTruck}
+                      {getTruckLabel(estimation.suggestedTruck)}
                     </Badge>
                   </div>
                 </div>

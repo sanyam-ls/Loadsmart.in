@@ -1,9 +1,21 @@
 import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from "react";
 
-// Truck Types
+// Indian Truck Types
+export type IndianTruckType = 
+  | "Open - 17 Feet" | "Open - 19 Feet" | "Open - 20 Feet" | "Open - 22 Feet" | "Open - 24 Feet"
+  | "Open - 10 Wheeler" | "Open - 12 Wheeler" | "Open - 14 Wheeler" | "Open - 16 Wheeler" | "Open - 18 Wheeler"
+  | "Container - 20 Ft" | "Container - 32 Ft" | "Container - 40 Ft"
+  | "LCV - Tata Ace" | "LCV - Bolero Pickup" | "LCV - 14 Feet" | "LCV - 17 Feet"
+  | "Mini/Pickup"
+  | "Trailer - 40 Ft" | "Trailer - Triple Axle"
+  | "Tipper - 10 Wheeler" | "Tipper - 12 Wheeler"
+  | "Tanker - Oil/Fuel" | "Tanker - Water" | "Tanker - Chemical"
+  | "Dumper - Hyva" | "Dumper - 10 Wheeler"
+  | "Bulker - Cement" | "Bulker - Fly Ash";
+
 export interface CarrierTruck {
   truckId: string;
-  truckType: "Container" | "Flatbed" | "Open" | "Reefer" | "Tanker" | "Trailer";
+  truckType: IndianTruckType;
   model: string;
   manufacturer: string;
   makeYear: number;
@@ -304,7 +316,11 @@ const truckModels: Record<string, string[]> = {
   "MAN": ["CLA 31.300", "CLA 25.280"]
 };
 
-const truckTypes: CarrierTruck["truckType"][] = ["Container", "Flatbed", "Open", "Reefer", "Tanker", "Trailer"];
+const truckTypes: CarrierTruck["truckType"][] = [
+  "Open - 17 Feet", "Open - 20 Feet", "Open - 10 Wheeler", "Open - 14 Wheeler",
+  "Container - 20 Ft", "Container - 32 Ft", "LCV - Tata Ace", "LCV - 14 Feet",
+  "Trailer - 40 Ft", "Tipper - 10 Wheeler", "Tanker - Oil/Fuel", "Bulker - Cement"
+];
 const loadTypes = ["FMCG", "Construction", "Machinery", "Perishables", "Chemical", "Bulk Materials", "Electronics", "Textiles", "Automotive", "Pharmaceuticals"];
 
 const indianFirstNames = [

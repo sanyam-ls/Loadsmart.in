@@ -96,9 +96,63 @@ export type NegotiationStatus = typeof negotiationStatuses[number];
 export const shipmentStatuses = ["pickup_scheduled", "picked_up", "in_transit", "at_checkpoint", "out_for_delivery", "delivered"] as const;
 export type ShipmentStatus = typeof shipmentStatuses[number];
 
-// Truck types enum
-export const truckTypes = ["flatbed", "refrigerated", "dry_van", "tanker", "container", "open_deck"] as const;
-export type TruckType = typeof truckTypes[number];
+// Indian Truck Types - Main Categories
+export const truckCategories = [
+  "open",           // Open body trucks (7.5 - 43 Ton)
+  "container",      // Container trucks (7.5 - 30 Ton)
+  "lcv",            // Light Commercial Vehicle (2.5 - 7 Ton)
+  "mini_pickup",    // Mini/Pickup (0.75 - 2 Ton)
+  "trailer",        // Trailer trucks (16 - 43 Ton)
+  "tipper",         // Tipper trucks (9 - 30 Ton)
+  "tanker",         // Tanker trucks (8 - 36 Ton)
+  "dumper",         // Dumper trucks (9 - 36 Ton)
+  "bulker",         // Bulker trucks (20 - 36 Ton)
+] as const;
+export type TruckCategory = typeof truckCategories[number];
+
+// Open truck subtypes by size
+export const openTruckSubtypes = [
+  "17_feet", "19_feet", "20_feet", "22_feet", "24_feet",
+  "10_wheeler", "12_wheeler", "14_wheeler", "16_wheeler", "18_wheeler"
+] as const;
+export type OpenTruckSubtype = typeof openTruckSubtypes[number];
+
+// Full truck types with categories and capacity ranges (for UI display)
+export const indianTruckTypes = [
+  { value: "open_17_feet", label: "Open - 17 Feet", category: "open", capacityMin: 7.5, capacityMax: 12 },
+  { value: "open_19_feet", label: "Open - 19 Feet", category: "open", capacityMin: 9, capacityMax: 15 },
+  { value: "open_20_feet", label: "Open - 20 Feet", category: "open", capacityMin: 10, capacityMax: 18 },
+  { value: "open_22_feet", label: "Open - 22 Feet", category: "open", capacityMin: 12, capacityMax: 22 },
+  { value: "open_24_feet", label: "Open - 24 Feet", category: "open", capacityMin: 15, capacityMax: 25 },
+  { value: "open_10_wheeler", label: "Open - 10 Wheeler", category: "open", capacityMin: 16, capacityMax: 25 },
+  { value: "open_12_wheeler", label: "Open - 12 Wheeler", category: "open", capacityMin: 20, capacityMax: 30 },
+  { value: "open_14_wheeler", label: "Open - 14 Wheeler", category: "open", capacityMin: 25, capacityMax: 35 },
+  { value: "open_16_wheeler", label: "Open - 16 Wheeler", category: "open", capacityMin: 30, capacityMax: 40 },
+  { value: "open_18_wheeler", label: "Open - 18 Wheeler", category: "open", capacityMin: 35, capacityMax: 43 },
+  { value: "container_20ft", label: "Container - 20 Ft", category: "container", capacityMin: 7.5, capacityMax: 20 },
+  { value: "container_32ft", label: "Container - 32 Ft", category: "container", capacityMin: 15, capacityMax: 30 },
+  { value: "container_40ft", label: "Container - 40 Ft", category: "container", capacityMin: 20, capacityMax: 30 },
+  { value: "lcv_tata_ace", label: "LCV - Tata Ace", category: "lcv", capacityMin: 0.75, capacityMax: 1 },
+  { value: "lcv_bolero", label: "LCV - Bolero Pickup", category: "lcv", capacityMin: 1, capacityMax: 1.5 },
+  { value: "lcv_14ft", label: "LCV - 14 Feet", category: "lcv", capacityMin: 2.5, capacityMax: 4 },
+  { value: "lcv_17ft", label: "LCV - 17 Feet", category: "lcv", capacityMin: 4, capacityMax: 7 },
+  { value: "mini_pickup", label: "Mini/Pickup", category: "mini_pickup", capacityMin: 0.5, capacityMax: 2 },
+  { value: "trailer_40ft", label: "Trailer - 40 Ft", category: "trailer", capacityMin: 25, capacityMax: 35 },
+  { value: "trailer_triple_axle", label: "Trailer - Triple Axle", category: "trailer", capacityMin: 30, capacityMax: 43 },
+  { value: "tipper_10_wheel", label: "Tipper - 10 Wheeler", category: "tipper", capacityMin: 16, capacityMax: 22 },
+  { value: "tipper_12_wheel", label: "Tipper - 12 Wheeler", category: "tipper", capacityMin: 20, capacityMax: 30 },
+  { value: "tanker_oil", label: "Tanker - Oil/Fuel", category: "tanker", capacityMin: 10, capacityMax: 24 },
+  { value: "tanker_water", label: "Tanker - Water", category: "tanker", capacityMin: 8, capacityMax: 20 },
+  { value: "tanker_chemical", label: "Tanker - Chemical", category: "tanker", capacityMin: 12, capacityMax: 36 },
+  { value: "dumper_hyva", label: "Dumper - Hyva", category: "dumper", capacityMin: 16, capacityMax: 25 },
+  { value: "dumper_10_wheel", label: "Dumper - 10 Wheeler", category: "dumper", capacityMin: 20, capacityMax: 36 },
+  { value: "bulker_cement", label: "Bulker - Cement", category: "bulker", capacityMin: 25, capacityMax: 35 },
+  { value: "bulker_fly_ash", label: "Bulker - Fly Ash", category: "bulker", capacityMin: 20, capacityMax: 36 },
+] as const;
+
+// Truck types enum (for backward compatibility)
+export const truckTypes = indianTruckTypes.map(t => t.value);
+export type TruckType = typeof indianTruckTypes[number]["value"];
 
 // Document types enum
 export const documentTypes = ["pod", "invoice", "rc", "insurance", "fitness", "license", "other"] as const;

@@ -80,7 +80,17 @@ const bios = [
   "Comprehensive freight solutions for businesses of all sizes.",
 ];
 
-const truckTypes = ["Dry Van", "Flatbed", "Refrigerated", "Tanker", "Container", "Box Truck"];
+const truckTypes = [
+  "Open - 17 Feet", "Open - 19 Feet", "Open - 20 Feet", "Open - 22 Feet", 
+  "Open - 10 Wheeler", "Open - 12 Wheeler", "Open - 14 Wheeler",
+  "Container - 20 Ft", "Container - 32 Ft", "Container - 40 Ft",
+  "LCV - Tata Ace", "LCV - Bolero Pickup", "LCV - 14 Feet", "LCV - 17 Feet",
+  "Trailer - 40 Ft", "Trailer - Triple Axle",
+  "Tipper - 10 Wheeler", "Tipper - 12 Wheeler",
+  "Tanker - Oil/Fuel", "Tanker - Water", "Tanker - Chemical",
+  "Dumper - Hyva", "Dumper - 10 Wheeler",
+  "Bulker - Cement", "Bulker - Fly Ash"
+];
 const badgeLevels = ["platinum", "gold", "silver", "bronze"] as const;
 
 const preferredRoutesList = [

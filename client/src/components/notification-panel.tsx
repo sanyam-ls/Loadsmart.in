@@ -138,7 +138,7 @@ export function NotificationPanel() {
         case "bid_accepted":
         case "bid_rejected":
         case "counter_offer":
-          navigate(`/carrier/marketplace${loadId ? `?load=${loadId}` : ''}`);
+          navigate(`/carrier/bids${loadId ? `?load=${loadId}` : ''}`);
           break;
         case "invoice":
         case "invoice_generated":

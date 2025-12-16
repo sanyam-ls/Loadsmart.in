@@ -395,6 +395,30 @@ export async function registerRoutes(
     }
   });
 
+  // Dedicated carrier bids endpoint with load details
+  app.get("/api/carrier/bids", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can access this endpoint" });
+      }
+
+      const bidsList = await storage.getBidsByCarrier(user.id);
+      
+      const bidsWithDetails = await Promise.all(
+        bidsList.map(async (bid) => {
+          const load = await storage.getLoad(bid.loadId);
+          return { ...bid, load };
+        })
+      );
+
+      res.json(bidsWithDetails);
+    } catch (error) {
+      console.error("Get carrier bids error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.get("/api/loads/:loadId/bids", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);

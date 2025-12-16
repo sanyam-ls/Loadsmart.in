@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useLocation, useSearch } from "wouter";
 import { 
   Search, Filter, Gavel, Clock, CheckCircle, XCircle, RefreshCw, 
   MapPin, Truck, Package, Building2, Star, MessageSquare, Send,
@@ -35,8 +36,10 @@ import { useCarrierData, type CarrierBid } from "@/lib/carrier-data-store";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import type { Bid, Load } from "@shared/schema";
 
 function formatCurrency(amount: number): string {
   if (amount >= 100000) {
@@ -393,13 +396,82 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
 }
 
 export default function CarrierBidsPage() {
-  const { bids, updateBid, updateBidStatus } = useCarrierData();
+  const { bids: mockBids, updateBid, updateBidStatus } = useCarrierData();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const searchParams = useSearch();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loadTypeFilter, setLoadTypeFilter] = useState("all");
   const [selectedBid, setSelectedBid] = useState<CarrierBid | null>(null);
+  const [autoOpenProcessed, setAutoOpenProcessed] = useState(false);
+  
+  // Fetch real bids from API
+  const { data: realBidsData = [] } = useQuery<(Bid & { load?: Load })[]>({
+    queryKey: ['/api/carrier/bids'],
+    staleTime: 15000,
+    refetchInterval: 30000,
+    enabled: !!user && user.role === "carrier",
+  });
+  
+  // Convert real bids to CarrierBid format and merge with mock data
+  const bids = useMemo(() => {
+    const realBids: CarrierBid[] = realBidsData.map((bid) => ({
+      bidId: bid.id,
+      loadId: bid.loadId,
+      shipperName: "Shipper",
+      shipperCompany: bid.load?.shipperId || "Unknown Shipper",
+      shipperRating: 4.5,
+      pickup: bid.load?.pickupCity || bid.load?.pickupAddress || "Origin",
+      dropoff: bid.load?.dropoffCity || bid.load?.dropoffAddress || "Destination",
+      loadType: bid.load?.vehicleType || "General",
+      weight: Number(bid.load?.weight) || 10,
+      distance: Number(bid.load?.distance) || 500,
+      proposedRate: Number(bid.load?.adminFinalPrice) || Number(bid.amount) || 50000,
+      carrierOffer: Number(bid.amount) || 50000,
+      currentRate: Number(bid.counterAmount) || Number(bid.amount) || 50000,
+      shipperCounterRate: bid.counterAmount ? Number(bid.counterAmount) : null,
+      estimatedRevenue: Number(bid.amount) || 50000,
+      estimatedProfit: Math.round((Number(bid.amount) || 50000) * 0.2),
+      requiredVehicleType: bid.load?.vehicleType || "Open - 17 Feet",
+      bidStatus: (bid.status as CarrierBid["bidStatus"]) || "pending",
+      timeLeftToRespond: 24,
+      submittedAt: new Date(bid.createdAt || Date.now()),
+      negotiationHistory: [{
+        id: `msg-${bid.id}-1`,
+        sender: "carrier" as const,
+        message: "Initial bid placed",
+        amount: Number(bid.amount),
+        timestamp: new Date(bid.createdAt || Date.now()),
+      }],
+    }));
+    
+    // Merge real bids with mock bids, prioritizing real bids
+    const realBidIds = new Set(realBids.map(b => b.bidId));
+    const realLoadIds = new Set(realBids.map(b => b.loadId));
+    const filteredMockBids = mockBids.filter(b => !realBidIds.has(b.bidId) && !realLoadIds.has(b.loadId));
+    
+    return [...realBids, ...filteredMockBids];
+  }, [realBidsData, mockBids]);
+  
+  // Auto-open negotiation dialog when navigating from notification with ?load= parameter
+  useEffect(() => {
+    if (autoOpenProcessed) return;
+    
+    const params = new URLSearchParams(searchParams);
+    const loadId = params.get("load");
+    
+    if (loadId && bids.length > 0) {
+      const matchingBid = bids.find(b => b.loadId === loadId);
+      if (matchingBid) {
+        setSelectedBid(matchingBid);
+        // Clear the URL parameter
+        setLocation("/carrier/bids", { replace: true });
+      }
+      setAutoOpenProcessed(true);
+    }
+  }, [searchParams, bids, autoOpenProcessed, setLocation]);
 
   useEffect(() => {
     if (user?.id && user?.role === "carrier") {
@@ -411,6 +483,8 @@ export default function CarrierBidsPage() {
           if (counterAmount && !isNaN(parseFloat(counterAmount))) {
             updateBidStatus(data.bidId || data.bid?.id, "countered", parseFloat(counterAmount));
           }
+          // Invalidate carrier bids cache to refresh from API
+          queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
           toast({
             title: "Counter Offer Received",
             description: `Admin sent a counter offer of Rs. ${parseFloat(counterAmount || "0").toLocaleString("en-IN")}`,
@@ -421,6 +495,8 @@ export default function CarrierBidsPage() {
       const unsubAccepted = onMarketplaceEvent("bid_accepted", (data) => {
         if (data.carrierId === user.id) {
           updateBidStatus(data.bidId || data.bid?.id, "accepted");
+          // Invalidate carrier bids cache to refresh from API
+          queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
           toast({
             title: "Bid Accepted!",
             description: `Your bid for the load has been accepted. Check your trips.`,
@@ -431,6 +507,8 @@ export default function CarrierBidsPage() {
       const unsubRejected = onMarketplaceEvent("bid_rejected", (data) => {
         if (data.carrierId === user.id) {
           updateBidStatus(data.bidId || data.bid?.id, "rejected");
+          // Invalidate carrier bids cache to refresh from API
+          queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
           toast({
             title: "Bid Rejected",
             description: "Your bid was not accepted for this load.",

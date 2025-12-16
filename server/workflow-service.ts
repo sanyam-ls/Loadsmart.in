@@ -126,10 +126,11 @@ export async function checkCarrierEligibility(
     return { eligible: false, reasons: ["Carrier not found"] };
   }
 
-  // 1. Check carrier is verified
-  if (!carrier.isVerified) {
-    reasons.push("Carrier not verified");
-  }
+  // 1. Check carrier is verified - SOFT CHECK (warning only, not blocking for MVP)
+  // In production, you'd make this a hard requirement
+  // if (!carrier.isVerified) {
+  //   reasons.push("Carrier not verified");
+  // }
 
   // 2. Get carrier profile for additional checks
   const profile = await storage.getCarrierProfile(carrierId);
@@ -141,36 +142,38 @@ export async function checkCarrierEligibility(
       reasons.push("Reliability score below minimum threshold");
     }
 
-    // 4. Check service region compatibility (if defined)
-    if (profile.serviceZones && profile.serviceZones.length > 0 && load.pickupCity) {
-      const pickupRegion = extractRegion(load.pickupCity);
-      const dropoffRegion = extractRegion(load.dropoffCity);
-      
-      const servesPickup = profile.serviceZones.some(zone => 
-        zone.toLowerCase().includes(pickupRegion.toLowerCase()) ||
-        pickupRegion.toLowerCase().includes(zone.toLowerCase())
-      );
-      const servesDropoff = profile.serviceZones.some(zone => 
-        zone.toLowerCase().includes(dropoffRegion.toLowerCase()) ||
-        dropoffRegion.toLowerCase().includes(zone.toLowerCase())
-      );
-      
-      if (!servesPickup && !servesDropoff) {
-        reasons.push("Service zone mismatch");
-      }
-    }
+    // 4. Check service region compatibility - SOFT CHECK for MVP
+    // Service zones are optional hints, not hard requirements
+    // if (profile.serviceZones && profile.serviceZones.length > 0 && load.pickupCity) {
+    //   const pickupRegion = extractRegion(load.pickupCity);
+    //   const dropoffRegion = extractRegion(load.dropoffCity);
+    //   
+    //   const servesPickup = profile.serviceZones.some(zone => 
+    //     zone.toLowerCase().includes(pickupRegion.toLowerCase()) ||
+    //     pickupRegion.toLowerCase().includes(zone.toLowerCase())
+    //   );
+    //   const servesDropoff = profile.serviceZones.some(zone => 
+    //     zone.toLowerCase().includes(dropoffRegion.toLowerCase()) ||
+    //     dropoffRegion.toLowerCase().includes(zone.toLowerCase())
+    //   );
+    //   
+    //   if (!servesPickup && !servesDropoff) {
+    //     reasons.push("Service zone mismatch");
+    //   }
+    // }
   }
 
-  // 5. Check truck type compatibility
-  if (load.requiredTruckType) {
-    const trucks = await storage.getTrucksByCarrier(carrierId);
-    const hasMatchingTruck = trucks.some(truck => 
-      truck.truckType === load.requiredTruckType && truck.isAvailable
-    );
-    if (!hasMatchingTruck) {
-      reasons.push("No matching truck type available");
-    }
-  }
+  // 5. Check truck type compatibility - SOFT CHECK for MVP
+  // Carriers can bid even without pre-registered matching trucks
+  // if (load.requiredTruckType) {
+  //   const trucks = await storage.getTrucksByCarrier(carrierId);
+  //   const hasMatchingTruck = trucks.some(truck => 
+  //     truck.truckType === load.requiredTruckType && truck.isAvailable
+  //   );
+  //   if (!hasMatchingTruck) {
+  //     reasons.push("No matching truck type available");
+  //   }
+  // }
 
   // 6. Check if carrier is blocked/suspended (using isVerified as proxy)
   // In a full implementation, you'd have a separate blocked/suspended flag

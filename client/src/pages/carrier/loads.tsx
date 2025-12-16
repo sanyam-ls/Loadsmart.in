@@ -51,6 +51,30 @@ interface CarrierLoad {
   priceFixed: boolean;
   createdAt: string;
   isSimulated?: boolean;
+  pickupDate?: string | null;
+  deliveryDate?: string | null;
+}
+
+// Helper function to estimate distance between cities
+function estimateDistanceFromCities(pickup: string, dropoff: string): number {
+  const distanceMap: Record<string, number> = {
+    "mumbai_delhi": 1400, "delhi_mumbai": 1400,
+    "bangalore_chennai": 350, "chennai_bangalore": 350,
+    "pune_hyderabad": 560, "hyderabad_pune": 560,
+    "kolkata_guwahati": 980, "guwahati_kolkata": 980,
+    "ahmedabad_jaipur": 680, "jaipur_ahmedabad": 680,
+    "ludhiana_delhi": 310, "delhi_ludhiana": 310,
+    "coimbatore_kochi": 190, "kochi_coimbatore": 190,
+    "nagpur_bhopal": 350, "bhopal_nagpur": 350,
+  };
+  
+  const normalizeCity = (city: string) => 
+    (city || "").toLowerCase().split(",")[0].trim().replace(/\s+/g, "");
+  
+  const key1 = `${normalizeCity(pickup)}_${normalizeCity(dropoff)}`;
+  const key2 = `${normalizeCity(dropoff)}_${normalizeCity(pickup)}`;
+  
+  return distanceMap[key1] || distanceMap[key2] || Math.floor(Math.random() * 800) + 200;
 }
 
 const simulatedLoads: CarrierLoad[] = [
@@ -258,9 +282,53 @@ export default function CarrierLoadsPage() {
     }
   }, [highlightLoadId]);
 
-  const { data: apiLoads = [], isLoading, error } = useQuery<CarrierLoad[]>({
+  // Raw API response type (before transformation)
+  interface ApiLoad {
+    id: string;
+    pickupCity: string;
+    dropoffCity: string;
+    requiredTruckType: string | null;
+    weight: string | null;
+    distance: number | null;
+    adminFinalPrice: string | null;
+    allowCounterBids: boolean | null;
+    shipperName: string | null;
+    bidCount: number;
+    myBid: any | null;
+    postedByAdmin: boolean;
+    priceFixed: boolean;
+    createdAt: string;
+    postedAt: string | null;
+    pickupDate: string | null;
+    deliveryDate: string | null;
+  }
+
+  const { data: rawApiLoads = [], isLoading, error } = useQuery<ApiLoad[]>({
     queryKey: ['/api/carrier/loads'],
   });
+
+  // Transform API data to match CarrierLoad interface
+  const apiLoads: CarrierLoad[] = useMemo(() => {
+    return rawApiLoads.map(load => ({
+      id: load.id,
+      origin: load.pickupCity || "Unknown",
+      destination: load.dropoffCity || "Unknown",
+      loadType: load.requiredTruckType,
+      weight: load.weight,
+      estimatedDistance: load.distance || estimateDistanceFromCities(load.pickupCity, load.dropoffCity),
+      adminFinalPrice: load.adminFinalPrice,
+      allowCounterBids: load.allowCounterBids,
+      shipperName: load.shipperName,
+      bidCount: load.bidCount || 0,
+      myBid: load.myBid,
+      postedByAdmin: load.postedByAdmin ?? true,
+      priceFixed: load.priceFixed ?? false,
+      createdAt: load.postedAt || load.createdAt,
+      isSimulated: false,
+      pickupDate: load.pickupDate,
+      deliveryDate: load.deliveryDate,
+    }));
+  }, [rawApiLoads]);
 
   const loads = useMemo(() => {
     return [...apiLoads, ...simulatedLoads];

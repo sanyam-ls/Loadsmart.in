@@ -390,6 +390,15 @@ export const invoices = pgTable("invoices", {
   shipperCounterAmount: decimal("shipper_counter_amount", { precision: 12, scale: 2 }),
   negotiationThreadId: varchar("negotiation_thread_id"),
   
+  // Counter offer contact details (submitted by shipper)
+  counterContactName: text("counter_contact_name"),
+  counterContactCompany: text("counter_contact_company"),
+  counterContactPhone: text("counter_contact_phone"),
+  counterContactAddress: text("counter_contact_address"),
+  counterReason: text("counter_reason"),
+  counteredAt: timestamp("countered_at"),
+  counteredBy: varchar("countered_by"),
+  
   // Timestamps
   sentAt: timestamp("sent_at"),
   viewedAt: timestamp("viewed_at"),

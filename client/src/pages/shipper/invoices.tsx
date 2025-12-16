@@ -240,6 +240,10 @@ export default function ShipperInvoicesPage() {
   const [negotiateDialogOpen, setNegotiateDialogOpen] = useState(false);
   const [negotiateReason, setNegotiateReason] = useState("");
   const [counterAmount, setCounterAmount] = useState("");
+  const [counterContactName, setCounterContactName] = useState("");
+  const [counterContactCompany, setCounterContactCompany] = useState("");
+  const [counterContactPhone, setCounterContactPhone] = useState("");
+  const [counterContactAddress, setCounterContactAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
@@ -345,8 +349,23 @@ export default function ShipperInvoicesPage() {
   });
 
   const negotiateMutation = useMutation({
-    mutationFn: async ({ invoiceId, proposedAmount, reason }: { invoiceId: string; proposedAmount: number; reason: string }) => {
-      return apiRequest("POST", `/api/shipper/invoices/${invoiceId}/negotiate`, { proposedAmount, reason });
+    mutationFn: async ({ invoiceId, proposedAmount, reason, contactName, contactCompany, contactPhone, contactAddress }: { 
+      invoiceId: string; 
+      proposedAmount: number; 
+      reason: string;
+      contactName: string;
+      contactCompany: string;
+      contactPhone: string;
+      contactAddress: string;
+    }) => {
+      return apiRequest("POST", `/api/shipper/invoices/${invoiceId}/negotiate`, { 
+        proposedAmount, 
+        reason,
+        contactName,
+        contactCompany,
+        contactPhone,
+        contactAddress
+      });
     },
     onSuccess: () => {
       toast({
@@ -1014,47 +1033,102 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
       </Dialog>
 
       <Dialog open={negotiateDialogOpen} onOpenChange={setNegotiateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Submit Counter Offer</DialogTitle>
             <DialogDescription>
-              Propose a different amount with your reason
+              Propose a different amount with your contact details and reason
             </DialogDescription>
           </DialogHeader>
           
           {selectedInvoice && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 p-4 rounded-md">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Original Amount</span>
-                  <span className="font-medium">{formatCurrency(selectedInvoice.totalAmount)}</span>
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-4 pr-4">
+                <div className="bg-muted/50 p-4 rounded-md">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Original Amount</span>
+                    <span className="font-medium">{formatCurrency(selectedInvoice.totalAmount)}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label>Your Proposed Amount (Rs.)</Label>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount"
+                    value={counterAmount}
+                    onChange={(e) => setCounterAmount(e.target.value)}
+                    className="mt-2"
+                    data-testid="input-counter-amount"
+                  />
+                </div>
+                
+                <Separator />
+                
+                <div className="text-sm font-medium text-muted-foreground">Contact Information</div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Your Name</Label>
+                    <Input
+                      placeholder="Full name"
+                      value={counterContactName}
+                      onChange={(e) => setCounterContactName(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-counter-name"
+                    />
+                  </div>
+                  <div>
+                    <Label>Company Name</Label>
+                    <Input
+                      placeholder="Company name"
+                      value={counterContactCompany}
+                      onChange={(e) => setCounterContactCompany(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-counter-company"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label>Phone Number</Label>
+                  <Input
+                    type="tel"
+                    placeholder="+91 XXXXX XXXXX"
+                    value={counterContactPhone}
+                    onChange={(e) => setCounterContactPhone(e.target.value)}
+                    className="mt-2"
+                    data-testid="input-counter-phone"
+                  />
+                </div>
+                
+                <div>
+                  <Label>Address</Label>
+                  <Textarea
+                    placeholder="Your business address..."
+                    value={counterContactAddress}
+                    onChange={(e) => setCounterContactAddress(e.target.value)}
+                    className="mt-2"
+                    rows={2}
+                    data-testid="input-counter-address"
+                  />
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <Label>Reason for Counter Offer</Label>
+                  <Textarea
+                    placeholder="Explain why you're proposing this amount..."
+                    value={negotiateReason}
+                    onChange={(e) => setNegotiateReason(e.target.value)}
+                    className="mt-2"
+                    rows={3}
+                    data-testid="input-counter-reason"
+                  />
                 </div>
               </div>
-              
-              <div>
-                <Label>Your Proposed Amount (Rs.)</Label>
-                <Input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={counterAmount}
-                  onChange={(e) => setCounterAmount(e.target.value)}
-                  className="mt-2"
-                  data-testid="input-counter-amount"
-                />
-              </div>
-              
-              <div>
-                <Label>Reason for Counter Offer</Label>
-                <Textarea
-                  placeholder="Explain why you're proposing this amount..."
-                  value={negotiateReason}
-                  onChange={(e) => setNegotiateReason(e.target.value)}
-                  className="mt-2"
-                  rows={4}
-                  data-testid="input-counter-reason"
-                />
-              </div>
-            </div>
+            </ScrollArea>
           )}
           
           <DialogFooter>
@@ -1063,9 +1137,13 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
               onClick={() => selectedInvoice && negotiateMutation.mutate({ 
                 invoiceId: selectedInvoice.id, 
                 proposedAmount: parseFloat(counterAmount), 
-                reason: negotiateReason 
+                reason: negotiateReason,
+                contactName: counterContactName,
+                contactCompany: counterContactCompany,
+                contactPhone: counterContactPhone,
+                contactAddress: counterContactAddress
               })}
-              disabled={negotiateMutation.isPending || !counterAmount || !negotiateReason}
+              disabled={negotiateMutation.isPending || !counterAmount || !negotiateReason || !counterContactName || !counterContactPhone}
               data-testid="button-submit-counter"
             >
               {negotiateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowLeftRight className="h-4 w-4 mr-2" />}

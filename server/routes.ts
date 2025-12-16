@@ -3043,7 +3043,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Shipper access required" });
       }
 
-      const { proposedAmount, reason } = req.body;
+      const { proposedAmount, reason, contactName, contactCompany, contactPhone, contactAddress } = req.body;
       if (!proposedAmount || !reason) {
         return res.status(400).json({ error: "Proposed amount and reason are required" });
       }
@@ -3061,10 +3061,18 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invoice already confirmed" });
       }
 
-      // Update invoice with negotiation request
+      // Update invoice with negotiation request and counter contact details
       const updatedInvoice = await storage.updateInvoice(req.params.id, {
         shipperResponseType: 'negotiate',
         shipperResponseMessage: `Counter: Rs. ${parseFloat(proposedAmount).toLocaleString('en-IN')} - ${reason}`,
+        shipperCounterAmount: proposedAmount.toString(),
+        counterContactName: contactName || null,
+        counterContactCompany: contactCompany || null,
+        counterContactPhone: contactPhone || null,
+        counterContactAddress: contactAddress || null,
+        counterReason: reason || null,
+        counteredAt: new Date(),
+        counteredBy: user.id,
         status: 'negotiation',
       });
 

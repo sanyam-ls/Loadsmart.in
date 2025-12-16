@@ -73,6 +73,14 @@ interface Invoice {
   createdAt: string;
   sentAt?: string;
   dueDate?: string;
+  shipperCounterAmount?: string;
+  shipperResponseMessage?: string;
+  counterContactName?: string;
+  counterContactCompany?: string;
+  counterContactPhone?: string;
+  counterContactAddress?: string;
+  counterReason?: string;
+  counteredAt?: string;
 }
 
 const simulatedInvoices: Invoice[] = [
@@ -622,6 +630,79 @@ export default function AdminInvoicesPage() {
                           Payment received on {format(new Date(selectedInvoice.paidAt), "MMM d, yyyy 'at' h:mm a")}
                         </span>
                       </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {(selectedInvoice.shipperCounterAmount || selectedInvoice.counterContactName) && (
+                  <Card className="border-amber-200 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <ArrowLeftRight className="h-4 w-4 text-amber-600" />
+                        Counter Offer Details
+                        {selectedInvoice.counteredAt && (
+                          <span className="text-xs font-normal text-muted-foreground">
+                            - {format(new Date(selectedInvoice.counteredAt), "MMM d, yyyy 'at' h:mm a")}
+                          </span>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {selectedInvoice.shipperCounterAmount && (
+                        <div className="flex items-center justify-between gap-4 bg-background p-3 rounded-md border">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Proposed Amount</p>
+                            <p className="font-semibold text-lg text-amber-700 dark:text-amber-400">
+                              Rs. {parseFloat(selectedInvoice.shipperCounterAmount).toLocaleString('en-IN')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-muted-foreground">Original Amount</p>
+                            <p className="font-medium">
+                              Rs. {parseFloat(selectedInvoice.totalAmount || '0').toLocaleString('en-IN')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedInvoice.counterReason && (
+                        <div>
+                          <p className="text-sm font-medium mb-1">Reason for Counter Offer</p>
+                          <p className="text-sm bg-background p-3 rounded-md border">{selectedInvoice.counterReason}</p>
+                        </div>
+                      )}
+                      
+                      {(selectedInvoice.counterContactName || selectedInvoice.counterContactPhone) && (
+                        <div>
+                          <p className="text-sm font-medium mb-2">Contact Information</p>
+                          <div className="bg-background p-3 rounded-md border space-y-2">
+                            {selectedInvoice.counterContactName && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-sm w-20">Name:</span>
+                                <span className="font-medium">{selectedInvoice.counterContactName}</span>
+                              </div>
+                            )}
+                            {selectedInvoice.counterContactCompany && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-sm w-20">Company:</span>
+                                <span className="font-medium">{selectedInvoice.counterContactCompany}</span>
+                              </div>
+                            )}
+                            {selectedInvoice.counterContactPhone && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-sm w-20">Phone:</span>
+                                <span className="font-medium">{selectedInvoice.counterContactPhone}</span>
+                              </div>
+                            )}
+                            {selectedInvoice.counterContactAddress && (
+                              <div className="flex items-start gap-2">
+                                <span className="text-muted-foreground text-sm w-20">Address:</span>
+                                <span className="font-medium">{selectedInvoice.counterContactAddress}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}

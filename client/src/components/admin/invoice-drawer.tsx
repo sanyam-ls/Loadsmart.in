@@ -330,6 +330,10 @@ export function InvoiceDrawer({
       });
 
       queryClient.invalidateQueries({ queryKey: ['/api/admin/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/queue'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard'] });
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {

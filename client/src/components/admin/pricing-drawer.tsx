@@ -270,8 +270,10 @@ export function PricingDrawer({
           description: `Invoice for ${formatRupees(bidPrice)} has been generated and sent to the shipper.`,
         });
         queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
         queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
         onSuccess?.();
         onOpenChange(false);
       }

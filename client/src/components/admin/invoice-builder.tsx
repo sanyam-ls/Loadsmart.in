@@ -413,6 +413,8 @@ Thank you for your business!
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
       onSuccess?.();
       onOpenChange(false);
     },

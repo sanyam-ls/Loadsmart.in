@@ -159,25 +159,47 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
 
     setIsSending(true);
     try {
-      const payload: any = { messageType };
       if (messageType === "counter_offer") {
-        payload.amount = counterAmount;
-        payload.message = `Counter offer: Rs. ${parseInt(counterAmount).toLocaleString("en-IN")}`;
-      } else {
-        payload.message = newMessage;
-      }
-
-      await apiRequest("POST", `/api/bids/${bid.bidId}/negotiations`, payload);
-
-      if (messageType === "counter_offer") {
+        // Use the new dedicated carrier counter endpoint for real-time sync
+        await apiRequest("POST", `/api/carrier/bids/${bid.bidId}/counter`, {
+          amount: parseInt(counterAmount),
+          message: `Counter offer: Rs. ${parseInt(counterAmount).toLocaleString("en-IN")}`,
+        });
         setShowCounterInput(false);
+        // Invalidate carrier bids cache
+        queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
         toast({ title: "Counter Sent", description: `Your counter offer of ${formatCurrency(parseInt(counterAmount))} has been sent.` });
       } else {
+        // For regular messages, use the existing negotiations endpoint
+        await apiRequest("POST", `/api/bids/${bid.bidId}/negotiations`, {
+          messageType,
+          message: newMessage,
+        });
         setNewMessage("");
         toast({ title: "Message Sent", description: "Your message has been sent to the admin." });
       }
     } catch {
       toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const acceptCounterOffer = async () => {
+    if (!isRealBid) {
+      onAccept();
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      await apiRequest("POST", `/api/carrier/bids/${bid.bidId}/accept`, {});
+      // Invalidate carrier bids cache
+      queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
+      toast({ title: "Offer Accepted", description: "You have accepted the counter offer." });
+      onAccept();
+    } catch {
+      toast({ title: "Error", description: "Failed to accept offer", variant: "destructive" });
     } finally {
       setIsSending(false);
     }
@@ -365,10 +387,11 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
             <div className="flex gap-2">
               <Button 
                 className="flex-1" 
-                onClick={onAccept}
+                onClick={acceptCounterOffer}
+                disabled={isSending}
                 data-testid="button-accept-bid"
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
+                {isSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
                 Accept {bid.shipperCounterRate ? "Counter" : ""}
               </Button>
               <Button 
@@ -425,7 +448,7 @@ export default function CarrierBidsPage() {
       shipperRating: 4.5,
       pickup: bid.load?.pickupCity || bid.load?.pickupAddress || "Origin",
       dropoff: bid.load?.dropoffCity || bid.load?.dropoffAddress || "Destination",
-      loadType: bid.load?.vehicleType || "General",
+      loadType: bid.load?.requiredTruckType || "General",
       weight: Number(bid.load?.weight) || 10,
       distance: Number(bid.load?.distance) || 500,
       proposedRate: Number(bid.load?.adminFinalPrice) || Number(bid.amount) || 50000,
@@ -434,7 +457,7 @@ export default function CarrierBidsPage() {
       shipperCounterRate: bid.counterAmount ? Number(bid.counterAmount) : null,
       estimatedRevenue: Number(bid.amount) || 50000,
       estimatedProfit: Math.round((Number(bid.amount) || 50000) * 0.2),
-      requiredVehicleType: bid.load?.vehicleType || "Open - 17 Feet",
+      requiredVehicleType: bid.load?.requiredTruckType || "Open - 17 Feet",
       bidStatus: (bid.status as CarrierBid["bidStatus"]) || "pending",
       timeLeftToRespond: 24,
       submittedAt: new Date(bid.createdAt || Date.now()),

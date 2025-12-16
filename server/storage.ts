@@ -45,6 +45,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
+  getAdmins(): Promise<User[]>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
   getCarrierProfile(userId: string): Promise<CarrierProfile | undefined>;
@@ -263,6 +264,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getAdmins(): Promise<User[]> {
+    return db.select().from(users).where(eq(users.role, "admin")).orderBy(desc(users.createdAt));
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {

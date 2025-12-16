@@ -419,6 +419,218 @@ export async function registerRoutes(
     }
   });
 
+  // Carrier responds to admin counter offer with counter-response
+  app.post("/api/carrier/bids/:bidId/counter", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can respond to bids" });
+      }
+
+      const { bidId } = req.params;
+      const counterSchema = z.object({
+        amount: z.number(),
+        message: z.string().optional(),
+      });
+
+      const { amount, message } = counterSchema.parse(req.body);
+
+      const bid = await storage.getBid(bidId);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      if (bid.carrierId !== user.id) {
+        return res.status(403).json({ error: "You can only respond to your own bids" });
+      }
+
+      const load = await storage.getLoad(bid.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Update bid with new carrier counter amount - store as counterAmount for admin visibility
+      await storage.updateBid(bidId, { 
+        amount: String(amount),
+        counterAmount: String(amount), // Store carrier counter for admin to see
+        status: "countered", // Mark as countered for admin review
+      });
+
+      // Create negotiation message for carrier counter
+      const negotiationMessage = await storage.createBidNegotiation({
+        bidId,
+        loadId: bid.loadId,
+        senderId: user.id,
+        senderRole: "carrier",
+        messageType: "counter_offer",
+        message: message || `Counter offer: Rs. ${amount.toLocaleString('en-IN')}`,
+        amount: String(amount),
+        previousAmount: bid.counterAmount || bid.amount,
+        carrierName: user.companyName || user.username,
+        isSimulated: false,
+      });
+
+      // Update thread status
+      await storage.updateNegotiationThread(bid.loadId, {
+        status: "counter_received",
+        lastActivityAt: new Date(),
+      });
+
+      // Notify admin
+      const admins = await storage.getAdmins();
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Carrier Counter Offer",
+          message: `${user.companyName || user.username} countered with Rs. ${amount.toLocaleString('en-IN')}`,
+          type: "warning",
+          relatedLoadId: bid.loadId,
+          relatedBidId: bidId,
+          contextType: "counter_offer",
+        });
+      }
+
+      // Broadcast real-time counter event to admin for chat sync
+      broadcastNegotiationMessage("admin", null, bidId, {
+        ...negotiationMessage,
+        senderName: user.companyName || user.username,
+        loadId: bid.loadId,
+        action: "carrier_counter",
+      });
+
+      // Also broadcast to carrier for confirmation
+      broadcastNegotiationMessage("carrier", user.id, bidId, {
+        ...negotiationMessage,
+        senderName: user.companyName || user.username,
+        loadId: bid.loadId,
+        action: "carrier_counter_confirmed",
+      });
+
+      // Broadcast bid countered for UI updates with complete payload
+      broadcastBidCountered(user.id, bid.loadId, {
+        bidId,
+        carrierId: user.id,
+        carrierName: user.companyName || user.username,
+        amount: String(amount),
+        counterAmount: String(amount),
+        loadId: bid.loadId,
+        loadPickup: load.pickupCity,
+        loadDropoff: load.dropoffCity,
+      });
+
+      res.json({ success: true, message: negotiationMessage });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Carrier counter error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Carrier accepts admin counter offer
+  app.post("/api/carrier/bids/:bidId/accept", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can accept bids" });
+      }
+
+      const { bidId } = req.params;
+      const bid = await storage.getBid(bidId);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      if (bid.carrierId !== user.id) {
+        return res.status(403).json({ error: "You can only respond to your own bids" });
+      }
+
+      const load = await storage.getLoad(bid.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Accept the counter offer - use the counter amount as the final amount
+      const finalAmount = bid.counterAmount || bid.amount;
+      await storage.updateBid(bidId, { 
+        amount: finalAmount,
+        status: "accepted",
+      });
+
+      // Create negotiation message for acceptance
+      const negotiationMessage = await storage.createBidNegotiation({
+        bidId,
+        loadId: bid.loadId,
+        senderId: user.id,
+        senderRole: "carrier",
+        messageType: "carrier_accept",
+        message: `Accepted counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')}`,
+        amount: finalAmount,
+        previousAmount: bid.amount,
+        carrierName: user.companyName || user.username,
+        isSimulated: false,
+      });
+
+      // Update thread and load status
+      await storage.updateNegotiationThread(bid.loadId, {
+        status: "accepted",
+        lastActivityAt: new Date(),
+      });
+
+      await storage.updateLoad(bid.loadId, {
+        status: "awarded",
+        assignedCarrierId: user.id,
+        statusChangedAt: new Date(),
+      });
+
+      // Notify admin
+      const admins = await storage.getAdmins();
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Carrier Accepted Counter Offer",
+          message: `${user.companyName || user.username} accepted the counter offer for load ${load.pickupCity} to ${load.dropoffCity}`,
+          type: "info",
+          relatedLoadId: bid.loadId,
+          relatedBidId: bidId,
+        });
+      }
+
+      // Broadcast real-time acceptance to admin
+      broadcastNegotiationMessage("admin", null, bidId, {
+        ...negotiationMessage,
+        senderName: user.companyName || user.username,
+        loadId: bid.loadId,
+        action: "carrier_accept",
+      });
+
+      // Also broadcast bid_accepted for carrier and admin dashboard updates
+      broadcastBidAccepted(user.id, bid.loadId, {
+        bidId,
+        loadId: bid.loadId,
+        carrierId: user.id,
+        carrierName: user.companyName || user.username,
+        amount: String(finalAmount),
+        loadPickup: load.pickupCity,
+        loadDropoff: load.dropoffCity,
+      });
+
+      // Also broadcast to carrier for confirmation
+      broadcastNegotiationMessage("carrier", user.id, bidId, {
+        ...negotiationMessage,
+        senderName: user.companyName || user.username,
+        loadId: bid.loadId,
+        action: "carrier_accept_confirmed",
+      });
+
+      res.json({ success: true, message: negotiationMessage });
+    } catch (error) {
+      console.error("Carrier accept error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.get("/api/loads/:loadId/bids", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -1414,6 +1626,14 @@ export async function registerRoutes(
         message: message || `Counter offer: Rs. ${Number(counterAmount).toLocaleString('en-IN')}`,
         loadPickup: load.pickupCity,
         loadDropoff: load.dropoffCity,
+      });
+
+      // Broadcast negotiation message to carrier for real-time chat sync
+      broadcastNegotiationMessage("carrier", bid.carrierId, bidId, {
+        ...negotiationMessage,
+        senderName: "Admin",
+        loadId,
+        action: "admin_counter",
       });
 
       res.json({ success: true, message: negotiationMessage });

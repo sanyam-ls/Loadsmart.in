@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import {
   MessageSquare,
   Send,
@@ -49,6 +51,7 @@ interface NegotiationData {
 
 export function NegotiationChat({ loadId, onClose, onInvoiceCreate }: NegotiationChatProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [counterAmount, setCounterAmount] = useState("");
   const [selectedBidId, setSelectedBidId] = useState<string | null>(null);
 
@@ -56,6 +59,47 @@ export function NegotiationChat({ loadId, onClose, onInvoiceCreate }: Negotiatio
     queryKey: ["/api/admin/negotiations", loadId],
     refetchInterval: 5000,
   });
+
+  // Real-time WebSocket connection for negotiation updates
+  useEffect(() => {
+    if (!user?.id || user?.role !== "admin") return;
+
+    connectMarketplace("admin", user.id);
+
+    // Listen for carrier counter offers and messages
+    const unsubNegotiation = onMarketplaceEvent("negotiation_message", (data: any) => {
+      if (data.negotiation?.loadId === loadId || data.loadId === loadId) {
+        // Refetch to get latest messages
+        refetch();
+        if (data.action === "carrier_counter") {
+          toast({
+            title: "Carrier Counter Offer",
+            description: `${data.senderName || "Carrier"} sent a counter offer`,
+          });
+        } else if (data.action === "carrier_accept") {
+          toast({
+            title: "Carrier Accepted",
+            description: `${data.senderName || "Carrier"} accepted the offer`,
+          });
+        }
+      }
+    });
+
+    const unsubBidReceived = onMarketplaceEvent("bid_received", (data: any) => {
+      if (data.loadId === loadId) {
+        refetch();
+        toast({
+          title: "New Bid Received",
+          description: `${data.carrierName || "Carrier"} submitted a bid`,
+        });
+      }
+    });
+
+    return () => {
+      unsubNegotiation();
+      unsubBidReceived();
+    };
+  }, [user?.id, user?.role, loadId, refetch, toast]);
 
   const counterMutation = useMutation({
     mutationFn: async ({ bidId, amount }: { bidId: string; amount: string }) => {

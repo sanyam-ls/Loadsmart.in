@@ -12,21 +12,29 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
   if (socket?.readyState === WebSocket.OPEN) {
     return;
   }
+  
+  // If already connecting, don't create another connection
+  if (socket?.readyState === WebSocket.CONNECTING) {
+    return;
+  }
 
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const wsUrl = `${protocol}//${window.location.host}/ws/marketplace`;
 
   socket = new WebSocket(wsUrl);
 
-  socket.onopen = () => {
+  socket.onopen = function() {
     console.log("[Marketplace] Connected to real-time updates");
     reconnectAttempts = 0;
     
-    socket?.send(JSON.stringify({
-      type: "identify",
-      role,
-      userId,
-    }));
+    // Only send if socket is truly open
+    if (this.readyState === WebSocket.OPEN) {
+      this.send(JSON.stringify({
+        type: "identify",
+        role,
+        userId,
+      }));
+    }
   };
 
   socket.onmessage = (event) => {

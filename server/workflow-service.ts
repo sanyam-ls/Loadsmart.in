@@ -56,11 +56,12 @@ export async function getLoadsForRole(
       return allLoads;
 
     case "shipper":
-      // Shipper sees only their own loads in specific states
-      // NOTE: Shipper can only see invoice after it's SENT (not created)
+      // Shipper sees only their own loads across the full lifecycle
+      // From submission through delivery
       const shipperVisibleStates: LoadStatus[] = [
-        "pending", "priced", "awarded", "invoice_created", "invoice_sent", 
-        "invoice_acknowledged", "invoice_paid", "in_transit", "delivered", "closed"
+        "pending", "priced", "posted_to_carriers", "open_for_bid", "counter_received",
+        "awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", 
+        "in_transit", "delivered", "closed"
       ];
       return allLoads.filter(load => 
         load.shipperId === user.id && 

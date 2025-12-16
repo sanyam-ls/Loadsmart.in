@@ -22,6 +22,35 @@ The backend utilizes `Express.js` for HTTP routing, supporting a RESTful API des
 
 This core feature involves administrators reviewing and pricing load postings before carriers can bid. Shippers submit loads without a rate, which then enter an admin queue for review, pricing, and posting (as "fixed price" or "negotiable"). Carriers can then accept fixed-price loads or counter-bid on negotiable ones. This workflow is supported by specific API endpoints for submission, review, pricing, and auditing.
 
+### Canonical Load Lifecycle (12 States)
+
+The platform enforces a consistent 12-state load lifecycle:
+
+```
+draft → pending → priced → posted_to_carriers → open_for_bid → counter_received 
+      → awarded → invoice_created → invoice_sent → invoice_acknowledged 
+      → invoice_paid → in_transit → delivered → closed
+```
+
+**State Transitions:**
+- **draft**: Initial load creation (not submitted)
+- **pending**: Shipper submitted load, awaiting admin pricing
+- **priced**: Admin set price, awaiting posting decision
+- **posted_to_carriers**: Load posted for carrier bidding
+- **open_for_bid**: Carriers actively bidding
+- **counter_received**: Counter-offer negotiations in progress
+- **awarded**: Bid accepted, carrier assigned (auto-creates shipment + invoice)
+- **invoice_created → invoice_sent → invoice_acknowledged → invoice_paid**: Invoice workflow
+- **in_transit**: Shipment picked up and en route
+- **delivered**: Shipment delivered to destination
+- **closed**: Load complete
+
+**Key Workflow Functions (server/workflow-service.ts):**
+- `transitionLoadState()`: Validates and executes state transitions
+- `getLoadsForRole()`: Role-based load visibility filtering
+- `acceptBid()`: Accepts bid, auto-creates shipment and invoice, closes other bids
+- `checkCarrierEligibility()`: Validates carrier can bid on a load
+
 ### Vehicle Telematics System (Shipper Portal Exclusive)
 
 The Shipper Portal includes a CAN-Bus GPS + Telematics system. It provides real-time vehicle tracking, CAN-Bus diagnostics (speed, RPM, fuel, etc.), ETA predictions with AI, and driver behavior insights. The AI Concierge integrates with telematics data to answer queries about fleet status, alerts, ETAs, and driver performance.

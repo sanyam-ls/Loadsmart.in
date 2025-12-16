@@ -47,8 +47,8 @@ import type { Load, Bid } from "@shared/schema";
 
 function getStatusColor(status: string | null) {
   switch (status) {
-    case "submitted_to_admin": 
-    case "pending_pricing": 
+    case "pending":
+    case "priced":
       return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
     case "posted_to_carriers":
     case "open_for_bid":
@@ -56,14 +56,14 @@ function getStatusColor(status: string | null) {
     case "counter_received":
       return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
     case "awarded":
+    case "invoice_created":
     case "invoice_sent":
+    case "invoice_acknowledged":
+    case "invoice_paid":
       return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
     case "in_transit": 
       return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400";
     case "delivered":
-    case "pod_uploaded":
-    case "carrier_invoice_submitted":
-    case "carrier_finalized":
     case "closed":
       return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
     case "cancelled":
@@ -171,11 +171,11 @@ export default function ShipperLoadsPage() {
   }));
 
   const statusMappings: Record<string, string[]> = {
-    active: ['submitted_to_admin', 'pending_pricing', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_sent'],
+    active: ['pending', 'priced', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid'],
     bidding: ['open_for_bid', 'counter_received'],
-    assigned: ['awarded', 'invoice_sent'],
+    assigned: ['awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid'],
     in_transit: ['in_transit'],
-    delivered: ['delivered', 'pod_uploaded', 'carrier_invoice_submitted', 'carrier_finalized', 'closed'],
+    delivered: ['delivered', 'closed'],
     cancelled: ['cancelled'],
   };
 

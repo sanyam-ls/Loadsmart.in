@@ -106,11 +106,11 @@ export default function AdminOverview() {
   const allBids = bids || [];
   const allInvoices = invoices || [];
 
-  const activeStatusList = ['submitted_to_admin', 'pending_pricing', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_sent', 'in_transit'];
+  const activeStatusList = ['pending', 'priced', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid', 'in_transit'];
   const inTransitLoads = allLoads.filter((l: Load) => l.status === 'in_transit');
   const activeLoads = allLoads.filter((l: Load) => activeStatusList.includes(l.status || ''));
-  const completedLoads = allLoads.filter((l: Load) => ['delivered', 'pod_uploaded', 'carrier_invoice_submitted', 'carrier_finalized', 'closed'].includes(l.status || ''));
-  const pendingLoads = allLoads.filter((l: Load) => ['submitted_to_admin', 'pending_pricing'].includes(l.status || ''));
+  const completedLoads = allLoads.filter((l: Load) => ['delivered', 'closed'].includes(l.status || ''));
+  const pendingLoads = allLoads.filter((l: Load) => ['pending', 'priced'].includes(l.status || ''));
 
   const verifiedCarriers = allCarriers.filter(c => c.carrierProfile?.verificationStatus === 'verified');
   

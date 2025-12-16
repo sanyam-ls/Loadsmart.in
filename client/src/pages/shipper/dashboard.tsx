@@ -23,8 +23,8 @@ function getStatusBadgeStyle(status: string | null | undefined) {
   switch (status) {
     case 'in_transit':
       return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
-    case 'submitted_to_admin':
-    case 'pending_pricing':
+    case 'pending':
+    case 'priced':
       return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
     case 'delivered':
     case 'closed':
@@ -49,7 +49,7 @@ export default function ShipperDashboard() {
 
   const userLoads = (loads || []).filter((load: Load) => load.shipperId === user?.id);
   const activeLoads = userLoads.filter((load: Load) => 
-    ['submitted_to_admin', 'pending_pricing', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_sent'].includes(load.status || '')
+    ['pending', 'priced', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid'].includes(load.status || '')
   );
   const inTransitLoads = userLoads.filter((load: Load) => load.status === 'in_transit');
   

@@ -388,6 +388,7 @@ export const invoices = pgTable("invoices", {
   shipperResponseType: text("shipper_response_type"), // approve, negotiate, query
   shipperResponseMessage: text("shipper_response_message"),
   shipperCounterAmount: decimal("shipper_counter_amount", { precision: 12, scale: 2 }),
+  shipperStatus: text("shipper_status").default("pending"), // pending, viewed, acknowledged, countered, paid
   negotiationThreadId: varchar("negotiation_thread_id"),
   
   // Counter offer contact details (submitted by shipper)

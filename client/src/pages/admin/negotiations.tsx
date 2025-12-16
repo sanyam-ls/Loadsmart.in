@@ -1016,11 +1016,30 @@ export default function AdminNegotiationsPage() {
               onClick={() => {
                 if (chatBid) {
                   // Find the latest counter amount from the negotiation messages
-                  const messagesWithAmount = chatMessages.filter(m => m.amount != null);
-                  const latestPrice = messagesWithAmount.length > 0 
-                    ? messagesWithAmount[messagesWithAmount.length - 1].amount 
-                    : parseFloat(chatBid.amount);
-                  setFinalNegotiatedPrice(latestPrice ?? parseFloat(chatBid.amount));
+                  // First check for structured amounts, then try to parse from message text
+                  let latestPrice = parseFloat(chatBid.amount);
+                  
+                  // Look through all messages (newest last) for amounts
+                  for (let i = chatMessages.length - 1; i >= 0; i--) {
+                    const msg = chatMessages[i];
+                    // If message has explicit amount field, use it
+                    if (msg.amount != null) {
+                      latestPrice = parseFloat(msg.amount);
+                      break;
+                    }
+                    // Otherwise, try to parse a numeric amount from message text
+                    // Match patterns like "37000", "Rs. 37,000", "final price 37000"
+                    const amountMatch = msg.message?.match(/(?:Rs\.?\s*)?(\d{1,3}(?:,?\d{3})*(?:\.\d{2})?)\s*(?:final|offer)?/i);
+                    if (amountMatch) {
+                      const parsed = parseFloat(amountMatch[1].replace(/,/g, ''));
+                      if (!isNaN(parsed) && parsed > 0) {
+                        latestPrice = parsed;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  setFinalNegotiatedPrice(latestPrice);
                   setSelectedBid(chatBid);
                   setChatDialogOpen(false);
                   setAcceptDialogOpen(true);

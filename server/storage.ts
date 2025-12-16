@@ -6,7 +6,7 @@ import {
   pricingTemplates, adminPricings, invoices, carrierSettlements,
   adminAuditLogs, apiLogs, adminActionsQueue, featureFlags,
   invoiceHistory, carrierProposals, loadStateChangeLogs, shipperInvoiceResponses,
-  carrierVerifications, carrierVerificationDocuments, bidNegotiations,
+  carrierVerifications, carrierVerificationDocuments, bidNegotiations, negotiationThreads,
   validStateTransitions,
   type User, type InsertUser,
   type Truck, type InsertTruck,
@@ -35,6 +35,7 @@ import {
   type CarrierVerification, type InsertCarrierVerification,
   type CarrierVerificationDocument, type InsertCarrierVerificationDocument,
   type BidNegotiation, type InsertBidNegotiation,
+  type NegotiationThread, type InsertNegotiationThread,
   type LoadStatus,
 } from "@shared/schema";
 
@@ -221,6 +222,18 @@ export interface IStorage {
   createBidNegotiation(negotiation: InsertBidNegotiation): Promise<BidNegotiation>;
   getBidNegotiations(bidId: string): Promise<BidNegotiation[]>;
   getBidNegotiationsByLoad(loadId: string): Promise<BidNegotiation[]>;
+  
+  // Negotiation Thread methods (for Admin Negotiation Chat)
+  createNegotiationThread(thread: InsertNegotiationThread): Promise<NegotiationThread>;
+  getNegotiationThread(loadId: string): Promise<NegotiationThread | undefined>;
+  getNegotiationThreadById(id: string): Promise<NegotiationThread | undefined>;
+  getAllNegotiationThreads(): Promise<NegotiationThread[]>;
+  getActiveNegotiationThreads(): Promise<NegotiationThread[]>;
+  updateNegotiationThread(loadId: string, updates: Partial<NegotiationThread>): Promise<NegotiationThread | undefined>;
+  getOrCreateNegotiationThread(loadId: string): Promise<NegotiationThread>;
+  acceptBidInThread(loadId: string, bidId: string, carrierId: string, amount: string): Promise<NegotiationThread | undefined>;
+  incrementThreadBidCount(loadId: string, isSimulated: boolean): Promise<void>;
+  getNegotiationCounters(): Promise<{ pending: number; counterSent: number; accepted: number; rejected: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1140,6 +1153,100 @@ export class DatabaseStorage implements IStorage {
       .from(bidNegotiations)
       .where(eq(bidNegotiations.loadId, loadId))
       .orderBy(bidNegotiations.createdAt);
+  }
+
+  // Negotiation Thread methods
+  async createNegotiationThread(thread: InsertNegotiationThread): Promise<NegotiationThread> {
+    const [newThread] = await db.insert(negotiationThreads).values(thread).returning();
+    return newThread;
+  }
+
+  async getNegotiationThread(loadId: string): Promise<NegotiationThread | undefined> {
+    const [thread] = await db.select()
+      .from(negotiationThreads)
+      .where(eq(negotiationThreads.loadId, loadId));
+    return thread;
+  }
+
+  async getNegotiationThreadById(id: string): Promise<NegotiationThread | undefined> {
+    const [thread] = await db.select()
+      .from(negotiationThreads)
+      .where(eq(negotiationThreads.id, id));
+    return thread;
+  }
+
+  async getAllNegotiationThreads(): Promise<NegotiationThread[]> {
+    return db.select()
+      .from(negotiationThreads)
+      .orderBy(desc(negotiationThreads.lastActivityAt));
+  }
+
+  async getActiveNegotiationThreads(): Promise<NegotiationThread[]> {
+    return db.select()
+      .from(negotiationThreads)
+      .where(inArray(negotiationThreads.status, ["pending_review", "counter_sent", "carrier_responded"]))
+      .orderBy(desc(negotiationThreads.lastActivityAt));
+  }
+
+  async updateNegotiationThread(loadId: string, updates: Partial<NegotiationThread>): Promise<NegotiationThread | undefined> {
+    const [updated] = await db.update(negotiationThreads)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(negotiationThreads.loadId, loadId))
+      .returning();
+    return updated;
+  }
+
+  async getOrCreateNegotiationThread(loadId: string): Promise<NegotiationThread> {
+    const existing = await this.getNegotiationThread(loadId);
+    if (existing) return existing;
+    
+    return this.createNegotiationThread({
+      loadId,
+      status: "pending_review",
+      totalBids: 0,
+      realBids: 0,
+      simulatedBids: 0,
+      pendingCounters: 0,
+      lastActivityAt: new Date(),
+    });
+  }
+
+  async acceptBidInThread(loadId: string, bidId: string, carrierId: string, amount: string): Promise<NegotiationThread | undefined> {
+    const [updated] = await db.update(negotiationThreads)
+      .set({
+        status: "accepted",
+        acceptedBidId: bidId,
+        acceptedCarrierId: carrierId,
+        acceptedAmount: amount,
+        updatedAt: new Date(),
+        lastActivityAt: new Date(),
+      })
+      .where(eq(negotiationThreads.loadId, loadId))
+      .returning();
+    return updated;
+  }
+
+  async incrementThreadBidCount(loadId: string, isSimulated: boolean): Promise<void> {
+    const thread = await this.getOrCreateNegotiationThread(loadId);
+    await db.update(negotiationThreads)
+      .set({
+        totalBids: (thread.totalBids || 0) + 1,
+        realBids: isSimulated ? thread.realBids : (thread.realBids || 0) + 1,
+        simulatedBids: isSimulated ? (thread.simulatedBids || 0) + 1 : thread.simulatedBids,
+        lastActivityAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(negotiationThreads.loadId, loadId));
+  }
+
+  async getNegotiationCounters(): Promise<{ pending: number; counterSent: number; accepted: number; rejected: number }> {
+    const threads = await this.getAllNegotiationThreads();
+    return {
+      pending: threads.filter(t => t.status === "pending_review").length,
+      counterSent: threads.filter(t => t.status === "counter_sent").length,
+      accepted: threads.filter(t => t.status === "accepted").length,
+      rejected: threads.filter(t => t.status === "rejected").length,
+    };
   }
 }
 

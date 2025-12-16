@@ -53,6 +53,7 @@ import AdminLoadQueuePage from "@/pages/admin/load-queue";
 import AdminNegotiationsPage from "@/pages/admin/negotiations";
 import AdminInvoicesPage from "@/pages/admin/invoices";
 import AdminCarrierVerificationPage from "@/pages/admin/carrier-verification";
+import NegotiationInbox from "@/pages/admin/negotiation-inbox";
 import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import { AdminDataProvider } from "@/lib/admin-data-store";
@@ -141,6 +142,7 @@ function AppContent() {
               <Route path="/admin" component={AdminOverview} />
               <Route path="/admin/queue" component={AdminLoadQueuePage} />
               <Route path="/admin/negotiations" component={AdminNegotiationsPage} />
+              <Route path="/admin/inbox" component={NegotiationInbox} />
               <Route path="/admin/users" component={AdminUsersPage} />
               <Route path="/admin/users/:id" component={AdminUsersPage} />
               <Route path="/admin/loads" component={AdminLoadsPage} />

@@ -66,6 +66,32 @@ export type BidStatus = typeof bidStatuses[number];
 export const bidTypes = ["carrier_bid", "admin_posted_acceptance", "admin_counter"] as const;
 export type BidType = typeof bidTypes[number];
 
+// Negotiation message types enum (for chat-style negotiation)
+export const negotiationMessageTypes = [
+  "carrier_bid",          // Initial bid from carrier
+  "admin_counter",        // Admin counter-offer
+  "carrier_counter",      // Carrier counter to admin's counter
+  "admin_accept",         // Admin accepts a bid
+  "carrier_accept",       // Carrier accepts admin's counter
+  "admin_reject",         // Admin rejects a bid
+  "carrier_reject",       // Carrier rejects admin's counter
+  "system_message",       // System notifications (finalization, etc.)
+  "simulated_bid",        // Auto-generated simulated bid
+  "simulated_counter",    // Simulated carrier counter-response
+] as const;
+export type NegotiationMessageType = typeof negotiationMessageTypes[number];
+
+// Negotiation thread status enum
+export const negotiationStatuses = [
+  "pending_review",       // Initial bids awaiting admin review
+  "counter_sent",         // Admin sent counter, awaiting response
+  "carrier_responded",    // Carrier responded to counter
+  "accepted",             // Negotiation finalized with acceptance
+  "rejected",             // All bids rejected
+  "expired",              // Negotiation timed out
+] as const;
+export type NegotiationStatus = typeof negotiationStatuses[number];
+
 // Shipment status enum
 export const shipmentStatuses = ["pickup_scheduled", "picked_up", "in_transit", "at_checkpoint", "out_for_delivery", "delivered"] as const;
 export type ShipmentStatus = typeof shipmentStatuses[number];
@@ -1068,14 +1094,37 @@ export const carrierVerificationDocuments = pgTable("carrier_verification_docume
 // Bid Negotiations table (for chat-style negotiation history)
 export const bidNegotiations = pgTable("bid_negotiations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  bidId: varchar("bid_id").notNull().references(() => bids.id),
+  bidId: varchar("bid_id").references(() => bids.id), // Can be null for system messages
   loadId: varchar("load_id").notNull().references(() => loads.id),
-  senderId: varchar("sender_id").notNull().references(() => users.id),
-  senderRole: text("sender_role").notNull(), // carrier, admin, shipper
-  messageType: text("message_type").default("message"), // message, counter_offer, accept, reject
+  senderId: varchar("sender_id").references(() => users.id), // Can be null for simulated/system
+  senderRole: text("sender_role").notNull(), // carrier, admin, system
+  messageType: text("message_type").default("carrier_bid"), // negotiationMessageTypes
   message: text("message"),
   amount: decimal("amount", { precision: 12, scale: 2 }),
+  previousAmount: decimal("previous_amount", { precision: 12, scale: 2 }), // For counter offers
+  isSimulated: boolean("is_simulated").default(false), // Flag for simulated bids
+  simulatedCarrierName: text("simulated_carrier_name"), // Name for simulated carriers
+  carrierName: text("carrier_name"), // Display name for real carriers
+  carrierType: text("carrier_type"), // enterprise or solo
+  isRead: boolean("is_read").default(false), // Track read status
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Negotiation Thread Summary table (for live counters and quick lookups)
+export const negotiationThreads = pgTable("negotiation_threads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loadId: varchar("load_id").notNull().references(() => loads.id).unique(),
+  status: text("status").default("pending_review"), // negotiationStatuses
+  totalBids: integer("total_bids").default(0),
+  realBids: integer("real_bids").default(0),
+  simulatedBids: integer("simulated_bids").default(0),
+  pendingCounters: integer("pending_counters").default(0),
+  acceptedBidId: varchar("accepted_bid_id").references(() => bids.id),
+  acceptedCarrierId: varchar("accepted_carrier_id").references(() => users.id),
+  acceptedAmount: decimal("accepted_amount", { precision: 12, scale: 2 }),
+  lastActivityAt: timestamp("last_activity_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Relations for new tables
@@ -1121,6 +1170,21 @@ export const bidNegotiationsRelations = relations(bidNegotiations, ({ one }) => 
   }),
 }));
 
+export const negotiationThreadsRelations = relations(negotiationThreads, ({ one }) => ({
+  load: one(loads, {
+    fields: [negotiationThreads.loadId],
+    references: [loads.id],
+  }),
+  acceptedBid: one(bids, {
+    fields: [negotiationThreads.acceptedBidId],
+    references: [bids.id],
+  }),
+  acceptedCarrier: one(users, {
+    fields: [negotiationThreads.acceptedCarrierId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCarrierVerificationSchema = createInsertSchema(carrierVerifications).omit({ id: true, createdAt: true, updatedAt: true });
@@ -1154,6 +1218,7 @@ export const insertAdminActionsQueueSchema = createInsertSchema(adminActionsQueu
 export const insertFeatureFlagSchema = createInsertSchema(featureFlags).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertLoadStateChangeLogSchema = createInsertSchema(loadStateChangeLogs).omit({ id: true, createdAt: true });
 export const insertShipperInvoiceResponseSchema = createInsertSchema(shipperInvoiceResponses).omit({ id: true, createdAt: true });
+export const insertNegotiationThreadSchema = createInsertSchema(negotiationThreads).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -1220,6 +1285,8 @@ export type InsertCarrierVerificationDocument = z.infer<typeof insertCarrierVeri
 export type CarrierVerificationDocument = typeof carrierVerificationDocuments.$inferSelect;
 export type InsertBidNegotiation = z.infer<typeof insertBidNegotiationSchema>;
 export type BidNegotiation = typeof bidNegotiations.$inferSelect;
+export type InsertNegotiationThread = z.infer<typeof insertNegotiationThreadSchema>;
+export type NegotiationThread = typeof negotiationThreads.$inferSelect;
 
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {

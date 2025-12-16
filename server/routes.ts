@@ -1169,6 +1169,411 @@ export async function registerRoutes(
     }
   });
 
+  // ============================
+  // ADMIN NEGOTIATION CHAT ROUTES
+  // ============================
+
+  // Get all negotiation threads with load details
+  app.get("/api/admin/negotiations", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get loads that are in negotiation states (including awarded for post-acceptance invoice flow)
+      const negotiableStatuses = ["posted_to_carriers", "open_for_bid", "counter_received", "awarded", "open_for_bids"];
+      const loads = await storage.getLoadsByStatuses(negotiableStatuses as any);
+      
+      // Enrich with negotiation thread data
+      const enrichedLoads = await Promise.all(
+        loads.map(async (load) => {
+          const thread = await storage.getOrCreateNegotiationThread(load.id);
+          const shipper = await storage.getUser(load.shipperId);
+          const bids = await storage.getBidsByLoad(load.id);
+          const messages = await storage.getBidNegotiationsByLoad(load.id);
+          
+          return {
+            ...load,
+            shipperName: shipper?.companyName || shipper?.username,
+            shipperEmail: shipper?.email,
+            thread,
+            bidCount: bids.length,
+            messageCount: messages.length,
+            latestActivity: messages.length > 0 
+              ? messages[messages.length - 1].createdAt 
+              : thread.lastActivityAt,
+          };
+        })
+      );
+
+      // Get counters for dashboard
+      const counters = await storage.getNegotiationCounters();
+
+      res.json({ loads: enrichedLoads, counters });
+    } catch (error) {
+      console.error("Get negotiations error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get negotiation thread and messages for a specific load
+  app.get("/api/admin/negotiations/:loadId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId } = req.params;
+      const load = await storage.getLoad(loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const thread = await storage.getOrCreateNegotiationThread(loadId);
+      const messages = await storage.getBidNegotiationsByLoad(loadId);
+      const bids = await storage.getBidsByLoad(loadId);
+      const shipper = await storage.getUser(load.shipperId);
+
+      // Enrich bids with carrier info
+      const enrichedBids = await Promise.all(
+        bids.map(async (bid) => {
+          const carrier = await storage.getUser(bid.carrierId);
+          return {
+            ...bid,
+            carrierName: carrier?.companyName || carrier?.username,
+            carrierEmail: carrier?.email,
+          };
+        })
+      );
+
+      res.json({
+        load: {
+          ...load,
+          shipperName: shipper?.companyName || shipper?.username,
+        },
+        thread,
+        messages,
+        bids: enrichedBids,
+      });
+    } catch (error) {
+      console.error("Get negotiation thread error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin sends counter-offer in negotiation
+  app.post("/api/admin/negotiations/:loadId/counter", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId } = req.params;
+      const counterSchema = z.object({
+        bidId: z.string(),
+        counterAmount: z.string(),
+        message: z.string().optional(),
+      });
+
+      const { bidId, counterAmount, message } = counterSchema.parse(req.body);
+
+      const load = await storage.getLoad(loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const bid = await storage.getBid(bidId);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      // Update bid with counter amount
+      await storage.updateBid(bidId, { 
+        counterAmount,
+        status: "countered",
+      });
+
+      // Create negotiation message
+      const negotiationMessage = await storage.createBidNegotiation({
+        bidId,
+        loadId,
+        senderId: user.id,
+        senderRole: "admin",
+        messageType: "admin_counter",
+        message: message || `Counter offer: Rs. ${Number(counterAmount).toLocaleString('en-IN')}`,
+        amount: counterAmount,
+        previousAmount: bid.amount,
+        carrierName: null,
+        isSimulated: false,
+      });
+
+      // Update thread status
+      await storage.updateNegotiationThread(loadId, {
+        status: "counter_sent",
+        pendingCounters: 1,
+        lastActivityAt: new Date(),
+      });
+
+      // Update load status to counter_received
+      await storage.updateLoad(loadId, { status: "counter_received" });
+
+      // Notify carrier
+      await storage.createNotification({
+        userId: bid.carrierId,
+        title: "Counter Offer Received",
+        message: `Admin has countered your bid with Rs. ${Number(counterAmount).toLocaleString('en-IN')}`,
+        type: "warning",
+        relatedLoadId: loadId,
+        contextType: "counter_offer",
+      });
+
+      res.json({ success: true, message: negotiationMessage });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Counter offer error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin accepts a bid in negotiation
+  app.post("/api/admin/negotiations/:loadId/accept", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId } = req.params;
+      const acceptSchema = z.object({
+        bidId: z.string(),
+      });
+
+      const { bidId } = acceptSchema.parse(req.body);
+
+      const load = await storage.getLoad(loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      const bid = await storage.getBid(bidId);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      // Accept the winning bid
+      await storage.updateBid(bidId, { status: "accepted" });
+
+      // Reject all other bids for this load
+      const allBids = await storage.getBidsByLoad(loadId);
+      for (const otherBid of allBids) {
+        if (otherBid.id !== bidId && otherBid.status !== "rejected") {
+          await storage.updateBid(otherBid.id, { status: "rejected" });
+          // Notify rejected carriers
+          await storage.createNotification({
+            userId: otherBid.carrierId,
+            title: "Bid Not Selected",
+            message: `Another carrier was selected for the load from ${load.pickupCity} to ${load.dropoffCity}`,
+            type: "info",
+            relatedLoadId: loadId,
+          });
+        }
+      }
+
+      // Get the final amount (counter amount if exists, otherwise original bid)
+      const finalAmount = bid.counterAmount || bid.amount;
+
+      // Create acceptance message in chat
+      const carrier = await storage.getUser(bid.carrierId);
+      await storage.createBidNegotiation({
+        bidId,
+        loadId,
+        senderId: user.id,
+        senderRole: "system",
+        messageType: "admin_accept",
+        message: `Carrier finalized at Rs. ${Number(finalAmount).toLocaleString('en-IN')}`,
+        amount: finalAmount,
+        carrierName: carrier?.companyName || carrier?.username,
+        isSimulated: false,
+      });
+
+      // Update thread to accepted
+      await storage.acceptBidInThread(loadId, bidId, bid.carrierId, finalAmount);
+
+      // Update load status to awarded (CARRIER_FINALIZED)
+      await storage.updateLoad(loadId, { 
+        status: "awarded",
+        assignedCarrierId: bid.carrierId,
+        finalPrice: finalAmount,
+        awardedBidId: bidId,
+      });
+
+      // Notify winning carrier
+      await storage.createNotification({
+        userId: bid.carrierId,
+        title: "Bid Accepted!",
+        message: `Your bid for load from ${load.pickupCity} to ${load.dropoffCity} has been accepted at Rs. ${Number(finalAmount).toLocaleString('en-IN')}`,
+        type: "success",
+        relatedLoadId: loadId,
+      });
+
+      // Notify shipper
+      await storage.createNotification({
+        userId: load.shipperId,
+        title: "Carrier Assigned",
+        message: `A carrier has been assigned for your load from ${load.pickupCity} to ${load.dropoffCity}`,
+        type: "success",
+        relatedLoadId: loadId,
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Bid accepted and carrier finalized",
+        finalAmount,
+        carrierId: bid.carrierId,
+        carrierName: carrier?.companyName || carrier?.username,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Accept bid error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin rejects a bid in negotiation
+  app.post("/api/admin/negotiations/:loadId/reject", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId } = req.params;
+      const rejectSchema = z.object({
+        bidId: z.string(),
+        reason: z.string().optional(),
+      });
+
+      const { bidId, reason } = rejectSchema.parse(req.body);
+
+      const bid = await storage.getBid(bidId);
+      if (!bid) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      const load = await storage.getLoad(loadId);
+
+      // Reject the bid
+      await storage.updateBid(bidId, { status: "rejected" });
+
+      // Create rejection message in chat
+      await storage.createBidNegotiation({
+        bidId,
+        loadId,
+        senderId: user.id,
+        senderRole: "admin",
+        messageType: "admin_reject",
+        message: reason || "Bid rejected by admin",
+        amount: bid.amount,
+        isSimulated: false,
+      });
+
+      // Notify carrier
+      await storage.createNotification({
+        userId: bid.carrierId,
+        title: "Bid Rejected",
+        message: reason || `Your bid for load from ${load?.pickupCity} to ${load?.dropoffCity} was not accepted`,
+        type: "warning",
+        relatedLoadId: loadId,
+      });
+
+      res.json({ success: true, message: "Bid rejected" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Reject bid error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Generate simulated bid for a load
+  app.post("/api/admin/negotiations/:loadId/simulate", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { loadId } = req.params;
+      const load = await storage.getLoad(loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Generate simulated carrier names
+      const simulatedCarrierNames = [
+        "Swift Logistics",
+        "Premium Freight Co",
+        "Highway Express",
+        "National Transport",
+        "Metro Carriers",
+        "Rapid Delivery",
+        "Elite Trucking",
+        "Prime Movers",
+      ];
+
+      const carrierName = simulatedCarrierNames[Math.floor(Math.random() * simulatedCarrierNames.length)];
+      
+      // Generate realistic bid amount based on admin price
+      const basePrice = Number(load.adminFinalPrice) || 50000;
+      const variance = 0.1 + Math.random() * 0.15; // 10-25% variance
+      const bidAmount = Math.round(basePrice * (1 - variance));
+
+      // Create simulated bid message
+      const message = await storage.createBidNegotiation({
+        loadId,
+        senderRole: "carrier",
+        messageType: "simulated_bid",
+        message: `Bid placed: Rs. ${bidAmount.toLocaleString('en-IN')}`,
+        amount: bidAmount.toString(),
+        isSimulated: true,
+        simulatedCarrierName: carrierName,
+        carrierType: Math.random() > 0.5 ? "enterprise" : "solo",
+      });
+
+      // Update thread bid count
+      await storage.incrementThreadBidCount(loadId, true);
+
+      res.json({ success: true, message, carrierName, bidAmount });
+    } catch (error) {
+      console.error("Simulate bid error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get negotiation counters for dashboard
+  app.get("/api/admin/negotiations/counters", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const counters = await storage.getNegotiationCounters();
+      res.json(counters);
+    } catch (error) {
+      console.error("Get counters error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Get admin-posted loads for carriers (with eligibility filters)
   app.get("/api/carrier/loads", requireAuth, async (req, res) => {
     try {
@@ -4280,7 +4685,7 @@ export async function registerRoutes(
       // Enrich with sender info
       const enrichedNegotiations = await Promise.all(
         negotiations.map(async (n) => {
-          const sender = await storage.getUser(n.senderId);
+          const sender = n.senderId ? await storage.getUser(n.senderId) : null;
           return {
             ...n,
             sender: sender ? { username: sender.username, companyName: sender.companyName } : null,
@@ -4410,7 +4815,7 @@ export async function registerRoutes(
       // Build final payload - server controls invoiceId, loadId, shipperId
       const response = await storage.createShipperInvoiceResponse({
         invoiceId: invoice.id,
-        loadId: invoice.loadId,
+        loadId: invoice.loadId || "",
         shipperId: user.id,
         responseType: userInput.responseType,
         message: userInput.message,

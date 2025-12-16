@@ -1,0 +1,284 @@
+You are acting as a principal systems architect upgrading the Admin Console of a freight exchange.
+
+Your task is to replace the existing Negotiation Queue UI behavior with a real-time, chat-style negotiation engine that supports both real carrier bids and simulated bids, without breaking existing workflows.
+
+This prompt applies ONLY to the ADMIN CONSOLE.
+
+You must not stop execution until all behaviors below are live and synchronized.
+
+⸻
+
+1. REDEFINE THE NEGOTIATION QUEUE (ADMIN CONSOLE)
+
+The current Negotiation Queue page must no longer behave as a static list.
+
+It must become a Negotiation Inbox, where:
+	•	Each row represents one load
+	•	Clicking a load opens a chat-based negotiation panel
+	•	This panel is the single control center for:
+	•	Viewing bids
+	•	Countering prices
+	•	Accepting a carrier
+	•	Finalizing the load
+
+This page is not informational — it is operational.
+
+⸻
+
+2. CHAT BOX IS THE PRIMARY NEGOTIATION INTERFACE
+
+For every load in NEGOTIATION_ACTIVE or BIDDING_ACTIVE state:
+
+Opening the load must display a chat-style conversation panel with:
+
+Message types inside the chat:
+	•	Carrier bid messages
+	•	Admin counter-offers
+	•	Simulated carrier responses
+	•	Acceptance confirmations
+	•	System state updates (e.g. “Carrier finalized”)
+
+Each message must clearly show:
+	•	Sender (Admin / Carrier / Simulated Carrier / System)
+	•	Bid amount
+	•	Timestamp
+	•	Optional notes
+
+This chat must visually feel like a negotiation, not a log.
+
+⸻
+
+3. REAL + SIMULATED BIDS MUST COEXIST
+
+Inside the same chat:
+	•	Real carrier bids (submitted from Carrier Portal) must appear live
+	•	Simulated bids must also appear automatically to:
+	•	Populate the chat
+	•	Demonstrate negotiation behavior
+	•	Prevent empty states
+
+Simulated bids must:
+	•	Look identical to real bids
+	•	Be internally flagged as simulated
+	•	Never break the flow when real bids arrive
+
+Admin must be able to:
+	•	Counter simulated bids
+	•	Accept simulated bids (for demo/testing)
+	•	Counter real bids
+	•	Accept real bids
+
+⸻
+
+4. ADMIN ACTIONS MUST LIVE INSIDE THE CHAT
+
+Inside the chat box itself, Admin must have:
+
+Inline controls on each bid message:
+	•	Counter (opens inline price input)
+	•	Accept (finalizes carrier immediately)
+	•	Reject
+
+These buttons must:
+	•	Act immediately
+	•	Change load state
+	•	Trigger notifications
+	•	Lock or unlock further actions
+
+No external modal.
+No separate page.
+Chat is the control surface.
+
+⸻
+
+5. COUNTER FLOW (STRICT BEHAVIOR)
+
+When Admin clicks Counter:
+	•	A counter message appears in the chat
+	•	Carrier (real or simulated) must respond:
+	•	Accept
+	•	Counter back
+	•	Response appears as a new chat message
+
+This loop continues until:
+	•	Admin accepts one carrier
+	•	Or admin rejects all bids
+
+This applies equally to:
+	•	Enterprise carriers
+	•	Solo drivers
+	•	Simulated carriers
+
+⸻
+
+6. ACCEPT FLOW (FINALIZATION EVENT)
+
+When Admin clicks Accept on a bid inside the chat:
+
+Immediately:
+	•	Load state changes to CARRIER_FINALIZED
+	•	Chat shows a system message:
+“Carrier finalized at ₹X”
+	•	All other bids auto-reject
+	•	Chat input is locked
+	•	Negotiation closes
+
+This must be visible instantly across:
+	•	Admin
+	•	Carrier
+	•	Shipper (state only, no chat)
+
+⸻
+
+7. POST-NEGOTIATION CTA — SEND INVOICE
+
+Only after acceptance:
+
+Inside the same Admin chat panel, a new primary button must appear:
+
+“Send Invoice to Shipper”
+
+This button:
+	•	Did NOT exist before acceptance
+	•	Generates the invoice
+	•	Pushes invoice to Shipper Portal
+	•	Changes load state to INVOICE_SENT
+
+If this button appears earlier → FAIL.
+
+⸻
+
+8. SHIPPER IS NEVER PART OF CHAT
+
+The chat is:
+	•	Admin ↔ Carrier only
+	•	Shipper must never:
+	•	See the chat
+	•	See bids
+	•	See counters
+	•	See simulated activity
+
+Shipper only receives:
+	•	Final carrier
+	•	Final price
+	•	Invoice
+
+⸻
+
+9. LOAD VISIBILITY RULE (CRITICAL FIX)
+
+If a load appears in:
+	•	Admin Negotiation Chat
+
+It must also exist and be searchable in:
+	•	Carrier Marketplace
+
+If carrier receives a notification but:
+	•	Cannot open the load
+	•	Cannot find it via search
+
+→ FAIL.
+
+⸻
+
+10. NEGOTIATION QUEUE COUNTERS MUST BE LIVE
+
+The top counters:
+	•	Pending Review
+	•	Counter Sent
+	•	Accepted
+	•	Rejected
+
+Must update in real time based on:
+	•	Chat activity
+	•	Accept / Counter / Reject actions
+
+No static numbers.
+No manual refresh dependency.
+
+⸻
+
+11. SIMULATED DATA RULES
+
+System must auto-inject:
+	•	Simulated carriers
+	•	Simulated bids
+	•	Simulated counter replies
+
+Only when:
+	•	Real bids are low
+	•	Load would otherwise look inactive
+
+Simulated activity must:
+	•	Respect pricing logic
+	•	Respond realistically
+	•	Never override real carrier actions
+
+⸻
+
+12. BID PAGE SYNC (ADMIN)
+
+All bids shown in:
+	•	Chat
+	•	Bid History tab
+	•	Load detail view
+
+Must be:
+	•	The same data
+	•	Same status
+	•	Same amounts
+
+No duplicated or out-of-sync bid lists.
+
+⸻
+
+13. NOTIFICATIONS MUST OPEN CHAT DIRECTLY
+
+Any notification related to:
+	•	New bid
+	•	Counter
+	•	Acceptance
+
+Must deep-link to:
+	•	The exact load
+	•	The negotiation chat
+	•	The correct message context
+
+Opening a notification must never land on a dead page.
+
+⸻
+
+14. FAILURE CONDITIONS (DO NOT IGNORE)
+
+The system is considered broken if:
+	•	Chat opens but has no actions
+	•	Accept doesn’t finalize load
+	•	Counter doesn’t create a new message
+	•	Invoice can be sent before acceptance
+	•	Carrier bid doesn’t appear in admin chat
+	•	Simulated bids replace real ones
+	•	Load exists in admin but not in carrier marketplace
+
+⸻
+
+FINAL DIRECTIVE
+
+This negotiation chat is the heart of the platform.
+
+Admin must be able to:
+	•	See demand
+	•	Create competition
+	•	Negotiate live
+	•	Finalize decisively
+	•	Trigger billing
+
+One chat. One load. One truth.
+
+Do not stop execution until:
+	•	Chat works for real + simulated loads
+	•	Accept and Counter work inside the chat
+	•	Invoice is triggered only after finalization
+	•	Every state syncs across the ecosystem
+
+This is not optional polish.
+This is core marketplace functionality.

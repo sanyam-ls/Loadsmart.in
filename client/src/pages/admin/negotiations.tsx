@@ -1028,11 +1028,22 @@ export default function AdminNegotiationsPage() {
                       break;
                     }
                     // Otherwise, try to parse a numeric amount from message text
-                    // Match patterns like "37000", "Rs. 37,000", "final price 37000"
-                    const amountMatch = msg.message?.match(/(?:Rs\.?\s*)?(\d{1,3}(?:,?\d{3})*(?:\.\d{2})?)\s*(?:final|offer)?/i);
-                    if (amountMatch) {
-                      const parsed = parseFloat(amountMatch[1].replace(/,/g, ''));
-                      if (!isNaN(parsed) && parsed > 0) {
+                    // Match any 4+ digit number (typical price in rupees) or comma-formatted like 38,555
+                    const text = msg.message || "";
+                    // First try to find a number with 4+ digits (like 38555)
+                    const simpleMatch = text.match(/\b(\d{4,})\b/);
+                    if (simpleMatch) {
+                      const parsed = parseFloat(simpleMatch[1]);
+                      if (!isNaN(parsed) && parsed >= 1000) {
+                        latestPrice = parsed;
+                        break;
+                      }
+                    }
+                    // Also try comma-formatted numbers like 38,555
+                    const commaMatch = text.match(/\b(\d{1,2},\d{3})\b/);
+                    if (commaMatch) {
+                      const parsed = parseFloat(commaMatch[1].replace(/,/g, ''));
+                      if (!isNaN(parsed) && parsed >= 1000) {
                         latestPrice = parsed;
                         break;
                       }

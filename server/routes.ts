@@ -18,6 +18,7 @@ import {
 import { setupTelemetryWebSocket } from "./websocket-telemetry";
 import { 
   broadcastLoadPosted, 
+  broadcastLoadSubmitted,
   broadcastLoadUpdated, 
   broadcastBidReceived,
   broadcastBidCountered,
@@ -219,6 +220,17 @@ export async function registerRoutes(
       });
 
       const load = await storage.createLoad(data);
+      
+      // Broadcast to admins that a new load was submitted for pricing
+      broadcastLoadSubmitted({
+        id: load.id,
+        pickupCity: load.pickupCity,
+        dropoffCity: load.dropoffCity,
+        shipperId: load.shipperId,
+        shipperName: user.companyName || user.username,
+        status: load.status,
+      });
+      
       res.json(load);
     } catch (error) {
       if (error instanceof z.ZodError) {

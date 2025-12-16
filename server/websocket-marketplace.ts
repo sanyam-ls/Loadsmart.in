@@ -117,6 +117,31 @@ export function broadcastLoadPosted(loadData: {
   console.log(`Broadcasted load_posted event for load ${loadData.id} to ${clients.size} carrier clients`);
 }
 
+export function broadcastLoadSubmitted(loadData: {
+  id: string;
+  pickupCity: string | null;
+  dropoffCity: string | null;
+  shipperId: string;
+  shipperName?: string;
+  status: string | null;
+}): void {
+  const message = {
+    type: "load_submitted",
+    load: loadData,
+    timestamp: new Date().toISOString(),
+  };
+
+  let adminCount = 0;
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.role === "admin") {
+      sendToClient(ws, message);
+      adminCount++;
+    }
+  });
+
+  console.log(`Broadcasted load_submitted event for load ${loadData.id} to ${adminCount} admin clients`);
+}
+
 export function broadcastLoadUpdated(loadId: string, shipperId: string | null, status: string | null, event: string, loadData?: any): void {
   const message = {
     type: "load_updated",

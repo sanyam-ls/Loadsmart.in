@@ -58,6 +58,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useMockData, MockLoad } from "@/lib/mock-data-store";
 import { PricingDrawer } from "@/components/admin/pricing-drawer";
 import { InvoiceDrawer } from "@/components/admin/invoice-drawer";
+import { useAuth } from "@/lib/auth-context";
+import { connectMarketplace, onMarketplaceEvent, disconnectMarketplace } from "@/lib/marketplace-socket";
+import { queryClient } from "@/lib/queryClient";
 
 const regions = ["All Regions", "North India", "South India", "East India", "West India", "Central India"];
 const loadTypes = [
@@ -286,10 +289,32 @@ export default function LoadQueuePage() {
   const [adminComment, setAdminComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { user } = useAuth();
+
   const { data: realLoads = [], isLoading: isLoadingReal } = useQuery<RealLoad[]>({
     queryKey: ["/api/admin/queue"],
     refetchInterval: 30000,
   });
+
+  // WebSocket listener for real-time load submissions from shippers
+  useEffect(() => {
+    if (user?.id && user?.role === "admin") {
+      connectMarketplace("admin", user.id);
+      
+      const unsubLoadSubmitted = onMarketplaceEvent("load_submitted", (data) => {
+        toast({
+          title: "New Load Submitted",
+          description: `${data.load?.shipperName || "A shipper"} submitted a load from ${data.load?.pickupCity || ""} to ${data.load?.dropoffCity || ""}`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
+      });
+
+      return () => {
+        unsubLoadSubmitted();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, toast]);
 
   // Handle highlight query param from notifications - auto-open drawer for that load
   const [highlightHandled, setHighlightHandled] = useState(false);

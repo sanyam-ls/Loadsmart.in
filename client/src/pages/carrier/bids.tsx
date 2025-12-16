@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { 
   Search, Filter, Gavel, Clock, CheckCircle, XCircle, RefreshCw, 
   MapPin, Truck, Package, Building2, Star, MessageSquare, Send,
-  TrendingUp, AlertTriangle, Timer, ArrowRight, ChevronDown, ChevronRight
+  TrendingUp, AlertTriangle, Timer, ArrowRight, ChevronDown, ChevronRight,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ import { useCarrierData, type CarrierBid } from "@/lib/carrier-data-store";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
+import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 
 function formatCurrency(amount: number): string {
@@ -51,14 +53,132 @@ const statusConfig: Record<CarrierBid["bidStatus"], { label: string; icon: typeo
   expired: { label: "Expired", icon: Clock, color: "bg-muted text-muted-foreground" },
 };
 
-function NegotiationDialog({ bid, onAccept, onCounter, onReject }: { 
+interface ChatMessage {
+  id: string;
+  sender: "carrier" | "admin";
+  message: string;
+  amount?: number;
+  timestamp: Date;
+  isSimulated?: boolean;
+}
+
+function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: { 
   bid: CarrierBid; 
   onAccept: () => void;
   onCounter: (amount: number) => void;
   onReject: () => void;
+  isOpen: boolean;
 }) {
   const [counterAmount, setCounterAmount] = useState(bid.currentRate.toString());
   const [showCounterInput, setShowCounterInput] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const isRealBid = bid.bidId && !bid.bidId.startsWith("bid-");
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (isRealBid) {
+      setIsLoading(true);
+      fetch(`/api/bids/${bid.bidId}/negotiations`, { credentials: "include" })
+        .then((res) => res.ok ? res.json() : [])
+        .then((data) => {
+          const messages: ChatMessage[] = data
+            .filter((msg: any) => msg.messageType !== "initial_bid")
+            .map((msg: any) => ({
+              id: msg.id,
+              sender: msg.senderRole === "admin" ? "admin" : "carrier",
+              message: msg.message || (msg.messageType === "counter_offer" ? "Counter offer" : "Message"),
+              amount: msg.amount ? parseFloat(msg.amount) : undefined,
+              timestamp: new Date(msg.createdAt),
+              isSimulated: false,
+            }));
+          setChatMessages(messages);
+        })
+        .catch(() => setChatMessages([]))
+        .finally(() => setIsLoading(false));
+    } else {
+      setChatMessages(
+        bid.negotiationHistory.slice(1).map((msg) => ({
+          id: msg.id,
+          sender: msg.sender as "carrier" | "admin",
+          message: msg.message,
+          amount: msg.amount,
+          timestamp: new Date(msg.timestamp),
+          isSimulated: true,
+        }))
+      );
+    }
+  }, [isOpen, bid.bidId, isRealBid, bid.negotiationHistory]);
+
+  useEffect(() => {
+    if (!isOpen || !isRealBid) return;
+
+    const unsub = onMarketplaceEvent("negotiation_message", (data) => {
+      if (data.bidId === bid.bidId) {
+        const newMsg: ChatMessage = {
+          id: data.negotiation?.id || `msg-${Date.now()}`,
+          sender: data.negotiation?.senderRole === "carrier" ? "carrier" : "admin",
+          message: data.negotiation?.message || "Counter offer",
+          amount: data.negotiation?.counterAmount ? parseFloat(data.negotiation.counterAmount) : undefined,
+          timestamp: new Date(data.negotiation?.createdAt || Date.now()),
+          isSimulated: false,
+        };
+        setChatMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      }
+    });
+
+    return () => unsub();
+  }, [isOpen, isRealBid, bid.bidId]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  const sendMessage = async (messageType: "message" | "counter_offer") => {
+    if (!isRealBid) {
+      if (messageType === "counter_offer") {
+        onCounter(parseInt(counterAmount));
+        setShowCounterInput(false);
+      }
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const payload: any = { messageType };
+      if (messageType === "counter_offer") {
+        payload.amount = counterAmount;
+        payload.message = `Counter offer: Rs. ${parseInt(counterAmount).toLocaleString("en-IN")}`;
+      } else {
+        payload.message = newMessage;
+      }
+
+      await apiRequest("POST", `/api/bids/${bid.bidId}/negotiations`, payload);
+
+      if (messageType === "counter_offer") {
+        setShowCounterInput(false);
+        toast({ title: "Counter Sent", description: `Your counter offer of ${formatCurrency(parseInt(counterAmount))} has been sent.` });
+      } else {
+        setNewMessage("");
+        toast({ title: "Message Sent", description: "Your message has been sent to the admin." });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
   
   return (
     <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -121,42 +241,77 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject }: {
       
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Negotiation Timeline</CardTitle>
+          <CardTitle className="text-sm">Negotiation Chat</CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-48">
-            <div className="space-y-3">
-              {bid.negotiationHistory.map((msg, idx) => (
-                <div 
-                  key={msg.id} 
-                  className={`flex ${msg.sender === "carrier" ? "justify-end" : "justify-start"}`}
-                >
+          <ScrollArea className="h-48" ref={scrollRef}>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : chatMessages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                No negotiation messages yet
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {chatMessages.map((msg) => (
                   <div 
-                    className={`max-w-[80%] rounded-lg p-3 ${
-                      msg.sender === "carrier" 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-muted"
-                    }`}
+                    key={msg.id} 
+                    className={`flex ${msg.sender === "carrier" ? "justify-end" : "justify-start"}`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium">
-                        {msg.sender === "carrier" ? "You" : bid.shipperCompany}
-                      </span>
-                      <span className="text-xs opacity-70">
-                        {format(new Date(msg.timestamp), "MMM d, h:mm a")}
-                      </span>
+                    <div 
+                      className={`max-w-[80%] rounded-lg p-3 ${
+                        msg.sender === "carrier" 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-medium">
+                          {msg.sender === "carrier" ? "You" : "Admin"}
+                        </span>
+                        <span className="text-xs opacity-70">
+                          {format(new Date(msg.timestamp), "MMM d, h:mm a")}
+                        </span>
+                      </div>
+                      <p className="text-sm">{msg.message}</p>
+                      {msg.amount && (
+                        <p className="text-lg font-bold mt-1">{formatCurrency(msg.amount)}</p>
+                      )}
                     </div>
-                    <p className="text-sm">{msg.message}</p>
-                    {msg.amount && (
-                      <p className="text-lg font-bold mt-1">{formatCurrency(msg.amount)}</p>
-                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {isRealBid && (bid.bidStatus === "pending" || bid.bidStatus === "countered") && (
+        <div className="flex gap-2 pt-2">
+          <Input
+            placeholder="Type a message..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newMessage.trim()) {
+                sendMessage("message");
+              }
+            }}
+            className="flex-1"
+            data-testid="input-chat-message"
+          />
+          <Button
+            size="icon"
+            disabled={!newMessage.trim() || isSending}
+            onClick={() => sendMessage("message")}
+            data-testid="button-send-message"
+          >
+            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        </div>
+      )}
       
       {(bid.bidStatus === "pending" || bid.bidStatus === "countered") && (
         <div className="space-y-4 pt-4 border-t">
@@ -164,7 +319,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject }: {
             <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span className="font-medium text-amber-800 dark:text-amber-200">Shipper Counter Offer</span>
+                <span className="font-medium text-amber-800 dark:text-amber-200">Admin Counter Offer</span>
               </div>
               <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
                 {formatCurrency(bid.shipperCounterRate)}
@@ -187,13 +342,11 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject }: {
                   data-testid="input-counter-amount"
                 />
                 <Button 
-                  onClick={() => {
-                    onCounter(parseInt(counterAmount));
-                    setShowCounterInput(false);
-                  }}
+                  onClick={() => sendMessage("counter_offer")}
+                  disabled={isSending}
                   data-testid="button-submit-counter"
                 >
-                  <Send className="h-4 w-4 mr-2" />
+                  {isSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
                   Send
                 </Button>
               </div>
@@ -531,11 +684,13 @@ export default function CarrierBidsPage() {
                         </div>
                       </div>
                       
-                      <Dialog>
+                      <Dialog 
+                        open={selectedBid?.bidId === bid.bidId} 
+                        onOpenChange={(open) => setSelectedBid(open ? bid : null)}
+                      >
                         <DialogTrigger asChild>
                           <Button 
                             variant={bid.bidStatus === "countered" ? "default" : "outline"}
-                            onClick={() => setSelectedBid(bid)}
                             data-testid={`button-view-${bid.bidId}`}
                           >
                             <MessageSquare className="h-4 w-4 mr-2" />
@@ -544,6 +699,7 @@ export default function CarrierBidsPage() {
                         </DialogTrigger>
                         <NegotiationDialog 
                           bid={bid}
+                          isOpen={selectedBid?.bidId === bid.bidId}
                           onAccept={() => handleAccept(bid.bidId)}
                           onCounter={(amount) => handleCounter(bid.bidId, amount)}
                           onReject={() => handleReject(bid.bidId)}

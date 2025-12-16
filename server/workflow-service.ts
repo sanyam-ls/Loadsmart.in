@@ -1,6 +1,11 @@
 import { storage } from "./storage";
 import { validStateTransitions, LoadStatus, BidStatus } from "@shared/schema";
 import type { Load, Bid, User } from "@shared/schema";
+import { 
+  broadcastLoadUpdated, 
+  broadcastBidAccepted, 
+  broadcastBidRejected 
+} from "./websocket-marketplace";
 
 /**
  * Workflow Service - Centralized business logic for the Admin-Managed Freight Exchange
@@ -324,6 +329,19 @@ export async function acceptBid(
     } catch (invoiceError) {
       console.error("Failed to create invoice after bid acceptance:", invoiceError);
     }
+
+    broadcastBidAccepted(bid.carrierId, load.id, {
+      id: bidId,
+      amount: bid.amount,
+      loadId: load.id,
+    });
+
+    broadcastLoadUpdated(load.id, load.shipperId, "awarded", "bid_accepted", {
+      id: load.id,
+      status: "awarded",
+      pickupCity: load.pickupCity,
+      dropoffCity: load.dropoffCity,
+    });
   }
 
   return { success: true, bid: updatedBid };
@@ -352,8 +370,6 @@ export async function rejectBid(
     notes: reason || `Rejected by ${rejectedBy}`
   });
 
-  // Broadcast rejection to carrier
-  const { broadcastBidRejected } = await import("./websocket-marketplace");
   broadcastBidRejected(bid.carrierId, bid.loadId, {
     id: bidId,
     amount: bid.amount,

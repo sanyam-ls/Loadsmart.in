@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   FileText, Send, Check, Clock, AlertCircle, DollarSign,
   Search, Filter, Eye, RefreshCw, MessageSquare, History,
   CheckCircle, XCircle, ArrowLeftRight, ChevronDown, ChevronUp
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -234,6 +236,7 @@ function getShipperStatusBadge(status?: string) {
 
 export default function AdminInvoicesPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [shipperStatusFilter, setShipperStatusFilter] = useState("all");
@@ -244,6 +247,33 @@ export default function AdminInvoicesPage() {
   const { data: apiInvoices = [], isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/admin/invoices"],
   });
+
+  useEffect(() => {
+    if (user?.id && user?.role === "admin") {
+      connectMarketplace("admin", user.id);
+      
+      const unsubInvoice = onMarketplaceEvent("invoice_update", (data) => {
+        if (data.event === "invoice_opened") {
+          toast({
+            title: "Invoice Acknowledged",
+            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been viewed by shipper.`,
+          });
+          refetch();
+        } else if (data.event === "invoice_paid") {
+          toast({
+            title: "Payment Received",
+            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been paid.`,
+          });
+          refetch();
+        }
+      });
+
+      return () => {
+        unsubInvoice();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, toast, refetch]);
 
   const invoices = useMemo(() => {
     if (apiInvoices.length > 0) {

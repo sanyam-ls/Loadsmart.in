@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   FileText, Check, Clock, AlertCircle, Eye, Download, 
   CreditCard, MessageSquare, CheckCircle, XCircle, Loader2,
   ArrowLeftRight, History, ChevronDown, ChevronUp, DollarSign
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -230,6 +232,7 @@ const simulatedInvoices: Invoice[] = [
 
 export default function ShipperInvoicesPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -240,9 +243,30 @@ export default function ShipperInvoicesPage() {
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
-  const { data: apiInvoices = [], isLoading } = useQuery<Invoice[]>({
+  const { data: apiInvoices = [], isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices/shipper"],
   });
+
+  useEffect(() => {
+    if (user?.id && user?.role === "shipper") {
+      connectMarketplace("shipper", user.id);
+      
+      const unsubInvoice = onMarketplaceEvent("invoice_update", (data) => {
+        if (data.event === "invoice_sent") {
+          toast({
+            title: "New Invoice Received",
+            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been sent to you.`,
+          });
+          refetch();
+        }
+      });
+
+      return () => {
+        unsubInvoice();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, toast, refetch]);
 
   const invoices = useMemo(() => {
     if (apiInvoices.length > 0) {

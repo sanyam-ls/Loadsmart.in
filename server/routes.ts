@@ -3257,6 +3257,8 @@ export async function registerRoutes(
         relatedLoadId: invoice.loadId,
       });
 
+      broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_sent", updated);
+
       res.json(updated);
     } catch (error) {
       console.error("Send invoice error:", error);
@@ -3518,6 +3520,8 @@ export async function registerRoutes(
         });
       }
 
+      broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_opened", updated);
+
       res.json(updated);
     } catch (error) {
       console.error("Acknowledge invoice error:", error);
@@ -3588,6 +3592,8 @@ export async function registerRoutes(
           relatedLoadId: load.id,
         });
       }
+
+      broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_paid", updated);
 
       res.json({ invoice: updated, paymentReference });
     } catch (error) {

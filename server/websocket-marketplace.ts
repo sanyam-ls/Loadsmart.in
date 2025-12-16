@@ -117,20 +117,27 @@ export function broadcastLoadPosted(loadData: {
   console.log(`Broadcasted load_posted event for load ${loadData.id} to ${clients.size} carrier clients`);
 }
 
-export function broadcastLoadUpdated(loadId: string, status: string | null, event: string): void {
+export function broadcastLoadUpdated(loadId: string, shipperId: string | null, status: string | null, event: string, loadData?: any): void {
   const message = {
     type: "load_updated",
     loadId,
     status,
     event,
+    load: loadData,
     timestamp: new Date().toISOString(),
   };
 
   clients.forEach((client, ws) => {
     if (ws.readyState === WebSocket.OPEN) {
-      sendToClient(ws, message);
+      if (client.role === "admin") {
+        sendToClient(ws, message);
+      }
+      if (client.role === "shipper" && shipperId && client.userId === shipperId) {
+        sendToClient(ws, message);
+      }
     }
   });
+  console.log(`Broadcasted load_updated (${event}) for load ${loadId}`);
 }
 
 export function broadcastBidReceived(loadId: string, bidData: any): void {

@@ -4,6 +4,7 @@ import {
   Plus, Search, Filter, Package, LayoutGrid, List, MapPin, ArrowRight, 
   Clock, DollarSign, Truck, MoreHorizontal, Edit, Copy, X, Eye, Loader2
 } from "lucide-react";
+import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +126,30 @@ export default function ShipperLoadsPage() {
     else if (status === "bidding") setStatusFilter("open_for_bid");
     else if (status) setStatusFilter(status);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (user?.id && user?.role === "shipper") {
+      connectMarketplace("shipper", user.id);
+      
+      const unsubLoadUpdate = onMarketplaceEvent("load_updated", (data) => {
+        const eventName = data.event === "bid_accepted" ? "Carrier Assigned" : data.event;
+        toast({
+          title: `Load ${eventName}`,
+          description: `Load ${data.load?.pickupCity || ""} → ${data.load?.dropoffCity || ""} has been updated to ${data.status}`,
+        });
+        if (typeof window !== "undefined") {
+          import("@/lib/queryClient").then(({ queryClient }) => {
+            queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+          });
+        }
+      });
+
+      return () => {
+        unsubLoadUpdate();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, toast]);
 
   const handleCancel = async (loadId: string) => {
     try {

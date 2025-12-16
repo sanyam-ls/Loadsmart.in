@@ -3771,6 +3771,99 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/shipper/invoices/:id/negotiate - Shipper submits counter offer
+  app.post("/api/shipper/invoices/:id/negotiate", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const { proposedAmount, reason, contactName, contactCompany, contactPhone, contactAddress } = req.body;
+      if (!proposedAmount || !reason) {
+        return res.status(400).json({ error: "Proposed amount and reason are required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      if (invoice.shipperId !== user.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      if (invoice.shipperConfirmed) {
+        return res.status(400).json({ error: "Invoice already confirmed" });
+      }
+
+      // Update invoice with negotiation request and counter contact details
+      const updatedInvoice = await storage.updateInvoice(req.params.id, {
+        shipperResponseType: 'negotiate',
+        shipperResponseMessage: `Counter: Rs. ${parseFloat(proposedAmount).toLocaleString('en-IN')} - ${reason}`,
+        shipperCounterAmount: proposedAmount.toString(),
+        counterContactName: contactName || null,
+        counterContactCompany: contactCompany || null,
+        counterContactPhone: contactPhone || null,
+        counterContactAddress: contactAddress || null,
+        counterReason: reason || null,
+        counteredAt: new Date(),
+        counteredBy: user.id,
+        status: 'disputed',
+        shipperStatus: 'countered',
+      });
+
+      // Update load status to invoice_negotiation (canonical state)
+      const load = await storage.getLoad(invoice.loadId);
+      if (load) {
+        await storage.updateLoad(load.id, {
+          status: 'invoice_negotiation',
+          previousStatus: load.status,
+          statusChangedBy: user.id,
+          statusChangedAt: new Date(),
+          statusNote: `Invoice negotiation: Proposed Rs. ${proposedAmount.toLocaleString('en-IN')}`,
+        });
+      }
+
+      // Create shipper invoice response record for audit
+      await storage.createShipperInvoiceResponse({
+        invoiceId: invoice.id,
+        loadId: invoice.loadId,
+        shipperId: user.id,
+        responseType: 'negotiate',
+        counterAmount: proposedAmount.toString(),
+        message: reason,
+        status: 'pending',
+      });
+
+      // Notify admins about negotiation request
+      const allUsers = await storage.getAllUsers();
+      const admins = allUsers.filter(u => u.role === 'admin');
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          title: "Invoice Counter Offer Received",
+          message: `Shipper ${user.companyName || user.username} proposes Rs. ${parseFloat(proposedAmount).toLocaleString('en-IN')} (was Rs. ${parseFloat(invoice.totalAmount?.toString() || '0').toLocaleString('en-IN')})`,
+          type: "warning",
+          relatedLoadId: invoice.loadId,
+        });
+      }
+
+      // Broadcast real-time update
+      broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_countered", updatedInvoice);
+
+      res.json({
+        success: true,
+        invoice: updatedInvoice,
+        load_status: 'invoice_negotiation',
+        message: "Counter offer submitted. Admin will review your proposal.",
+      });
+    } catch (error) {
+      console.error("Shipper invoice negotiate error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // =============================================
   // CARRIER PROPOSAL ENDPOINTS (Edited Estimations)
   // =============================================

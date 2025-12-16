@@ -1,0 +1,327 @@
+You are configuring a real freight exchange platform, not a demo.
+
+Your responsibility is to enforce strict business logic, data flow, and synchronization across Admin, Carrier, and Shipper portals so the platform operates as one ecosystem, not disconnected pages.
+
+You must not redesign UI unless required to support workflow.
+You must not add code in your response.
+You must not stop execution until every rule below is enforced.
+
+⸻
+
+1. CORE SYSTEM RULE (OVERRIDES EVERYTHING)
+
+There is ONE Load Object in the system.
+
+All portals (Admin, Carrier, Shipper) read from and write to the same load record, filtered only by role permissions.
+
+If a load changes state anywhere, every portal must reflect that change immediately.
+
+No UI success message is valid unless the state change propagates.
+
+⸻
+
+2. LOAD LIFECYCLE (MANDATORY STATES)
+
+Every load must move through these states in order:
+	1.	SUBMITTED_BY_SHIPPER
+	2.	PRICING_BY_ADMIN
+	3.	POSTED_TO_CARRIERS
+	4.	BIDS_RECEIVED
+	5.	NEGOTIATION_ACTIVE
+	6.	CARRIER_FINALIZED
+	7.	INVOICE_SENT
+	8.	SHIPPER_APPROVED / PAID
+	9.	IN_TRANSIT
+	10.	COMPLETED
+
+No step may be skipped.
+No invoice may exist before CARRIER_FINALIZED.
+
+⸻
+
+3. SHIPPER PORTAL — STRICTLY LIMITED ROLE
+
+REMOVE COMPLETELY from Shipper Portal:
+	•	Carrier Directory
+	•	Carrier profiles
+	•	Negotiations page
+	•	Nearby trucks
+	•	Any bid visibility
+	•	Any carrier messaging
+	•	Any carrier selection
+	•	Any pricing control
+
+Shipper is allowed ONLY:
+	•	Submit load (NO price)
+	•	View load status
+	•	View final assigned carrier (after finalization)
+	•	View invoice (ONLY after admin sends it)
+	•	Approve / reject invoice
+	•	Track shipment AFTER carrier assignment
+
+Shipper never participates in bidding or negotiation.
+
+⸻
+
+4. ADMIN — SINGLE CONTROLLER OF MARKETPLACE
+
+Admin is the only intermediary between Shipper and Carrier.
+
+Admin responsibilities:
+	•	Price loads
+	•	Post loads to marketplace
+	•	Receive all bids
+	•	Negotiate with carriers
+	•	Finalize carrier
+	•	Generate and send invoice
+	•	Monitor payment status
+
+There must be no direct Shipper ↔ Carrier interaction anywhere.
+
+⸻
+
+5. FIX: ADMIN “PRICE & POST” MUST PUSH TO CARRIER MARKETPLACE
+
+When Admin clicks Price & Post:
+
+You must enforce ALL of the following:
+	•	Load state → POSTED_TO_CARRIERS
+	•	Load becomes visible in:
+	•	Carrier → Available Loads (Enterprise)
+	•	Carrier → Available Loads (Solo Driver)
+	•	Load is marked:
+	•	“Posted by Admin”
+	•	With Admin Price
+	•	Carrier actions become active:
+	•	Accept Fixed Price
+	•	Place Bid
+
+If the load does NOT appear on Carrier Portal → the action is invalid.
+
+⸻
+
+6. CARRIER TYPES (MANDATORY SPLIT)
+
+Every carrier account must be tagged as:
+	•	ENTERPRISE_CARRIER
+	•	SOLO_DRIVER
+
+Enterprise Carrier:
+	•	Full dashboard
+	•	Fleet & drivers
+	•	Advanced bidding
+	•	Analytics
+
+Solo Driver:
+	•	Minimal dashboard
+	•	Available Loads
+	•	My Bids
+	•	My Trips
+	•	Earnings
+
+Both see the same loads.
+Only UI depth differs.
+
+⸻
+
+7. CARRIER REGISTRATION — TWO FLOWS
+
+At registration, carrier must choose:
+
+Owner-Operator:
+	•	Personal details
+	•	Single truck details
+	•	License documents
+
+Company:
+	•	Company name
+	•	GST / PAN
+	•	Fleet size
+	•	Authorized user
+
+Both go to:
+VERIFICATION_PENDING
+
+⸻
+
+8. ADMIN → CARRIERS VS VERIFICATION (SEPARATION)
+
+Admin → Carriers Page:
+	•	ONLY verified carriers
+	•	Eligible to bid
+
+Admin → Verification Page:
+	•	Pending carriers
+	•	Rejected carriers
+	•	Documents
+	•	Carrier type (Solo / Enterprise)
+
+Approval moves carrier from Verification → Carriers.
+
+⸻
+
+9. CARRIER PORTAL — AVAILABLE LOADS
+
+Carrier Portal must show:
+	•	All admin-posted loads
+	•	Simulated + real loads together
+	•	Load cards must open correctly
+
+Carrier actions:
+	•	Accept fixed price
+	•	Place bid
+	•	Enter negotiation chat
+
+If carrier receives notification but cannot open load → FAIL.
+
+⸻
+
+10. BIDS + NEGOTIATION — MUST BE ONE SYSTEM (CRITICAL)
+
+FIX THIS PROBLEM:
+
+Negotiation, chat, and bids are currently fragmented.
+This must be unified.
+
+⸻
+
+11. ADMIN — CREATE ONE BIDS & NEGOTIATION PAGE
+
+There must be one page per load that contains:
+
+A. Bid Table (Top)
+	•	Carrier name
+	•	Carrier type
+	•	Bid amount
+	•	Status
+	•	Timestamp
+	•	Notes
+
+Includes:
+	•	Real bids
+	•	Simulated bids
+
+B. Chat Box (Attached to each bid)
+	•	Chat thread per carrier
+	•	Simulated + real messages
+	•	Messages like:
+	•	Carrier: “Can do ₹38,000”
+	•	Admin: “Best is ₹40,000”
+
+Inside Chat Box (MANDATORY BUTTONS):
+	•	Counter Offer
+	•	Accept
+	•	Reject
+
+No separate Chat Inbox.
+No separate Negotiation Queue.
+Chat lives inside bid context.
+
+⸻
+
+12. NEGOTIATION RULES
+
+While negotiation is active:
+	•	Load state → NEGOTIATION_ACTIVE
+	•	New bids allowed
+	•	Load stays visible to carriers
+
+When admin accepts ONE bid:
+	•	Load state → CARRIER_FINALIZED
+	•	All other bids auto-rejected
+	•	Load removed from carrier marketplace
+	•	Selected carrier sees “Awarded”
+
+⸻
+
+13. INVOICE — ADMIN CONTROLLED, POST-NEGOTIATION ONLY
+
+Invoice rules:
+	•	Invoice CANNOT exist before carrier finalization
+	•	“Send Invoice” button appears ONLY after final bid acceptance
+
+When Admin sends invoice:
+	•	Invoice references:
+	•	Load
+	•	Final carrier
+	•	Final price
+	•	Invoice pushed to Shipper Portal
+	•	Invoice appears in Admin → Invoices page
+
+⸻
+
+14. SHIPPER — INVOICE VISIBILITY RULES
+
+Shipper sees invoice ONLY AFTER:
+	•	Negotiation closed
+	•	Carrier finalized
+	•	Admin sends invoice
+
+Shipper can:
+	•	View
+	•	Approve
+	•	Pay
+	•	Counter (with reason)
+
+Shipper NEVER sees bids or negotiation history.
+
+⸻
+
+15. ADMIN — INVOICE MONITORING
+
+Admin Invoice Page must show:
+	•	Invoice status:
+	•	Sent
+	•	Approved
+	•	Paid
+	•	Due date
+	•	Shipper action timestamps
+	•	Payment confirmation
+
+⸻
+
+16. NOTIFICATIONS — MUST OPEN REAL DATA
+
+Every notification must:
+	•	Open the exact load
+	•	Open correct state
+	•	Open correct page
+
+Notifications without deep-link access are invalid.
+
+⸻
+
+17. REMOVE BROKEN / MEANINGLESS FEATURES
+
+Disable or remove:
+	•	Shipper negotiations
+	•	Shipper carrier browsing
+	•	Carrier visibility before admin posting
+	•	Buttons that don’t change state
+	•	Pages that don’t sync data
+
+Do NOT remove:
+	•	Negotiation logic
+	•	Chat
+	•	Bidding
+These must be fixed, not deleted.
+
+⸻
+
+18. ACCEPTANCE CHECK (HARD FAIL)
+
+The system FAILS if any of these occur:
+
+❌ Admin posts load → carrier cannot see it
+❌ Carrier bids → admin cannot see it
+❌ Admin accepts bid → invoice not gated
+❌ Shipper sees invoice before negotiation ends
+❌ Bid, chat, and negotiation exist on different pages
+
+The system PASSES only if:
+
+✅ One load flows end-to-end
+✅ Admin mediates everything
+✅ Carrier bids & negotiates via admin
+✅ Invoice is final output
+✅ All portals reflect the same state

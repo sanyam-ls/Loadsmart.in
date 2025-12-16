@@ -5,7 +5,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -25,11 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -38,23 +30,19 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
-  Info,
-  DollarSign,
   Truck,
   MapPin,
   Package,
-  Clock,
   Users,
-  Lock,
   Send,
-  History,
   Sparkles,
   IndianRupee,
-  Percent,
   ChevronRight,
   Loader2,
-  Shield,
   BarChart3,
+  Receipt,
+  FileText,
+  CheckCircle,
 } from "lucide-react";
 
 interface LoadData {
@@ -68,8 +56,12 @@ interface LoadData {
   distance?: number | string;
   pickupDate?: string | Date;
   shipperId?: string;
+  shipperName?: string;
   status?: string;
   cargoDescription?: string;
+  adminPrice?: number;
+  finalPrice?: string;
+  adminFinalPrice?: string;
 }
 
 interface CarrierOption {
@@ -139,9 +131,8 @@ export function PricingDrawer({
   carriers = [],
 }: PricingDrawerProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("builder");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
 
   // Pricing state
@@ -163,14 +154,24 @@ export function PricingDrawer({
   const [breakdown, setBreakdown] = useState<PricingSuggestion["breakdown"] | null>(null);
   const [params, setParams] = useState<PricingSuggestion["params"] | null>(null);
   const [confidenceScore, setConfidenceScore] = useState(0);
-  const [comparableLoads, setComparableLoads] = useState<PricingSuggestion["comparable_loads"]>([]);
-  const [riskFlags, setRiskFlags] = useState<string[]>([]);
   const [pricingId, setPricingId] = useState<string | null>(null);
+
+  // Determine if load is in "Carrier Finalized" state (awarded) - ready for invoice
+  const isCarrierFinalized = load?.status === "awarded";
+  
+  // Get the bid price for invoice
+  const bidPrice = useMemo(() => {
+    const price = load?.finalPrice || load?.adminFinalPrice || load?.adminPrice;
+    if (price) {
+      return typeof price === 'string' ? parseFloat(price) : price;
+    }
+    return 0;
+  }, [load]);
 
   // Fetch templates
   const { data: templates = [] } = useQuery<PricingTemplate[]>({
     queryKey: ["/api/admin/pricing/templates"],
-    enabled: open,
+    enabled: open && !isCarrierFinalized,
   });
 
   // Calculate derived values
@@ -191,12 +192,12 @@ export function PricingDrawer({
     return Math.abs(priceDeviation) > 15;
   }, [priceDeviation]);
 
-  // Fetch suggested price when load changes
+  // Fetch suggested price when load changes (only for non-finalized loads)
   useEffect(() => {
-    if (open && load?.id) {
+    if (open && load?.id && !isCarrierFinalized) {
       fetchSuggestedPrice();
     }
-  }, [open, load?.id]);
+  }, [open, load?.id, isCarrierFinalized]);
 
   // Update final price when adjustments change
   useEffect(() => {
@@ -236,12 +237,9 @@ export function PricingDrawer({
       setBreakdown(data.breakdown);
       setParams(data.params);
       setConfidenceScore(data.confidence_score);
-      setComparableLoads(data.comparable_loads);
-      setRiskFlags(data.risk_flags);
       setPlatformMarginPercent(data.platform_rate_percent);
     } catch (error) {
       console.error("Failed to fetch suggested price:", error);
-      // Fallback calculation
       const distance = parseFloat(load.distance?.toString() || "500");
       const weight = parseFloat(load.weight?.toString() || "10");
       const basePrice = distance * 45 * (1 + Math.max(0, weight - 5) * 0.02);
@@ -253,36 +251,39 @@ export function PricingDrawer({
     }
   };
 
-  const handleSaveDraft = async () => {
-    if (!load?.id) return;
-    setIsSaving(true);
+  const handleSendInvoice = async () => {
+    if (!load?.id || bidPrice <= 0) return;
+    setIsSending(true);
+    
     try {
-      const response = await apiRequest("POST", "/api/admin/pricing/save", {
+      // Generate and send invoice in one API call
+      const response = await apiRequest("POST", "/api/admin/invoice/generate-and-send", {
         load_id: load.id,
-        suggested_price: suggestedPrice,
-        final_price: finalPrice,
-        markup_percent: markupPercent,
-        fixed_fee: fixedFee,
-        discount_amount: discountAmount,
-        platform_margin_percent: platformMarginPercent,
-        notes,
-        template_id: selectedTemplate || null,
+        amount: bidPrice,
       });
+      
       const data = await response.json();
-      setPricingId(data.pricing?.id);
-
-      toast({
-        title: "Draft Saved",
-        description: "Pricing draft has been saved. You can continue editing.",
-      });
-    } catch (error) {
+      
+      if (data.success) {
+        toast({
+          title: "Invoice Sent",
+          description: `Invoice for ${formatRupees(bidPrice)} has been generated and sent to the shipper.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+        onSuccess?.();
+        onOpenChange(false);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send invoice";
       toast({
         title: "Error",
-        description: "Failed to save draft",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
-      setIsSaving(false);
+      setIsSending(false);
     }
   };
 
@@ -314,12 +315,9 @@ export function PricingDrawer({
 
     setIsLocking(true);
     
-    // Check if this is a mock load (id starts with "LD-") vs a real database load (UUID/numeric)
-    // Note: Real loads have numeric/UUID id but also have loadId field with "LD-xxx" format for display
     const isMockLoad = typeof load.id === 'string' && load.id.startsWith("LD-");
     
     if (isMockLoad) {
-      // Handle mock loads locally without API calls
       setTimeout(() => {
         toast({
           title: "Load Posted Successfully",
@@ -333,7 +331,6 @@ export function PricingDrawer({
     }
     
     try {
-      // Real database loads - use API
       const saveResponse = await apiRequest("POST", "/api/admin/pricing/save", {
         load_id: load.id,
         suggested_price: suggestedPrice,
@@ -405,20 +402,29 @@ export function PricingDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-[600px] p-0 flex flex-col">
+      <SheetContent className="w-full sm:max-w-[550px] p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-primary" />
-            <SheetTitle data-testid="text-drawer-title">Price & Post Load</SheetTitle>
+            {isCarrierFinalized ? (
+              <Receipt className="h-5 w-5 text-primary" />
+            ) : (
+              <Calculator className="h-5 w-5 text-primary" />
+            )}
+            <SheetTitle data-testid="text-drawer-title">
+              {isCarrierFinalized ? "Send Invoice to Shipper" : "Price & Post Load"}
+            </SheetTitle>
           </div>
           <SheetDescription>
-            Set final pricing and post to carriers
+            {isCarrierFinalized 
+              ? "Generate and send invoice for the finalized bid"
+              : "Set pricing and post to carrier marketplace"
+            }
           </SheetDescription>
         </SheetHeader>
 
         <ScrollArea className="flex-1">
           <div className="p-6 space-y-6">
-            {/* Load Summary */}
+            {/* Load Summary Card */}
             <Card>
               <CardContent className="pt-4">
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -426,7 +432,7 @@ export function PricingDrawer({
                     <Package className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Load:</span>
                     <span className="font-mono font-medium" data-testid="text-load-id">
-                      {load.loadId || load.id?.slice(0, 8)}
+                      {load.loadId || load.id?.slice(0, 8).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -440,39 +446,87 @@ export function PricingDrawer({
                     <MapPin className="h-4 w-4 text-red-500" />
                     <span>{load.dropoffCity}</span>
                   </div>
-                  {params && (
-                    <div className="flex items-center gap-2 col-span-2 text-muted-foreground">
-                      <span>{params.distanceKm} km</span>
-                      <span className="mx-1">|</span>
-                      <span>{params.weightTons} tons</span>
-                      <span className="mx-1">|</span>
-                      <Badge variant="outline" className="text-xs">
-                        {params.region} region
-                      </Badge>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 col-span-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span>{load.weight} {load.weightUnit || "MT"}</span>
+                    {load.cargoDescription && (
+                      <>
+                        <span className="text-muted-foreground">-</span>
+                        <span className="text-muted-foreground truncate">{load.cargoDescription}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="builder" data-testid="tab-builder">
-                  <Calculator className="h-4 w-4 mr-1" />
-                  Builder
-                </TabsTrigger>
-                <TabsTrigger value="intelligence" data-testid="tab-intelligence">
-                  <Sparkles className="h-4 w-4 mr-1" />
-                  Intel
-                </TabsTrigger>
-                <TabsTrigger value="post" data-testid="tab-post">
-                  <Send className="h-4 w-4 mr-1" />
-                  Post
-                </TabsTrigger>
-              </TabsList>
+            {/* SECTION 1: Invoice Section (for Carrier Finalized loads) */}
+            {isCarrierFinalized && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Invoice Details</h3>
+                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Carrier Finalized
+                  </Badge>
+                </div>
 
-              {/* Price Builder Tab */}
-              <TabsContent value="builder" className="space-y-4 mt-4">
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="pt-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Shipper:</span>
+                      <span className="font-medium">{load.shipperName || "Unknown"}</span>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IndianRupee className="h-5 w-5 text-primary" />
+                        <span className="font-medium">Bid Amount</span>
+                      </div>
+                      <span className="text-2xl font-bold text-primary" data-testid="text-bid-amount">
+                        {formatRupees(bidPrice)}
+                      </span>
+                    </div>
+
+                    <div className="bg-muted/50 rounded-md p-3 text-sm text-muted-foreground">
+                      <p>Invoice will be automatically generated with:</p>
+                      <ul className="mt-2 space-y-1 list-disc list-inside">
+                        <li>Load details and route information</li>
+                        <li>Agreed bid amount: {formatRupees(bidPrice)}</li>
+                        <li>Payment terms and due date</li>
+                      </ul>
+                    </div>
+
+                    <Button 
+                      className="w-full" 
+                      size="lg"
+                      onClick={handleSendInvoice}
+                      disabled={isSending || bidPrice <= 0}
+                      data-testid="button-send-invoice"
+                    >
+                      {isSending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Send Invoice to Shipper
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* SECTION 2: Carrier Posting Section (for loads needing pricing) */}
+            {!isCarrierFinalized && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Post to Carrier Marketplace</h3>
+                </div>
+
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -618,313 +672,124 @@ export function PricingDrawer({
                       <CardContent className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Label>Platform Rate</Label>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3 w-3 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Percentage of final price retained as platform fee
-                              </TooltipContent>
-                            </Tooltip>
+                            <Label className="text-sm">Platform Margin</Label>
                           </div>
                           <div className="flex items-center gap-2">
                             <Slider
                               value={[platformMarginPercent]}
                               onValueChange={([val]) => setPlatformMarginPercent(val)}
                               min={5}
-                              max={20}
-                              step={0.5}
+                              max={25}
+                              step={1}
                               className="w-24"
-                              data-testid="slider-platform-rate"
+                              data-testid="slider-platform-margin"
                             />
-                            <span className="text-sm font-medium w-12 text-right">
-                              {platformMarginPercent}%
-                            </span>
+                            <span className="text-sm font-medium w-10">{platformMarginPercent}%</span>
                           </div>
                         </div>
-
-                        <Separator />
-
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Carrier Payout</span>
-                            <p className="text-lg font-bold text-green-600" data-testid="text-carrier-payout">
-                              {formatRupees(carrierPayout)}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Platform Margin</span>
-                            <p className="text-lg font-bold text-primary" data-testid="text-platform-margin">
-                              {formatRupees(platformMargin)}
-                            </p>
-                          </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Platform Earnings:</span>
+                          <span className="font-medium text-primary">{formatRupees(platformMargin)}</span>
                         </div>
-
-                        <div className="h-2 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all"
-                            style={{ width: `${platformMarginPercent}%` }}
-                          />
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Carrier Payout:</span>
+                          <span className="font-medium">{formatRupees(carrierPayout)}</span>
                         </div>
                       </CardContent>
                     </Card>
+
+                    <Separator />
+
+                    {/* Posting Options */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Posting Options
+                      </h4>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id="post-open"
+                            checked={postMode === "open"}
+                            onCheckedChange={() => setPostMode("open")}
+                            data-testid="checkbox-post-open"
+                          />
+                          <Label htmlFor="post-open" className="flex-1 cursor-pointer">
+                            <span className="font-medium">Open to All Carriers</span>
+                            <p className="text-sm text-muted-foreground">
+                              All verified carriers can view and bid
+                            </p>
+                          </Label>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id="post-invite"
+                            checked={postMode === "invite"}
+                            onCheckedChange={() => setPostMode("invite")}
+                            data-testid="checkbox-post-invite"
+                          />
+                          <Label htmlFor="post-invite" className="flex-1 cursor-pointer">
+                            <span className="font-medium">Invite Specific Carriers</span>
+                            <p className="text-sm text-muted-foreground">
+                              Only invited carriers can view and bid
+                            </p>
+                          </Label>
+                        </div>
+
+                        {postMode === "invite" && carriers.length > 0 && (
+                          <div className="ml-7 space-y-2 max-h-32 overflow-y-auto">
+                            {carriers.map((carrier) => (
+                              <div key={carrier.id} className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`carrier-${carrier.id}`}
+                                  checked={selectedCarriers.includes(carrier.id)}
+                                  onCheckedChange={() => toggleCarrier(carrier.id)}
+                                />
+                                <Label htmlFor={`carrier-${carrier.id}`} className="text-sm cursor-pointer">
+                                  {carrier.name} ({carrier.completedLoads} loads)
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="allow-counter"
+                          checked={allowCounterBids}
+                          onCheckedChange={(checked) => setAllowCounterBids(checked === true)}
+                          data-testid="checkbox-allow-counter"
+                        />
+                        <Label htmlFor="allow-counter" className="cursor-pointer">
+                          Allow carriers to submit counter-offers
+                        </Label>
+                      </div>
+                    </div>
+
+                    {/* Post Button */}
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handleLockAndPost}
+                      disabled={isLocking || finalPrice <= 0}
+                      data-testid="button-lock-post"
+                    >
+                      {isLocking ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Price & Post to Carriers
+                    </Button>
                   </>
                 )}
-              </TabsContent>
-
-              {/* Intelligence Tab */}
-              <TabsContent value="intelligence" className="space-y-4 mt-4">
-                {/* Risk Flags */}
-                {riskFlags.length > 0 && (
-                  <Card className="border-amber-500">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2 text-amber-600">
-                        <AlertTriangle className="h-4 w-4" />
-                        Risk Flags ({riskFlags.length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {riskFlags.map((flag, i) => (
-                          <li key={i} className="flex items-center gap-2 text-sm">
-                            <Shield className="h-3 w-3 text-amber-500" />
-                            {flag}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {riskFlags.length === 0 && (
-                  <Card className="border-green-500">
-                    <CardContent className="pt-4">
-                      <div className="flex items-center gap-2 text-green-600">
-                        <CheckCircle2 className="h-5 w-5" />
-                        <span className="font-medium">No risk flags detected</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Comparable Loads */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <History className="h-4 w-4" />
-                      Comparable Loads
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {comparableLoads.length > 0 ? (
-                      <ul className="space-y-2">
-                        {comparableLoads.map((comp) => (
-                          <li
-                            key={comp.id}
-                            className="flex items-center justify-between text-sm p-2 rounded bg-muted/50"
-                          >
-                            <div>
-                              <p className="font-medium">{comp.route}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {comp.distance} km
-                              </p>
-                            </div>
-                            <span className="font-mono">
-                              {formatRupees(parseInt(comp.finalPrice || "0"))}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        No comparable loads found in last 90 days
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Pricing Parameters */}
-                {params && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Calculator className="h-4 w-4" />
-                        Calculation Parameters
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Distance:</span>
-                          <span>{params.distanceKm} km</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Weight:</span>
-                          <span>{params.weightTons} tons</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Base Rate:</span>
-                          <span>Rs. {params.baseRatePerKm}/km</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Region:</span>
-                          <span className="capitalize">{params.region}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              {/* Post Options Tab */}
-              <TabsContent value="post" className="space-y-4 mt-4">
-                {/* Post Mode */}
-                <div className="space-y-3">
-                  <Label>Posting Mode</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      variant={postMode === "open" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPostMode("open")}
-                      className="flex flex-col h-auto py-3"
-                      data-testid="button-mode-open"
-                    >
-                      <Users className="h-4 w-4 mb-1" />
-                      <span className="text-xs">Open Market</span>
-                    </Button>
-                    <Button
-                      variant={postMode === "invite" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPostMode("invite")}
-                      className="flex flex-col h-auto py-3"
-                      data-testid="button-mode-invite"
-                    >
-                      <Send className="h-4 w-4 mb-1" />
-                      <span className="text-xs">Invite Only</span>
-                    </Button>
-                    <Button
-                      variant={postMode === "assign" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPostMode("assign")}
-                      className="flex flex-col h-auto py-3"
-                      data-testid="button-mode-assign"
-                    >
-                      <Lock className="h-4 w-4 mb-1" />
-                      <span className="text-xs">Direct Assign</span>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Carrier Selection for Invite/Assign mode */}
-                {(postMode === "invite" || postMode === "assign") && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">
-                        {postMode === "invite" ? "Select Carriers to Invite" : "Assign to Carrier"}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-48">
-                        <div className="space-y-2">
-                          {carriers.map((carrier) => (
-                            <div
-                              key={carrier.id}
-                              className={`p-3 rounded border cursor-pointer transition-colors ${
-                                (postMode === "invite" && selectedCarriers.includes(carrier.id)) ||
-                                (postMode === "assign" && selectedCarriers[0] === carrier.id)
-                                  ? "border-primary bg-primary/5"
-                                  : "hover:bg-muted/50"
-                              }`}
-                              onClick={() => {
-                                if (postMode === "assign") {
-                                  setSelectedCarriers([carrier.id]);
-                                } else {
-                                  toggleCarrier(carrier.id);
-                                }
-                              }}
-                              data-testid={`carrier-option-${carrier.id}`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="font-medium">{carrier.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {carrier.trucks} trucks | {carrier.zone} | {carrier.completedLoads} loads
-                                  </p>
-                                </div>
-                                <Badge variant="secondary">{carrier.rating}</Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                      {postMode === "invite" && selectedCarriers.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {selectedCarriers.length} carrier(s) selected
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Allow Counter Bids */}
-                {postMode !== "assign" && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="allowCounterBids"
-                      checked={allowCounterBids}
-                      onCheckedChange={(checked) => setAllowCounterBids(checked as boolean)}
-                      data-testid="checkbox-counter-bids"
-                    />
-                    <Label htmlFor="allowCounterBids" className="text-sm cursor-pointer">
-                      Allow carriers to submit counter-bids
-                    </Label>
-                  </div>
-                )}
-
-                {/* Notes */}
-                <div className="space-y-2">
-                  <Label>Internal Notes</Label>
-                  <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add any notes about this pricing decision..."
-                    rows={3}
-                    data-testid="textarea-notes"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+            )}
           </div>
         </ScrollArea>
-
-        <SheetFooter className="px-6 py-4 border-t gap-2">
-          <Button
-            variant="outline"
-            onClick={handleSaveDraft}
-            disabled={isSaving || isLocking}
-            data-testid="button-save-draft"
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <History className="h-4 w-4 mr-2" />
-            )}
-            Save Draft
-          </Button>
-          <Button
-            onClick={handleLockAndPost}
-            disabled={isLocking || isSaving || finalPrice <= 0}
-            data-testid="button-lock-post"
-          >
-            {isLocking ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Lock className="h-4 w-4 mr-2" />
-            )}
-            {requiresApproval ? "Submit for Approval" : "Lock & Post"}
-          </Button>
-        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

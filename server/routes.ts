@@ -3279,6 +3279,131 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/admin/invoice/generate-and-send - Generate and send invoice in one step
+  app.post("/api/admin/invoice/generate-and-send", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { load_id, amount } = req.body;
+      if (!load_id || !amount) {
+        return res.status(400).json({ error: "load_id and amount are required" });
+      }
+
+      // Get the load
+      const load = await storage.getLoad(load_id);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Verify load is in awarded state
+      if (load.status !== "awarded") {
+        return res.status(400).json({ 
+          error: `Load must be in 'awarded' state to generate invoice. Current state: ${load.status}` 
+        });
+      }
+
+      // Get shipper info
+      const shipper = await storage.getUser(load.shipperId);
+      if (!shipper) {
+        return res.status(404).json({ error: "Shipper not found" });
+      }
+
+      // Check if invoice already exists for this load
+      const existingInvoice = await storage.getInvoiceByLoad(load_id);
+      let invoice;
+      
+      if (existingInvoice) {
+        // Use existing invoice
+        invoice = existingInvoice;
+        // Update total amount if different
+        if (parseFloat(invoice.totalAmount) !== amount) {
+          invoice = await storage.updateInvoice(invoice.id, { 
+            totalAmount: amount.toString(),
+            subtotal: amount.toString(),
+          });
+        }
+      } else {
+        // Generate invoice number
+        const allInvoices = await storage.getAllInvoices();
+        const invoiceNumber = `INV-${String(allInvoices.length + 1).padStart(5, '0')}`;
+
+        // Calculate due date (30 days from now)
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30);
+
+        // Create the invoice
+        invoice = await storage.createInvoice({
+          invoiceNumber,
+          loadId: load_id,
+          shipperId: load.shipperId,
+          adminId: user.id,
+          subtotal: amount.toString(),
+          totalAmount: amount.toString(),
+          status: "draft",
+          dueDate,
+          lineItems: [
+            {
+              description: `Freight transportation: ${load.pickupCity} to ${load.dropoffCity}`,
+              quantity: 1,
+              unitPrice: amount,
+              total: amount,
+            }
+          ],
+          notes: `Auto-generated invoice for load ${load.id.slice(0, 8).toUpperCase()}`,
+        });
+      }
+
+      // Send the invoice
+      const sentInvoice = await storage.sendInvoice(invoice.id);
+
+      // Transition load state to invoice_sent
+      const transitionResult = await transitionLoadState(
+        load_id,
+        'invoice_sent',
+        user.id,
+        'Invoice auto-generated and sent to shipper'
+      );
+      
+      if (!transitionResult.success) {
+        console.warn(`Load state transition warning: ${transitionResult.error}`);
+      }
+
+      // Create notification for shipper
+      await storage.createNotification({
+        userId: load.shipperId,
+        title: "Invoice Received",
+        message: `Invoice for Rs. ${amount.toLocaleString('en-IN')} has been generated for your load from ${load.pickupCity} to ${load.dropoffCity}.`,
+        type: "invoice",
+        relatedLoadId: load_id,
+      });
+
+      // Broadcast invoice event
+      broadcastInvoiceEvent(load.shipperId, invoice.id, "invoice_sent", sentInvoice);
+
+      // Audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: load_id,
+        actionType: 'generate_and_send_invoice',
+        actionDescription: `Generated and sent invoice ${invoice.invoiceNumber} for Rs. ${amount}`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+
+      res.json({ 
+        success: true, 
+        invoice: sentInvoice,
+        message: `Invoice ${invoice.invoiceNumber} generated and sent to shipper`
+      });
+    } catch (error) {
+      console.error("Generate and send invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // POST /api/admin/invoices/:id/pay - Mark invoice as paid
   app.post("/api/admin/invoices/:id/pay", requireAuth, async (req, res) => {
     try {

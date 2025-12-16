@@ -374,6 +374,11 @@ export default function LoadQueuePage() {
     pickupDate: load.pickupDate,
     cargoDescription: load.cargoDescription,
     shipperId: load.shipperId,
+    shipperName: load.shipperName,
+    status: load.status,
+    adminPrice: load.adminPrice,
+    finalPrice: load.finalPrice,
+    adminFinalPrice: load.adminFinalPrice,
   });
 
   const openRealLoadPricingDrawer = (load: RealLoad) => {

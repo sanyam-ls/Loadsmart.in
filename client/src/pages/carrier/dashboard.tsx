@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, Fuel, MapPin, User, Info, Loader2 } from "lucide-react";
+import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,32 +71,25 @@ export default function CarrierDashboard() {
   const bids = (allBids || []).filter((b: Bid) => b.carrierId === user?.id);
   const loads = allLoads || [];
   const shipments = (allShipments || []).filter((s: Shipment) => s.carrierId === user?.id);
-  const settlements = allSettlements || [];
+  const carrierSettlements = (allSettlements || []).filter((s: any) => s.carrierId === user?.id);
 
   const activeTruckCount = trucks.filter((t: TruckType) => t.status === "on_trip" || t.status === "en_route").length;
   const availableTruckCount = trucks.filter((t: TruckType) => t.status === "available" || t.status === "idle").length;
   const pendingBidsCount = bids.filter((b: Bid) => b.status === "pending" || b.status === "countered").length;
   const activeTripsCount = shipments.filter((s: Shipment) => s.status === "in_transit").length;
-  const driversEnRoute = shipments.filter((s: Shipment) => s.status === "in_transit").length;
+  const driversEnRoute = activeTripsCount;
   
-  const carrierSettlements = settlements.filter((s: any) => s.carrierId === user?.id);
   const currentMonthRevenue = carrierSettlements
     .filter((s: any) => s.status === 'paid')
     .reduce((sum: number, s: any) => sum + parseFloat(s.carrierPayoutAmount?.toString() || '0'), 0);
   
-  const monthlyRevenueData = [
-    { month: 'Apr', revenue: 450000, fullMonth: 'April' },
-    { month: 'May', revenue: 520000, fullMonth: 'May' },
-    { month: 'Jun', revenue: 480000, fullMonth: 'June' },
-    { month: 'Jul', revenue: 610000, fullMonth: 'July' },
-    { month: 'Aug', revenue: 580000, fullMonth: 'August' },
-    { month: 'Sep', revenue: 690000, fullMonth: 'September' },
-    { month: 'Oct', revenue: 720000, fullMonth: 'October' },
-    { month: 'Nov', revenue: 850000, fullMonth: 'November' },
-    { month: 'Dec', revenue: currentMonthRevenue || 920000, fullMonth: 'December' },
-  ];
+  const hasRevenueData = carrierSettlements.length > 0;
+  
+  const monthlyRevenueData = hasRevenueData 
+    ? [{ month: 'Dec', revenue: currentMonthRevenue, fullMonth: 'December (Current)' }]
+    : [];
 
-  const revenueChange = 12;
+  const revenueChange = 0;
 
   const availableLoads = loads.filter((l: Load) => 
     ['posted_to_carriers', 'open_for_bid'].includes(l.status || '')
@@ -106,10 +99,9 @@ export default function CarrierDashboard() {
     loadId: load.id,
     pickup: `${load.pickupCity}`,
     dropoff: `${load.dropoffCity}`,
-    distance: load.distance ? parseFloat(load.distance) : 500,
+    distance: load.distance ? parseFloat(load.distance) : null,
     loadType: load.truckType || 'General',
-    budget: parseFloat(load.adminPrice || '50000'),
-    matchScore: 85 + Math.floor(Math.random() * 15),
+    budget: load.adminPrice ? parseFloat(load.adminPrice) : null,
   }));
 
   const displayTrips = shipments
@@ -121,14 +113,11 @@ export default function CarrierDashboard() {
         tripId: shipment.id,
         pickup: load?.pickupCity || 'Unknown',
         dropoff: load?.dropoffCity || 'Unknown',
-        eta: shipment.estimatedDelivery || new Date(Date.now() + 24 * 60 * 60 * 1000),
-        progress: 50,
-        driverAssigned: shipment.driverName || 'Driver',
-        truckAssigned: shipment.truckNumber || 'Truck',
+        eta: shipment.estimatedDelivery,
+        driverAssigned: shipment.driverName,
+        truckAssigned: shipment.truckNumber,
         loadType: load?.truckType || 'General',
-        totalDistance: load?.distance ? parseFloat(load.distance) : 500,
-        coveredKm: 250,
-        fuelUsed: 30,
+        totalDistance: load?.distance ? parseFloat(load.distance) : null,
       };
     });
 
@@ -199,10 +188,9 @@ export default function CarrierDashboard() {
         >
           <StatCard
             title="Monthly Revenue"
-            value={formatCurrency(currentMonthRevenue || 920000)}
+            value={currentMonthRevenue > 0 ? formatCurrency(currentMonthRevenue) : "No data"}
             icon={DollarSign}
-            trend={{ value: Math.abs(revenueChange), isPositive: revenueChange >= 0 }}
-            subtitle="vs last month"
+            subtitle={carrierSettlements.length > 0 ? `${carrierSettlements.length} settlement(s)` : "Complete trips to earn"}
           />
         </div>
       </div>
@@ -210,48 +198,61 @@ export default function CarrierDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Monthly Revenue (FY 2024-25)</CardTitle>
-            <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              {revenueChange >= 0 ? '+' : ''}{revenueChange}% vs last month
-            </Badge>
+            <CardTitle className="text-lg">Revenue Summary</CardTitle>
+            {hasRevenueData && (
+              <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                {formatCurrency(currentMonthRevenue)} total
+              </Badge>
+            )}
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyRevenueData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" tickFormatter={(value) => `${(value / 100000).toFixed(1)}L`} />
-                  <RechartsTooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                    formatter={(value: number) => [formatCurrency(value), "Revenue"]}
-                    labelFormatter={(label, payload) => {
-                      if (payload && payload[0]) {
-                        return payload[0].payload.fullMonth;
-                      }
-                      return label;
-                    }}
-                  />
-                  <Bar 
-                    dataKey="revenue" 
-                    fill="hsl(217, 91%, 48%)" 
-                    radius={[4, 4, 0, 0]}
-                    cursor="pointer"
-                    onClick={() => {
-                      navigate("/carrier/revenue");
-                    }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Click any bar to view detailed monthly report
-            </p>
+            {!hasRevenueData ? (
+              <div className="h-64 flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="font-medium">No revenue data yet</p>
+                  <p className="text-sm">Complete trips to start earning revenue</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyRevenueData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="month" className="text-xs" />
+                      <YAxis className="text-xs" tickFormatter={(value) => `${(value / 100000).toFixed(1)}L`} />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                        formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                        labelFormatter={(label, payload) => {
+                          if (payload && payload[0]) {
+                            return payload[0].payload.fullMonth;
+                          }
+                          return label;
+                        }}
+                      />
+                      <Bar 
+                        dataKey="revenue" 
+                        fill="hsl(217, 91%, 48%)" 
+                        radius={[4, 4, 0, 0]}
+                        cursor="pointer"
+                        onClick={() => {
+                          navigate("/carrier/revenue");
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Click any bar to view detailed monthly report
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -357,14 +358,14 @@ export default function CarrierDashboard() {
                   >
                     <div className="flex items-center justify-between mb-2 gap-2">
                       <span className="font-medium text-sm truncate">{load.pickup} to {load.dropoff}</span>
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate shrink-0">
-                        {load.matchScore}% match
+                      <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate shrink-0">
+                        {load.loadType}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between text-sm text-muted-foreground gap-2 flex-wrap">
-                      <span>{load.distance} km</span>
-                      <span className="text-xs">{load.loadType}</span>
-                      <span className="font-semibold text-foreground">{formatCurrency(load.budget)}</span>
+                      {load.distance && <span>{load.distance} km</span>}
+                      {load.budget && <span className="font-semibold text-foreground">{formatCurrency(load.budget)}</span>}
+                      {!load.distance && !load.budget && <span>Details pending</span>}
                     </div>
                   </div>
                 ))}
@@ -395,34 +396,37 @@ export default function CarrierDashboard() {
                   >
                     <div className="flex items-center justify-between mb-2 gap-2">
                       <span className="font-medium text-sm truncate">{trip.pickup} to {trip.dropoff}</span>
-                      <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate shrink-0">
-                        ETA: {formatEta(trip.eta)}
-                      </Badge>
+                      {trip.eta && (
+                        <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate shrink-0">
+                          ETA: {formatEta(trip.eta)}
+                        </Badge>
+                      )}
                     </div>
-                    <Progress value={trip.progress} className="h-2 mb-2" />
                     <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {trip.driverAssigned}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Truck className="h-3 w-3" />
-                        {trip.truckAssigned}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {trip.coveredKm} / {trip.totalDistance} km
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Fuel className="h-3 w-3" />
-                        {trip.fuelUsed} L used
-                      </div>
+                      {trip.driverAssigned && (
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          {trip.driverAssigned}
+                        </div>
+                      )}
+                      {trip.truckAssigned && (
+                        <div className="flex items-center gap-1">
+                          <Truck className="h-3 w-3" />
+                          {trip.truckAssigned}
+                        </div>
+                      )}
+                      {trip.totalDistance && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {trip.totalDistance} km
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
                         {trip.loadType}
                       </Badge>
-                      <span className="text-xs font-medium">{trip.progress}% complete</span>
+                      <span className="text-xs text-muted-foreground">In Transit</span>
                     </div>
                   </div>
                 ))

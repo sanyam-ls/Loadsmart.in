@@ -273,6 +273,12 @@ export default function AdminInvoicesPage() {
             description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been paid.`,
           });
           refetch();
+        } else if (data.event === "invoice_countered") {
+          toast({
+            title: "Counter Offer Received",
+            description: `Shipper submitted a counter offer for invoice ${data.invoice?.invoiceNumber || data.invoiceId}.`,
+          });
+          refetch();
         }
       });
 

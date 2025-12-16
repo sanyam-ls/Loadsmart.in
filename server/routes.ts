@@ -2407,11 +2407,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Pricing not found" });
       }
 
-      // Check if approval is needed
-      const suggestedPrice = parseFloat(pricing.suggestedPrice?.toString() || '0');
       const finalPrice = parseFloat(final_price);
-      const deviation = Math.abs((finalPrice - suggestedPrice) / suggestedPrice * 100);
-      const requiresApproval = deviation > PRICING_CONFIG.approvalThresholdPercent;
 
       // Calculate margins
       const platformMarginPercent = parseFloat(pricing.platformMarginPercent?.toString() || PRICING_CONFIG.defaultPlatformRate.toString());
@@ -2423,36 +2419,14 @@ export async function registerRoutes(
         finalPrice: finalPrice.toString(),
         postMode: post_mode,
         invitedCarrierIds: invite_carrier_ids || [],
-        status: requiresApproval ? 'awaiting_approval' : 'locked',
-        requiresApproval,
+        status: 'locked',
+        requiresApproval: false,
         payoutEstimate: payoutEstimate.toString(),
         platformMargin: platformMargin.toString(),
         notes: notes || pricing.notes,
       });
 
-      if (requiresApproval) {
-        // Notify other admins for approval
-        const allUsers = await storage.getAllUsers();
-        const otherAdmins = allUsers.filter(u => u.role === 'admin' && u.id !== user.id);
-        for (const admin of otherAdmins) {
-          await storage.createNotification({
-            userId: admin.id,
-            title: "Pricing Override Requires Approval",
-            message: `Load pricing deviates ${deviation.toFixed(1)}% from suggested. Review required.`,
-            type: "warning",
-            relatedLoadId: pricing.loadId,
-          });
-        }
-
-        return res.json({ 
-          success: true, 
-          pricing: updatedPricing, 
-          requires_approval: true,
-          deviation_percent: deviation,
-        });
-      }
-
-      // If no approval needed, proceed to lock and await shipper confirmation
+      // Proceed to lock and post
       const load = await storage.getLoad(pricing.loadId);
       if (!load) {
         return res.status(404).json({ error: "Load not found" });

@@ -4918,6 +4918,558 @@ export async function registerRoutes(
     }
   });
 
+  // =============================================
+  // LOAD STATE TRANSITION ENDPOINT
+  // =============================================
+
+  // POST /api/loads/:id/transition - Transition load to new state
+  app.post("/api/loads/:id/transition", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { toStatus, reason } = req.body;
+      if (!toStatus) {
+        return res.status(400).json({ error: "toStatus is required" });
+      }
+
+      const load = await storage.getLoad(req.params.id);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Authorization: Only admins, the shipper who owns, or assigned carrier can transition
+      const isAdmin = user.role === "admin";
+      const isOwner = user.id === load.shipperId;
+      const isAssignedCarrier = user.id === load.assignedCarrierId;
+
+      if (!isAdmin && !isOwner && !isAssignedCarrier) {
+        return res.status(403).json({ error: "Not authorized to transition this load" });
+      }
+
+      // Use the canonical state transition function
+      const result = await transitionLoadState(load.id, toStatus, user.id, reason);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      const updatedLoad = await storage.getLoad(load.id);
+      res.json({ success: true, load: updatedLoad });
+    } catch (error) {
+      console.error("Load transition error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // SETTLEMENTS ENDPOINTS
+  // =============================================
+
+  // GET /api/settlements - Get all settlements (admin)
+  app.get("/api/settlements", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const settlements = await storage.getAllSettlements();
+      res.json(settlements);
+    } catch (error) {
+      console.error("Get settlements error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/settlements/carrier - Get settlements for current carrier
+  app.get("/api/settlements/carrier", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const settlements = await storage.getSettlementsByCarrier(user.id);
+      res.json(settlements);
+    } catch (error) {
+      console.error("Get carrier settlements error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/settlements - Create settlement (admin)
+  app.post("/api/settlements", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const settlement = await storage.createSettlement(req.body);
+      res.json(settlement);
+    } catch (error) {
+      console.error("Create settlement error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/settlements/:id - Update settlement status
+  app.patch("/api/settlements/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const settlement = await storage.updateSettlement(req.params.id, req.body);
+      res.json(settlement);
+    } catch (error) {
+      console.error("Update settlement error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // CARRIER VERIFICATION ENDPOINTS
+  // =============================================
+
+  // GET /api/carrier-verifications - Get all pending verifications (admin)
+  app.get("/api/carrier-verifications", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const verifications = await storage.getAllCarrierVerifications();
+      res.json(verifications);
+    } catch (error) {
+      console.error("Get verifications error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier-verifications/:carrierId - Get verification for specific carrier
+  app.get("/api/carrier-verifications/:carrierId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Allow admin or the carrier themselves
+      if (user.role !== "admin" && user.id !== req.params.carrierId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const verification = await storage.getCarrierVerification(req.params.carrierId);
+      res.json(verification || null);
+    } catch (error) {
+      console.error("Get verification error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/carrier-verifications/:id - Update verification status (admin)
+  app.patch("/api/carrier-verifications/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const verification = await storage.updateCarrierVerification(req.params.id, req.body);
+      res.json(verification);
+    } catch (error) {
+      console.error("Update verification error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // CARRIERS ENDPOINTS (PUBLIC DATA)
+  // =============================================
+
+  // GET /api/carriers - Get all verified carriers
+  app.get("/api/carriers", requireAuth, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const carriers = allUsers.filter(u => u.role === "carrier" && u.isVerified);
+      
+      const carriersWithProfiles = await Promise.all(
+        carriers.map(async (carrier) => {
+          const profile = await storage.getCarrierProfile(carrier.id);
+          const { password: _, ...carrierWithoutPassword } = carrier;
+          return { ...carrierWithoutPassword, carrierProfile: profile };
+        })
+      );
+
+      res.json(carriersWithProfiles);
+    } catch (error) {
+      console.error("Get carriers error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carriers/:id - Get specific carrier details
+  app.get("/api/carriers/:id", requireAuth, async (req, res) => {
+    try {
+      const carrier = await storage.getUser(req.params.id);
+      if (!carrier || carrier.role !== "carrier") {
+        return res.status(404).json({ error: "Carrier not found" });
+      }
+
+      const profile = await storage.getCarrierProfile(carrier.id);
+      const { password: _, ...carrierWithoutPassword } = carrier;
+      res.json({ ...carrierWithoutPassword, carrierProfile: profile });
+    } catch (error) {
+      console.error("Get carrier error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // NOTIFICATIONS ENDPOINTS
+  // =============================================
+
+  // GET /api/notifications - Get notifications for current user
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const notifications = await storage.getNotificationsByUser(req.session.userId!);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/notifications/:id/read - Mark notification as read
+  app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
+    try {
+      const notification = await storage.getNotification(req.params.id);
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+
+      if (notification.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      await storage.markNotificationAsRead(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark notification read error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/notifications/read-all - Mark all notifications as read
+  app.post("/api/notifications/read-all", requireAuth, async (req, res) => {
+    try {
+      await storage.markAllNotificationsAsRead(req.session.userId!);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark all notifications read error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // SHIPMENTS ENDPOINTS
+  // =============================================
+
+  // GET /api/shipments - Get all shipments (admin) or user's shipments
+  app.get("/api/shipments", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      let shipments;
+      if (user.role === "admin") {
+        shipments = await storage.getAllShipments();
+      } else if (user.role === "carrier") {
+        shipments = await storage.getShipmentsByCarrier(user.id);
+      } else {
+        shipments = await storage.getShipmentsByShipper(user.id);
+      }
+
+      res.json(shipments);
+    } catch (error) {
+      console.error("Get shipments error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/shipments/:id - Get specific shipment
+  app.get("/api/shipments/:id", requireAuth, async (req, res) => {
+    try {
+      const shipment = await storage.getShipment(req.params.id);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+      res.json(shipment);
+    } catch (error) {
+      console.error("Get shipment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/shipments/load/:loadId - Get shipment for a load
+  app.get("/api/shipments/load/:loadId", requireAuth, async (req, res) => {
+    try {
+      const shipment = await storage.getShipmentByLoad(req.params.loadId);
+      res.json(shipment || null);
+    } catch (error) {
+      console.error("Get shipment by load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // DOCUMENTS ENDPOINTS
+  // =============================================
+
+  // GET /api/documents - Get documents for current user
+  app.get("/api/documents", requireAuth, async (req, res) => {
+    try {
+      const documents = await storage.getDocumentsByUser(req.session.userId!);
+      res.json(documents);
+    } catch (error) {
+      console.error("Get documents error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/loads/:loadId/documents - Get documents for a load
+  app.get("/api/loads/:loadId/documents", requireAuth, async (req, res) => {
+    try {
+      const documents = await storage.getDocumentsByLoad(req.params.loadId);
+      res.json(documents);
+    } catch (error) {
+      console.error("Get load documents error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // USERS ENDPOINT (ADMIN)
+  // =============================================
+
+  // GET /api/users - Get all users (admin only)
+  app.get("/api/users", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const allUsers = await storage.getAllUsers();
+      const usersWithoutPasswords = allUsers.map(u => {
+        const { password: _, ...userWithoutPassword } = u;
+        return userWithoutPassword;
+      });
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // INVOICES GENERAL ENDPOINTS
+  // =============================================
+
+  // GET /api/invoices - Get invoices based on user role
+  app.get("/api/invoices", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      let invoices;
+      if (user.role === "admin") {
+        invoices = await storage.getAllInvoices();
+      } else if (user.role === "shipper") {
+        invoices = await storage.getInvoicesByShipper(user.id);
+        // Filter to show only sent+ invoices to shipper
+        const visibleStatuses = ['sent', 'approved', 'acknowledged', 'paid', 'overdue', 'disputed'];
+        invoices = invoices.filter(inv => visibleStatuses.includes(inv.status || ''));
+      } else if (user.role === "carrier") {
+        // Carriers see invoices for loads they delivered
+        const allInvoices = await storage.getAllInvoices();
+        const carrierLoads = await storage.getLoadsByCarrier(user.id);
+        const carrierLoadIds = carrierLoads.map(l => l.id);
+        invoices = allInvoices.filter(inv => carrierLoadIds.includes(inv.loadId || ''));
+      } else {
+        invoices = [];
+      }
+
+      res.json(invoices);
+    } catch (error) {
+      console.error("Get invoices error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/invoices/:id - Get specific invoice
+  app.get("/api/invoices/:id", requireAuth, async (req, res) => {
+    try {
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      // Authorization check
+      if (user?.role !== "admin" && user?.id !== invoice.shipperId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json(invoice);
+    } catch (error) {
+      console.error("Get invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/invoices - Create invoice (admin only, for completed loads)
+  app.post("/api/invoices", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const invoice = await storage.createInvoice(req.body);
+      res.json(invoice);
+    } catch (error) {
+      console.error("Create invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/invoices/:id - Update invoice
+  app.patch("/api/invoices/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const invoice = await storage.updateInvoice(req.params.id, req.body);
+      res.json(invoice);
+    } catch (error) {
+      console.error("Update invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/invoices/:id/send - Send invoice to shipper
+  app.post("/api/invoices/:id/send", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const updatedInvoice = await storage.updateInvoice(req.params.id, {
+        status: 'sent',
+        sentAt: new Date(),
+        sentBy: user.id,
+      });
+
+      // Notify shipper
+      if (invoice.shipperId) {
+        await storage.createNotification({
+          userId: invoice.shipperId,
+          title: "New Invoice Received",
+          message: `Invoice #${invoice.invoiceNumber} is ready for your review.`,
+          type: "info",
+          relatedLoadId: invoice.loadId || undefined,
+        });
+      }
+
+      // Update load status
+      if (invoice.loadId) {
+        await transitionLoadState(invoice.loadId, 'invoice_sent', user.id, 'Invoice sent to shipper');
+      }
+
+      res.json({ success: true, invoice: updatedInvoice });
+    } catch (error) {
+      console.error("Send invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // LOAD HISTORY ENDPOINT
+  // =============================================
+
+  // GET /api/loads/:id/history - Get load state history
+  app.get("/api/loads/:id/history", requireAuth, async (req, res) => {
+    try {
+      const history = await storage.getLoadStateHistory(req.params.id);
+      res.json(history);
+    } catch (error) {
+      console.error("Get load history error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // NEGOTIATION THREADS ENDPOINT
+  // =============================================
+
+  // GET /api/negotiations - Get negotiation threads for current user
+  app.get("/api/negotiations", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (user.role === "admin") {
+        const threads = await storage.getAllNegotiationThreads();
+        res.json(threads);
+      } else {
+        // Get threads for loads user is involved in
+        const userLoads = user.role === "shipper" 
+          ? await storage.getLoadsByShipper(user.id)
+          : await storage.getLoadsByCarrier(user.id);
+        
+        const threads = await Promise.all(
+          userLoads.map(load => storage.getNegotiationThread(load.id))
+        );
+        res.json(threads.filter(Boolean));
+      }
+    } catch (error) {
+      console.error("Get negotiations error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/negotiations/:loadId - Get specific thread
+  app.get("/api/negotiations/:loadId", requireAuth, async (req, res) => {
+    try {
+      const thread = await storage.getNegotiationThread(req.params.loadId);
+      res.json(thread || null);
+    } catch (error) {
+      console.error("Get negotiation thread error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Setup WebSocket for real-time telemetry
   setupTelemetryWebSocket(httpServer);
 

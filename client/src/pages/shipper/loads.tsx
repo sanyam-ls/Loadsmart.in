@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { 
   Plus, Search, Filter, Package, LayoutGrid, List, MapPin, ArrowRight, 
-  Clock, DollarSign, Truck, MoreHorizontal, Edit, Copy, X, Eye
+  Clock, DollarSign, Truck, MoreHorizontal, Edit, Copy, X, Eye, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,18 +41,41 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
-import { useMockData, type MockLoad } from "@/lib/mock-data-store";
+import { useLoads, useBids, useTransitionLoadState, useCreateLoad } from "@/lib/api-hooks";
+import { useAuth } from "@/lib/auth-context";
+import type { Load, Bid } from "@shared/schema";
 
 function getStatusColor(status: string | null) {
   switch (status) {
-    case "Active": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
-    case "Bidding": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-    case "Assigned": return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
-    case "En Route": return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400";
-    case "Delivered": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-    case "Cancelled": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-    default: return "bg-muted text-muted-foreground";
+    case "submitted_to_admin": 
+    case "pending_pricing": 
+      return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+    case "posted_to_carriers":
+    case "open_for_bid":
+      return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+    case "counter_received":
+      return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+    case "awarded":
+    case "invoice_sent":
+      return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+    case "in_transit": 
+      return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400";
+    case "delivered":
+    case "pod_uploaded":
+    case "carrier_invoice_submitted":
+    case "carrier_finalized":
+    case "closed":
+      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    case "cancelled":
+      return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+    default: 
+      return "bg-muted text-muted-foreground";
   }
+}
+
+function formatStatus(status: string | null): string {
+  if (!status) return "Unknown";
+  return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
 function formatDate(date: Date | string | null) {
@@ -77,64 +100,120 @@ export default function ShipperLoadsPage() {
   const [, navigate] = useLocation();
   const searchParams = useSearch();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [cancelDialog, setCancelDialog] = useState<{ open: boolean; loadId: string | null }>({ open: false, loadId: null });
 
-  const { loads, bids, cancelLoad, duplicateLoad, getBidsForLoad } = useMockData();
+  const { data: allLoads, isLoading: loadsLoading } = useLoads();
+  const { data: allBids } = useBids();
+  const transitionLoad = useTransitionLoadState();
+  const createLoad = useCreateLoad();
+
+  const loads = (allLoads || []).filter((load: Load) => load.shipperId === user?.id);
+  const bids = allBids || [];
+
+  const getBidsForLoad = (loadId: string): Bid[] => {
+    return bids.filter((bid: Bid) => bid.loadId === loadId);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     const status = params.get("status");
     if (status === "active") setStatusFilter("active");
-    else if (status === "bidding") setStatusFilter("Bidding");
+    else if (status === "bidding") setStatusFilter("open_for_bid");
     else if (status) setStatusFilter(status);
   }, [searchParams]);
 
-  const handleCancel = (loadId: string) => {
-    cancelLoad(loadId);
-    toast({ title: "Load cancelled", description: "The load has been cancelled successfully." });
-    setCancelDialog({ open: false, loadId: null });
-  };
-
-  const handleDuplicate = (loadId: string) => {
-    const newLoad = duplicateLoad(loadId);
-    if (newLoad) {
-      toast({ title: "Load duplicated", description: `Created new load ${newLoad.loadId}` });
+  const handleCancel = async (loadId: string) => {
+    try {
+      await transitionLoad.mutateAsync({ loadId, toStatus: 'cancelled' });
+      toast({ title: "Load cancelled", description: "The load has been cancelled successfully." });
+      setCancelDialog({ open: false, loadId: null });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to cancel load", variant: "destructive" });
     }
   };
 
-  const loadsWithBids = loads.map(load => ({
+  const handleDuplicate = async (loadId: string) => {
+    const loadToDuplicate = loads.find((l: Load) => l.id === loadId);
+    if (loadToDuplicate) {
+      try {
+        const newLoadData = {
+          shipperId: loadToDuplicate.shipperId,
+          pickupAddress: loadToDuplicate.pickupAddress,
+          pickupCity: loadToDuplicate.pickupCity,
+          pickupState: loadToDuplicate.pickupState,
+          pickupPincode: loadToDuplicate.pickupPincode,
+          dropoffAddress: loadToDuplicate.dropoffAddress,
+          dropoffCity: loadToDuplicate.dropoffCity,
+          dropoffState: loadToDuplicate.dropoffState,
+          dropoffPincode: loadToDuplicate.dropoffPincode,
+          materialType: loadToDuplicate.materialType,
+          weight: loadToDuplicate.weight,
+          truckType: loadToDuplicate.truckType,
+          pickupDate: loadToDuplicate.pickupDate,
+          specialInstructions: loadToDuplicate.specialInstructions,
+        };
+        await createLoad.mutateAsync(newLoadData);
+        toast({ title: "Load duplicated", description: "A new load has been created." });
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to duplicate load", variant: "destructive" });
+      }
+    }
+  };
+
+  const loadsWithBids = loads.map((load: Load) => ({
     ...load,
-    bidCount: getBidsForLoad(load.loadId).length,
-    loadBids: getBidsForLoad(load.loadId),
+    bidCount: getBidsForLoad(load.id).length,
+    loadBids: getBidsForLoad(load.id),
   }));
+
+  const statusMappings: Record<string, string[]> = {
+    active: ['submitted_to_admin', 'pending_pricing', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_sent'],
+    bidding: ['open_for_bid', 'counter_received'],
+    assigned: ['awarded', 'invoice_sent'],
+    in_transit: ['in_transit'],
+    delivered: ['delivered', 'pod_uploaded', 'carrier_invoice_submitted', 'carrier_finalized', 'closed'],
+    cancelled: ['cancelled'],
+  };
 
   const filteredLoads = loadsWithBids.filter((load) => {
     let matchesStatus = true;
-    if (statusFilter === "active") {
-      matchesStatus = ["Active", "Bidding", "Assigned"].includes(load.status);
-    } else if (statusFilter !== "all") {
+    if (statusFilter === "all") {
+      matchesStatus = true;
+    } else if (statusMappings[statusFilter]) {
+      matchesStatus = statusMappings[statusFilter].includes(load.status || '');
+    } else {
       matchesStatus = load.status === statusFilter;
     }
+    
+    const searchLower = searchQuery.toLowerCase();
     const matchesSearch = 
-      load.pickup.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      load.drop.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      load.loadId.toLowerCase().includes(searchQuery.toLowerCase());
+      (load.pickupCity?.toLowerCase() || '').includes(searchLower) ||
+      (load.dropoffCity?.toLowerCase() || '').includes(searchLower) ||
+      load.id.toLowerCase().includes(searchLower);
     return matchesStatus && matchesSearch;
   });
 
   const statusCounts = {
     all: loads.length,
-    active: loads.filter(l => ["Active", "Bidding", "Assigned"].includes(l.status)).length,
-    Active: loads.filter((l) => l.status === "Active").length,
-    Bidding: loads.filter((l) => l.status === "Bidding").length,
-    Assigned: loads.filter((l) => l.status === "Assigned").length,
-    "En Route": loads.filter((l) => l.status === "En Route").length,
-    Delivered: loads.filter((l) => l.status === "Delivered").length,
-    Cancelled: loads.filter((l) => l.status === "Cancelled").length,
+    active: loads.filter((l: Load) => statusMappings.active.includes(l.status || '')).length,
+    bidding: loads.filter((l: Load) => statusMappings.bidding.includes(l.status || '')).length,
+    assigned: loads.filter((l: Load) => statusMappings.assigned.includes(l.status || '')).length,
+    in_transit: loads.filter((l: Load) => statusMappings.in_transit.includes(l.status || '')).length,
+    delivered: loads.filter((l: Load) => statusMappings.delivered.includes(l.status || '')).length,
+    cancelled: loads.filter((l: Load) => statusMappings.cancelled.includes(l.status || '')).length,
   };
+
+  if (loadsLoading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -168,12 +247,11 @@ export default function ShipperLoadsPage() {
           <SelectContent>
             <SelectItem value="all">All Loads ({statusCounts.all})</SelectItem>
             <SelectItem value="active">Active ({statusCounts.active})</SelectItem>
-            <SelectItem value="Active">Posted ({statusCounts.Active})</SelectItem>
-            <SelectItem value="Bidding">Bidding ({statusCounts.Bidding})</SelectItem>
-            <SelectItem value="Assigned">Assigned ({statusCounts.Assigned})</SelectItem>
-            <SelectItem value="En Route">In Transit ({statusCounts["En Route"]})</SelectItem>
-            <SelectItem value="Delivered">Delivered ({statusCounts.Delivered})</SelectItem>
-            <SelectItem value="Cancelled">Cancelled ({statusCounts.Cancelled})</SelectItem>
+            <SelectItem value="bidding">Bidding ({statusCounts.bidding})</SelectItem>
+            <SelectItem value="assigned">Assigned ({statusCounts.assigned})</SelectItem>
+            <SelectItem value="in_transit">In Transit ({statusCounts.in_transit})</SelectItem>
+            <SelectItem value="delivered">Delivered ({statusCounts.delivered})</SelectItem>
+            <SelectItem value="cancelled">Cancelled ({statusCounts.cancelled})</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex">
@@ -205,14 +283,14 @@ export default function ShipperLoadsPage() {
           <TabsTrigger value="active" className="gap-2">
             Active <Badge variant="secondary" className="ml-1">{statusCounts.active}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="Bidding" className="gap-2">
-            Bidding <Badge variant="secondary" className="ml-1">{statusCounts.Bidding}</Badge>
+          <TabsTrigger value="bidding" className="gap-2">
+            Bidding <Badge variant="secondary" className="ml-1">{statusCounts.bidding}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="En Route" className="gap-2">
-            In Transit <Badge variant="secondary" className="ml-1">{statusCounts["En Route"]}</Badge>
+          <TabsTrigger value="in_transit" className="gap-2">
+            In Transit <Badge variant="secondary" className="ml-1">{statusCounts.in_transit}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="Delivered" className="gap-2">
-            Delivered <Badge variant="secondary" className="ml-1">{statusCounts.Delivered}</Badge>
+          <TabsTrigger value="delivered" className="gap-2">
+            Delivered <Badge variant="secondary" className="ml-1">{statusCounts.delivered}</Badge>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -224,7 +302,7 @@ export default function ShipperLoadsPage() {
           description={
             statusFilter === "all"
               ? "You haven't posted any loads yet. Start by posting your first load to connect with carriers."
-              : `No loads with "${statusFilter}" status.`
+              : `No loads with "${formatStatus(statusFilter)}" status.`
           }
           actionLabel="Post Your First Load"
           onAction={() => navigate("/shipper/post-load")}
@@ -249,30 +327,30 @@ export default function ShipperLoadsPage() {
             <TableBody>
               {filteredLoads.map((load) => (
                 <TableRow 
-                  key={load.loadId} 
+                  key={load.id} 
                   className="cursor-pointer hover-elevate"
-                  onClick={() => navigate(`/shipper/loads/${load.loadId}`)}
-                  data-testid={`row-load-${load.loadId}`}
+                  onClick={() => navigate(`/shipper/loads/${load.id}`)}
+                  data-testid={`row-load-${load.id}`}
                 >
-                  <TableCell className="font-mono text-sm">{load.loadId}</TableCell>
+                  <TableCell className="font-mono text-sm">{load.id.slice(0, 8)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-3 w-3 text-green-500" />
-                      <span className="truncate max-w-24">{load.pickup}</span>
+                      <span className="truncate max-w-24">{load.pickupCity}</span>
                       <ArrowRight className="h-3 w-3 text-muted-foreground" />
                       <MapPin className="h-3 w-3 text-red-500" />
-                      <span className="truncate max-w-24">{load.drop}</span>
+                      <span className="truncate max-w-24">{load.dropoffCity}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate">
-                      {load.type || "Any"}
+                      {load.truckType || "Any"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{load.weight.toLocaleString()} {load.weightUnit}</TableCell>
+                  <TableCell>{load.weight ? `${parseFloat(load.weight).toLocaleString()} kg` : 'N/A'}</TableCell>
                   <TableCell>
                     <Badge className={`${getStatusColor(load.status)} no-default-hover-elevate no-default-active-elevate`}>
-                      {load.status}
+                      {formatStatus(load.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -285,7 +363,7 @@ export default function ShipperLoadsPage() {
                     )}
                   </TableCell>
                   <TableCell className="font-medium">
-                    ${(load.finalPrice || load.estimatedPrice || 0).toLocaleString()}
+                    Rs. {parseFloat(load.finalPrice || load.adminPrice || '0').toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell>{formatDate(load.pickupDate)}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">
@@ -294,22 +372,22 @@ export default function ShipperLoadsPage() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" data-testid={`button-menu-${load.loadId}`}>
+                        <Button variant="ghost" size="icon" data-testid={`button-menu-${load.id}`}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/shipper/loads/${load.loadId}`); }}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/shipper/loads/${load.id}`); }}>
                           <Eye className="h-4 w-4 mr-2" /> View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(load.loadId); }}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(load.id); }}>
                           <Copy className="h-4 w-4 mr-2" /> Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           className="text-destructive"
-                          onClick={(e) => { e.stopPropagation(); setCancelDialog({ open: true, loadId: load.loadId }); }}
-                          disabled={load.status === "Cancelled" || load.status === "Delivered"}
+                          onClick={(e) => { e.stopPropagation(); setCancelDialog({ open: true, loadId: load.id }); }}
+                          disabled={load.status === "cancelled" || load.status === "delivered"}
                         >
                           <X className="h-4 w-4 mr-2" /> Cancel Load
                         </DropdownMenuItem>
@@ -325,15 +403,15 @@ export default function ShipperLoadsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredLoads.map((load) => (
             <Card 
-              key={load.loadId} 
+              key={load.id} 
               className="hover-elevate cursor-pointer"
-              onClick={() => navigate(`/shipper/loads/${load.loadId}`)}
-              data-testid={`card-load-${load.loadId}`}
+              onClick={() => navigate(`/shipper/loads/${load.id}`)}
+              data-testid={`card-load-${load.id}`}
             >
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <Badge className={`${getStatusColor(load.status)} no-default-hover-elevate no-default-active-elevate`}>
-                    {load.status}
+                    {formatStatus(load.status)}
                   </Badge>
                   <div className="flex items-center gap-2">
                     {load.bidCount > 0 && (
@@ -348,12 +426,12 @@ export default function ShipperLoadsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(load.loadId); }}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(load.id); }}>
                           <Copy className="h-4 w-4 mr-2" /> Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive"
-                          onClick={(e) => { e.stopPropagation(); setCancelDialog({ open: true, loadId: load.loadId }); }}
+                          onClick={(e) => { e.stopPropagation(); setCancelDialog({ open: true, loadId: load.id }); }}
                         >
                           <X className="h-4 w-4 mr-2" /> Cancel
                         </DropdownMenuItem>
@@ -368,7 +446,7 @@ export default function ShipperLoadsPage() {
                       <MapPin className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{load.pickup}</p>
+                      <p className="text-sm font-medium truncate">{load.pickupCity}, {load.pickupState}</p>
                     </div>
                   </div>
                   
@@ -382,15 +460,15 @@ export default function ShipperLoadsPage() {
                       <MapPin className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{load.drop}</p>
+                      <p className="text-sm font-medium truncate">{load.dropoffCity}, {load.dropoffState}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border text-sm">
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border text-sm flex-wrap">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Package className="h-3.5 w-3.5" />
-                    <span>{load.weight.toLocaleString()} {load.weightUnit}</span>
+                    <span>{load.weight ? `${parseFloat(load.weight).toLocaleString()} kg` : 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
@@ -398,7 +476,7 @@ export default function ShipperLoadsPage() {
                   </div>
                   <div className="flex items-center gap-1 ml-auto font-medium text-foreground">
                     <DollarSign className="h-3.5 w-3.5" />
-                    <span>{(load.estimatedPrice || 0).toLocaleString()}</span>
+                    <span>Rs. {parseFloat(load.adminPrice || '0').toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </CardContent>
@@ -422,7 +500,11 @@ export default function ShipperLoadsPage() {
             <Button 
               variant="destructive" 
               onClick={() => cancelDialog.loadId && handleCancel(cancelDialog.loadId)}
+              disabled={transitionLoad.isPending}
             >
+              {transitionLoad.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
               Cancel Load
             </Button>
           </DialogFooter>

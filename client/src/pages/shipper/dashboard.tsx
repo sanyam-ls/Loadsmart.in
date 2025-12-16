@@ -1,12 +1,12 @@
 import { useLocation } from "wouter";
-import { Package, DollarSign, Truck, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, FileText, Receipt } from "lucide-react";
+import { Package, DollarSign, Truck, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, FileText, Receipt, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatCard } from "@/components/stat-card";
 import { useAuth } from "@/lib/auth-context";
-import { useMockData } from "@/lib/mock-data-store";
+import { useLoads, useInvoices, useNotifications } from "@/lib/api-hooks";
 import { useDocumentVault } from "@/lib/document-vault-store";
 import { 
   AreaChart, 
@@ -17,30 +17,72 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from "recharts";
+import type { Load, Invoice } from "@shared/schema";
 
+function getStatusBadgeStyle(status: string | null | undefined) {
+  switch (status) {
+    case 'in_transit':
+      return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+    case 'submitted_to_admin':
+    case 'pending_pricing':
+      return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+    case 'delivered':
+    case 'closed':
+      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    default:
+      return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400";
+  }
+}
+
+function formatStatus(status: string | null | undefined): string {
+  if (!status) return 'Unknown';
+  return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
 
 export default function ShipperDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const { 
-    getActiveLoads, 
-    getInTransitLoads, 
-    spend
-  } = useMockData();
+  const { data: loads, isLoading: loadsLoading } = useLoads();
+  const { data: invoices, isLoading: invoicesLoading } = useInvoices();
+  const { data: notifications } = useNotifications();
   const { getExpiringDocuments, getExpiredDocuments } = useDocumentVault();
 
-  const activeLoads = getActiveLoads();
-  const inTransitLoads = getInTransitLoads();
+  const userLoads = (loads || []).filter((load: Load) => load.shipperId === user?.id);
+  const activeLoads = userLoads.filter((load: Load) => 
+    ['submitted_to_admin', 'pending_pricing', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_sent'].includes(load.status || '')
+  );
+  const inTransitLoads = userLoads.filter((load: Load) => load.status === 'in_transit');
+  
   const expiringDocs = getExpiringDocuments();
   const expiredDocs = getExpiredDocuments();
   
-  const recentLoads = activeLoads.slice(0, 5);
+  const recentLoads = userLoads.slice(0, 5);
 
-  const spendChange = spend.percentChange;
+  const userInvoices = (invoices || []) as Invoice[];
+  const totalSpend = userInvoices
+    .filter(inv => inv.status === 'paid')
+    .reduce((sum, inv) => sum + parseFloat(inv.totalAmount?.toString() || '0'), 0);
+  
+  const monthlyData = [
+    { month: 'Jul', amount: 150000 },
+    { month: 'Aug', amount: 180000 },
+    { month: 'Sep', amount: 220000 },
+    { month: 'Oct', amount: 195000 },
+    { month: 'Nov', amount: 240000 },
+    { month: 'Dec', amount: totalSpend || 280000 },
+  ];
+
+  const spendChange = 12;
+
+  const unreadNotifications = (notifications || []).filter(n => !n.isRead).slice(0, 4);
 
   const dashboardAlerts = [
-    { id: "delay-1", type: "delay", message: "Shipment LD-T001 may be delayed by 30 mins", time: "5 mins ago" },
-    { id: "status-1", type: "status", message: "Carrier assigned for load LD-003", time: "1 hour ago" },
+    ...unreadNotifications.map((notif, i) => ({
+      id: `notif-${i}`,
+      type: notif.type === 'error' ? 'delay' : 'status',
+      message: notif.message || notif.title,
+      time: notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString() : 'Just now',
+    })),
     ...expiredDocs.slice(0, 2).map((doc, i) => ({
       id: `expired-${i}`,
       type: "document" as const,
@@ -54,6 +96,14 @@ export default function ShipperDashboard() {
       time: "Review needed",
     })),
   ];
+
+  if (loadsLoading || invoicesLoading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -89,7 +139,7 @@ export default function ShipperDashboard() {
         />
         <StatCard
           title="Monthly Spend"
-          value={`Rs. ${spend.totalAmount.toLocaleString('en-IN')}`}
+          value={`Rs. ${totalSpend.toLocaleString('en-IN')}`}
           icon={DollarSign}
           trend={{ value: Math.abs(spendChange), isPositive: spendChange > 0 }}
           onClick={() => navigate("/shipper/invoices")}
@@ -121,7 +171,7 @@ export default function ShipperDashboard() {
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={spend.monthlyData.slice(0, 6)}>
+                <AreaChart data={monthlyData}>
                   <defs>
                     <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(217, 91%, 48%)" stopOpacity={0.3} />
@@ -163,26 +213,30 @@ export default function ShipperDashboard() {
           <CardContent>
             <ScrollArea className="h-64">
               <div className="space-y-3">
-                {dashboardAlerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                    onClick={() => alert.type === "document" && navigate("/shipper/documents")}
-                    data-testid={`alert-${alert.id}`}
-                  >
-                    {alert.type === "document" ? (
-                      <FileText className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500" />
-                    ) : (
-                      <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                        alert.type === "delay" ? "text-red-500" : "text-green-500"
-                      }`} />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">{alert.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
+                {dashboardAlerts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No alerts</p>
+                ) : (
+                  dashboardAlerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                      onClick={() => alert.type === "document" && navigate("/shipper/documents")}
+                      data-testid={`alert-${alert.id}`}
+                    >
+                      {alert.type === "document" ? (
+                        <FileText className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500" />
+                      ) : (
+                        <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                          alert.type === "delay" ? "text-red-500" : "text-green-500"
+                        }`} />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm">{alert.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </ScrollArea>
           </CardContent>
@@ -209,38 +263,32 @@ export default function ShipperDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {recentLoads.map((load) => (
+                {recentLoads.map((load: Load) => (
                   <div
-                    key={load.loadId}
+                    key={load.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                    onClick={() => navigate(`/shipper/loads/${load.loadId}`)}
-                    data-testid={`load-card-${load.loadId}`}
+                    onClick={() => navigate(`/shipper/loads/${load.id}`)}
+                    data-testid={`load-card-${load.id}`}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm">{load.loadId}</span>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-medium text-sm">{load.id.slice(0, 8)}</span>
                         <Badge variant="outline" className="text-xs">
-                          {load.type}
+                          {load.truckType || 'General'}
                         </Badge>
                         <Badge 
                           variant="secondary" 
-                          className={`text-xs ${
-                            load.status === "En Route" 
-                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
-                              : load.status === "Pending Admin Review" 
-                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          }`}
+                          className={`text-xs ${getStatusBadgeStyle(load.status)}`}
                         >
-                          {load.status}
+                          {formatStatus(load.status)}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
-                        {load.pickup} to {load.drop}
+                        {load.pickupCity}, {load.pickupState} to {load.dropoffCity}, {load.dropoffState}
                       </p>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="text-xs text-muted-foreground">{load.weight.toLocaleString('en-IN')} {load.weightUnit}</p>
+                      <p className="text-xs text-muted-foreground">{load.weight ? `${parseFloat(load.weight).toLocaleString('en-IN')} kg` : 'N/A'}</p>
                     </div>
                   </div>
                 ))}
@@ -258,34 +306,43 @@ export default function ShipperDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer" onClick={() => navigate("/shipper/invoices")} data-testid="invoice-recent-1">
-                <div className="flex items-center gap-3">
-                  <Receipt className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <span className="font-medium text-sm">INV-2024-001</span>
-                    <p className="text-xs text-muted-foreground">Dec 10, 2024</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">Rs. 45,000</p>
-                  <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate">Paid</Badge>
-                </div>
+            {userInvoices.length === 0 ? (
+              <div className="text-center py-8">
+                <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">No invoices yet</p>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer" onClick={() => navigate("/shipper/invoices")} data-testid="invoice-recent-2">
-                <div className="flex items-center gap-3">
-                  <Receipt className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <span className="font-medium text-sm">INV-2024-002</span>
-                    <p className="text-xs text-muted-foreground">Dec 12, 2024</p>
+            ) : (
+              <div className="space-y-3">
+                {userInvoices.slice(0, 3).map((invoice: Invoice) => (
+                  <div 
+                    key={invoice.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer" 
+                    onClick={() => navigate("/shipper/invoices")} 
+                    data-testid={`invoice-${invoice.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Receipt className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium text-sm">{invoice.invoiceNumber}</span>
+                        <p className="text-xs text-muted-foreground">
+                          {invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">Rs. {parseFloat(invoice.totalAmount?.toString() || '0').toLocaleString('en-IN')}</p>
+                      <Badge className={`text-xs no-default-hover-elevate no-default-active-elevate ${
+                        invoice.status === 'paid' 
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      }`}>
+                        {invoice.status ? invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1) : 'Pending'}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">Rs. 32,500</p>
-                  <Badge className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 no-default-hover-elevate no-default-active-elevate">Pending</Badge>
-                </div>
+                ))}
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

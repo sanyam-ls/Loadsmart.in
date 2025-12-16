@@ -74,6 +74,8 @@ export interface IStorage {
   getShipment(id: string): Promise<Shipment | undefined>;
   getShipmentByLoad(loadId: string): Promise<Shipment | undefined>;
   getShipmentsByCarrier(carrierId: string): Promise<Shipment[]>;
+  getShipmentsByShipper(shipperId: string): Promise<Shipment[]>;
+  getAllShipments(): Promise<Shipment[]>;
   createShipment(shipment: InsertShipment): Promise<Shipment>;
   updateShipment(id: string, updates: Partial<Shipment>): Promise<Shipment | undefined>;
 
@@ -89,6 +91,7 @@ export interface IStorage {
   createDocument(doc: InsertDocument): Promise<Document>;
   deleteDocument(id: string): Promise<boolean>;
 
+  getNotification(id: string): Promise<Notification | undefined>;
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(id: string): Promise<void>;
@@ -153,6 +156,7 @@ export interface IStorage {
   getSettlement(id: string): Promise<CarrierSettlement | undefined>;
   getSettlementByLoad(loadId: string): Promise<CarrierSettlement | undefined>;
   getSettlementsByCarrier(carrierId: string): Promise<CarrierSettlement[]>;
+  getAllSettlements(): Promise<CarrierSettlement[]>;
   createSettlement(settlement: InsertCarrierSettlement): Promise<CarrierSettlement>;
   updateSettlement(id: string, updates: Partial<CarrierSettlement>): Promise<CarrierSettlement | undefined>;
   markSettlementPaid(id: string, paymentDetails: { paymentMethod: string; transactionId?: string }): Promise<CarrierSettlement | undefined>;
@@ -375,6 +379,14 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(shipments).where(eq(shipments.carrierId, carrierId));
   }
 
+  async getShipmentsByShipper(shipperId: string): Promise<Shipment[]> {
+    return db.select().from(shipments).where(eq(shipments.shipperId, shipperId));
+  }
+
+  async getAllShipments(): Promise<Shipment[]> {
+    return db.select().from(shipments).orderBy(desc(shipments.createdAt));
+  }
+
   async createShipment(shipment: InsertShipment): Promise<Shipment> {
     const [newShipment] = await db.insert(shipments).values(shipment).returning();
     return newShipment;
@@ -425,6 +437,11 @@ export class DatabaseStorage implements IStorage {
   async deleteDocument(id: string): Promise<boolean> {
     await db.delete(documents).where(eq(documents.id, id));
     return true;
+  }
+
+  async getNotification(id: string): Promise<Notification | undefined> {
+    const [notification] = await db.select().from(notifications).where(eq(notifications.id, id));
+    return notification;
   }
 
   async getNotificationsByUser(userId: string): Promise<Notification[]> {
@@ -781,6 +798,10 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(carrierSettlements)
       .where(eq(carrierSettlements.carrierId, carrierId))
       .orderBy(desc(carrierSettlements.createdAt));
+  }
+
+  async getAllSettlements(): Promise<CarrierSettlement[]> {
+    return db.select().from(carrierSettlements).orderBy(desc(carrierSettlements.createdAt));
   }
 
   async createSettlement(settlement: InsertCarrierSettlement): Promise<CarrierSettlement> {

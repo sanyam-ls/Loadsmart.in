@@ -3298,14 +3298,22 @@ export async function registerRoutes(
       const existingInvoice = await storage.getInvoiceByLoad(load_id);
       let invoice;
       
+      // Calculate GST (18%) on the subtotal
+      const subtotal = parseFloat(amount);
+      const gstPercent = load.gstApplicable !== false ? 18 : 0;
+      const taxAmount = Math.round(subtotal * (gstPercent / 100));
+      const totalAmount = subtotal + taxAmount;
+      
       if (existingInvoice) {
         // Use existing invoice
         invoice = existingInvoice;
-        // Update total amount if different
-        if (parseFloat(invoice.totalAmount) !== amount) {
+        // Update amounts if different
+        if (parseFloat(invoice.totalAmount) !== totalAmount) {
           invoice = await storage.updateInvoice(invoice.id, { 
-            totalAmount: amount.toString(),
-            subtotal: amount.toString(),
+            subtotal: subtotal.toString(),
+            taxPercent: gstPercent.toString(),
+            taxAmount: taxAmount.toString(),
+            totalAmount: totalAmount.toString(),
           });
         }
       } else {
@@ -3317,22 +3325,24 @@ export async function registerRoutes(
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 30);
 
-        // Create the invoice
+        // Create the invoice with GST included
         invoice = await storage.createInvoice({
           invoiceNumber,
           loadId: load_id,
           shipperId: load.shipperId,
           adminId: user.id,
-          subtotal: amount.toString(),
-          totalAmount: amount.toString(),
+          subtotal: subtotal.toString(),
+          taxPercent: gstPercent.toString(),
+          taxAmount: taxAmount.toString(),
+          totalAmount: totalAmount.toString(),
           status: "draft",
           dueDate,
           lineItems: [
             {
               description: `Freight transportation: ${load.pickupCity} to ${load.dropoffCity}`,
               quantity: 1,
-              unitPrice: amount,
-              total: amount,
+              unitPrice: subtotal,
+              total: subtotal,
             }
           ],
           notes: `Auto-generated invoice for load ${load.id.slice(0, 8).toUpperCase()}`,
@@ -3358,7 +3368,7 @@ export async function registerRoutes(
       await storage.createNotification({
         userId: load.shipperId,
         title: "Invoice Received",
-        message: `Invoice for Rs. ${amount.toLocaleString('en-IN')} has been generated for your load from ${load.pickupCity} to ${load.dropoffCity}.`,
+        message: `Invoice for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. GST) has been generated for your load from ${load.pickupCity} to ${load.dropoffCity}.`,
         type: "invoice",
         relatedLoadId: load_id,
       });

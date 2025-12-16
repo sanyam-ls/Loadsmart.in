@@ -351,8 +351,8 @@ export default function AdminNegotiationsPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Negotiation Queue</h1>
-          <p className="text-muted-foreground">Review and manage carrier bids for all loads</p>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">Bids & Negotiations</h1>
+          <p className="text-muted-foreground">Review and manage carrier bids with per-load negotiation threads</p>
         </div>
         <Button variant="outline" onClick={() => refetch()} data-testid="button-refresh">
           <RefreshCw className="h-4 w-4 mr-2" />

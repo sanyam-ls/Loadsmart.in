@@ -67,13 +67,11 @@ const soloItems = [
 const adminItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
   { title: "Load Queue", url: "/admin/queue", icon: ClipboardList },
-  { title: "Negotiations", url: "/admin/negotiations", icon: Gavel },
-  { title: "Chat Inbox", url: "/admin/inbox", icon: MessageSquare },
+  { title: "Bids & Negotiations", url: "/admin/negotiations", icon: Gavel },
   { title: "Invoices", url: "/admin/invoices", icon: FileText },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "All Loads", url: "/admin/loads", icon: Package },
   { title: "Carriers", url: "/admin/carriers", icon: Truck },
-  { title: "Nearby Trucks", url: "/admin/nearby-trucks", icon: MapPin },
   { title: "Verification", url: "/admin/verification", icon: Shield },
   { title: "Reports", url: "/admin/reports", icon: BarChart3 },
 ];

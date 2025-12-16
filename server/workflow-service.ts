@@ -271,6 +271,21 @@ export async function acceptBid(
       awardedBidId: bidId,
     });
 
+    // Create shipment for carrier execution (if not already exists)
+    try {
+      const existingShipment = await storage.getShipmentByLoad(load.id);
+      if (!existingShipment) {
+        await storage.createShipment({
+          loadId: load.id,
+          carrierId: bid.carrierId,
+          truckId: bid.truckId || null,
+          status: 'pickup_scheduled',
+        });
+      }
+    } catch (shipmentError) {
+      console.error("Failed to create shipment after bid acceptance:", shipmentError);
+    }
+
     // Create invoice now that carrier is finalized (if not already exists)
     try {
       const existingInvoice = await storage.getInvoiceByLoad(load.id);

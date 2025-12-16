@@ -143,12 +143,30 @@ export default function AdminNegotiationsPage() {
         refetch();
       });
 
+      const unsubscribeNegotiation = onMarketplaceEvent("negotiation_message", (data) => {
+        if (chatBid && data.bidId === chatBid.id) {
+          const newMessage: ChatMessage = {
+            id: data.negotiation?.id || `msg-${Date.now()}`,
+            sender: data.negotiation?.senderRole === "admin" ? "admin" : "carrier",
+            message: data.negotiation?.message || "",
+            amount: data.negotiation?.counterAmount,
+            timestamp: new Date(data.negotiation?.createdAt || Date.now()),
+            isSimulated: false,
+          };
+          setChatMessages(prev => {
+            const exists = prev.some(m => m.id === newMessage.id);
+            return exists ? prev : [...prev, newMessage];
+          });
+        }
+      });
+
       return () => {
         unsubscribeBid();
+        unsubscribeNegotiation();
         disconnectMarketplace();
       };
     }
-  }, [user?.id, user?.role, toast]);
+  }, [user?.id, user?.role, toast, chatBid]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -156,26 +174,53 @@ export default function AdminNegotiationsPage() {
     }
   }, [chatMessages]);
 
-  const openChatDialog = useCallback((bid: Bid) => {
+  const openChatDialog = useCallback(async (bid: Bid) => {
     setChatBid(bid);
-    setChatMessages([
-      {
-        id: "initial",
-        sender: "carrier",
-        message: `Hi, I'm interested in this load from ${bid.load?.pickupCity} to ${bid.load?.dropoffCity}. My initial offer is Rs. ${parseFloat(bid.amount).toLocaleString("en-IN")}.`,
-        amount: bid.amount,
-        timestamp: new Date(bid.createdAt),
-        isSimulated: false,
-      },
-    ]);
     setChatDialogOpen(true);
+    
+    const initialMessage: ChatMessage = {
+      id: `initial-${bid.id}`,
+      sender: "carrier",
+      message: `Hi, I'm interested in this load from ${bid.load?.pickupCity} to ${bid.load?.dropoffCity}. My initial offer is Rs. ${parseFloat(bid.amount).toLocaleString("en-IN")}.`,
+      amount: bid.amount,
+      timestamp: new Date(bid.createdAt),
+      isSimulated: false,
+    };
+    
+    try {
+      const response = await fetch(`/api/bids/${bid.id}/negotiations`);
+      if (response.ok) {
+        const negotiations = await response.json();
+        if (Array.isArray(negotiations) && negotiations.length > 0) {
+          const historyMessages: ChatMessage[] = negotiations
+            .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+            .map((n: any) => ({
+              id: n.id,
+              sender: n.senderRole === "admin" ? "admin" as const : "carrier" as const,
+              message: n.message || "",
+              amount: n.counterAmount,
+              timestamp: new Date(n.createdAt),
+              isSimulated: false,
+            }));
+          setChatMessages([initialMessage, ...historyMessages]);
+        } else {
+          setChatMessages([initialMessage]);
+        }
+      } else {
+        setChatMessages([initialMessage]);
+      }
+    } catch (error) {
+      console.error("Failed to load negotiation history:", error);
+      setChatMessages([initialMessage]);
+    }
   }, []);
 
-  const sendChatMessage = useCallback((message: string, amount?: string) => {
+  const sendChatMessage = useCallback(async (message: string, amount?: string) => {
     if (!chatBid || !message.trim()) return;
 
+    const tempId = `temp-${Date.now()}`;
     const adminMessage: ChatMessage = {
-      id: `admin-${Date.now()}`,
+      id: tempId,
       sender: "admin",
       message,
       amount,
@@ -183,6 +228,29 @@ export default function AdminNegotiationsPage() {
     };
     setChatMessages(prev => [...prev, adminMessage]);
     setChatInput("");
+
+    try {
+      const response = await apiRequest("POST", `/api/bids/${chatBid.id}/negotiate`, {
+        message,
+        amount: amount || undefined,
+        messageType: amount ? "counter_offer" : "message",
+      });
+      
+      if (response.ok) {
+        const negotiation = await response.json();
+        setChatMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, id: negotiation.id } : m
+        ));
+        queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    }
 
     setIsTyping(true);
     setTimeout(() => {
@@ -197,7 +265,7 @@ export default function AdminNegotiationsPage() {
       setChatMessages(prev => [...prev, carrierResponse]);
       setIsTyping(false);
     }, 1500 + Math.random() * 2000);
-  }, [chatBid]);
+  }, [chatBid, toast]);
 
   const { data: bids = [], isLoading, refetch } = useQuery<Bid[]>({
     queryKey: ["/api/bids"],
@@ -811,6 +879,134 @@ export default function AdminNegotiationsPage() {
               data-testid="button-confirm-counter"
             >
               {counterMutation.isPending ? "Sending..." : "Send Counter Offer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={chatDialogOpen} onOpenChange={setChatDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Negotiate with {chatBid?.carrier?.companyName || chatBid?.carrier?.username}
+            </DialogTitle>
+            <DialogDescription>
+              {chatBid?.load?.pickupCity} to {chatBid?.load?.dropoffCity} - Current bid: Rs. {parseFloat(chatBid?.amount || "0").toLocaleString("en-IN")}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div 
+            ref={chatScrollRef}
+            className="h-[350px] overflow-y-auto border rounded-md p-4 space-y-4 bg-muted/30"
+            data-testid="chat-messages-container"
+          >
+            {chatMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    msg.sender === "admin"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card border"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-medium">
+                      {msg.sender === "admin" ? "You (Admin)" : chatBid?.carrier?.companyName || "Carrier"}
+                    </span>
+                    {msg.isSimulated && (
+                      <Badge variant="outline" className="text-xs">Simulated</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm">{msg.message}</p>
+                  {msg.amount && (
+                    <div className="mt-1 text-sm font-semibold">
+                      Proposed: Rs. {parseFloat(msg.amount).toLocaleString("en-IN")}
+                    </div>
+                  )}
+                  <p className="text-xs opacity-70 mt-1">
+                    {format(msg.timestamp, "h:mm a")}
+                  </p>
+                </div>
+              </div>
+            ))}
+            
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-card border rounded-lg px-4 py-2">
+                  <div className="flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span className="text-xs text-muted-foreground">Carrier is typing...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              placeholder="Type your message..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendChatMessage(chatInput);
+                }
+              }}
+              disabled={isTyping}
+              data-testid="input-chat-message"
+            />
+            <Button
+              size="icon"
+              onClick={() => sendChatMessage(chatInput)}
+              disabled={!chatInput.trim() || isTyping}
+              data-testid="button-send-chat"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setChatDialogOpen(false)}
+              data-testid="button-close-chat"
+            >
+              Close
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (chatBid) {
+                  setSelectedBid(chatBid);
+                  setCounterAmount(chatBid.amount);
+                  setChatDialogOpen(false);
+                  setCounterDialogOpen(true);
+                }
+              }}
+              disabled={chatBid?.status !== "pending"}
+              data-testid="button-chat-counter"
+            >
+              <DollarSign className="h-4 w-4 mr-1" />
+              Make Counter Offer
+            </Button>
+            <Button
+              onClick={() => {
+                if (chatBid) {
+                  setSelectedBid(chatBid);
+                  setChatDialogOpen(false);
+                  setAcceptDialogOpen(true);
+                }
+              }}
+              disabled={chatBid?.status !== "pending"}
+              data-testid="button-chat-accept"
+            >
+              <Check className="h-4 w-4 mr-1" />
+              Accept Bid
             </Button>
           </DialogFooter>
         </DialogContent>

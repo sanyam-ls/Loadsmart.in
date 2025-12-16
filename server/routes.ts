@@ -4828,6 +4828,17 @@ export async function registerRoutes(
         }
       }
 
+      // Broadcast negotiation message to relevant parties
+      const targetRole = isAdmin ? "carrier" : "admin";
+      const targetUserId = isAdmin ? bid.carrierId : null;
+      broadcastNegotiationMessage(targetRole, targetUserId, bid.id, {
+        id: negotiation.id,
+        senderRole: user.role,
+        message: userInput.message,
+        counterAmount: userInput.amount,
+        createdAt: negotiation.createdAt,
+      });
+
       res.json(negotiation);
     } catch (error) {
       if (error instanceof z.ZodError) {

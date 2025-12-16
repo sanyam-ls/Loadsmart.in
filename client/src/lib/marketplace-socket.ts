@@ -77,6 +77,15 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         acceptHandlers?.forEach(handler => handler(message));
       }
 
+      if (message.type === "bid_rejected") {
+        queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/bids"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/loads"] });
+        
+        const rejectHandlers = handlers.get("bid_rejected");
+        rejectHandlers?.forEach(handler => handler(message));
+      }
+
       if (message.type === "invoice_update") {
         queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
         queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });

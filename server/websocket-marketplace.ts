@@ -181,6 +181,23 @@ export function broadcastBidAccepted(carrierId: string, loadId: string, bidData:
   console.log(`Broadcasted bid_accepted event to carrier ${carrierId}`);
 }
 
+export function broadcastBidRejected(carrierId: string, loadId: string, bidData: any): void {
+  const message = {
+    type: "bid_rejected",
+    loadId,
+    carrierId,
+    bid: bidData,
+    timestamp: new Date().toISOString(),
+  };
+
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.role === "carrier" && client.userId === carrierId) {
+      sendToClient(ws, message);
+    }
+  });
+  console.log(`Broadcasted bid_rejected event to carrier ${carrierId}`);
+}
+
 export function broadcastInvoiceEvent(shipperId: string, invoiceId: string, event: string, invoiceData?: any): void {
   const message = {
     type: "invoice_update",

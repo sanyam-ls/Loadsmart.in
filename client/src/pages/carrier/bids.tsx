@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Search, Filter, Gavel, Clock, CheckCircle, XCircle, RefreshCw, 
   MapPin, Truck, Package, Building2, Star, MessageSquare, Send,
@@ -32,6 +32,8 @@ import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { useCarrierData, type CarrierBid } from "@/lib/carrier-data-store";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { format } from "date-fns";
 
 function formatCurrency(amount: number): string {
@@ -238,12 +240,60 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject }: {
 }
 
 export default function CarrierBidsPage() {
-  const { bids, updateBid } = useCarrierData();
+  const { bids, updateBid, updateBidStatus } = useCarrierData();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loadTypeFilter, setLoadTypeFilter] = useState("all");
   const [selectedBid, setSelectedBid] = useState<CarrierBid | null>(null);
+
+  useEffect(() => {
+    if (user?.id && user?.role === "carrier") {
+      connectMarketplace("carrier", user.id);
+      
+      const unsubCounter = onMarketplaceEvent("bid_countered", (data) => {
+        if (data.carrierId === user.id) {
+          const counterAmount = data.counterAmount || data.bid?.counterAmount;
+          if (counterAmount && !isNaN(parseFloat(counterAmount))) {
+            updateBidStatus(data.bidId || data.bid?.id, "countered", parseFloat(counterAmount));
+          }
+          toast({
+            title: "Counter Offer Received",
+            description: `Admin sent a counter offer of Rs. ${parseFloat(counterAmount || "0").toLocaleString("en-IN")}`,
+          });
+        }
+      });
+
+      const unsubAccepted = onMarketplaceEvent("bid_accepted", (data) => {
+        if (data.carrierId === user.id) {
+          updateBidStatus(data.bidId || data.bid?.id, "accepted");
+          toast({
+            title: "Bid Accepted!",
+            description: `Your bid for the load has been accepted. Check your trips.`,
+          });
+        }
+      });
+
+      const unsubRejected = onMarketplaceEvent("bid_rejected", (data) => {
+        if (data.carrierId === user.id) {
+          updateBidStatus(data.bidId || data.bid?.id, "rejected");
+          toast({
+            title: "Bid Rejected",
+            description: "Your bid was not accepted for this load.",
+            variant: "destructive",
+          });
+        }
+      });
+
+      return () => {
+        unsubCounter();
+        unsubAccepted();
+        unsubRejected();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, toast, updateBidStatus]);
 
   const filteredBids = useMemo(() => {
     return bids.filter((bid) => {

@@ -273,6 +273,7 @@ interface CarrierDataContextType {
   getRevenueAnalytics: () => CarrierRevenueAnalytics;
   
   updateBid: (bidId: string, action: "accept" | "counter" | "reject", counterAmount?: number) => void;
+  updateBidStatus: (bidId: string, status: CarrierBid["bidStatus"], counterAmount?: number) => void;
   updateTripStatus: (tripId: string, status: CarrierTrip["status"]) => void;
   placeBid: (loadId: string, amount: number) => void;
 }
@@ -861,6 +862,51 @@ export function CarrierDataProvider({ children }: { children: ReactNode }) {
       return bid;
     }));
   }, []);
+
+  const updateBidStatus = useCallback((bidId: string, status: CarrierBid["bidStatus"], counterAmount?: number) => {
+    if (!bidId) return;
+    
+    setBids(prev => prev.map(bid => {
+      if (bid.bidId !== bidId) return bid;
+      
+      const newHistory = [...bid.negotiationHistory];
+      if (status === "countered") {
+        const validAmount = counterAmount && !isNaN(counterAmount) ? counterAmount : bid.currentRate;
+        newHistory.push({
+          id: generateId("msg"),
+          sender: "shipper",
+          message: "Admin counter offer received",
+          amount: validAmount,
+          timestamp: new Date()
+        });
+        return { 
+          ...bid, 
+          bidStatus: status, 
+          shipperCounterRate: validAmount,
+          currentRate: validAmount,
+          negotiationHistory: newHistory 
+        };
+      } else if (status === "accepted") {
+        newHistory.push({
+          id: generateId("msg"),
+          sender: "shipper",
+          message: "Bid accepted by admin",
+          amount: bid.currentRate,
+          timestamp: new Date()
+        });
+        return { ...bid, bidStatus: status, negotiationHistory: newHistory };
+      } else if (status === "rejected") {
+        newHistory.push({
+          id: generateId("msg"),
+          sender: "shipper",
+          message: "Bid rejected by admin",
+          timestamp: new Date()
+        });
+        return { ...bid, bidStatus: status, negotiationHistory: newHistory };
+      }
+      return { ...bid, bidStatus: status };
+    }));
+  }, []);
   
   const updateTripStatus = useCallback((tripId: string, status: CarrierTrip["status"]) => {
     setActiveTrips(prev => prev.map(trip => {
@@ -932,6 +978,7 @@ export function CarrierDataProvider({ children }: { children: ReactNode }) {
       getTripDetails,
       getRevenueAnalytics,
       updateBid,
+      updateBidStatus,
       updateTripStatus,
       placeBid
     }}>

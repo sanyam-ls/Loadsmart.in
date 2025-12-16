@@ -352,6 +352,14 @@ export async function rejectBid(
     notes: reason || `Rejected by ${rejectedBy}`
   });
 
+  // Broadcast rejection to carrier
+  const { broadcastBidRejected } = await import("./websocket-marketplace");
+  broadcastBidRejected(bid.carrierId, bid.loadId, {
+    id: bidId,
+    amount: bid.amount,
+    reason: reason || "Bid rejected",
+  });
+
   return { success: true, bid: updatedBid };
 }
 

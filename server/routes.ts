@@ -3651,11 +3651,51 @@ export async function registerRoutes(
         });
       }
 
-      broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_opened", updated);
+      broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_acknowledged", updated);
 
       res.json(updated);
     } catch (error) {
       console.error("Acknowledge invoice error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/shipper/invoices/:id/view - Track when shipper first views invoice
+  app.post("/api/shipper/invoices/:id/view", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice || invoice.shipperId !== user.id) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Only update if not already viewed
+      if (!invoice.viewedAt && invoice.shipperStatus === "pending") {
+        const updated = await storage.updateInvoice(req.params.id, {
+          viewedAt: new Date(),
+          shipperStatus: "viewed",
+        });
+
+        await storage.createInvoiceHistory({
+          invoiceId: invoice.id,
+          userId: user.id,
+          action: "view",
+          payload: { viewedAt: new Date() },
+        });
+
+        // Broadcast to admin for real-time tracking
+        broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_viewed", updated);
+
+        res.json({ ...updated, firstView: true });
+      } else {
+        res.json({ ...invoice, firstView: false });
+      }
+    } catch (error) {
+      console.error("View invoice error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

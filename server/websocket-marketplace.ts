@@ -241,10 +241,12 @@ export function broadcastInvoiceEvent(shipperId: string, invoiceId: string, even
 
   clients.forEach((client, ws) => {
     if (ws.readyState === WebSocket.OPEN) {
+      // Send invoice_sent to shipper
       if (event === "invoice_sent" && client.role === "shipper" && client.userId === shipperId) {
         sendToClient(ws, message);
       }
-      if (["invoice_opened", "invoice_paid", "invoice_countered"].includes(event) && client.role === "admin") {
+      // Send all shipper activity events to admin for real-time tracking
+      if (["invoice_viewed", "invoice_opened", "invoice_acknowledged", "invoice_paid", "invoice_countered"].includes(event) && client.role === "admin") {
         sendToClient(ws, message);
       }
     }

@@ -261,10 +261,22 @@ export default function AdminInvoicesPage() {
       connectMarketplace("admin", user.id);
       
       const unsubInvoice = onMarketplaceEvent("invoice_update", (data) => {
-        if (data.event === "invoice_opened") {
+        if (data.event === "invoice_viewed") {
+          toast({
+            title: "Invoice Viewed",
+            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been viewed by shipper.`,
+          });
+          refetch();
+        } else if (data.event === "invoice_acknowledged") {
           toast({
             title: "Invoice Acknowledged",
-            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been viewed by shipper.`,
+            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been acknowledged by shipper.`,
+          });
+          refetch();
+        } else if (data.event === "invoice_opened") {
+          toast({
+            title: "Invoice Opened",
+            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been opened by shipper.`,
           });
           refetch();
         } else if (data.event === "invoice_paid") {

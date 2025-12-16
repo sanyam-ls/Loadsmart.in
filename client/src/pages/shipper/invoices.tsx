@@ -459,10 +459,19 @@ export default function ShipperInvoicesPage() {
     setNegotiateDialogOpen(true);
   };
 
-  const handleViewDetails = (invoice: Invoice) => {
+  const handleViewDetails = async (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setHistoryExpanded(false);
     setDetailsOpen(true);
+    
+    // Track first-time view for admin real-time sync
+    if (!invoice.id.startsWith("INV-SHP-")) {
+      try {
+        await apiRequest("POST", `/api/shipper/invoices/${invoice.id}/view`);
+      } catch (error) {
+        console.error("Failed to track invoice view:", error);
+      }
+    }
   };
 
   const handleDownloadPDF = (invoice: Invoice) => {

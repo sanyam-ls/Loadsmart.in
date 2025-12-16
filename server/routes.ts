@@ -3073,7 +3073,8 @@ export async function registerRoutes(
         counterReason: reason || null,
         counteredAt: new Date(),
         counteredBy: user.id,
-        status: 'negotiation',
+        status: 'disputed',
+        shipperStatus: 'countered',
       });
 
       // Update load status to invoice_negotiation (canonical state)

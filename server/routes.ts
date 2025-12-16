@@ -3618,7 +3618,9 @@ export async function registerRoutes(
 
       const updated = await storage.updateInvoice(req.params.id, {
         status: "acknowledged",
+        shipperStatus: "acknowledged",
         viewedAt: new Date(),
+        acknowledgedAt: new Date(),
       });
 
       // Transition load state to invoice_acknowledged using centralized validation

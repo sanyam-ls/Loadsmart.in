@@ -680,6 +680,7 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db.update(invoices)
       .set({ 
         status: 'paid',
+        shipperStatus: 'paid',
         paidAt: new Date(),
         paidAmount: paymentDetails.paidAmount,
         paymentMethod: paymentDetails.paymentMethod,

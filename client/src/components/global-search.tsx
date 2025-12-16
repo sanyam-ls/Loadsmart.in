@@ -24,11 +24,11 @@ interface MockCarrier {
 }
 
 const staticCarriers: MockCarrier[] = [
-  { id: "car-1", name: "FastHaul Logistics", mcNumber: "MC-123456", location: "Los Angeles, CA", fleet: "35 Trucks", status: "Approved" },
-  { id: "car-2", name: "Swift Transport", mcNumber: "MC-789012", location: "Phoenix, AZ", fleet: "22 Trucks", status: "Approved" },
-  { id: "car-3", name: "Reliable Freight Co", mcNumber: "MC-345678", location: "Dallas, TX", fleet: "18 Trucks", status: "Pending" },
-  { id: "car-4", name: "Mountain Express", mcNumber: "MC-901234", location: "Denver, CO", fleet: "12 Trucks", status: "Approved" },
-  { id: "car-5", name: "Pacific Carriers", mcNumber: "MC-567890", location: "Seattle, WA", fleet: "28 Trucks", status: "Approved" },
+  { id: "car-1", name: "Sharma Transport", mcNumber: "IND-123456", location: "Mumbai, Maharashtra", fleet: "35 Trucks", status: "Approved" },
+  { id: "car-2", name: "Patel Logistics", mcNumber: "IND-789012", location: "Ahmedabad, Gujarat", fleet: "22 Trucks", status: "Approved" },
+  { id: "car-3", name: "Singh Freight Co", mcNumber: "IND-345678", location: "Delhi, Delhi", fleet: "18 Trucks", status: "Pending" },
+  { id: "car-4", name: "Gupta Express", mcNumber: "IND-901234", location: "Jaipur, Rajasthan", fleet: "12 Trucks", status: "Approved" },
+  { id: "car-5", name: "Kumar Carriers", mcNumber: "IND-567890", location: "Bangalore, Karnataka", fleet: "28 Trucks", status: "Approved" },
 ];
 
 interface SearchResult {

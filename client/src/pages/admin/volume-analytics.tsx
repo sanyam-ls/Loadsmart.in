@@ -83,13 +83,13 @@ const generateMockVolumeData = (): MonthlyVolumeData[] => {
   ];
 
   const routes = [
-    "Los Angeles - Phoenix",
-    "Chicago - Detroit",
-    "Dallas - Houston",
-    "Atlanta - Miami",
-    "New York - Boston",
-    "Seattle - Portland",
-    "Denver - Salt Lake City",
+    "Mumbai - Pune",
+    "Delhi - Jaipur",
+    "Bangalore - Chennai",
+    "Ahmedabad - Surat",
+    "Kolkata - Patna",
+    "Hyderabad - Visakhapatnam",
+    "Lucknow - Kanpur",
   ];
 
   const shippers = ["ABC Manufacturing", "XYZ Corp", "Global Imports", "FastRetail Inc", "MegaStore LLC"];
@@ -127,10 +127,10 @@ const generateMockVolumeData = (): MonthlyVolumeData[] => {
 const fullYearData = generateMockVolumeData();
 
 const routeBreakdown = [
-  { name: "LA - Phoenix", value: 4250000, color: "hsl(217, 91%, 48%)" },
-  { name: "Chicago - Detroit", value: 3800000, color: "hsl(217, 91%, 58%)" },
-  { name: "Dallas - Houston", value: 3200000, color: "hsl(217, 91%, 68%)" },
-  { name: "Atlanta - Miami", value: 2900000, color: "hsl(217, 91%, 78%)" },
+  { name: "Mumbai - Pune", value: 4250000, color: "hsl(217, 91%, 48%)" },
+  { name: "Delhi - Jaipur", value: 3800000, color: "hsl(217, 91%, 58%)" },
+  { name: "Bangalore - Chennai", value: 3200000, color: "hsl(217, 91%, 68%)" },
+  { name: "Ahmedabad - Surat", value: 2900000, color: "hsl(217, 91%, 78%)" },
   { name: "Other Routes", value: 5850000, color: "hsl(220, 12%, 50%)" },
 ];
 

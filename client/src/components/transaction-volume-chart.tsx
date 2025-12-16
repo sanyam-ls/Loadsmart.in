@@ -72,13 +72,13 @@ const generateMockData = (): MonthlyData[] => {
   ];
 
   const routes = [
-    "Los Angeles - Phoenix",
-    "Chicago - Detroit",
-    "Dallas - Houston",
-    "Atlanta - Miami",
-    "New York - Boston",
-    "Seattle - Portland",
-    "Denver - Salt Lake City",
+    "Mumbai - Pune",
+    "Delhi - Jaipur",
+    "Bangalore - Chennai",
+    "Ahmedabad - Surat",
+    "Kolkata - Patna",
+    "Hyderabad - Visakhapatnam",
+    "Lucknow - Kanpur",
   ];
 
   return months.map((m, i) => {

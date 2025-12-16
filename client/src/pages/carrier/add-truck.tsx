@@ -223,7 +223,7 @@ export default function AddTruckPage() {
                   <FormItem>
                     <FormLabel>Current Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="Los Angeles, CA" {...field} data-testid="input-location" />
+                      <Input placeholder="Mumbai, Maharashtra" {...field} data-testid="input-location" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

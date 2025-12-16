@@ -13,47 +13,57 @@ interface AddressSuggestion {
   type: "city" | "recent" | "popular";
 }
 
-const US_CITIES: AddressSuggestion[] = [
-  { id: "1", city: "Los Angeles", state: "CA", fullAddress: "Los Angeles, CA", lat: 34.0522, lng: -118.2437, type: "popular" },
-  { id: "2", city: "New York", state: "NY", fullAddress: "New York, NY", lat: 40.7128, lng: -74.0060, type: "popular" },
-  { id: "3", city: "Chicago", state: "IL", fullAddress: "Chicago, IL", lat: 41.8781, lng: -87.6298, type: "popular" },
-  { id: "4", city: "Houston", state: "TX", fullAddress: "Houston, TX", lat: 29.7604, lng: -95.3698, type: "city" },
-  { id: "5", city: "Phoenix", state: "AZ", fullAddress: "Phoenix, AZ", lat: 33.4484, lng: -112.0740, type: "popular" },
-  { id: "6", city: "Philadelphia", state: "PA", fullAddress: "Philadelphia, PA", lat: 39.9526, lng: -75.1652, type: "city" },
-  { id: "7", city: "San Antonio", state: "TX", fullAddress: "San Antonio, TX", lat: 29.4241, lng: -98.4936, type: "city" },
-  { id: "8", city: "San Diego", state: "CA", fullAddress: "San Diego, CA", lat: 32.7157, lng: -117.1611, type: "city" },
-  { id: "9", city: "Dallas", state: "TX", fullAddress: "Dallas, TX", lat: 32.7767, lng: -96.7970, type: "popular" },
-  { id: "10", city: "San Jose", state: "CA", fullAddress: "San Jose, CA", lat: 37.3382, lng: -121.8863, type: "city" },
-  { id: "11", city: "Austin", state: "TX", fullAddress: "Austin, TX", lat: 30.2672, lng: -97.7431, type: "city" },
-  { id: "12", city: "Jacksonville", state: "FL", fullAddress: "Jacksonville, FL", lat: 30.3322, lng: -81.6557, type: "city" },
-  { id: "13", city: "Fort Worth", state: "TX", fullAddress: "Fort Worth, TX", lat: 32.7555, lng: -97.3308, type: "city" },
-  { id: "14", city: "Columbus", state: "OH", fullAddress: "Columbus, OH", lat: 39.9612, lng: -82.9988, type: "city" },
-  { id: "15", city: "San Francisco", state: "CA", fullAddress: "San Francisco, CA", lat: 37.7749, lng: -122.4194, type: "popular" },
-  { id: "16", city: "Charlotte", state: "NC", fullAddress: "Charlotte, NC", lat: 35.2271, lng: -80.8431, type: "city" },
-  { id: "17", city: "Indianapolis", state: "IN", fullAddress: "Indianapolis, IN", lat: 39.7684, lng: -86.1581, type: "city" },
-  { id: "18", city: "Seattle", state: "WA", fullAddress: "Seattle, WA", lat: 47.6062, lng: -122.3321, type: "popular" },
-  { id: "19", city: "Denver", state: "CO", fullAddress: "Denver, CO", lat: 39.7392, lng: -104.9903, type: "popular" },
-  { id: "20", city: "Boston", state: "MA", fullAddress: "Boston, MA", lat: 42.3601, lng: -71.0589, type: "popular" },
-  { id: "21", city: "El Paso", state: "TX", fullAddress: "El Paso, TX", lat: 31.7619, lng: -106.4850, type: "city" },
-  { id: "22", city: "Nashville", state: "TN", fullAddress: "Nashville, TN", lat: 36.1627, lng: -86.7816, type: "city" },
-  { id: "23", city: "Detroit", state: "MI", fullAddress: "Detroit, MI", lat: 42.3314, lng: -83.0458, type: "city" },
-  { id: "24", city: "Oklahoma City", state: "OK", fullAddress: "Oklahoma City, OK", lat: 35.4676, lng: -97.5164, type: "city" },
-  { id: "25", city: "Portland", state: "OR", fullAddress: "Portland, OR", lat: 45.5152, lng: -122.6784, type: "city" },
-  { id: "26", city: "Las Vegas", state: "NV", fullAddress: "Las Vegas, NV", lat: 36.1699, lng: -115.1398, type: "popular" },
-  { id: "27", city: "Memphis", state: "TN", fullAddress: "Memphis, TN", lat: 35.1495, lng: -90.0490, type: "city" },
-  { id: "28", city: "Louisville", state: "KY", fullAddress: "Louisville, KY", lat: 38.2527, lng: -85.7585, type: "city" },
-  { id: "29", city: "Baltimore", state: "MD", fullAddress: "Baltimore, MD", lat: 39.2904, lng: -76.6122, type: "city" },
-  { id: "30", city: "Milwaukee", state: "WI", fullAddress: "Milwaukee, WI", lat: 43.0389, lng: -87.9065, type: "city" },
-  { id: "31", city: "Albuquerque", state: "NM", fullAddress: "Albuquerque, NM", lat: 35.0844, lng: -106.6504, type: "city" },
-  { id: "32", city: "Tucson", state: "AZ", fullAddress: "Tucson, AZ", lat: 32.2226, lng: -110.9747, type: "city" },
-  { id: "33", city: "Fresno", state: "CA", fullAddress: "Fresno, CA", lat: 36.7378, lng: -119.7871, type: "city" },
-  { id: "34", city: "Sacramento", state: "CA", fullAddress: "Sacramento, CA", lat: 38.5816, lng: -121.4944, type: "city" },
-  { id: "35", city: "Kansas City", state: "MO", fullAddress: "Kansas City, MO", lat: 39.0997, lng: -94.5786, type: "city" },
-  { id: "36", city: "Mesa", state: "AZ", fullAddress: "Mesa, AZ", lat: 33.4152, lng: -111.8315, type: "city" },
-  { id: "37", city: "Atlanta", state: "GA", fullAddress: "Atlanta, GA", lat: 33.7490, lng: -84.3880, type: "popular" },
-  { id: "38", city: "Long Beach", state: "CA", fullAddress: "Long Beach, CA", lat: 33.7701, lng: -118.1937, type: "city" },
-  { id: "39", city: "Colorado Springs", state: "CO", fullAddress: "Colorado Springs, CO", lat: 38.8339, lng: -104.8214, type: "city" },
-  { id: "40", city: "Miami", state: "FL", fullAddress: "Miami, FL", lat: 25.7617, lng: -80.1918, type: "popular" },
+const INDIAN_CITIES: AddressSuggestion[] = [
+  { id: "1", city: "Mumbai", state: "Maharashtra", fullAddress: "Mumbai, Maharashtra", lat: 19.0760, lng: 72.8777, type: "popular" },
+  { id: "2", city: "Delhi", state: "Delhi", fullAddress: "Delhi, Delhi", lat: 28.7041, lng: 77.1025, type: "popular" },
+  { id: "3", city: "Bangalore", state: "Karnataka", fullAddress: "Bangalore, Karnataka", lat: 12.9716, lng: 77.5946, type: "popular" },
+  { id: "4", city: "Chennai", state: "Tamil Nadu", fullAddress: "Chennai, Tamil Nadu", lat: 13.0827, lng: 80.2707, type: "popular" },
+  { id: "5", city: "Kolkata", state: "West Bengal", fullAddress: "Kolkata, West Bengal", lat: 22.5726, lng: 88.3639, type: "popular" },
+  { id: "6", city: "Hyderabad", state: "Telangana", fullAddress: "Hyderabad, Telangana", lat: 17.3850, lng: 78.4867, type: "popular" },
+  { id: "7", city: "Pune", state: "Maharashtra", fullAddress: "Pune, Maharashtra", lat: 18.5204, lng: 73.8567, type: "city" },
+  { id: "8", city: "Ahmedabad", state: "Gujarat", fullAddress: "Ahmedabad, Gujarat", lat: 23.0225, lng: 72.5714, type: "popular" },
+  { id: "9", city: "Jaipur", state: "Rajasthan", fullAddress: "Jaipur, Rajasthan", lat: 26.9124, lng: 75.7873, type: "city" },
+  { id: "10", city: "Surat", state: "Gujarat", fullAddress: "Surat, Gujarat", lat: 21.1702, lng: 72.8311, type: "city" },
+  { id: "11", city: "Lucknow", state: "Uttar Pradesh", fullAddress: "Lucknow, Uttar Pradesh", lat: 26.8467, lng: 80.9462, type: "city" },
+  { id: "12", city: "Kanpur", state: "Uttar Pradesh", fullAddress: "Kanpur, Uttar Pradesh", lat: 26.4499, lng: 80.3319, type: "city" },
+  { id: "13", city: "Nagpur", state: "Maharashtra", fullAddress: "Nagpur, Maharashtra", lat: 21.1458, lng: 79.0882, type: "city" },
+  { id: "14", city: "Indore", state: "Madhya Pradesh", fullAddress: "Indore, Madhya Pradesh", lat: 22.7196, lng: 75.8577, type: "city" },
+  { id: "15", city: "Bhopal", state: "Madhya Pradesh", fullAddress: "Bhopal, Madhya Pradesh", lat: 23.2599, lng: 77.4126, type: "city" },
+  { id: "16", city: "Patna", state: "Bihar", fullAddress: "Patna, Bihar", lat: 25.5941, lng: 85.1376, type: "city" },
+  { id: "17", city: "Vadodara", state: "Gujarat", fullAddress: "Vadodara, Gujarat", lat: 22.3072, lng: 73.1812, type: "city" },
+  { id: "18", city: "Ghaziabad", state: "Uttar Pradesh", fullAddress: "Ghaziabad, Uttar Pradesh", lat: 28.6692, lng: 77.4538, type: "city" },
+  { id: "19", city: "Ludhiana", state: "Punjab", fullAddress: "Ludhiana, Punjab", lat: 30.9010, lng: 75.8573, type: "city" },
+  { id: "20", city: "Agra", state: "Uttar Pradesh", fullAddress: "Agra, Uttar Pradesh", lat: 27.1767, lng: 78.0081, type: "city" },
+  { id: "21", city: "Nashik", state: "Maharashtra", fullAddress: "Nashik, Maharashtra", lat: 19.9975, lng: 73.7898, type: "city" },
+  { id: "22", city: "Faridabad", state: "Haryana", fullAddress: "Faridabad, Haryana", lat: 28.4089, lng: 77.3178, type: "city" },
+  { id: "23", city: "Meerut", state: "Uttar Pradesh", fullAddress: "Meerut, Uttar Pradesh", lat: 28.9845, lng: 77.7064, type: "city" },
+  { id: "24", city: "Rajkot", state: "Gujarat", fullAddress: "Rajkot, Gujarat", lat: 22.3039, lng: 70.8022, type: "city" },
+  { id: "25", city: "Varanasi", state: "Uttar Pradesh", fullAddress: "Varanasi, Uttar Pradesh", lat: 25.3176, lng: 82.9739, type: "city" },
+  { id: "26", city: "Srinagar", state: "Jammu & Kashmir", fullAddress: "Srinagar, Jammu & Kashmir", lat: 34.0837, lng: 74.7973, type: "city" },
+  { id: "27", city: "Aurangabad", state: "Maharashtra", fullAddress: "Aurangabad, Maharashtra", lat: 19.8762, lng: 75.3433, type: "city" },
+  { id: "28", city: "Dhanbad", state: "Jharkhand", fullAddress: "Dhanbad, Jharkhand", lat: 23.7957, lng: 86.4304, type: "city" },
+  { id: "29", city: "Amritsar", state: "Punjab", fullAddress: "Amritsar, Punjab", lat: 31.6340, lng: 74.8723, type: "city" },
+  { id: "30", city: "Allahabad", state: "Uttar Pradesh", fullAddress: "Allahabad, Uttar Pradesh", lat: 25.4358, lng: 81.8463, type: "city" },
+  { id: "31", city: "Ranchi", state: "Jharkhand", fullAddress: "Ranchi, Jharkhand", lat: 23.3441, lng: 85.3096, type: "city" },
+  { id: "32", city: "Coimbatore", state: "Tamil Nadu", fullAddress: "Coimbatore, Tamil Nadu", lat: 11.0168, lng: 76.9558, type: "city" },
+  { id: "33", city: "Jabalpur", state: "Madhya Pradesh", fullAddress: "Jabalpur, Madhya Pradesh", lat: 23.1815, lng: 79.9864, type: "city" },
+  { id: "34", city: "Gwalior", state: "Madhya Pradesh", fullAddress: "Gwalior, Madhya Pradesh", lat: 26.2183, lng: 78.1828, type: "city" },
+  { id: "35", city: "Vijayawada", state: "Andhra Pradesh", fullAddress: "Vijayawada, Andhra Pradesh", lat: 16.5062, lng: 80.6480, type: "city" },
+  { id: "36", city: "Jodhpur", state: "Rajasthan", fullAddress: "Jodhpur, Rajasthan", lat: 26.2389, lng: 73.0243, type: "city" },
+  { id: "37", city: "Madurai", state: "Tamil Nadu", fullAddress: "Madurai, Tamil Nadu", lat: 9.9252, lng: 78.1198, type: "city" },
+  { id: "38", city: "Raipur", state: "Chhattisgarh", fullAddress: "Raipur, Chhattisgarh", lat: 21.2514, lng: 81.6296, type: "city" },
+  { id: "39", city: "Chandigarh", state: "Chandigarh", fullAddress: "Chandigarh, Chandigarh", lat: 30.7333, lng: 76.7794, type: "city" },
+  { id: "40", city: "Guwahati", state: "Assam", fullAddress: "Guwahati, Assam", lat: 26.1445, lng: 91.7362, type: "city" },
+  { id: "41", city: "Visakhapatnam", state: "Andhra Pradesh", fullAddress: "Visakhapatnam, Andhra Pradesh", lat: 17.6868, lng: 83.2185, type: "city" },
+  { id: "42", city: "Thiruvananthapuram", state: "Kerala", fullAddress: "Thiruvananthapuram, Kerala", lat: 8.5241, lng: 76.9366, type: "city" },
+  { id: "43", city: "Kochi", state: "Kerala", fullAddress: "Kochi, Kerala", lat: 9.9312, lng: 76.2673, type: "city" },
+  { id: "44", city: "Mangalore", state: "Karnataka", fullAddress: "Mangalore, Karnataka", lat: 12.9141, lng: 74.8560, type: "city" },
+  { id: "45", city: "Noida", state: "Uttar Pradesh", fullAddress: "Noida, Uttar Pradesh", lat: 28.5355, lng: 77.3910, type: "city" },
+  { id: "46", city: "Gurugram", state: "Haryana", fullAddress: "Gurugram, Haryana", lat: 28.4595, lng: 77.0266, type: "city" },
+  { id: "47", city: "Thane", state: "Maharashtra", fullAddress: "Thane, Maharashtra", lat: 19.2183, lng: 72.9781, type: "city" },
+  { id: "48", city: "Hubli", state: "Karnataka", fullAddress: "Hubli, Karnataka", lat: 15.3647, lng: 75.1240, type: "city" },
+  { id: "49", city: "Mysore", state: "Karnataka", fullAddress: "Mysore, Karnataka", lat: 12.2958, lng: 76.6394, type: "city" },
+  { id: "50", city: "Tiruchirappalli", state: "Tamil Nadu", fullAddress: "Tiruchirappalli, Tamil Nadu", lat: 10.7905, lng: 78.7047, type: "city" },
 ];
 
 interface AddressAutocompleteProps {
@@ -79,13 +89,13 @@ export function AddressAutocomplete({
 
   const searchCities = useCallback((query: string) => {
     if (!query.trim()) {
-      const popular = US_CITIES.filter(c => c.type === "popular").slice(0, 5);
+      const popular = INDIAN_CITIES.filter(c => c.type === "popular").slice(0, 5);
       setSuggestions(popular);
       return;
     }
 
     const q = query.toLowerCase();
-    const matches = US_CITIES.filter(
+    const matches = INDIAN_CITIES.filter(
       (city) =>
         city.city.toLowerCase().includes(q) ||
         city.state.toLowerCase().includes(q) ||
@@ -230,7 +240,7 @@ export function calculateDistance(
   lat2: number,
   lng2: number
 ): number {
-  const R = 3959;
+  const R = 6371; // Earth's radius in kilometers
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a =
@@ -243,8 +253,8 @@ export function calculateDistance(
   return Math.round(R * c);
 }
 
-export function estimateDrivingTime(distanceMiles: number): string {
-  const hours = distanceMiles / 55;
+export function estimateDrivingTime(distanceKm: number): string {
+  const hours = distanceKm / 50; // Average speed ~50 km/h for Indian roads
   if (hours < 1) {
     return `${Math.round(hours * 60)} mins`;
   } else if (hours < 24) {
@@ -261,12 +271,12 @@ export function getRouteInfo(
   originCity: string,
   destCity: string
 ): { distance: number; duration: string } | null {
-  const origin = US_CITIES.find(
+  const origin = INDIAN_CITIES.find(
     (c) =>
       c.fullAddress.toLowerCase() === originCity.toLowerCase() ||
       c.city.toLowerCase() === originCity.toLowerCase()
   );
-  const dest = US_CITIES.find(
+  const dest = INDIAN_CITIES.find(
     (c) =>
       c.fullAddress.toLowerCase() === destCity.toLowerCase() ||
       c.city.toLowerCase() === destCity.toLowerCase()
@@ -281,5 +291,5 @@ export function getRouteInfo(
   return { distance: roadDistance, duration };
 }
 
-export { US_CITIES };
+export { INDIAN_CITIES };
 export type { AddressSuggestion };

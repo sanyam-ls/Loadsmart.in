@@ -499,16 +499,35 @@ export async function registerRoutes(
         // Update bid with counter offer
         const updatedBid = await storage.updateBid(req.params.id, {
           status: "countered",
-          notes: notes || `Admin counter: $${counterAmount}`,
+          counterAmount: counterAmount,
+          notes: notes || `Admin counter: Rs. ${Number(counterAmount).toLocaleString('en-IN')}`,
         });
         
         // Update load state to counter_received (negotiation active)
         if (bid.loadId) {
           await storage.updateLoad(bid.loadId, { 
             status: "counter_received",
-            statusNote: `Admin countered with $${counterAmount}`
+            statusNote: `Admin countered with Rs. ${Number(counterAmount).toLocaleString('en-IN')}`
           });
         }
+        
+        // Create notification for carrier
+        await storage.createNotification({
+          userId: bid.carrierId,
+          title: "Counter Offer Received",
+          message: `Admin has countered your bid with Rs. ${Number(counterAmount).toLocaleString('en-IN')}`,
+          type: "warning",
+          relatedLoadId: bid.loadId,
+          contextType: "counter_offer",
+        });
+        
+        // Broadcast real-time counter event to carrier portal
+        broadcastBidCountered(bid.carrierId, bid.loadId, {
+          bidId: req.params.id,
+          counterAmount: counterAmount,
+          notes: notes,
+          timestamp: new Date().toISOString(),
+        });
         
         return res.json(updatedBid);
       }

@@ -472,23 +472,24 @@ export class DatabaseStorage implements IStorage {
 
   // Admin mediation methods
   async getLoadsSubmittedToAdmin(): Promise<Load[]> {
+    // Use canonical statuses from schema - pending = awaiting admin review, priced = ready to post
     return db.select().from(loads)
-      .where(sql`${loads.status} IN ('pending', 'priced', 'invoice_sent', 'invoice_rejected', 'invoice_negotiation', 'submitted_to_admin', 'pending_admin_review')`)
+      .where(sql`${loads.status} IN ('pending', 'priced', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'awarded')`)
       .orderBy(desc(loads.submittedAt));
   }
 
   async getAdminPostedLoads(): Promise<Load[]> {
     // Query canonical lifecycle states for loads visible to carriers
-    // Include both 'open_for_bid' and 'open_for_bids' for compatibility
     return db.select().from(loads)
-      .where(sql`${loads.status} IN ('posted_to_carriers', 'open_for_bid', 'open_for_bids', 'counter_received', 'awarded', 'in_transit') AND ${loads.adminId} IS NOT NULL`)
+      .where(sql`${loads.status} IN ('posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'in_transit') AND ${loads.adminId} IS NOT NULL`)
       .orderBy(desc(loads.postedAt));
   }
 
   async submitLoadToAdmin(loadId: string): Promise<Load | undefined> {
+    // Use canonical 'pending' status per schema
     const [updated] = await db.update(loads)
       .set({ 
-        status: 'submitted_to_admin',
+        status: 'pending',
         submittedAt: new Date()
       })
       .where(eq(loads.id, loadId))

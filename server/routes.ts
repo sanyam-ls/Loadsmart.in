@@ -992,7 +992,7 @@ export async function registerRoutes(
       const data = insertLoadSchema.parse({
         ...body,
         shipperId: user.id,
-        status: 'submitted_to_admin',
+        status: 'pending',
         submittedAt: new Date(),
       });
 
@@ -1010,7 +1010,7 @@ export async function registerRoutes(
         });
       }
 
-      res.json({ load_id: load.id, status: 'submitted_to_admin' });
+      res.json({ load_id: load.id, status: 'pending' });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });

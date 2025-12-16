@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useMockData } from "@/lib/mock-data-store";
 import { AddressAutocomplete, getRouteInfo } from "@/components/address-autocomplete";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -89,7 +88,6 @@ function suggestTruckType(weight: number, description: string): string {
 export default function PostLoadPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { addLoad } = useMockData();
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submittedLoadId, setSubmittedLoadId] = useState<string | null>(null);
@@ -148,38 +146,21 @@ export default function PostLoadPage() {
     try {
       const truckType = data.requiredTruckType || estimation?.suggestedTruck || "Dry Van";
       
-      const newLoad = addLoad({
-        pickup: data.pickupCity,
-        drop: data.dropoffCity,
-        weight: Number(data.weight),
-        weightUnit: data.weightUnit,
-        type: truckType,
-        status: "Pending Admin Review",
-        carrier: null,
-        eta: null,
-        estimatedPrice: null,
-        finalPrice: null,
+      const response = await apiRequest("POST", "/api/loads/submit", {
+        pickupAddress: data.pickupAddress,
+        pickupCity: data.pickupCity,
+        dropoffAddress: data.dropoffAddress,
+        dropoffCity: data.dropoffCity,
+        weight: data.weight,
         cargoDescription: data.cargoDescription || "",
-        pickupDate: new Date(data.pickupDate).toISOString(),
+        requiredTruckType: truckType,
+        pickupDate: data.pickupDate,
+        deliveryDate: data.deliveryDate || null,
       });
+      
+      const result = await response.json();
 
-      try {
-        await apiRequest("POST", "/api/loads/submit", {
-          pickupAddress: data.pickupAddress,
-          pickupCity: data.pickupCity,
-          dropoffAddress: data.dropoffAddress,
-          dropoffCity: data.dropoffCity,
-          weight: data.weight,
-          cargoDescription: data.cargoDescription || "",
-          requiredTruckType: truckType,
-          pickupDate: data.pickupDate,
-          deliveryDate: data.deliveryDate || null,
-        });
-      } catch (apiError) {
-        console.log("API call skipped - using mock data for demo");
-      }
-
-      setSubmittedLoadId(newLoad.loadId);
+      setSubmittedLoadId(result.load_id);
       setSubmitted(true);
       
       queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
@@ -189,8 +170,13 @@ export default function PostLoadPage() {
         description: `Your load has been submitted. Our team will evaluate and price it shortly.` 
       });
       
-    } catch (error) {
-      toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Submit load error:", error);
+      toast({ 
+        title: "Error", 
+        description: error?.message || "Something went wrong submitting your load.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }

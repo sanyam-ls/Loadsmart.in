@@ -125,6 +125,8 @@ interface RealLoad {
   distance?: number;
   priority?: string;
   adminPrice?: number;
+  adminFinalPrice?: string;
+  finalPrice?: string;  // The negotiated final price after bid acceptance
   priceLockedAt?: string;
 }
 
@@ -533,13 +535,25 @@ export default function LoadQueuePage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {load.adminPrice ? (
-                          <span className="font-medium text-green-600 dark:text-green-400">
-                            Rs. {Number(load.adminPrice).toLocaleString('en-IN')}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Not priced</span>
-                        )}
+                        {(() => {
+                          // Show price: finalPrice (negotiated) > adminFinalPrice > adminPrice
+                          const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
+                          if (price) {
+                            const priceNum = typeof price === 'string' ? parseFloat(price) : price;
+                            const isBidPrice = load.finalPrice && !load.adminPrice;
+                            return (
+                              <div className="flex flex-col">
+                                <span className="font-medium text-green-600 dark:text-green-400">
+                                  Rs. {priceNum.toLocaleString('en-IN')}
+                                </span>
+                                {isBidPrice && (
+                                  <span className="text-xs text-muted-foreground">(Bid Price)</span>
+                                )}
+                              </div>
+                            );
+                          }
+                          return <span className="text-muted-foreground text-sm">Not priced</span>;
+                        })()}
                       </TableCell>
                       <TableCell>
                         {(() => {

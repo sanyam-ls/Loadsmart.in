@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   FileText, Check, Clock, AlertCircle, Eye, Download, 
   CreditCard, MessageSquare, CheckCircle, XCircle, Loader2,
-  ArrowLeftRight, History, ChevronDown, ChevronUp, DollarSign
+  ArrowLeftRight, History, ChevronDown, ChevronUp, DollarSign, Building2
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -597,6 +597,20 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                     >
                       <Check className="h-4 w-4 mr-1" />
                       Approve
+                    </Button>
+                    <Button 
+                      size="sm"
+                      variant="default"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        setSelectedInvoice(invoice);
+                        setPaymentMethod("bank_transfer");
+                        setPayDialogOpen(true);
+                      }}
+                      data-testid={`button-pay-bank-${invoice.id}`}
+                    >
+                      <Building2 className="h-4 w-4 mr-1" />
+                      Pay via Bank
                     </Button>
                     <Button 
                       variant="outline"

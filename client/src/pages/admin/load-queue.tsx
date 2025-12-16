@@ -546,11 +546,31 @@ export default function LoadQueuePage() {
                           if (price) {
                             const priceNum = typeof price === 'string' ? parseFloat(price) : price;
                             const isBidPrice = load.finalPrice && !load.adminPrice;
+                            // Calculate GST for awarded loads (ready for invoice)
+                            const gstPercent = 18;
+                            const gstAmount = Math.round(priceNum * (gstPercent / 100));
+                            const totalWithGst = priceNum + gstAmount;
+                            const showGst = load.status === 'awarded';
+                            
                             return (
                               <div className="flex flex-col">
-                                <span className="font-medium text-green-600 dark:text-green-400">
-                                  Rs. {priceNum.toLocaleString('en-IN')}
-                                </span>
+                                {showGst ? (
+                                  <>
+                                    <span className="text-xs text-muted-foreground">
+                                      Subtotal: Rs. {priceNum.toLocaleString('en-IN')}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      GST (18%): Rs. {gstAmount.toLocaleString('en-IN')}
+                                    </span>
+                                    <span className="font-semibold text-green-600 dark:text-green-400">
+                                      Total: Rs. {totalWithGst.toLocaleString('en-IN')}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="font-medium text-green-600 dark:text-green-400">
+                                    Rs. {priceNum.toLocaleString('en-IN')}
+                                  </span>
+                                )}
                                 {isBidPrice && (
                                   <span className="text-xs text-muted-foreground">(Bid Price)</span>
                                 )}

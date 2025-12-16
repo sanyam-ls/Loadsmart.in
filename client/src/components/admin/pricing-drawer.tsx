@@ -357,25 +357,18 @@ export function PricingDrawer({
         allow_counter_bids: allowCounterBids,
         notes,
       });
-      const data = await response.json();
+      await response.json();
 
-      if (data.requires_approval) {
-        toast({
-          title: "Approval Required",
-          description: `Price deviates ${data.deviation_percent.toFixed(1)}% from suggested. Sent for admin approval.`,
-        });
-      } else {
-        toast({
-          title: "Load Posted Successfully",
-          description: `Load has been priced at ${formatRupees(finalPrice)} and posted to carriers.`,
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/carrier/available-loads"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
-        onSuccess?.();
-        onOpenChange(false);
-      }
+      toast({
+        title: "Load Posted Successfully",
+        description: `Load has been priced at ${formatRupees(finalPrice)} and posted to carriers.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/available-loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
+      onSuccess?.();
+      onOpenChange(false);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error 
         ? (error.message.includes(':') ? error.message.split(':').slice(1).join(':').trim() : error.message)

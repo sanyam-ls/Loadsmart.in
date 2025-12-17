@@ -1112,6 +1112,62 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Get single carrier with full details
+  app.get("/api/admin/carriers/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const carrier = await storage.getUser(req.params.id);
+      if (!carrier || carrier.role !== "carrier") {
+        return res.status(404).json({ error: "Carrier not found" });
+      }
+
+      const profile = await storage.getCarrierProfile(carrier.id);
+      const carrierBids = await storage.getBidsByCarrier(carrier.id);
+      const documents = await storage.getDocumentsByUser(carrier.id);
+      const trucks = await storage.getTrucksByCarrier(carrier.id);
+      const verification = await storage.getCarrierVerificationByCarrier(carrier.id);
+      
+      // Get loads where this carrier has bids
+      const allLoads = await storage.getAllLoads();
+      const carrierLoads = allLoads.filter(load => 
+        carrierBids.some(bid => bid.loadId === load.id)
+      );
+
+      const { password: _, ...carrierWithoutPassword } = carrier;
+      
+      res.json({
+        ...carrierWithoutPassword,
+        profile: profile || {
+          userId: carrier.id,
+          carrierType: "enterprise",
+          fleetSize: trucks.length || 1,
+          serviceZones: [],
+          reliabilityScore: "0.00",
+          communicationScore: "0.00",
+          onTimeScore: "0.00",
+          totalDeliveries: 0,
+          badgeLevel: "bronze",
+          rating: "4.5",
+        },
+        bids: carrierBids,
+        bidCount: carrierBids.length,
+        documents,
+        documentCount: documents.length,
+        trucks,
+        truckCount: trucks.length,
+        verification,
+        assignedLoads: carrierLoads.slice(0, 20), // Limit to 20 recent loads
+      });
+    } catch (error) {
+      console.error("Get admin carrier error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Admin: Verify/unverify carrier
   app.patch("/api/admin/carriers/:id/verify", requireAuth, async (req, res) => {
     try {

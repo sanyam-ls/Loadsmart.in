@@ -163,6 +163,10 @@ export function onMarketplaceEvent(eventType: string, handler: MessageHandler): 
   };
 }
 
+export function offMarketplaceEvent(eventType: string, handler: MessageHandler): void {
+  handlers.get(eventType)?.delete(handler);
+}
+
 export function isMarketplaceConnected(): boolean {
   return socket?.readyState === WebSocket.OPEN;
 }

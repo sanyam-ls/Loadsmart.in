@@ -57,20 +57,49 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useAdminData, type AdminCarrier } from "@/lib/admin-data-store";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Loader2 } from "lucide-react";
+
+interface ApiCarrier {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  companyName: string | null;
+  phone: string | null;
+  isVerified: boolean;
+  createdAt: string;
+  serviceZones?: string[];
+  profile?: {
+    fleetSize?: number;
+    rating?: number;
+  };
+  bidCount?: number;
+  documentCount?: number;
+}
 
 export default function AdminCarriersPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { carriers, verificationQueue, updateCarrier, verifyCarrier, rejectCarrier, refreshFromShipperPortal } = useAdminData();
+  
+  // Fetch carriers from real API
+  const { data: apiCarriers = [], isLoading, refetch } = useQuery<ApiCarrier[]>({
+    queryKey: ["/api/admin/carriers"],
+  });
+  
+  // Fetch verification counts
+  const { data: verifications = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/verifications"],
+  });
   
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activityFilter, setActivityFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<keyof AdminCarrier>("dateJoined");
+  const [sortField, setSortField] = useState<string>("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCarrier, setSelectedCarrier] = useState<AdminCarrier | null>(null);
+  const [selectedCarrier, setSelectedCarrier] = useState<ApiCarrier | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -85,12 +114,12 @@ export default function AdminCarriersPage() {
   const itemsPerPage = 10;
 
   const verifiedCarriers = useMemo(() => {
-    return carriers.filter(c => c.verificationStatus === "verified");
-  }, [carriers]);
+    return apiCarriers.filter(c => c.isVerified === true);
+  }, [apiCarriers]);
 
   const pendingCount = useMemo(() => {
-    return carriers.filter(c => c.verificationStatus === "pending").length;
-  }, [carriers]);
+    return verifications.filter((v: any) => v.status === "pending").length;
+  }, [verifications]);
 
   const filteredCarriers = useMemo(() => {
     let result = [...verifiedCarriers];
@@ -104,13 +133,9 @@ export default function AdminCarriersPage() {
       );
     }
     
-    if (activityFilter !== "all") {
-      result = result.filter(carrier => carrier.activityLevel === activityFilter);
-    }
-    
     result.sort((a, b) => {
-      const aVal = a[sortField];
-      const bVal = b[sortField];
+      const aVal = (a as any)[sortField];
+      const bVal = (b as any)[sortField];
       const direction = sortDirection === "asc" ? 1 : -1;
       
       if (aVal instanceof Date && bVal instanceof Date) {
@@ -125,7 +150,7 @@ export default function AdminCarriersPage() {
     });
     
     return result;
-  }, [verifiedCarriers, searchQuery, activityFilter, sortField, sortDirection]);
+  }, [verifiedCarriers, searchQuery, sortField, sortDirection]);
 
   const paginatedCarriers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -134,7 +159,7 @@ export default function AdminCarriersPage() {
 
   const totalPages = Math.ceil(filteredCarriers.length / itemsPerPage);
 
-  const handleSort = (field: keyof AdminCarrier) => {
+  const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(prev => prev === "asc" ? "desc" : "asc");
     } else {
@@ -143,57 +168,82 @@ export default function AdminCarriersPage() {
     }
   };
 
-  const handleUpdateCarrier = () => {
+  const handleUpdateCarrier = async () => {
     if (selectedCarrier) {
-      updateCarrier(selectedCarrier.carrierId, {
-        companyName: formData.companyName,
-        email: formData.email,
-        phone: formData.phone,
-        fleetSize: parseInt(formData.fleetSize) || selectedCarrier.fleetSize,
-        serviceZones: formData.serviceZones.split(",").map(z => z.trim()).filter(Boolean),
-      });
-      
-      toast({
-        title: "Carrier Updated",
-        description: `${formData.companyName} has been updated`,
-      });
-      setIsEditModalOpen(false);
-      setSelectedCarrier(null);
+      try {
+        await apiRequest("PATCH", `/api/admin/carriers/${selectedCarrier.id}`, {
+          companyName: formData.companyName,
+          email: formData.email,
+          phone: formData.phone,
+        });
+        
+        toast({
+          title: "Carrier Updated",
+          description: `${formData.companyName} has been updated`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+        setIsEditModalOpen(false);
+        setSelectedCarrier(null);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: "Failed to update carrier",
+        });
+      }
     }
   };
 
-  const handleVerifyCarrier = () => {
+  const handleVerifyCarrier = async () => {
     if (selectedCarrier) {
-      verifyCarrier(selectedCarrier.carrierId);
-      toast({
-        title: "Carrier Verified",
-        description: `${selectedCarrier.companyName} is now verified`,
-      });
-      setIsVerifyModalOpen(false);
-      setSelectedCarrier(null);
+      try {
+        await apiRequest("PATCH", `/api/admin/carriers/${selectedCarrier.id}/verify`, { isVerified: true });
+        toast({
+          title: "Carrier Verified",
+          description: `${selectedCarrier.companyName} is now verified`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+        setIsVerifyModalOpen(false);
+        setSelectedCarrier(null);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Verification Failed",
+          description: "Failed to verify carrier",
+        });
+      }
     }
   };
 
-  const handleRejectCarrier = () => {
+  const handleRejectCarrier = async () => {
     if (selectedCarrier) {
-      rejectCarrier(selectedCarrier.carrierId, rejectReason);
-      toast({
-        title: "Carrier Rejected",
-        description: `${selectedCarrier.companyName} verification rejected`,
-      });
-      setIsRejectModalOpen(false);
-      setSelectedCarrier(null);
-      setRejectReason("");
+      try {
+        await apiRequest("PATCH", `/api/admin/carriers/${selectedCarrier.id}/verify`, { isVerified: false });
+        toast({
+          title: "Carrier Unverified",
+          description: `${selectedCarrier.companyName} verification removed`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+        setIsRejectModalOpen(false);
+        setSelectedCarrier(null);
+        setRejectReason("");
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Action Failed",
+          description: "Failed to update carrier verification",
+        });
+      }
     }
   };
 
-  const openEditModal = (carrier: AdminCarrier) => {
+  const openEditModal = (carrier: ApiCarrier) => {
     setSelectedCarrier(carrier);
     setFormData({
       companyName: carrier.companyName || "",
       email: carrier.email || "",
       phone: carrier.phone || "",
-      fleetSize: carrier.fleetSize?.toString() || "",
+      fleetSize: carrier.profile?.fleetSize?.toString() || "",
       serviceZones: carrier.serviceZones?.join(", ") || "",
     });
     setIsEditModalOpen(true);
@@ -218,7 +268,7 @@ export default function AdminCarriersPage() {
     }
   };
 
-  const pendingVerifications = verificationQueue.filter(v => v.entityType === "carrier" && v.status === "pending").length;
+  const pendingVerifications = pendingCount;
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -244,7 +294,7 @@ export default function AdminCarriersPage() {
               {pendingCount} Pending Verification
             </Button>
           )}
-          <Button variant="outline" onClick={refreshFromShipperPortal} data-testid="button-sync-carriers">
+          <Button variant="outline" onClick={() => refetch()} data-testid="button-sync-carriers">
             <RefreshCw className="h-4 w-4 mr-2" />
             Sync
           </Button>
@@ -273,7 +323,7 @@ export default function AdminCarriersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Fleet</p>
-                <p className="text-xl font-bold">{verifiedCarriers.reduce((sum, c) => sum + c.fleetSize, 0)}</p>
+                <p className="text-xl font-bold">{verifiedCarriers.reduce((sum, c) => sum + (c.profile?.fleetSize || 0), 0)}</p>
               </div>
             </div>
           </CardContent>
@@ -286,7 +336,7 @@ export default function AdminCarriersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">High Activity</p>
-                <p className="text-xl font-bold">{verifiedCarriers.filter(c => c.activityLevel === "high").length}</p>
+                <p className="text-xl font-bold">{verifiedCarriers.filter(c => (c.bidCount || 0) > 5).length}</p>
               </div>
             </div>
           </CardContent>
@@ -299,7 +349,7 @@ export default function AdminCarriersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Avg Rating</p>
-                <p className="text-xl font-bold">{(verifiedCarriers.reduce((sum, c) => sum + c.rating, 0) / Math.max(1, verifiedCarriers.length)).toFixed(1)}</p>
+                <p className="text-xl font-bold">{(verifiedCarriers.reduce((sum, c) => sum + (c.profile?.rating || 4.5), 0) / Math.max(1, verifiedCarriers.length)).toFixed(1)}</p>
               </div>
             </div>
           </CardContent>
@@ -423,10 +473,10 @@ export default function AdminCarriersPage() {
                 ) : (
                   paginatedCarriers.map((carrier) => (
                     <TableRow 
-                      key={carrier.carrierId} 
+                      key={carrier.id} 
                       className="cursor-pointer hover-elevate"
-                      onClick={() => setLocation(`/admin/carriers/${carrier.carrierId}`)}
-                      data-testid={`row-carrier-${carrier.carrierId}`}
+                      onClick={() => setLocation(`/admin/carriers/${carrier.id}`)}
+                      data-testid={`row-carrier-${carrier.id}`}
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -434,9 +484,9 @@ export default function AdminCarriersPage() {
                             <Truck className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <div>
-                            <div className="font-medium flex items-center gap-2" data-testid={`text-carrier-name-${carrier.carrierId}`}>
-                              {carrier.companyName}
-                              {carrier.verificationStatus === "verified" && (
+                            <div className="font-medium flex items-center gap-2" data-testid={`text-carrier-name-${carrier.id}`}>
+                              {carrier.companyName || carrier.username}
+                              {carrier.isVerified && (
                                 <Shield className="h-3 w-3 text-primary" />
                               )}
                             </div>
@@ -444,44 +494,46 @@ export default function AdminCarriersPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell data-testid={`badge-status-${carrier.carrierId}`}>
-                        {getStatusBadge(carrier.verificationStatus)}
+                      <TableCell data-testid={`badge-status-${carrier.id}`}>
+                        {getStatusBadge(carrier.isVerified ? "verified" : "pending")}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium">{carrier.fleetSize} trucks</div>
-                          <div className="text-muted-foreground">{carrier.totalDeliveries} deliveries</div>
+                          <div className="font-medium">{carrier.profile?.fleetSize || 0} trucks</div>
+                          <div className="text-muted-foreground">{carrier.bidCount || 0} bids</div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {carrier.serviceZones.slice(0, 2).map((zone, i) => (
+                          {(carrier.serviceZones || []).slice(0, 2).map((zone, i) => (
                             <Badge key={i} variant="outline" className="text-xs">
                               <MapPin className="h-2 w-2 mr-1" />
                               {zone}
                             </Badge>
                           ))}
-                          {carrier.serviceZones.length > 2 && (
+                          {(carrier.serviceZones || []).length > 2 && (
                             <Badge variant="outline" className="text-xs">
-                              +{carrier.serviceZones.length - 2}
+                              +{(carrier.serviceZones || []).length - 2}
                             </Badge>
+                          )}
+                          {(!carrier.serviceZones || carrier.serviceZones.length === 0) && (
+                            <span className="text-muted-foreground text-xs">Not specified</span>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell data-testid={`text-rating-${carrier.carrierId}`}>
+                      <TableCell data-testid={`text-rating-${carrier.id}`}>
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                          <span className="font-medium">{carrier.rating.toFixed(1)}</span>
-                          <span className="text-muted-foreground text-sm">({carrier.onTimePercent}% on-time)</span>
+                          <span className="font-medium">{(carrier.profile?.rating || 4.5).toFixed(1)}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getActivityBadge(carrier.activityLevel)}
+                        {getActivityBadge(carrier.bidCount && carrier.bidCount > 5 ? "high" : carrier.bidCount && carrier.bidCount > 0 ? "medium" : "low")}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" data-testid={`button-carrier-actions-${carrier.carrierId}`}>
+                            <Button variant="ghost" size="icon" data-testid={`button-carrier-actions-${carrier.id}`}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -489,31 +541,11 @@ export default function AdminCarriersPage() {
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               openEditModal(carrier);
-                            }} data-testid={`menu-edit-${carrier.carrierId}`}>
+                            }} data-testid={`menu-edit-${carrier.id}`}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Carrier
                             </DropdownMenuItem>
-                            {carrier.verificationStatus === "pending" && (
-                              <>
-                                <DropdownMenuItem onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedCarrier(carrier);
-                                  setIsVerifyModalOpen(true);
-                                }} data-testid={`menu-verify-${carrier.carrierId}`}>
-                                  <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                                  Approve Verification
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedCarrier(carrier);
-                                  setIsRejectModalOpen(true);
-                                }} data-testid={`menu-reject-${carrier.carrierId}`}>
-                                  <XCircle className="h-4 w-4 mr-2 text-red-600" />
-                                  Reject Verification
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {carrier.verificationStatus === "verified" && (
+                            {carrier.isVerified && (
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedCarrier(carrier);

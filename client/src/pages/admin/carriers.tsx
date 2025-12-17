@@ -304,11 +304,27 @@ export default function AdminCarriersPage() {
             onClick={async () => {
               try {
                 const res = await fetch("/api/admin/seed-carriers", { method: "POST", credentials: "include" });
+                const data = await res.json();
                 if (res.ok) {
+                  toast({
+                    title: "Data Seeded Successfully",
+                    description: `Updated ${data.carriers?.length || 0} carriers with Indian service zones.`,
+                  });
                   refetch();
+                } else {
+                  toast({
+                    title: "Seed Failed",
+                    description: data.error || "Failed to seed carrier data",
+                    variant: "destructive",
+                  });
                 }
               } catch (e) {
                 console.error("Seed error:", e);
+                toast({
+                  title: "Error",
+                  description: "Failed to seed carrier data. Please try again.",
+                  variant: "destructive",
+                });
               }
             }}
             data-testid="button-seed-data"

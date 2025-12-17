@@ -43,7 +43,9 @@ import {
   Receipt,
   FileText,
   CheckCircle,
+  Scale,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface LoadData {
   id: string;
@@ -144,6 +146,10 @@ export function PricingDrawer({
   const [platformMarginPercent, setPlatformMarginPercent] = useState(10);
   const [notes, setNotes] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  
+  // Per-ton pricing state
+  const [usePerTonRate, setUsePerTonRate] = useState(false);
+  const [ratePerTon, setRatePerTon] = useState(0);
 
   // Posting options
   const [postMode, setPostMode] = useState<"open" | "invite" | "assign">("open");
@@ -192,6 +198,38 @@ export function PricingDrawer({
     return Math.abs(priceDeviation) > 15;
   }, [priceDeviation]);
 
+  // Get weight in tons (assuming weight is in MT/tons)
+  const weightInTons = useMemo(() => {
+    const w = parseFloat(load?.weight?.toString() || "0");
+    return w > 0 ? w : 1;
+  }, [load?.weight]);
+
+  // Calculated price from per-ton rate
+  const calculatedFromPerTon = useMemo(() => {
+    return Math.round(ratePerTon * weightInTons);
+  }, [ratePerTon, weightInTons]);
+
+  // Suggested per-ton rate based on suggested price
+  const suggestedPerTonRate = useMemo(() => {
+    if (weightInTons <= 0 || suggestedPrice <= 0) return 0;
+    return Math.round(suggestedPrice / weightInTons);
+  }, [suggestedPrice, weightInTons]);
+
+  // Reset per-ton state when drawer closes or load changes
+  useEffect(() => {
+    if (!open) {
+      // Reset when drawer closes
+      setUsePerTonRate(false);
+      setRatePerTon(0);
+    }
+  }, [open]);
+
+  // Reset per-ton state when load changes
+  useEffect(() => {
+    setUsePerTonRate(false);
+    setRatePerTon(0);
+  }, [load?.id]);
+
   // Fetch suggested price when load changes (only for non-finalized loads)
   useEffect(() => {
     if (open && load?.id && !isCarrierFinalized) {
@@ -199,13 +237,20 @@ export function PricingDrawer({
     }
   }, [open, load?.id, isCarrierFinalized]);
 
-  // Update final price when adjustments change
+  // Update final price when adjustments change (only when not using per-ton rate)
   useEffect(() => {
-    if (suggestedPrice > 0) {
+    if (!usePerTonRate && suggestedPrice > 0) {
       const adjusted = suggestedPrice * (1 + markupPercent / 100) + fixedFee - discountAmount;
       setFinalPrice(Math.round(Math.max(0, adjusted)));
     }
-  }, [suggestedPrice, markupPercent, fixedFee, discountAmount]);
+  }, [suggestedPrice, markupPercent, fixedFee, discountAmount, usePerTonRate]);
+
+  // Update final price when per-ton rate changes
+  useEffect(() => {
+    if (usePerTonRate && ratePerTon > 0) {
+      setFinalPrice(calculatedFromPerTon);
+    }
+  }, [usePerTonRate, ratePerTon, calculatedFromPerTon]);
 
   // Apply template
   useEffect(() => {
@@ -576,7 +621,79 @@ export function PricingDrawer({
                       </CardContent>
                     </Card>
 
+                    {/* Per-Ton Rate Calculator */}
+                    <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+                      <CardContent className="pt-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Scale className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium">Per Ton Rate Calculator</span>
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                              Indian Pricing
+                            </Badge>
+                          </div>
+                          <Switch
+                            checked={usePerTonRate}
+                            onCheckedChange={(checked) => {
+                              setUsePerTonRate(checked);
+                              if (checked && suggestedPerTonRate > 0) {
+                                setRatePerTon(suggestedPerTonRate);
+                              }
+                            }}
+                            data-testid="switch-per-ton"
+                          />
+                        </div>
+                        
+                        {usePerTonRate && (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-4 p-3 bg-background rounded-lg">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Load Weight</Label>
+                                <p className="text-lg font-semibold" data-testid="text-weight-tons">
+                                  {weightInTons} MT
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Suggested Rate</Label>
+                                <p className="text-lg font-semibold text-muted-foreground" data-testid="text-suggested-per-ton">
+                                  Rs. {suggestedPerTonRate.toLocaleString("en-IN")}/ton
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label>Rate Per Ton (Rs.)</Label>
+                              <Input
+                                type="number"
+                                value={ratePerTon}
+                                onChange={(e) => setRatePerTon(parseInt(e.target.value) || 0)}
+                                placeholder="Enter rate per ton"
+                                className="text-lg font-medium"
+                                data-testid="input-rate-per-ton"
+                              />
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <Calculator className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-medium">Calculated Total</span>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">
+                                  {weightInTons} MT x Rs. {ratePerTon.toLocaleString("en-IN")}
+                                </p>
+                                <p className="text-xl font-bold text-primary" data-testid="text-calculated-total">
+                                  {formatRupees(calculatedFromPerTon)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
                     {/* Adjustments */}
+                    {!usePerTonRate && (
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -614,6 +731,7 @@ export function PricingDrawer({
                         </div>
                       </div>
                     </div>
+                    )}
 
                     <Separator />
 

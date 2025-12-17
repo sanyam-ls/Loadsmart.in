@@ -585,7 +585,12 @@ export default function CarrierDashboard() {
       </Card>
 
       {/* Verification Status Dialog */}
-      <Dialog open={verificationDialogOpen} onOpenChange={setVerificationDialogOpen}>
+      <Dialog open={verificationDialogOpen} onOpenChange={(open) => {
+        setVerificationDialogOpen(open);
+        if (!open) {
+          setHasNewVerificationUpdate(false);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

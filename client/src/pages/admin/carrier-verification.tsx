@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
-  Truck, Search, FileText, ChevronLeft, Eye,
+  Truck, Search, FileText, ChevronLeft, Eye, ExternalLink,
   ShieldCheck, ShieldX, ShieldAlert, Clock,
   CheckCircle, XCircle, User, Building2, MapPin, Phone,
   ChevronDown, Info, Image, FileType, Ruler
@@ -143,6 +143,8 @@ export default function CarrierVerificationPage() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<VerificationDocument | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: verifications = [], isLoading } = useQuery<CarrierVerification[]>({
     queryKey: ["/api/admin/verifications"],
@@ -610,10 +612,16 @@ export default function CarrierVerificationPage() {
                               ) : (
                                 <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
                               )}
-                              <Button variant="outline" size="sm" asChild data-testid={`button-view-${doc.documentType}`}>
-                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
-                                  <Eye className="h-4 w-4" />
-                                </a>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                data-testid={`button-view-${doc.documentType}`}
+                                onClick={() => {
+                                  setPreviewDoc(doc);
+                                  setPreviewOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
@@ -687,6 +695,89 @@ export default function CarrierVerificationPage() {
               data-testid="button-confirm-reject"
             >
               Reject Verification
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Preview Modal */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {previewDoc && getDocumentDisplayName(previewDoc.documentType)}
+            </DialogTitle>
+            <DialogDescription>
+              {previewDoc?.fileName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {previewDoc && (
+              <>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-muted-foreground">Document Type</Label>
+                    <p className="font-medium">{getDocumentDisplayName(previewDoc.documentType)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">File Name</Label>
+                    <p className="font-medium">{previewDoc.fileName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Upload Date</Label>
+                    <p className="font-medium">
+                      {previewDoc.uploadedAt ? format(new Date(previewDoc.uploadedAt), "MMM d, yyyy HH:mm") : "Recently uploaded"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Status</Label>
+                    <div className="mt-1">
+                      {previewDoc.status === "approved" ? (
+                        <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Verified</Badge>
+                      ) : previewDoc.status === "rejected" ? (
+                        <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
+                      ) : (
+                        <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Document Preview */}
+                <div className="border rounded-lg overflow-hidden bg-muted/30">
+                  {previewDoc.fileUrl.endsWith('.pdf') || previewDoc.fileName.endsWith('.pdf') ? (
+                    <iframe
+                      src={previewDoc.fileUrl}
+                      className="w-full h-[400px]"
+                      title={previewDoc.fileName}
+                    />
+                  ) : previewDoc.fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) || previewDoc.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                    <img
+                      src={previewDoc.fileUrl}
+                      alt={previewDoc.fileName}
+                      className="max-w-full max-h-[400px] mx-auto object-contain"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                      <FileText className="h-16 w-16 mb-4" />
+                      <p className="text-lg font-medium">Document Preview</p>
+                      <p className="text-sm">Click below to open the document</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+              Close
+            </Button>
+            <Button asChild data-testid="button-open-document">
+              <a href={previewDoc?.fileUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open in New Tab
+              </a>
             </Button>
           </DialogFooter>
         </DialogContent>

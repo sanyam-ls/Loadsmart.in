@@ -150,6 +150,7 @@ export function PricingDrawer({
   // Per-ton pricing state
   const [usePerTonRate, setUsePerTonRate] = useState(false);
   const [ratePerTon, setRatePerTon] = useState(0);
+  const [customTonnage, setCustomTonnage] = useState<number | null>(null);
 
   // Posting options
   const [postMode, setPostMode] = useState<"open" | "invite" | "assign">("open");
@@ -199,10 +200,13 @@ export function PricingDrawer({
   }, [priceDeviation]);
 
   // Get weight in tons (assuming weight is in MT/tons)
-  const weightInTons = useMemo(() => {
+  const loadWeightInTons = useMemo(() => {
     const w = parseFloat(load?.weight?.toString() || "0");
     return w > 0 ? w : 1;
   }, [load?.weight]);
+
+  // Use custom tonnage if set, otherwise use load weight
+  const weightInTons = customTonnage !== null ? customTonnage : loadWeightInTons;
 
   // Calculated price from per-ton rate
   const calculatedFromPerTon = useMemo(() => {
@@ -221,6 +225,7 @@ export function PricingDrawer({
       // Reset when drawer closes
       setUsePerTonRate(false);
       setRatePerTon(0);
+      setCustomTonnage(null);
     }
   }, [open]);
 
@@ -228,6 +233,7 @@ export function PricingDrawer({
   useEffect(() => {
     setUsePerTonRate(false);
     setRatePerTon(0);
+    setCustomTonnage(null);
   }, [load?.id]);
 
   // Fetch suggested price when load changes (only for non-finalized loads)
@@ -621,71 +627,62 @@ export function PricingDrawer({
                       </CardContent>
                     </Card>
 
-                    {/* Per-Ton Rate Calculator */}
+                    {/* Per-Ton Rate Calculator - Simple Indian Pricing */}
                     <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
                       <CardContent className="pt-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Scale className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium">Per Ton Rate Calculator</span>
-                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                              Indian Pricing
-                            </Badge>
-                          </div>
-                          <Switch
-                            checked={usePerTonRate}
-                            onCheckedChange={(checked) => {
-                              setUsePerTonRate(checked);
-                              if (checked && suggestedPerTonRate > 0) {
-                                setRatePerTon(suggestedPerTonRate);
-                              }
-                            }}
-                            data-testid="switch-per-ton"
-                          />
+                        <div className="flex items-center gap-2">
+                          <Scale className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium">Per Ton Rate Calculator</span>
                         </div>
                         
-                        {usePerTonRate && (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-4 p-3 bg-background rounded-lg">
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Load Weight</Label>
-                                <p className="text-lg font-semibold" data-testid="text-weight-tons">
-                                  {weightInTons} MT
-                                </p>
-                              </div>
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Suggested Rate</Label>
-                                <p className="text-lg font-semibold text-muted-foreground" data-testid="text-suggested-per-ton">
-                                  Rs. {suggestedPerTonRate.toLocaleString("en-IN")}/ton
-                                </p>
-                              </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Tonnage (MT)</Label>
+                            <Input
+                              type="number"
+                              value={customTonnage !== null ? customTonnage : loadWeightInTons}
+                              onChange={(e) => {
+                                const newWeight = parseFloat(e.target.value) || 0;
+                                setCustomTonnage(newWeight);
+                              }}
+                              placeholder="Enter tonnage"
+                              className="text-lg font-medium"
+                              data-testid="input-tonnage"
+                            />
+                            {customTonnage === null && (
+                              <p className="text-xs text-muted-foreground">From load: {loadWeightInTons} MT</p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Rate Per Ton (Rs.)</Label>
+                            <Input
+                              type="number"
+                              value={ratePerTon || ""}
+                              onChange={(e) => {
+                                const rate = parseInt(e.target.value) || 0;
+                                setRatePerTon(rate);
+                                setUsePerTonRate(rate > 0);
+                              }}
+                              placeholder="e.g. 2000"
+                              className="text-lg font-medium"
+                              data-testid="input-rate-per-ton"
+                            />
+                          </div>
+                        </div>
+                        
+                        {ratePerTon > 0 && (
+                          <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Calculator className="h-4 w-4 text-primary" />
+                              <span className="text-sm font-medium">Total Price</span>
                             </div>
-                            
-                            <div className="space-y-2">
-                              <Label>Rate Per Ton (Rs.)</Label>
-                              <Input
-                                type="number"
-                                value={ratePerTon}
-                                onChange={(e) => setRatePerTon(parseInt(e.target.value) || 0)}
-                                placeholder="Enter rate per ton"
-                                className="text-lg font-medium"
-                                data-testid="input-rate-per-ton"
-                              />
-                            </div>
-                            
-                            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <Calculator className="h-4 w-4 text-primary" />
-                                <span className="text-sm font-medium">Calculated Total</span>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs text-muted-foreground">
-                                  {weightInTons} MT x Rs. {ratePerTon.toLocaleString("en-IN")}
-                                </p>
-                                <p className="text-xl font-bold text-primary" data-testid="text-calculated-total">
-                                  {formatRupees(calculatedFromPerTon)}
-                                </p>
-                              </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">
+                                {weightInTons} MT x Rs. {ratePerTon.toLocaleString("en-IN")}
+                              </p>
+                              <p className="text-xl font-bold text-primary" data-testid="text-calculated-total">
+                                {formatRupees(calculatedFromPerTon)}
+                              </p>
                             </div>
                           </div>
                         )}

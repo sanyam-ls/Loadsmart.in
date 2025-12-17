@@ -111,6 +111,14 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         negotiationHandlers?.forEach(handler => handler(message));
       }
 
+      if (message.type === "verification_status_changed") {
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/verification"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+        
+        const verificationHandlers = handlers.get("verification_status_changed");
+        verificationHandlers?.forEach(handler => handler(message));
+      }
+
       const typeHandlers = handlers.get(message.type);
       if (typeHandlers) {
         typeHandlers.forEach(handler => handler(message));

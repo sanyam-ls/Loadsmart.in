@@ -271,3 +271,24 @@ export function broadcastNegotiationMessage(targetRole: "carrier" | "admin", tar
   });
   console.log(`Broadcasted negotiation_message to ${targetRole}`);
 }
+
+export function broadcastVerificationStatus(carrierId: string, status: "approved" | "rejected", data: {
+  companyName?: string;
+  reason?: string;
+}): void {
+  const message = {
+    type: "verification_status_changed",
+    carrierId,
+    status,
+    companyName: data.companyName,
+    reason: data.reason,
+    timestamp: new Date().toISOString(),
+  };
+
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.role === "carrier" && client.userId === carrierId) {
+      sendToClient(ws, message);
+    }
+  });
+  console.log(`Broadcasted verification_status_changed (${status}) to carrier ${carrierId}`);
+}

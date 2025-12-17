@@ -24,7 +24,8 @@ import {
   broadcastBidCountered,
   broadcastBidAccepted,
   broadcastInvoiceEvent,
-  broadcastNegotiationMessage
+  broadcastNegotiationMessage,
+  broadcastVerificationStatus
 } from "./websocket-marketplace";
 import {
   getAllVehiclesTelemetry,
@@ -5090,6 +5091,14 @@ export async function registerRoutes(
         userAgent: req.get("user-agent"),
       });
 
+      // Get carrier info for broadcast
+      const carrier = await storage.getUser(verification.carrierId);
+      
+      // Broadcast real-time verification status to carrier
+      broadcastVerificationStatus(verification.carrierId, "approved", {
+        companyName: carrier?.companyName || "Carrier",
+      });
+
       res.json(updated);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -5138,6 +5147,15 @@ export async function registerRoutes(
         actionDescription: `Rejected carrier verification for ${verification.carrierId}: ${validatedBody.reason}`,
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
+      });
+
+      // Get carrier info for broadcast
+      const carrier = await storage.getUser(verification.carrierId);
+      
+      // Broadcast real-time verification status to carrier
+      broadcastVerificationStatus(verification.carrierId, "rejected", {
+        companyName: carrier?.companyName || "Carrier",
+        reason: validatedBody.reason,
       });
 
       res.json(updated);

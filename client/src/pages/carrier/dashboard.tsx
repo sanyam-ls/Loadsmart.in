@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
-import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2 } from "lucide-react";
+import { useEffect } from "react";
+import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,8 @@ import { StatCard } from "@/components/stat-card";
 import { useAuth } from "@/lib/auth-context";
 import { useTrucks, useBids, useLoads, useShipments, useSettlements } from "@/lib/api-hooks";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { connectMarketplace, onMarketplaceEvent, offMarketplaceEvent } from "@/lib/marketplace-socket";
 import { 
   BarChart, 
   Bar, 
@@ -51,6 +54,37 @@ const performanceTooltips = {
 export default function CarrierDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
+  
+  // Connect to WebSocket for real-time verification status updates
+  useEffect(() => {
+    if (user?.id) {
+      connectMarketplace("carrier", user.id);
+      
+      const handleVerificationStatus = (data: { status: string; companyName?: string; reason?: string }) => {
+        if (data.status === "approved") {
+          toast({
+            title: "Verification Approved!",
+            description: "Congratulations! Your carrier account has been verified. You can now bid on loads.",
+            duration: 10000,
+          });
+        } else if (data.status === "rejected") {
+          toast({
+            variant: "destructive",
+            title: "Verification Rejected",
+            description: data.reason || "Your verification application was rejected. Please check the requirements and resubmit.",
+            duration: 10000,
+          });
+        }
+      };
+      
+      onMarketplaceEvent("verification_status_changed", handleVerificationStatus);
+      
+      return () => {
+        offMarketplaceEvent("verification_status_changed", handleVerificationStatus);
+      };
+    }
+  }, [user?.id, toast]);
   
   const { data: allTrucks, isLoading: trucksLoading } = useTrucks();
   const { data: allBids, isLoading: bidsLoading } = useBids();

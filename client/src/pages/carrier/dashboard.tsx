@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
-import { useEffect } from "react";
-import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2, CheckCircle, XCircle, FileText, ShieldCheck, ShieldX, ShieldAlert, Eye, Bell } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
@@ -10,6 +10,10 @@ import { useTrucks, useBids, useLoads, useShipments, useSettlements } from "@/li
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { connectMarketplace, onMarketplaceEvent, offMarketplaceEvent } from "@/lib/marketplace-socket";
+import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
 import { 
   BarChart, 
   Bar, 
@@ -51,10 +55,46 @@ const performanceTooltips = {
   overall: "Weighted average of all performance metrics. Industry benchmark is 4.5/5.0"
 };
 
+const getDocumentDisplayName = (docType: string): string => {
+  const typeMap: Record<string, string> = {
+    rc_book: "RC (Registration Certificate)",
+    insurance: "Vehicle Insurance",
+    permit: "Commercial Permit",
+    pan_card: "PAN Card",
+    gst_certificate: "GST Certificate",
+    driving_license: "Driving License",
+    pollution_certificate: "Pollution Certificate",
+    fitness_certificate: "Fitness Certificate",
+    other: "Other Document",
+  };
+  return typeMap[docType] || docType;
+};
+
 export default function CarrierDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
+  const [hasNewVerificationUpdate, setHasNewVerificationUpdate] = useState(false);
+  
+  // Fetch verification status
+  const { data: verification, refetch: refetchVerification } = useQuery<{
+    id: string;
+    status: string;
+    rejectionReason?: string;
+    documents: Array<{
+      id: string;
+      documentType: string;
+      fileName: string;
+      fileUrl: string;
+      status: string;
+      uploadedAt?: string;
+      rejectionReason?: string;
+    }>;
+    updatedAt?: string;
+  }>({
+    queryKey: ["/api/carrier/verification"],
+  });
   
   // Connect to WebSocket for real-time verification status updates
   useEffect(() => {
@@ -62,18 +102,32 @@ export default function CarrierDashboard() {
       connectMarketplace("carrier", user.id);
       
       const handleVerificationStatus = (data: { status: string; companyName?: string; reason?: string }) => {
+        // Set flag to show notification indicator
+        setHasNewVerificationUpdate(true);
+        refetchVerification();
+        
         if (data.status === "approved") {
           toast({
             title: "Verification Approved!",
-            description: "Congratulations! Your carrier account has been verified. You can now bid on loads.",
+            description: "Congratulations! Your carrier account has been verified. You can now bid on loads. Click to view details.",
             duration: 10000,
+            action: (
+              <Button variant="outline" size="sm" onClick={() => setVerificationDialogOpen(true)}>
+                View
+              </Button>
+            ),
           });
         } else if (data.status === "rejected") {
           toast({
             variant: "destructive",
             title: "Verification Rejected",
-            description: data.reason || "Your verification application was rejected. Please check the requirements and resubmit.",
+            description: data.reason || "Your verification application was rejected. Click to view details.",
             duration: 10000,
+            action: (
+              <Button variant="outline" size="sm" onClick={() => setVerificationDialogOpen(true)}>
+                View
+              </Button>
+            ),
           });
         }
       };
@@ -84,7 +138,7 @@ export default function CarrierDashboard() {
         offMarketplaceEvent("verification_status_changed", handleVerificationStatus);
       };
     }
-  }, [user?.id, toast]);
+  }, [user?.id, toast, refetchVerification]);
   
   const { data: allTrucks, isLoading: trucksLoading } = useTrucks();
   const { data: allBids, isLoading: bidsLoading } = useBids();
@@ -180,6 +234,71 @@ export default function CarrierDashboard() {
           Add Truck
         </Button>
       </div>
+
+      {/* Verification Status Card - Show if not verified or recently updated */}
+      {verification && (verification.status === "pending" || verification.status === "approved" || verification.status === "rejected") && (
+        <Card 
+          className={`cursor-pointer hover-elevate ${
+            verification.status === "approved" ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20" : 
+            verification.status === "rejected" ? "border-destructive/50 bg-red-50/50 dark:bg-red-950/20" : 
+            "border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20"
+          }`}
+          onClick={() => {
+            setHasNewVerificationUpdate(false);
+            setVerificationDialogOpen(true);
+          }}
+          data-testid="card-verification-status"
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                {verification.status === "approved" ? (
+                  <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-full">
+                    <ShieldCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
+                ) : verification.status === "rejected" ? (
+                  <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-full">
+                    <ShieldX className="h-6 w-6 text-destructive" />
+                  </div>
+                ) : (
+                  <div className="p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-full relative">
+                    <ShieldAlert className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                    {hasNewVerificationUpdate && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full animate-pulse" />
+                    )}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-semibold">
+                    {verification.status === "approved" ? "Verification Complete" : 
+                     verification.status === "rejected" ? "Verification Rejected" : 
+                     "Verification Pending"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {verification.status === "approved" 
+                      ? `Your account is verified. ${verification.documents?.length || 0} documents approved.`
+                      : verification.status === "rejected"
+                      ? verification.rejectionReason || "Please review the rejection details and resubmit."
+                      : `${verification.documents?.length || 0} documents submitted and awaiting review.`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasNewVerificationUpdate && (
+                  <Badge variant="default" className="animate-pulse">
+                    <Bell className="h-3 w-3 mr-1" />
+                    New Update
+                  </Badge>
+                )}
+                <Button variant="outline" size="sm" data-testid="button-view-verification">
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Details
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div 
@@ -464,6 +583,144 @@ export default function CarrierDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Verification Status Dialog */}
+      <Dialog open={verificationDialogOpen} onOpenChange={setVerificationDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {verification?.status === "approved" ? (
+                <ShieldCheck className="h-5 w-5 text-green-600" />
+              ) : verification?.status === "rejected" ? (
+                <ShieldX className="h-5 w-5 text-destructive" />
+              ) : (
+                <ShieldAlert className="h-5 w-5 text-yellow-600" />
+              )}
+              Verification Status
+            </DialogTitle>
+            <DialogDescription>
+              {verification?.status === "approved" 
+                ? "Your carrier account has been verified and you can now bid on loads."
+                : verification?.status === "rejected"
+                ? "Your verification was rejected. Please review the details below and resubmit."
+                : "Your verification is pending review by our team."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {verification && (
+            <ScrollArea className="flex-1 max-h-[60vh] pr-4">
+              <div className="space-y-4">
+                {/* Overall Status */}
+                <Card className={
+                  verification.status === "approved" ? "border-green-500/50" :
+                  verification.status === "rejected" ? "border-destructive/50" :
+                  "border-yellow-500/50"
+                }>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <h3 className="font-semibold">Overall Status</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {verification.updatedAt && `Last updated: ${format(new Date(verification.updatedAt), "MMM d, yyyy 'at' h:mm a")}`}
+                        </p>
+                      </div>
+                      <Badge 
+                        variant={
+                          verification.status === "approved" ? "default" :
+                          verification.status === "rejected" ? "destructive" :
+                          "secondary"
+                        }
+                        className={verification.status === "approved" ? "bg-green-600" : ""}
+                      >
+                        {verification.status === "approved" ? "Verified" : 
+                         verification.status === "rejected" ? "Rejected" : 
+                         "Pending Review"}
+                      </Badge>
+                    </div>
+                    {verification.rejectionReason && (
+                      <div className="mt-3 p-3 bg-destructive/10 rounded-md">
+                        <p className="text-sm font-medium text-destructive">Rejection Reason:</p>
+                        <p className="text-sm text-muted-foreground">{verification.rejectionReason}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Documents List */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Submitted Documents ({verification.documents?.length || 0})</CardTitle>
+                    <CardDescription>Status of each document you submitted</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {(verification.documents || []).length === 0 ? (
+                        <p className="text-muted-foreground text-center py-4">No documents submitted yet</p>
+                      ) : (
+                        verification.documents?.map((doc) => (
+                          <div 
+                            key={doc.id} 
+                            className={`flex items-center justify-between p-3 border rounded-lg ${
+                              doc.status === "approved" ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" :
+                              doc.status === "rejected" ? "border-destructive/30 bg-red-50/50 dark:bg-red-950/20" :
+                              ""
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium">{getDocumentDisplayName(doc.documentType)}</p>
+                                <p className="text-sm text-muted-foreground">{doc.fileName}</p>
+                                {doc.uploadedAt && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Uploaded {format(new Date(doc.uploadedAt), "MMM d, yyyy")}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {doc.status === "approved" ? (
+                                <Badge variant="default" className="bg-green-600">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Approved
+                                </Badge>
+                              ) : doc.status === "rejected" ? (
+                                <div className="text-right">
+                                  <Badge variant="destructive">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    Rejected
+                                  </Badge>
+                                  {doc.rejectionReason && (
+                                    <p className="text-xs text-destructive mt-1">{doc.rejectionReason}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <Badge variant="secondary">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Pending
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Action Buttons */}
+                {verification.status === "rejected" && (
+                  <div className="flex justify-end">
+                    <Button onClick={() => navigate("/carrier/verification")} data-testid="button-resubmit-verification">
+                      Resubmit Documents
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -146,7 +146,7 @@ export default function CarrierVerificationPage() {
   const [previewDoc, setPreviewDoc] = useState<VerificationDocument | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const { data: verifications = [], isLoading } = useQuery<CarrierVerification[]>({
+  const { data: verifications = [], isLoading, refetch } = useQuery<CarrierVerification[]>({
     queryKey: ["/api/admin/verifications"],
   });
 
@@ -355,19 +355,54 @@ export default function CarrierVerificationPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => setLocation("/admin")}
-          data-testid="button-back"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Carrier Verification</h1>
-          <p className="text-muted-foreground">Review and verify carrier applications with documents</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setLocation("/admin")}
+            data-testid="button-back"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold" data-testid="text-page-title">Carrier Verification</h1>
+            <p className="text-muted-foreground">Review and verify carrier applications with documents</p>
+          </div>
         </div>
+        <Button 
+          variant="secondary"
+          onClick={async () => {
+            try {
+              const res = await fetch("/api/admin/seed-pending-verifications", { method: "POST", credentials: "include" });
+              const data = await res.json();
+              if (res.ok) {
+                toast({
+                  title: "Pending Verifications Seeded",
+                  description: `Created ${data.carriers?.length || 0} pending carrier verification requests.`,
+                });
+                refetch();
+              } else {
+                toast({
+                  title: "Seed Failed",
+                  description: data.error || "Failed to seed pending verifications",
+                  variant: "destructive",
+                });
+              }
+            } catch (e) {
+              console.error("Seed error:", e);
+              toast({
+                title: "Error",
+                description: "Failed to seed pending verifications.",
+                variant: "destructive",
+              });
+            }
+          }}
+          data-testid="button-seed-pending"
+        >
+          <ShieldAlert className="h-4 w-4 mr-2" />
+          Seed Pending
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

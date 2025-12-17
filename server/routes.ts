@@ -6162,16 +6162,13 @@ export async function registerRoutes(
       }
       
       for (const carrier of carriers) {
-        // Update or create carrier profile with realistic Indian data
-        const existingProfile = await storage.getCarrierProfile(carrier.id);
-        
-        // Randomly assign 2-4 service zones
+        // Randomly assign 2-4 service zones (always as proper array)
         const numZones = 2 + Math.floor(Math.random() * 3);
         const shuffledZones = [...indianServiceZones].sort(() => Math.random() - 0.5);
-        const assignedZones = shuffledZones.slice(0, numZones);
+        const assignedZones: string[] = shuffledZones.slice(0, numZones);
         
-        // Random fleet size 1-15
-        const fleetSize = 1 + Math.floor(Math.random() * 15);
+        // Random fleet size 3-15 (minimum 3 for fleet operators)
+        const fleetSize = 3 + Math.floor(Math.random() * 12);
         
         // Random rating between 3.5 and 5.0
         const rating = (3.5 + Math.random() * 1.5).toFixed(2);
@@ -6181,36 +6178,35 @@ export async function registerRoutes(
         const communicationScore = (70 + Math.random() * 30).toFixed(2);
         const onTimeScore = (75 + Math.random() * 25).toFixed(2);
         
-        // Random total deliveries 0-100
-        const totalDeliveries = Math.floor(Math.random() * 100);
+        // Random total deliveries 10-100
+        const totalDeliveries = 10 + Math.floor(Math.random() * 90);
         
         // Badge level based on deliveries
         const badgeLevel = totalDeliveries > 50 ? "gold" : totalDeliveries > 20 ? "silver" : "bronze";
         
+        const profileData = {
+          fleetSize,
+          serviceZones: assignedZones,
+          reliabilityScore,
+          communicationScore,
+          onTimeScore,
+          totalDeliveries,
+          badgeLevel,
+          carrierType: fleetSize > 5 ? "fleet" : "enterprise",
+          rating,
+        };
+        
+        // Check if profile exists and update or create
+        const existingProfile = await storage.getCarrierProfile(carrier.id);
+        
         if (existingProfile) {
-          await storage.updateCarrierProfile(carrier.id, {
-            fleetSize,
-            serviceZones: assignedZones,
-            reliabilityScore,
-            communicationScore,
-            onTimeScore,
-            totalDeliveries,
-            badgeLevel,
-            carrierType: fleetSize > 5 ? "fleet" : "enterprise",
-            rating,
-          });
+          console.log(`Updating profile for carrier ${carrier.id} with zones:`, assignedZones);
+          await storage.updateCarrierProfile(carrier.id, profileData);
         } else {
+          console.log(`Creating profile for carrier ${carrier.id} with zones:`, assignedZones);
           await storage.createCarrierProfile({
             userId: carrier.id,
-            fleetSize,
-            serviceZones: assignedZones,
-            reliabilityScore,
-            communicationScore,
-            onTimeScore,
-            totalDeliveries,
-            badgeLevel,
-            carrierType: fleetSize > 5 ? "fleet" : "enterprise",
-            rating,
+            ...profileData,
           });
         }
         

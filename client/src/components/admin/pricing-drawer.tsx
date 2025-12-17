@@ -199,11 +199,16 @@ export function PricingDrawer({
     return Math.abs(priceDeviation) > 15;
   }, [priceDeviation]);
 
-  // Get weight in tons (assuming weight is in MT/tons)
+  // Get weight in tons, converting from KG if needed
   const loadWeightInTons = useMemo(() => {
     const w = parseFloat(load?.weight?.toString() || "0");
-    return w > 0 ? w : 1;
-  }, [load?.weight]);
+    if (w <= 0) return 1;
+    // Convert KG to MT if weight unit is KG
+    if (load?.weight_unit === 'KG') {
+      return Math.round((w / 1000) * 100) / 100; // Round to 2 decimal places
+    }
+    return w; // Already in MT
+  }, [load?.weight, load?.weight_unit]);
 
   // Use custom tonnage if set, otherwise use load weight
   const weightInTons = customTonnage !== null ? customTonnage : loadWeightInTons;

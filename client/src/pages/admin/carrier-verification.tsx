@@ -29,7 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 
-// Document Requirements for Indian Freight Carriers
+// Document Requirements for Indian Freight Carriers (with pixel specifications)
 const DOCUMENT_REQUIREMENTS = [
   { 
     type: "rc", 
@@ -81,10 +81,24 @@ const DOCUMENT_REQUIREMENTS = [
   },
 ];
 
+// Complete document type labels for all supported types
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  rc: "RC (Registration Certificate)",
+  insurance: "Vehicle Insurance",
+  fitness: "Fitness Certificate",
+  permit: "National / State Permit",
+  puc: "PUC Certificate",
+  road_tax: "Road Tax / Challan Clearance",
+  license: "Driving License",
+  pan: "PAN Card",
+  gst: "GST Certificate",
+  aadhar: "Aadhaar Card",
+  fleet_proof: "Fleet Ownership Proof",
+};
+
 // Helper to get document display name
 const getDocumentDisplayName = (type: string) => {
-  const doc = DOCUMENT_REQUIREMENTS.find(d => d.type === type);
-  return doc?.name || type.toUpperCase();
+  return DOCUMENT_TYPE_LABELS[type] || type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 };
 
 interface CarrierVerification {

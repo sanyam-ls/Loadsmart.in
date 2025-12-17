@@ -20,6 +20,7 @@ import {
   XCircle,
   Clock,
   Users,
+  Database,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,11 @@ interface ApiCarrier {
   serviceZones?: string[];
   profile?: {
     fleetSize?: number;
-    rating?: number;
+    rating?: number | string;
+    serviceZones?: string[];
+    totalDeliveries?: number;
+    badgeLevel?: string;
+    carrierType?: string;
   };
   bidCount?: number;
   documentCount?: number;
@@ -287,13 +292,30 @@ export default function AdminCarriersPage() {
           </div>
           <p className="text-muted-foreground ml-10">Verified carriers only ({verifiedCarriers.length} total)</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {pendingCount > 0 && (
             <Button onClick={() => setLocation("/admin/verification")} data-testid="button-view-pending">
               <ShieldAlert className="h-4 w-4 mr-2" />
               {pendingCount} Pending Verification
             </Button>
           )}
+          <Button 
+            variant="secondary" 
+            onClick={async () => {
+              try {
+                const res = await fetch("/api/admin/seed-carriers", { method: "POST", credentials: "include" });
+                if (res.ok) {
+                  refetch();
+                }
+              } catch (e) {
+                console.error("Seed error:", e);
+              }
+            }}
+            data-testid="button-seed-data"
+          >
+            <Database className="h-4 w-4 mr-2" />
+            Seed Data
+          </Button>
           <Button variant="outline" onClick={() => refetch()} data-testid="button-sync-carriers">
             <RefreshCw className="h-4 w-4 mr-2" />
             Sync
@@ -349,7 +371,7 @@ export default function AdminCarriersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Avg Rating</p>
-                <p className="text-xl font-bold">{(verifiedCarriers.reduce((sum, c) => sum + (c.profile?.rating || 4.5), 0) / Math.max(1, verifiedCarriers.length)).toFixed(1)}</p>
+                <p className="text-xl font-bold">{(verifiedCarriers.reduce((sum, c) => sum + parseFloat(String(c.profile?.rating || 4.5)), 0) / Math.max(1, verifiedCarriers.length)).toFixed(1)}</p>
               </div>
             </div>
           </CardContent>
@@ -505,18 +527,18 @@ export default function AdminCarriersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {(carrier.serviceZones || []).slice(0, 2).map((zone, i) => (
+                          {(carrier.profile?.serviceZones || []).slice(0, 2).map((zone, i) => (
                             <Badge key={i} variant="outline" className="text-xs">
                               <MapPin className="h-2 w-2 mr-1" />
                               {zone}
                             </Badge>
                           ))}
-                          {(carrier.serviceZones || []).length > 2 && (
+                          {(carrier.profile?.serviceZones || []).length > 2 && (
                             <Badge variant="outline" className="text-xs">
-                              +{(carrier.serviceZones || []).length - 2}
+                              +{(carrier.profile?.serviceZones || []).length - 2}
                             </Badge>
                           )}
-                          {(!carrier.serviceZones || carrier.serviceZones.length === 0) && (
+                          {(!carrier.profile?.serviceZones || carrier.profile.serviceZones.length === 0) && (
                             <span className="text-muted-foreground text-xs">Not specified</span>
                           )}
                         </div>
@@ -524,7 +546,7 @@ export default function AdminCarriersPage() {
                       <TableCell data-testid={`text-rating-${carrier.id}`}>
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                          <span className="font-medium">{(carrier.profile?.rating || 4.5).toFixed(1)}</span>
+                          <span className="font-medium">{parseFloat(String(carrier.profile?.rating || 4.5)).toFixed(1)}</span>
                         </div>
                       </TableCell>
                       <TableCell>

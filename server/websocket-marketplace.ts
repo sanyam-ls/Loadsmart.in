@@ -292,3 +292,19 @@ export function broadcastVerificationStatus(carrierId: string, status: "approved
   });
   console.log(`Broadcasted verification_status_changed (${status}) to carrier ${carrierId}`);
 }
+
+// Generic marketplace event broadcast to all admin users
+export function broadcastMarketplaceEvent(eventType: string, data: any): void {
+  const message = {
+    type: eventType,
+    data,
+    timestamp: new Date().toISOString(),
+  };
+
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.role === "admin") {
+      sendToClient(ws, message);
+    }
+  });
+  console.log(`Broadcasted ${eventType} event to admin clients`);
+}

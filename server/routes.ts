@@ -25,7 +25,8 @@ import {
   broadcastBidAccepted,
   broadcastInvoiceEvent,
   broadcastNegotiationMessage,
-  broadcastVerificationStatus
+  broadcastVerificationStatus,
+  broadcastMarketplaceEvent
 } from "./websocket-marketplace";
 import {
   getAllVehiclesTelemetry,
@@ -6100,6 +6101,288 @@ export async function registerRoutes(
       res.json(thread || null);
     } catch (error) {
       console.error("Get negotiation thread error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // SEED DATA ENDPOINT (FOR TESTING)
+  // =============================================
+
+  // POST /api/admin/seed-carriers - Seed test carrier data
+  app.post("/api/admin/seed-carriers", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Indian service zones for realistic data
+      const indianServiceZones = [
+        "Delhi NCR", "Mumbai", "Chennai", "Bangalore", "Kolkata", "Hyderabad",
+        "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Coimbatore",
+        "Kochi", "Vizag", "Indore", "Nagpur", "Surat", "Vadodara"
+      ];
+
+      // Sample carrier company names for creation
+      const sampleCarrierNames = [
+        { name: "Shree Ganesh Transport", city: "Delhi NCR" },
+        { name: "Mumbai Express Cargo", city: "Mumbai" },
+        { name: "Chennai Freight Services", city: "Chennai" },
+        { name: "Bangalore Logistics Co", city: "Bangalore" },
+        { name: "Kolkata Moving Solutions", city: "Kolkata" },
+        { name: "Hyderabad Highway Haulers", city: "Hyderabad" },
+      ];
+
+      // Get all carrier users
+      const allUsers = await storage.getAllUsers();
+      let carriers = allUsers.filter(u => u.role === "carrier");
+      
+      const seededCarriers = [];
+      
+      // If no carriers exist, create new ones
+      if (carriers.length === 0) {
+        for (const sample of sampleCarrierNames) {
+          const email = `${sample.name.replace(/\s+/g, "").toLowerCase()}@freight.in`;
+          const existingUser = await storage.getUserByEmail(email);
+          if (existingUser) continue;
+
+          const isVerified = Math.random() > 0.3; // 70% verified
+          const newCarrier = await storage.createUser({
+            username: sample.name.replace(/\s+/g, ""),
+            email,
+            password: await hashPassword("test123"),
+            role: "carrier",
+            companyName: sample.name,
+            phone: "+91" + Math.floor(7000000000 + Math.random() * 2999999999),
+            isVerified,
+          });
+          carriers.push(newCarrier);
+        }
+      }
+      
+      for (const carrier of carriers) {
+        // Update or create carrier profile with realistic Indian data
+        const existingProfile = await storage.getCarrierProfile(carrier.id);
+        
+        // Randomly assign 2-4 service zones
+        const numZones = 2 + Math.floor(Math.random() * 3);
+        const shuffledZones = [...indianServiceZones].sort(() => Math.random() - 0.5);
+        const assignedZones = shuffledZones.slice(0, numZones);
+        
+        // Random fleet size 1-15
+        const fleetSize = 1 + Math.floor(Math.random() * 15);
+        
+        // Random rating between 3.5 and 5.0
+        const rating = (3.5 + Math.random() * 1.5).toFixed(2);
+        
+        // Random reliability scores
+        const reliabilityScore = (70 + Math.random() * 30).toFixed(2);
+        const communicationScore = (70 + Math.random() * 30).toFixed(2);
+        const onTimeScore = (75 + Math.random() * 25).toFixed(2);
+        
+        // Random total deliveries 0-100
+        const totalDeliveries = Math.floor(Math.random() * 100);
+        
+        // Badge level based on deliveries
+        const badgeLevel = totalDeliveries > 50 ? "gold" : totalDeliveries > 20 ? "silver" : "bronze";
+        
+        if (existingProfile) {
+          await storage.updateCarrierProfile(carrier.id, {
+            fleetSize,
+            serviceZones: assignedZones,
+            reliabilityScore,
+            communicationScore,
+            onTimeScore,
+            totalDeliveries,
+            badgeLevel,
+            carrierType: fleetSize > 5 ? "fleet" : "enterprise",
+            rating,
+          });
+        } else {
+          await storage.createCarrierProfile({
+            userId: carrier.id,
+            fleetSize,
+            serviceZones: assignedZones,
+            reliabilityScore,
+            communicationScore,
+            onTimeScore,
+            totalDeliveries,
+            badgeLevel,
+            carrierType: fleetSize > 5 ? "fleet" : "enterprise",
+            rating,
+          });
+        }
+        
+        // Check if verification already exists
+        const existingVerification = await storage.getCarrierVerificationByCarrier(carrier.id);
+        
+        if (!existingVerification) {
+          // Create verification record
+          const verification = await storage.createCarrierVerification({
+            carrierId: carrier.id,
+            status: carrier.isVerified ? "approved" : "pending",
+            carrierType: fleetSize > 5 ? "fleet" : "solo",
+            fleetSize,
+            notes: `Carrier from ${assignedZones[0]} with ${fleetSize} trucks`,
+            reviewedBy: carrier.isVerified ? user.id : null,
+            reviewedAt: carrier.isVerified ? new Date() : null,
+          });
+          
+          // Create verification documents
+          const documentTypes = ["rc", "insurance", "fitness", "permit", "puc", "road_tax"];
+          const documentStatuses = ["pending", "approved", "rejected"];
+          
+          for (const docType of documentTypes.slice(0, 4 + Math.floor(Math.random() * 3))) {
+            const expiryDate = new Date();
+            expiryDate.setMonth(expiryDate.getMonth() + Math.floor(Math.random() * 12) + 1);
+            
+            await storage.createVerificationDocument({
+              verificationId: verification.id,
+              carrierId: carrier.id,
+              documentType: docType,
+              fileName: `${docType.toUpperCase()}_${carrier.companyName?.replace(/\s+/g, "_") || carrier.username}.pdf`,
+              fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+              fileSize: 100000 + Math.floor(Math.random() * 500000),
+              expiryDate,
+              status: carrier.isVerified ? documentStatuses[Math.floor(Math.random() * 2)] : "pending",
+            });
+          }
+        }
+        
+        seededCarriers.push({
+          id: carrier.id,
+          companyName: carrier.companyName,
+          serviceZones: assignedZones,
+          fleetSize,
+        });
+      }
+
+      // Broadcast update to refresh carrier directories
+      broadcastMarketplaceEvent("carriers_updated", {
+        count: seededCarriers.length,
+        message: "Carrier data has been seeded",
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Seeded data for ${seededCarriers.length} carriers`,
+        carriers: seededCarriers,
+      });
+    } catch (error) {
+      console.error("Seed carriers error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/seed-pending-verifications - Add pending verification carriers for testing
+  app.post("/api/admin/seed-pending-verifications", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Indian service zones
+      const indianZones = [
+        "Delhi NCR", "Mumbai", "Chennai", "Bangalore", "Kolkata", 
+        "Hyderabad", "Pune", "Ahmedabad", "Jaipur", "Lucknow"
+      ];
+
+      // Sample pending carrier data for testing
+      const pendingCarriersData = [
+        { name: "Bharat Logistics", email: "bharat@logistics.in", zones: ["Delhi NCR", "Jaipur", "Lucknow"], fleet: 8 },
+        { name: "South Star Transport", email: "southstar@transport.in", zones: ["Chennai", "Bangalore", "Kochi"], fleet: 5 },
+        { name: "Western Movers", email: "western@movers.in", zones: ["Mumbai", "Pune", "Ahmedabad"], fleet: 12 },
+      ];
+
+      const createdCarriers = [];
+
+      for (const carrierData of pendingCarriersData) {
+        // Check if carrier with this email already exists
+        const existingUser = await storage.getUserByEmail(carrierData.email);
+        if (existingUser) continue;
+
+        // Create carrier user
+        const newUser = await storage.createUser({
+          username: carrierData.name.replace(/\s+/g, ""),
+          email: carrierData.email,
+          password: await hashPassword("test123"),
+          role: "carrier",
+          companyName: carrierData.name,
+          phone: "+91" + Math.floor(7000000000 + Math.random() * 2999999999),
+          isVerified: false,
+        });
+
+        // Create carrier profile
+        await storage.createCarrierProfile({
+          userId: newUser.id,
+          fleetSize: carrierData.fleet,
+          serviceZones: carrierData.zones,
+          reliabilityScore: "0.00",
+          communicationScore: "0.00",
+          onTimeScore: "0.00",
+          totalDeliveries: 0,
+          badgeLevel: "bronze",
+          carrierType: carrierData.fleet > 5 ? "fleet" : "enterprise",
+        });
+
+        // Create pending verification
+        const verification = await storage.createCarrierVerification({
+          carrierId: newUser.id,
+          status: "pending",
+          carrierType: carrierData.fleet > 5 ? "fleet" : "solo",
+          fleetSize: carrierData.fleet,
+          notes: `New carrier from ${carrierData.zones[0]} awaiting verification`,
+        });
+
+        // Create verification documents
+        const documents = [
+          { type: "rc", name: "Registration Certificate" },
+          { type: "insurance", name: "Vehicle Insurance" },
+          { type: "fitness", name: "Fitness Certificate" },
+          { type: "permit", name: "Transport Permit" },
+          { type: "puc", name: "PUC Certificate" },
+        ];
+
+        for (const doc of documents) {
+          const expiryDate = new Date();
+          expiryDate.setMonth(expiryDate.getMonth() + 6 + Math.floor(Math.random() * 12));
+          
+          await storage.createVerificationDocument({
+            verificationId: verification.id,
+            carrierId: newUser.id,
+            documentType: doc.type,
+            fileName: `${doc.name.replace(/\s+/g, "_")}_${carrierData.name.replace(/\s+/g, "_")}.pdf`,
+            fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+            fileSize: 150000 + Math.floor(Math.random() * 400000),
+            expiryDate,
+            status: "pending",
+          });
+        }
+
+        createdCarriers.push({
+          id: newUser.id,
+          name: carrierData.name,
+          email: carrierData.email,
+          zones: carrierData.zones,
+          fleet: carrierData.fleet,
+        });
+      }
+
+      // Broadcast for real-time updates
+      broadcastMarketplaceEvent("verification_pending", {
+        count: createdCarriers.length,
+        message: "New carriers awaiting verification",
+      });
+
+      res.json({
+        success: true,
+        message: `Created ${createdCarriers.length} pending verification carriers`,
+        carriers: createdCarriers,
+      });
+    } catch (error) {
+      console.error("Seed pending verifications error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

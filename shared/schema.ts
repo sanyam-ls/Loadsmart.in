@@ -192,6 +192,7 @@ export const carrierProfiles = pgTable("carrier_profiles", {
   onTimeScore: decimal("on_time_score", { precision: 3, scale: 2 }).default("0"),
   totalDeliveries: integer("total_deliveries").default(0),
   badgeLevel: text("badge_level").default("bronze"),
+  rating: decimal("rating", { precision: 2, scale: 1 }).default("4.5"), // Carrier rating 1.0-5.0
   bio: text("bio"),
 });
 

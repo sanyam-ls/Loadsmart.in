@@ -745,26 +745,21 @@ export default function CarrierVerificationPage() {
                 </div>
                 
                 {/* Document Preview */}
-                <div className="border rounded-lg overflow-hidden bg-muted/30">
-                  {previewDoc.fileUrl.endsWith('.pdf') || previewDoc.fileName.endsWith('.pdf') ? (
-                    <iframe
-                      src={previewDoc.fileUrl}
-                      className="w-full h-[400px]"
-                      title={previewDoc.fileName}
-                    />
-                  ) : previewDoc.fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) || previewDoc.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                    <img
-                      src={previewDoc.fileUrl}
-                      alt={previewDoc.fileName}
-                      className="max-w-full max-h-[400px] mx-auto object-contain"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                      <FileText className="h-16 w-16 mb-4" />
-                      <p className="text-lg font-medium">Document Preview</p>
-                      <p className="text-sm">Click below to open the document</p>
+                <div className="border rounded-lg bg-muted/30 p-6">
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <FileText className="h-10 w-10" />
                     </div>
-                  )}
+                    <p className="text-lg font-medium text-foreground mb-2">
+                      {previewDoc.fileName.endsWith('.pdf') ? 'PDF Document' : 'Image Document'}
+                    </p>
+                    <p className="text-sm mb-4">Click below to view the full document</p>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {previewDoc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
               </>
             )}

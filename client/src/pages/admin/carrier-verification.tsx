@@ -4,7 +4,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Truck, Search, FileText, ChevronLeft, Eye,
   ShieldCheck, ShieldX, ShieldAlert, Clock,
-  CheckCircle, XCircle, User, Building2, MapPin, Phone
+  CheckCircle, XCircle, User, Building2, MapPin, Phone,
+  ChevronDown, Info, Image, FileType, Ruler
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,9 +24,68 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
+
+// Document Requirements for Indian Freight Carriers
+const DOCUMENT_REQUIREMENTS = [
+  { 
+    type: "rc", 
+    name: "RC (Registration Certificate)", 
+    minPixels: "1200 x 800 px", 
+    recPixels: "1600 x 1200 px", 
+    dpi: "200-300", 
+    formats: "JPG / PNG / PDF" 
+  },
+  { 
+    type: "insurance", 
+    name: "Vehicle Insurance", 
+    minPixels: "1200 x 800 px", 
+    recPixels: "1600 x 1200 px", 
+    dpi: "200-300", 
+    formats: "PDF / JPG" 
+  },
+  { 
+    type: "fitness", 
+    name: "Fitness Certificate", 
+    minPixels: "1200 x 800 px", 
+    recPixels: "1600 x 1200 px", 
+    dpi: "200-300", 
+    formats: "PDF / JPG" 
+  },
+  { 
+    type: "permit", 
+    name: "National / State Permit", 
+    minPixels: "1200 x 800 px", 
+    recPixels: "1600 x 1200 px", 
+    dpi: "200-300", 
+    formats: "PDF / JPG" 
+  },
+  { 
+    type: "puc", 
+    name: "PUC Certificate", 
+    minPixels: "1000 x 700 px", 
+    recPixels: "1200 x 800 px", 
+    dpi: "200+", 
+    formats: "PDF / JPG" 
+  },
+  { 
+    type: "road_tax", 
+    name: "Road Tax / Challan Clearance", 
+    minPixels: "1000 x 700 px", 
+    recPixels: "1200 x 800 px", 
+    dpi: "200+", 
+    formats: "PDF / JPG" 
+  },
+];
+
+// Helper to get document display name
+const getDocumentDisplayName = (type: string) => {
+  const doc = DOCUMENT_REQUIREMENTS.find(d => d.type === type);
+  return doc?.name || type.toUpperCase();
+};
 
 interface CarrierVerification {
   id: string;
@@ -68,6 +128,7 @@ export default function CarrierVerificationPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [requirementsOpen, setRequirementsOpen] = useState(false);
 
   const { data: verifications = [], isLoading } = useQuery<CarrierVerification[]>({
     queryKey: ["/api/admin/verifications"],
@@ -337,6 +398,65 @@ export default function CarrierVerificationPage() {
         </Card>
       </div>
 
+      {/* Document Requirements Reference */}
+      <Collapsible open={requirementsOpen} onOpenChange={setRequirementsOpen}>
+        <Card>
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="py-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <CardTitle className="text-sm font-medium">Document Requirements Reference</CardTitle>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${requirementsOpen ? "rotate-180" : ""}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-3 font-medium">Document Type</th>
+                      <th className="text-left py-2 px-3 font-medium">
+                        <div className="flex items-center gap-1">
+                          <Ruler className="h-3 w-3" /> Min Pixels
+                        </div>
+                      </th>
+                      <th className="text-left py-2 px-3 font-medium">
+                        <div className="flex items-center gap-1">
+                          <Image className="h-3 w-3" /> Recommended
+                        </div>
+                      </th>
+                      <th className="text-left py-2 px-3 font-medium">DPI</th>
+                      <th className="text-left py-2 px-3 font-medium">
+                        <div className="flex items-center gap-1">
+                          <FileType className="h-3 w-3" /> Formats
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {DOCUMENT_REQUIREMENTS.map((doc) => (
+                      <tr key={doc.type} className="border-b last:border-0 hover-elevate">
+                        <td className="py-2 px-3 font-medium">{doc.name}</td>
+                        <td className="py-2 px-3 text-muted-foreground">{doc.minPixels}</td>
+                        <td className="py-2 px-3 text-muted-foreground">{doc.recPixels}</td>
+                        <td className="py-2 px-3 text-muted-foreground">{doc.dpi}</td>
+                        <td className="py-2 px-3">
+                          <Badge variant="secondary" className="text-xs">{doc.formats}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -461,16 +581,22 @@ export default function CarrierVerificationPage() {
                             <div className="flex items-center gap-3">
                               <FileText className="h-5 w-5 text-muted-foreground" />
                               <div>
-                                <p className="font-medium">{doc.documentType}</p>
+                                <p className="font-medium">{getDocumentDisplayName(doc.documentType)}</p>
                                 <p className="text-sm text-muted-foreground">{doc.fileName}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  Uploaded {format(new Date(doc.uploadedAt), "MMM d, yyyy")}
+                                  {doc.uploadedAt ? `Uploaded ${format(new Date(doc.uploadedAt), "MMM d, yyyy")}` : "Recently uploaded"}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
-                              <Button variant="outline" size="sm" asChild>
+                              {doc.status === "approved" ? (
+                                <Badge variant="default" className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Verified</Badge>
+                              ) : doc.status === "rejected" ? (
+                                <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
+                              ) : (
+                                <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+                              )}
+                              <Button variant="outline" size="sm" asChild data-testid={`button-view-${doc.documentType}`}>
                                 <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
                                   <Eye className="h-4 w-4" />
                                 </a>

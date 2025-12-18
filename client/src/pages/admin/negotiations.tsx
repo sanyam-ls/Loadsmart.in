@@ -48,6 +48,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/empty-state";
 
+// Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
+function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
+  if (load.adminReferenceNumber) {
+    return `LD-${load.adminReferenceNumber}`;
+  }
+  if (load.shipperLoadNumber) {
+    return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  return load.id.slice(0, 8).toUpperCase();
+}
+
 type ChatMessage = {
   id: string;
   sender: "admin" | "carrier";
@@ -713,7 +724,7 @@ export default function AdminNegotiationsPage() {
                             {load.pickupCity} <ArrowRight className="h-4 w-4 inline" /> {load.dropoffCity}
                           </CardTitle>
                           <CardDescription>
-                            Load ID: {load.id.slice(0, 8).toUpperCase()} | {loadBids.length} bid(s)
+                            Load ID: {formatLoadId(load)} | {loadBids.length} bid(s)
                           </CardDescription>
                         </div>
                         <Badge variant="outline">{load.status}</Badge>

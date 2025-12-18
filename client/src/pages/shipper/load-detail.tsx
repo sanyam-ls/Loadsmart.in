@@ -86,6 +86,17 @@ function formatTimeAgo(date: Date | string | null) {
   return `${diffDays}d ago`;
 }
 
+// Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
+function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
+  if (load.adminReferenceNumber) {
+    return `LD-${load.adminReferenceNumber}`;
+  }
+  if (load.shipperLoadNumber) {
+    return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  return load.id.slice(0, 8);
+}
+
 type LoadWithCarrier = Load & { assignedCarrier?: User | null };
 
 export default function LoadDetailPage() {
@@ -161,7 +172,7 @@ export default function LoadDetailPage() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold" data-testid="text-load-id">Load #{load.id.slice(0, 8)}</h1>
+            <h1 className="text-2xl font-bold" data-testid="text-load-id">Load #{formatLoadId(load)}</h1>
             <Badge className={`${getStatusColor(load.status)} no-default-hover-elevate no-default-active-elevate`}>
               {getStatusLabel(load.status)}
             </Badge>

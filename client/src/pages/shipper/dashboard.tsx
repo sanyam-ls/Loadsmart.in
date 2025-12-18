@@ -39,6 +39,17 @@ function formatStatus(status: string | null | undefined): string {
   return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
+// Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
+function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
+  if (load.adminReferenceNumber) {
+    return `LD-${load.adminReferenceNumber}`;
+  }
+  if (load.shipperLoadNumber) {
+    return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  return load.id.slice(0, 8);
+}
+
 export default function ShipperDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
@@ -272,7 +283,7 @@ export default function ShipperDashboard() {
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-medium text-sm">{load.id.slice(0, 8)}</span>
+                        <span className="font-medium text-sm">{formatLoadId(load)}</span>
                         <Badge variant="outline" className="text-xs">
                           {load.truckType || 'General'}
                         </Badge>

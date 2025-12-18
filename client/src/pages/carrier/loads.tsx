@@ -53,6 +53,19 @@ interface CarrierLoad {
   isSimulated?: boolean;
   pickupDate?: string | null;
   deliveryDate?: string | null;
+  shipperLoadNumber?: number | null;
+  adminReferenceNumber?: number | null;
+}
+
+// Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
+function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
+  if (load.adminReferenceNumber) {
+    return `LD-${load.adminReferenceNumber}`;
+  }
+  if (load.shipperLoadNumber) {
+    return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  return load.id.slice(0, 8);
 }
 
 // Helper function to estimate distance between cities
@@ -640,7 +653,7 @@ export default function CarrierLoadsPage() {
                           </Badge>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{load.id.slice(0, 8)}</span>
+                      <span className="text-xs text-muted-foreground">{formatLoadId(load)}</span>
                     </div>
                     <div className="flex items-center gap-1 text-sm">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
@@ -755,7 +768,7 @@ export default function CarrierLoadsPage() {
                       </Badge>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground">{load.id.slice(0, 8)}</span>
+                  <span className="text-xs text-muted-foreground">{formatLoadId(load)}</span>
                 </div>
                 
                 <div className="space-y-2">
@@ -840,7 +853,7 @@ export default function CarrierLoadsPage() {
                               Demo
                             </Badge>
                           )}
-                          <span className="text-sm text-muted-foreground">{load.id.slice(0, 8)}</span>
+                          <span className="text-sm text-muted-foreground">{formatLoadId(load)}</span>
                           {load.loadType && <Badge variant="outline">{load.loadType}</Badge>}
                           {load.myBid && (
                             <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
@@ -924,7 +937,7 @@ export default function CarrierLoadsPage() {
                       <Target className="h-3 w-3 mr-1" />
                       {(selectedLoad as any).matchScore || 80}% Match
                     </Badge>
-                    <span className="text-sm text-muted-foreground">{selectedLoad.id.slice(0, 8)}</span>
+                    <span className="text-sm text-muted-foreground">{formatLoadId(selectedLoad)}</span>
                   </div>
                   
                   <div className="flex items-center gap-2">

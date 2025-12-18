@@ -22,6 +22,17 @@ import { formatDistanceToNow } from "date-fns";
 import { queryClient } from "@/lib/queryClient";
 import type { Load, User } from "@shared/schema";
 
+// Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
+function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
+  if (load.adminReferenceNumber) {
+    return `LD-${load.adminReferenceNumber}`;
+  }
+  if (load.shipperLoadNumber) {
+    return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  return load.id.slice(0, 8);
+}
+
 interface ClickableStatCardProps {
   title: string;
   value: string | number;
@@ -146,7 +157,7 @@ export default function AdminOverview() {
   const recentActivity = allLoads.slice(0, 8).map((load: Load, i) => ({
     id: `activity-${i}`,
     type: 'load',
-    message: `Load ${load.id.slice(0, 8)} - ${load.pickupCity} to ${load.dropoffCity}`,
+    message: `Load ${formatLoadId(load)} - ${load.pickupCity} to ${load.dropoffCity}`,
     timestamp: load.createdAt ? new Date(load.createdAt) : new Date(),
     severity: load.status === 'in_transit' ? 'info' : load.status === 'delivered' ? 'success' : 'warning',
   }));

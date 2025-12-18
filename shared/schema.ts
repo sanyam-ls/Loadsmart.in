@@ -1263,7 +1263,12 @@ export const insertCarrierVerificationDocumentSchema = createInsertSchema(carrie
 export const insertBidNegotiationSchema = createInsertSchema(bidNegotiations).omit({ id: true, createdAt: true });
 export const insertCarrierProfileSchema = createInsertSchema(carrierProfiles).omit({ id: true });
 export const insertTruckSchema = createInsertSchema(trucks).omit({ id: true, createdAt: true });
-export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, createdAt: true });
+export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, createdAt: true }).extend({
+  shipperCompanyName: z.string().min(1, "Company name is required"),
+  shipperContactName: z.string().min(1, "Contact name is required"),
+  shipperCompanyAddress: z.string().min(1, "Company address is required"),
+  shipperPhone: z.string().min(1, "Phone number is required"),
+});
 export const insertBidSchema = createInsertSchema(bids).omit({ id: true, createdAt: true });
 export const insertAdminDecisionSchema = createInsertSchema(adminDecisions).omit({ id: true, createdAt: true });
 export const insertPricingTemplateSchema = createInsertSchema(pricingTemplates).omit({ id: true, createdAt: true, updatedAt: true });

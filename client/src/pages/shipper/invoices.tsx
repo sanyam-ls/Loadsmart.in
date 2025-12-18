@@ -235,16 +235,6 @@ export default function ShipperInvoicesPage() {
   const { user } = useAuth();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [payDialogOpen, setPayDialogOpen] = useState(false);
-  const [negotiateDialogOpen, setNegotiateDialogOpen] = useState(false);
-  const [negotiateReason, setNegotiateReason] = useState("");
-  const [counterAmount, setCounterAmount] = useState("");
-  const [counterContactName, setCounterContactName] = useState("");
-  const [counterContactCompany, setCounterContactCompany] = useState("");
-  const [counterContactPhone, setCounterContactPhone] = useState("");
-  const [counterContactAddress, setCounterContactAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
   const { data: apiInvoices = [], isLoading, refetch } = useQuery<Invoice[]>({
@@ -283,28 +273,6 @@ export default function ShipperInvoicesPage() {
     return simulatedInvoices;
   }, [apiInvoices]);
 
-  const confirmMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      return apiRequest("POST", `/api/invoices/${invoiceId}/confirm`, {});
-    },
-    onSuccess: () => {
-      toast({
-        title: "Invoice Confirmed",
-        description: "Invoice has been acknowledged and confirmed.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
-      setConfirmDialogOpen(false);
-      setSelectedInvoice(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to confirm invoice",
-        variant: "destructive",
-      });
-    },
-  });
-
   const acknowledgeMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
       return apiRequest("POST", `/api/shipper/invoices/${invoiceId}/acknowledge`, {});
@@ -320,68 +288,6 @@ export default function ShipperInvoicesPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to acknowledge invoice",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const payMutation = useMutation({
-    mutationFn: async ({ invoiceId, method }: { invoiceId: string; method: string }) => {
-      return apiRequest("POST", `/api/shipper/invoices/${invoiceId}/pay`, { paymentMethod: method });
-    },
-    onSuccess: async (response) => {
-      const data = await response.json();
-      toast({
-        title: "Payment Successful",
-        description: `Payment reference: ${data.paymentReference || "Generated"}`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
-      setPayDialogOpen(false);
-      setSelectedInvoice(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Payment Failed",
-        description: error.message || "Failed to process payment",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const negotiateMutation = useMutation({
-    mutationFn: async ({ invoiceId, proposedAmount, reason, contactName, contactCompany, contactPhone, contactAddress }: { 
-      invoiceId: string; 
-      proposedAmount: number; 
-      reason: string;
-      contactName: string;
-      contactCompany: string;
-      contactPhone: string;
-      contactAddress: string;
-    }) => {
-      return apiRequest("POST", `/api/shipper/invoices/${invoiceId}/negotiate`, { 
-        proposedAmount, 
-        reason,
-        contactName,
-        contactCompany,
-        contactPhone,
-        contactAddress
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Counter Offer Submitted",
-        description: "Your counter offer has been sent to admin for review.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
-      setNegotiateDialogOpen(false);
-      setCounterAmount("");
-      setNegotiateReason("");
-      setSelectedInvoice(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit counter offer",
         variant: "destructive",
       });
     },
@@ -442,22 +348,6 @@ export default function ShipperInvoicesPage() {
 
   const totalPaid = paidInvoices.reduce((sum, i) => sum + parseFloat(i.totalAmount || "0"), 0);
 
-  const handleConfirm = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setConfirmDialogOpen(true);
-  };
-
-  const handlePay = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setPayDialogOpen(true);
-  };
-
-  const handleNegotiate = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setCounterAmount("");
-    setNegotiateReason("");
-    setNegotiateDialogOpen(true);
-  };
 
   const handleViewDetails = async (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -597,67 +487,16 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                   <Download className="h-4 w-4" />
                 </Button>
                 
-                {!invoice.shipperConfirmed && invoice.status === 'sent' && (
-                  <>
-                    <Button 
-                      size="sm"
-                      onClick={() => handleConfirm(invoice)}
-                      data-testid={`button-confirm-invoice-${invoice.id}`}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Approve
-                    </Button>
-                    <Button 
-                      size="sm"
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={() => {
-                        setSelectedInvoice(invoice);
-                        setPaymentMethod("bank_transfer");
-                        setPayDialogOpen(true);
-                      }}
-                      data-testid={`button-pay-bank-${invoice.id}`}
-                    >
-                      <Building2 className="h-4 w-4 mr-1" />
-                      Pay via Bank
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleNegotiate(invoice)}
-                      data-testid={`button-counter-invoice-${invoice.id}`}
-                    >
-                      <ArrowLeftRight className="h-4 w-4 mr-1" />
-                      Counter
-                    </Button>
-                  </>
-                )}
-                
-                {invoice.shipperConfirmed && 
-                 invoice.status.toLowerCase() !== 'paid' && 
-                 invoice.status.toLowerCase() !== 'disputed' && (
-                  <>
-                    {!invoice.acknowledgedAt && (
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => acknowledgeMutation.mutate(invoice.id)}
-                        disabled={acknowledgeMutation.isPending}
-                        data-testid={`button-acknowledge-${invoice.id}`}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Acknowledge
-                      </Button>
-                    )}
-                    <Button 
-                      size="sm"
-                      onClick={() => handlePay(invoice)}
-                      data-testid={`button-pay-${invoice.id}`}
-                    >
-                      <CreditCard className="h-4 w-4 mr-1" />
-                      Pay Now
-                    </Button>
-                  </>
+                {invoice.status === 'sent' && !invoice.acknowledgedAt && (
+                  <Button 
+                    size="sm"
+                    onClick={() => acknowledgeMutation.mutate(invoice.id)}
+                    disabled={acknowledgeMutation.isPending}
+                    data-testid={`button-acknowledge-invoice-${invoice.id}`}
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Acknowledge
+                  </Button>
                 )}
               </div>
             )}
@@ -717,12 +556,12 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
-                <ArrowLeftRight className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Disputed</p>
-                <p className="text-xl font-bold">{disputedInvoices.length}</p>
+                <p className="text-sm text-muted-foreground">Acknowledged</p>
+                <p className="text-xl font-bold">{activeInvoices.length}</p>
               </div>
             </div>
           </CardContent>
@@ -730,15 +569,12 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="pending" data-testid="tab-pending">
-            Review ({pendingConfirmation.length})
+            To Acknowledge ({pendingConfirmation.length})
           </TabsTrigger>
           <TabsTrigger value="active" data-testid="tab-active">
-            Active ({activeInvoices.length})
-          </TabsTrigger>
-          <TabsTrigger value="disputed" data-testid="tab-disputed">
-            Countered ({disputedInvoices.length})
+            Acknowledged ({activeInvoices.length})
           </TabsTrigger>
           <TabsTrigger value="paid" data-testid="tab-paid">
             Paid ({paidInvoices.length})
@@ -758,7 +594,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             <>
               <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
                 <AlertCircle className="h-4 w-4" />
-                <span>Please review and approve these invoices or submit a counter offer.</span>
+                <span>Please review and acknowledge these invoices.</span>
               </div>
               {pendingConfirmation.map(invoice => renderInvoiceCard(invoice))}
             </>
@@ -775,19 +611,6 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             </Card>
           ) : (
             activeInvoices.map(invoice => renderInvoiceCard(invoice))
-          )}
-        </TabsContent>
-
-        <TabsContent value="disputed" className="space-y-4 mt-4">
-          {disputedInvoices.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <CheckCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No disputed invoices</p>
-              </CardContent>
-            </Card>
-          ) : (
-            disputedInvoices.map(invoice => renderInvoiceCard(invoice))
           )}
         </TabsContent>
         
@@ -964,217 +787,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
         </DialogContent>
       </Dialog>
 
-      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Invoice</DialogTitle>
-            <DialogDescription>
-              By approving this invoice, you agree to the pricing.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedInvoice && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 p-4 rounded-md space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Invoice</span>
-                  <span className="font-medium">{selectedInvoice.invoiceNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Route</span>
-                  <span>{selectedInvoice.loadRoute}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total</span>
-                  <span>{formatCurrency(selectedInvoice.totalAmount)}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={() => selectedInvoice && confirmMutation.mutate(selectedInvoice.id)}
-              disabled={confirmMutation.isPending}
-              data-testid="button-confirm-invoice-dialog"
-            >
-              {confirmMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-              Approve Invoice
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Pay Invoice</DialogTitle>
-            <DialogDescription>Select payment method and confirm payment</DialogDescription>
-          </DialogHeader>
-          
-          {selectedInvoice && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 p-4 rounded-md">
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Amount Due</span>
-                  <span>{formatCurrency(selectedInvoice.totalAmount)}</span>
-                </div>
-              </div>
-              
-              <div>
-                <Label>Payment Method</Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger className="mt-2" data-testid="select-payment-method">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                    <SelectItem value="credit_card">Credit Card</SelectItem>
-                    <SelectItem value="debit_card">Debit Card</SelectItem>
-                    <SelectItem value="net_banking">Net Banking</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayDialogOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={() => selectedInvoice && payMutation.mutate({ invoiceId: selectedInvoice.id, method: paymentMethod })}
-              disabled={payMutation.isPending}
-              data-testid="button-confirm-pay"
-            >
-              {payMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CreditCard className="h-4 w-4 mr-2" />}
-              Pay {selectedInvoice ? formatCurrency(selectedInvoice.totalAmount) : ''}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={negotiateDialogOpen} onOpenChange={setNegotiateDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Submit Counter Offer</DialogTitle>
-            <DialogDescription>
-              Propose a different amount with your contact details and reason
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedInvoice && (
-            <ScrollArea className="max-h-[60vh]">
-              <div className="space-y-4 pr-4">
-                <div className="bg-muted/50 p-4 rounded-md">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Original Amount</span>
-                    <span className="font-medium">{formatCurrency(selectedInvoice.totalAmount)}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Your Proposed Amount (Rs.)</Label>
-                  <Input
-                    type="number"
-                    placeholder="Enter amount"
-                    value={counterAmount}
-                    onChange={(e) => setCounterAmount(e.target.value)}
-                    className="mt-2"
-                    data-testid="input-counter-amount"
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="text-sm font-medium text-muted-foreground">Contact Information</div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Your Name</Label>
-                    <Input
-                      placeholder="Full name"
-                      value={counterContactName}
-                      onChange={(e) => setCounterContactName(e.target.value)}
-                      className="mt-2"
-                      data-testid="input-counter-name"
-                    />
-                  </div>
-                  <div>
-                    <Label>Company Name</Label>
-                    <Input
-                      placeholder="Company name"
-                      value={counterContactCompany}
-                      onChange={(e) => setCounterContactCompany(e.target.value)}
-                      className="mt-2"
-                      data-testid="input-counter-company"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Phone Number</Label>
-                  <Input
-                    type="tel"
-                    placeholder="+91 XXXXX XXXXX"
-                    value={counterContactPhone}
-                    onChange={(e) => setCounterContactPhone(e.target.value)}
-                    className="mt-2"
-                    data-testid="input-counter-phone"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Address</Label>
-                  <Textarea
-                    placeholder="Your business address..."
-                    value={counterContactAddress}
-                    onChange={(e) => setCounterContactAddress(e.target.value)}
-                    className="mt-2"
-                    rows={2}
-                    data-testid="input-counter-address"
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <Label>Reason for Counter Offer</Label>
-                  <Textarea
-                    placeholder="Explain why you're proposing this amount..."
-                    value={negotiateReason}
-                    onChange={(e) => setNegotiateReason(e.target.value)}
-                    className="mt-2"
-                    rows={3}
-                    data-testid="input-counter-reason"
-                  />
-                </div>
-              </div>
-            </ScrollArea>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNegotiateDialogOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={() => selectedInvoice && negotiateMutation.mutate({ 
-                invoiceId: selectedInvoice.id, 
-                proposedAmount: parseFloat(counterAmount), 
-                reason: negotiateReason,
-                contactName: counterContactName,
-                contactCompany: counterContactCompany,
-                contactPhone: counterContactPhone,
-                contactAddress: counterContactAddress
-              })}
-              disabled={negotiateMutation.isPending || !counterAmount || !negotiateReason || !counterContactName || !counterContactPhone}
-              data-testid="button-submit-counter"
-            >
-              {negotiateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowLeftRight className="h-4 w-4 mr-2" />}
-              Submit Counter Offer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

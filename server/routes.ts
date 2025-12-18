@@ -3782,6 +3782,80 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/admin/invoices/:id/mark-paid - Admin marks invoice as paid (simplified version)
+  app.post("/api/admin/invoices/:id/mark-paid", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Mark invoice as paid with default values
+      const updated = await storage.markInvoicePaid(req.params.id, {
+        paidAmount: invoice.totalAmount,
+        paymentMethod: "manual_admin",
+        paymentReference: `ADMIN-${Date.now()}`,
+      });
+
+      // Transition load state to invoice_paid
+      const load = await storage.getLoad(invoice.loadId);
+      if (load) {
+        const transitionResult = await transitionLoadState(
+          load.id,
+          'invoice_paid',
+          user.id,
+          'Invoice marked as paid by admin'
+        );
+        if (!transitionResult.success) {
+          console.warn(`Load state transition warning: ${transitionResult.error}`);
+        }
+
+        // Notify carrier that payment is complete
+        if (load.assignedCarrierId) {
+          await storage.createNotification({
+            userId: load.assignedCarrierId,
+            title: "Payment Received - Ready for Pickup",
+            message: `Payment confirmed for ${load.pickupCity} → ${load.dropoffCity}. You can now schedule pickup.`,
+            type: "success",
+            relatedLoadId: load.id,
+          });
+        }
+
+        // Notify shipper about payment confirmation
+        await storage.createNotification({
+          userId: load.shipperId,
+          title: "Payment Confirmed",
+          message: `Your payment for invoice ${invoice.invoiceNumber} has been confirmed.`,
+          type: "success",
+          relatedLoadId: load.id,
+        });
+      }
+
+      // Broadcast invoice event
+      broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_paid", updated);
+
+      // Audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: invoice.loadId,
+        actionType: 'mark_invoice_paid',
+        actionDescription: `Marked invoice ${invoice.invoiceNumber} as paid`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Admin mark invoice paid error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // GET /api/admin/invoices/load/:loadId - Get invoice for a specific load
   app.get("/api/admin/invoices/load/:loadId", requireAuth, async (req, res) => {
     try {

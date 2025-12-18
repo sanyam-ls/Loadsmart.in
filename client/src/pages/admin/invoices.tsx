@@ -324,6 +324,19 @@ export default function AdminInvoicesPage() {
     },
   });
 
+  const markPaidMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      return apiRequest("POST", `/api/admin/invoices/${invoiceId}/mark-paid`, {});
+    },
+    onSuccess: () => {
+      toast({ title: "Invoice Marked as Paid", description: "Payment has been recorded for this invoice." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const filteredInvoices = invoices.filter((inv) => {
     const matchesSearch = searchQuery === "" ||
       inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -548,6 +561,17 @@ export default function AdminInvoicesPage() {
                           >
                             <Send className="h-4 w-4 mr-1" />
                             Send
+                          </Button>
+                        )}
+                        {(invoice.shipperStatus === "acknowledged" || invoice.acknowledgedAt) && invoice.status !== "paid" && (
+                          <Button
+                            size="sm"
+                            onClick={() => markPaidMutation.mutate(invoice.id)}
+                            disabled={markPaidMutation.isPending}
+                            data-testid={`button-mark-paid-${invoice.id}`}
+                          >
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            Mark Paid
                           </Button>
                         )}
                       </div>

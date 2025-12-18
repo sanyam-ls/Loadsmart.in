@@ -116,18 +116,27 @@ interface RealLoad {
   weight: number;
   weightUnit?: string;
   cargoDescription?: string;
+  goodsToBeCarried?: string;
+  specialNotes?: string;
+  shipperPricePerTon?: string | number;
   requiredTruckType?: string;
   pickupDate?: string;
+  deliveryDate?: string;
   status: string;
   shipperId: string;
   shipperName?: string;
   shipperEmail?: string;
+  shipperCompanyName?: string;
+  shipperContactName?: string;
+  shipperCompanyAddress?: string;
+  shipperPhone?: string;
   distance?: number;
   priority?: string;
   adminPrice?: number;
   adminFinalPrice?: string;
-  finalPrice?: string;  // The negotiated final price after bid acceptance
+  finalPrice?: string;
   priceLockedAt?: string;
+  submittedAt?: string;
 }
 
 function getCanonicalStateDisplay(status: string): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string } {
@@ -290,8 +299,15 @@ export default function LoadQueuePage() {
   const [allowCounterBids, setAllowCounterBids] = useState(true);
   const [adminComment, setAdminComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [detailsLoad, setDetailsLoad] = useState<RealLoad | null>(null);
 
   const { user } = useAuth();
+  
+  const openLoadDetails = (load: RealLoad) => {
+    setDetailsLoad(load);
+    setDetailsDialogOpen(true);
+  };
 
   const { data: realLoads = [], isLoading: isLoadingReal } = useQuery<RealLoad[]>({
     queryKey: ["/api/admin/queue"],
@@ -594,48 +610,58 @@ export default function LoadQueuePage() {
                         })()}
                       </TableCell>
                       <TableCell className="text-right">
-                        {(() => {
-                          const adminAction = getAdminActionForState(load.status);
-                          if (adminAction) {
-                            const handleAction = () => {
-                              if (adminAction.action === "price" || adminAction.action === "reprice" || adminAction.action === "send_invoice" || adminAction.action === "push_to_carriers") {
-                                openRealLoadPricingDrawer(load);
-                              } else if (adminAction.action === "view_bids" || adminAction.action === "negotiate" || adminAction.action === "track_shipment" || adminAction.action === "view_invoice") {
-                                openRealLoadPricingDrawer(load);
-                              } else {
-                                openRealLoadPricingDrawer(load);
-                              }
-                            };
+                        <div className="flex items-center justify-end gap-1">
+                          <Button 
+                            size="icon" 
+                            variant="ghost"
+                            onClick={() => openLoadDetails(load)}
+                            data-testid={`button-view-details-${load.id.slice(0, 8)}`}
+                            title="View full details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {(() => {
+                            const adminAction = getAdminActionForState(load.status);
+                            if (adminAction) {
+                              const handleAction = () => {
+                                if (adminAction.action === "price" || adminAction.action === "reprice" || adminAction.action === "send_invoice" || adminAction.action === "push_to_carriers") {
+                                  openRealLoadPricingDrawer(load);
+                                } else if (adminAction.action === "view_bids" || adminAction.action === "negotiate" || adminAction.action === "track_shipment" || adminAction.action === "view_invoice") {
+                                  openRealLoadPricingDrawer(load);
+                                } else {
+                                  openRealLoadPricingDrawer(load);
+                                }
+                              };
+                              return (
+                                <Button 
+                                  size="sm" 
+                                  onClick={handleAction}
+                                  data-testid={`button-action-real-${load.id.slice(0, 8)}`}
+                                >
+                                  {adminAction.action === "price" && <Calculator className="h-4 w-4 mr-1" />}
+                                  {adminAction.action === "send_invoice" && <Send className="h-4 w-4 mr-1" />}
+                                  {adminAction.action === "reprice" && <Calculator className="h-4 w-4 mr-1" />}
+                                  {adminAction.action === "negotiate" && <Users className="h-4 w-4 mr-1" />}
+                                  {adminAction.action === "view_invoice" && <Receipt className="h-4 w-4 mr-1" />}
+                                  {adminAction.action === "push_to_carriers" && <Truck className="h-4 w-4 mr-1" />}
+                                  {adminAction.action === "view_bids" && <Gavel className="h-4 w-4 mr-1" />}
+                                  {adminAction.action === "track_shipment" && <MapPin className="h-4 w-4 mr-1" />}
+                                  {adminAction.buttonLabel}
+                                </Button>
+                              );
+                            }
                             return (
                               <Button 
                                 size="sm" 
-                                onClick={handleAction}
-                                data-testid={`button-action-real-${load.id.slice(0, 8)}`}
+                                onClick={() => openLoadDetails(load)}
+                                data-testid={`button-details-${load.id.slice(0, 8)}`}
                               >
-                                {adminAction.action === "price" && <Calculator className="h-4 w-4 mr-1" />}
-                                {adminAction.action === "send_invoice" && <Send className="h-4 w-4 mr-1" />}
-                                {adminAction.action === "reprice" && <Calculator className="h-4 w-4 mr-1" />}
-                                {adminAction.action === "negotiate" && <Users className="h-4 w-4 mr-1" />}
-                                {adminAction.action === "view_invoice" && <Receipt className="h-4 w-4 mr-1" />}
-                                {adminAction.action === "push_to_carriers" && <Truck className="h-4 w-4 mr-1" />}
-                                {adminAction.action === "view_bids" && <Gavel className="h-4 w-4 mr-1" />}
-                                {adminAction.action === "track_shipment" && <MapPin className="h-4 w-4 mr-1" />}
-                                {adminAction.buttonLabel}
+                                <Eye className="h-4 w-4 mr-1" />
+                                View Details
                               </Button>
                             );
-                          }
-                          return (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => openRealLoadPricingDrawer(load)}
-                              data-testid={`button-view-real-${load.id.slice(0, 8)}`}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View Details
-                            </Button>
-                          );
-                        })()}
+                          })()}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1057,6 +1083,234 @@ export default function LoadQueuePage() {
           }}
         />
       )}
+
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Load Details - {detailsLoad?.id?.slice(0, 8).toUpperCase()}
+            </DialogTitle>
+            <DialogDescription>
+              Complete shipper submission details
+            </DialogDescription>
+          </DialogHeader>
+          
+          {detailsLoad && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Shipper Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Company Name</Label>
+                      <p className="font-medium">{detailsLoad.shipperCompanyName || detailsLoad.shipperName || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Contact Name</Label>
+                      <p className="font-medium">{detailsLoad.shipperContactName || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Company Address</Label>
+                      <p className="font-medium">{detailsLoad.shipperCompanyAddress || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Phone</Label>
+                      <p className="font-medium">{detailsLoad.shipperPhone || "N/A"}</p>
+                    </div>
+                    {detailsLoad.shipperEmail && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Email</Label>
+                        <p className="font-medium">{detailsLoad.shipperEmail}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Route Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Pickup Address</Label>
+                      <p className="font-medium">{detailsLoad.pickupAddress || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Pickup City</Label>
+                      <p className="font-medium">{detailsLoad.pickupCity}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Dropoff Address</Label>
+                      <p className="font-medium">{detailsLoad.dropoffAddress || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Dropoff City</Label>
+                      <p className="font-medium">{detailsLoad.dropoffCity}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Cargo Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Weight</Label>
+                      <p className="font-medium">{detailsLoad.weight} {detailsLoad.weightUnit || "MT"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Required Truck Type</Label>
+                      <p className="font-medium">{detailsLoad.requiredTruckType || "Standard"}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-muted-foreground text-xs">Goods to be Carried</Label>
+                      <p className="font-medium">{detailsLoad.goodsToBeCarried || detailsLoad.cargoDescription || "N/A"}</p>
+                    </div>
+                    {detailsLoad.specialNotes && (
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground text-xs">Special Notes</Label>
+                        <p className="font-medium text-amber-600 dark:text-amber-400">{detailsLoad.specialNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Schedule
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Pickup Date</Label>
+                      <p className="font-medium">
+                        {detailsLoad.pickupDate 
+                          ? new Date(detailsLoad.pickupDate).toLocaleString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : "Not specified"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Delivery Date</Label>
+                      <p className="font-medium">
+                        {detailsLoad.deliveryDate 
+                          ? new Date(detailsLoad.deliveryDate).toLocaleString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : "Not specified"}
+                      </p>
+                    </div>
+                    {detailsLoad.submittedAt && (
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground text-xs">Submitted At</Label>
+                        <p className="font-medium text-muted-foreground">
+                          {new Date(detailsLoad.submittedAt).toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {(detailsLoad.shipperPricePerTon || detailsLoad.adminPrice || detailsLoad.finalPrice) && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Pricing Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-4">
+                      {detailsLoad.shipperPricePerTon && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Shipper's Preferred Rate (Per Ton)</Label>
+                          <p className="font-medium text-blue-600 dark:text-blue-400">
+                            Rs. {Number(detailsLoad.shipperPricePerTon).toLocaleString('en-IN')} / ton
+                          </p>
+                        </div>
+                      )}
+                      {detailsLoad.adminPrice && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Admin Price</Label>
+                          <p className="font-medium text-green-600 dark:text-green-400">
+                            Rs. {Number(detailsLoad.adminPrice).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      )}
+                      {detailsLoad.finalPrice && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Final Negotiated Price</Label>
+                          <p className="font-medium text-emerald-600 dark:text-emerald-400">
+                            Rs. {Number(detailsLoad.finalPrice).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  Status: {getCanonicalStateDisplay(detailsLoad.status).label}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              setDetailsDialogOpen(false);
+              if (detailsLoad) {
+                openRealLoadPricingDrawer(detailsLoad);
+              }
+            }}>
+              <Calculator className="h-4 w-4 mr-2" />
+              Price This Load
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

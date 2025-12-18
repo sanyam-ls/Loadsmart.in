@@ -64,6 +64,8 @@ export interface IStorage {
   getAllLoads(): Promise<Load[]>;
   createLoad(load: InsertLoad): Promise<Load>;
   updateLoad(id: string, updates: Partial<Load>): Promise<Load | undefined>;
+  getNextShipperLoadNumber(shipperId: string): Promise<number>;
+  getNextAdminReferenceNumber(shipperId: string): Promise<number>;
 
   getBid(id: string): Promise<Bid | undefined>;
   getBidsByLoad(loadId: string): Promise<Bid[]>;
@@ -341,6 +343,24 @@ export class DatabaseStorage implements IStorage {
   async updateLoad(id: string, updates: Partial<Load>): Promise<Load | undefined> {
     const [updated] = await db.update(loads).set(updates).where(eq(loads.id, id)).returning();
     return updated;
+  }
+
+  async getNextShipperLoadNumber(shipperId: string): Promise<number> {
+    const result = await db
+      .select({ maxNum: sql<number>`COALESCE(MAX(${loads.shipperLoadNumber}), 0)` })
+      .from(loads)
+      .where(eq(loads.shipperId, shipperId));
+    return (result[0]?.maxNum || 0) + 1;
+  }
+
+  async getNextAdminReferenceNumber(shipperId: string): Promise<number> {
+    const result = await db
+      .select({ maxNum: sql<number>`COALESCE(MAX(${loads.adminReferenceNumber}), 0)` })
+      .from(loads)
+      .where(eq(loads.shipperId, shipperId));
+    // Start admin reference numbers at 1001 to differentiate from shipper numbers
+    const maxNum = result[0]?.maxNum || 1000;
+    return Math.max(maxNum + 1, 1001);
   }
 
   async getBid(id: string): Promise<Bid | undefined> {

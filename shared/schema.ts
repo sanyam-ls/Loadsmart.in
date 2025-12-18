@@ -218,6 +218,10 @@ export const loads = pgTable("loads", {
   assignedCarrierId: varchar("assigned_carrier_id").references(() => users.id),
   assignedTruckId: varchar("assigned_truck_id").references(() => trucks.id),
   
+  // Sequential load numbers (per shipper)
+  shipperLoadNumber: integer("shipper_load_number"), // Assigned at creation: LD-001, LD-002, etc.
+  adminReferenceNumber: integer("admin_reference_number"), // Assigned when admin prices: LD-1001, LD-1002, etc.
+  
   // Shipper contact details
   shipperCompanyName: text("shipper_company_name"),
   shipperContactName: text("shipper_contact_name"),

@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupMarketplaceWebSocket } from "./websocket-marketplace";
+import { storage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -63,6 +64,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Run data migration to fix any missing load numbers or pickup IDs
+  await storage.runDataMigration();
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

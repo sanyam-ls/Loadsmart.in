@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import {
   users, trucks, loads, bids, shipments, shipmentEvents,
   messages, documents, notifications, ratings, carrierProfiles, adminDecisions,
@@ -1315,6 +1315,71 @@ export class DatabaseStorage implements IStorage {
       accepted: threads.filter(t => t.status === "accepted").length,
       rejected: threads.filter(t => t.status === "rejected").length,
     };
+  }
+
+  // Startup migration to fix missing shipperLoadNumber and pickupId values
+  async runDataMigration(): Promise<void> {
+    console.log("[Migration] Starting data migration check...");
+    
+    try {
+      // Step 1: Find all loads missing shipperLoadNumber (NULL or 0)
+      const loadsNeedingNumber = await db.select()
+        .from(loads)
+        .where(sql`${loads.shipperLoadNumber} IS NULL OR ${loads.shipperLoadNumber} = 0`)
+        .orderBy(asc(loads.createdAt));
+      
+      if (loadsNeedingNumber.length > 0) {
+        console.log(`[Migration] Found ${loadsNeedingNumber.length} loads needing sequential numbers`);
+        
+        // Get current max to start from
+        const maxResult = await db
+          .select({ maxNum: sql<number>`COALESCE(MAX(${loads.shipperLoadNumber}), 0)` })
+          .from(loads)
+          .where(sql`${loads.shipperLoadNumber} IS NOT NULL AND ${loads.shipperLoadNumber} > 0`);
+        
+        let nextNumber = (maxResult[0]?.maxNum || 0) + 1;
+        
+        // Update each load in order
+        for (const load of loadsNeedingNumber) {
+          await db.update(loads)
+            .set({ shipperLoadNumber: nextNumber })
+            .where(eq(loads.id, load.id));
+          console.log(`[Migration] Assigned LD-${String(nextNumber).padStart(3, '0')} to load ${load.id}`);
+          nextNumber++;
+        }
+        
+        console.log(`[Migration] Successfully assigned ${loadsNeedingNumber.length} sequential load numbers`);
+      } else {
+        console.log("[Migration] All loads have sequential numbers - no migration needed");
+      }
+      
+      // Step 2: Find awarded/active loads missing pickupId
+      const awardedStatuses = ['awarded', 'in_transit', 'delivered', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid'];
+      const loadsNeedingPickupId = await db.select()
+        .from(loads)
+        .where(sql`${loads.pickupId} IS NULL AND ${loads.status} IN (${sql.raw(awardedStatuses.map(s => `'${s}'`).join(', '))})`);
+      
+      if (loadsNeedingPickupId.length > 0) {
+        console.log(`[Migration] Found ${loadsNeedingPickupId.length} awarded loads needing pickup IDs`);
+        
+        for (const load of loadsNeedingPickupId) {
+          const pickupId = await this.generateUniquePickupId();
+          await db.update(loads)
+            .set({ pickupId })
+            .where(eq(loads.id, load.id));
+          console.log(`[Migration] Assigned pickup ID ${pickupId} to load ${load.id}`);
+        }
+        
+        console.log(`[Migration] Successfully assigned ${loadsNeedingPickupId.length} pickup IDs`);
+      } else {
+        console.log("[Migration] All awarded loads have pickup IDs - no migration needed");
+      }
+      
+      console.log("[Migration] Data migration complete");
+    } catch (error) {
+      console.error("[Migration] Error during data migration:", error);
+      // Don't throw - let the app continue even if migration fails
+    }
   }
 }
 

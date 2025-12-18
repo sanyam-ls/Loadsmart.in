@@ -97,13 +97,9 @@ function formatTimeAgo(date: Date | string | null) {
   return `${diffDays}d ago`;
 }
 
-// Format load ID for display - shipper sees LD-001, LD-002, etc.
-function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
-  // If admin has assigned a reference number, show that (e.g., LD-1001, LD-10023)
-  if (load.adminReferenceNumber) {
-    return `LD-${load.adminReferenceNumber}`;
-  }
-  // Otherwise show shipper's sequential number (e.g., LD-001)
+// Format load ID for display - shipper sees LD-001, LD-002, etc. (same as admin portal)
+function formatLoadId(load: { shipperLoadNumber?: number | null; id: string }): string {
+  // Use global sequential shipperLoadNumber for consistent LD-XXX format across all portals
   if (load.shipperLoadNumber) {
     return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;
   }

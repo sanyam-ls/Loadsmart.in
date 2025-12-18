@@ -218,6 +218,12 @@ export const loads = pgTable("loads", {
   assignedCarrierId: varchar("assigned_carrier_id").references(() => users.id),
   assignedTruckId: varchar("assigned_truck_id").references(() => trucks.id),
   
+  // Shipper contact details
+  shipperCompanyName: text("shipper_company_name"),
+  shipperContactName: text("shipper_contact_name"),
+  shipperCompanyAddress: text("shipper_company_address"),
+  shipperPhone: text("shipper_phone"),
+  
   // Location details
   pickupAddress: text("pickup_address").notNull(),
   pickupCity: text("pickup_city").notNull(),

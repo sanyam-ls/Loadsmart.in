@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send } from "lucide-react";
+import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,6 +32,10 @@ import { AddressAutocomplete, getRouteInfo } from "@/components/address-autocomp
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const loadFormSchema = z.object({
+  shipperCompanyName: z.string().min(2, "Company name is required"),
+  shipperContactName: z.string().min(2, "Contact name is required"),
+  shipperCompanyAddress: z.string().min(5, "Company address is required"),
+  shipperPhone: z.string().min(10, "Valid phone number is required"),
   pickupAddress: z.string().min(5, "Pickup address is required"),
   pickupCity: z.string().min(2, "Pickup city is required"),
   dropoffAddress: z.string().min(5, "Dropoff address is required"),
@@ -124,6 +128,10 @@ export default function PostLoadPage() {
   const form = useForm<LoadFormData>({
     resolver: zodResolver(loadFormSchema),
     defaultValues: {
+      shipperCompanyName: "",
+      shipperContactName: "",
+      shipperCompanyAddress: "",
+      shipperPhone: "",
       pickupAddress: "",
       pickupCity: "",
       dropoffAddress: "",
@@ -171,6 +179,10 @@ export default function PostLoadPage() {
       const truckType = data.requiredTruckType || estimation?.suggestedTruck || "Dry Van";
       
       const response = await apiRequest("POST", "/api/loads/submit", {
+        shipperCompanyName: data.shipperCompanyName,
+        shipperContactName: data.shipperContactName,
+        shipperCompanyAddress: data.shipperCompanyAddress,
+        shipperPhone: data.shipperPhone,
         pickupAddress: data.pickupAddress,
         pickupCity: data.pickupCity,
         dropoffAddress: data.dropoffAddress,
@@ -321,6 +333,71 @@ export default function PostLoadPage() {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-blue-500" />
+                    Shipper Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="shipperCompanyName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="ABC Logistics Pvt Ltd" {...field} data-testid="input-shipper-company-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="shipperContactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Person Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rajesh Kumar" {...field} data-testid="input-shipper-contact-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="shipperCompanyAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123 Industrial Area, Sector 5, Mumbai, MH 400001" {...field} data-testid="input-shipper-company-address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="shipperPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+91 98765 43210" {...field} data-testid="input-shipper-phone" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">

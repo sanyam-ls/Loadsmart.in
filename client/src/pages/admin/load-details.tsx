@@ -113,12 +113,112 @@ export default function AdminLoadDetailsPage() {
   const [selectedCarrierId, setSelectedCarrierId] = useState("");
   
   const loadId = params.loadId || "";
-  const detailedLoad = useMemo(() => getDetailedLoad(loadId), [loadId, getDetailedLoad]);
   
-  const { data: apiLoad, isLoading: isApiLoading } = useQuery<LoadWithRelations>({
+  const { data: apiLoad, isLoading: isApiLoading, error: apiError } = useQuery<LoadWithRelations>({
     queryKey: ["/api/loads", loadId],
     enabled: !!loadId,
   });
+  
+  const detailedLoad = useMemo(() => {
+    if (apiLoad) {
+      const displayLoadId = apiLoad.adminReferenceNumber 
+        ? `LD-${String(apiLoad.adminReferenceNumber).padStart(3, '0')}`
+        : `LD-${String(apiLoad.shipperLoadNumber || 0).padStart(3, '0')}`;
+      return getDetailedLoad(displayLoadId) || createDetailedLoadFromApi(apiLoad, displayLoadId);
+    }
+    return getDetailedLoad(loadId);
+  }, [loadId, getDetailedLoad, apiLoad]);
+  
+  function createDetailedLoadFromApi(load: LoadWithRelations, displayId: string): DetailedLoad {
+    const mapLoadStatus = (status: string | null): AdminLoad["status"] => {
+      switch (status) {
+        case "pending": return "Pending";
+        case "priced": return "Active";
+        case "posted_to_carriers": return "Active";
+        case "open_for_bid": return "Bidding";
+        case "counter_received": return "Bidding";
+        case "awarded": return "Assigned";
+        case "in_transit": return "En Route";
+        case "delivered": return "Delivered";
+        case "closed": return "Delivered";
+        case "cancelled": return "Cancelled";
+        default: return "Pending";
+      }
+    };
+    
+    return {
+      loadId: displayId,
+      shipperId: load.shipperId,
+      shipperName: load.shipperCompanyName || load.shipperContactName || "Unknown Shipper",
+      pickup: load.pickupCity,
+      drop: load.dropoffCity,
+      weight: parseFloat(String(load.weight)) || 0,
+      weightUnit: load.weightUnit || "kg",
+      type: load.requiredTruckType || "Any",
+      status: mapLoadStatus(load.status),
+      assignedCarrier: null,
+      carrierId: load.assignedCarrierId,
+      createdDate: load.createdAt ? new Date(load.createdAt) : new Date(),
+      eta: null,
+      spending: parseFloat(String(load.adminFinalPrice || load.finalPrice || load.estimatedPrice || 0)),
+      bidCount: 0,
+      distance: parseFloat(String(load.distance || 0)),
+      dimensions: "",
+      priority: load.priority === "high" ? "High" : load.priority === "critical" ? "Critical" : "Normal",
+      title: load.goodsToBeCarried,
+      description: load.specialNotes || "",
+      requiredTruckType: load.requiredTruckType,
+      _originalId: load.id,
+      shipperDetails: {
+        shipperId: load.shipperId,
+        name: load.shipperContactName || "Unknown",
+        company: load.shipperCompanyName || "Unknown Company",
+        phone: load.shipperPhone || "",
+        email: load.shipper?.email || "",
+        address: load.shipperCompanyAddress || "",
+        isVerified: load.shipper?.isVerified || false,
+        totalLoadsPosted: 0,
+        rating: 4.5,
+      },
+      carrierDetails: load.assignedCarrier ? {
+        carrierId: load.assignedCarrier.id,
+        companyName: load.assignedCarrier.company || load.assignedCarrier.username,
+        contactNumber: load.assignedCarrier.phone || "",
+        verificationStatus: load.assignedCarrier.isVerified ? "verified" : "pending",
+        rating: 4.5,
+        fleetSize: 0,
+      } : undefined,
+      vehicleDetails: undefined,
+      bids: [],
+      negotiations: [],
+      costBreakdown: {
+        baseFreightCost: parseFloat(String(load.estimatedPrice || 0)),
+        fuelSurcharge: 0,
+        handlingFee: 0,
+        platformFee: 0,
+        totalCost: parseFloat(String(load.adminFinalPrice || load.finalPrice || load.estimatedPrice || 0)),
+      },
+      documents: [],
+      activityLog: [],
+      routeInfo: {
+        pickupCoordinates: { lat: parseFloat(String(load.pickupLat || 0)), lng: parseFloat(String(load.pickupLng || 0)) },
+        dropCoordinates: { lat: parseFloat(String(load.dropoffLat || 0)), lng: parseFloat(String(load.dropoffLng || 0)) },
+        estimatedTime: "N/A",
+        liveStatus: "Pending Pickup",
+        checkpoints: [],
+      },
+    };
+  }
+  
+  if (isApiLoading) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px]">
+        <Package className="h-16 w-16 text-muted-foreground mb-4 animate-pulse" />
+        <h2 className="text-xl font-semibold mb-2">Loading...</h2>
+        <p className="text-muted-foreground">Fetching load details</p>
+      </div>
+    );
+  }
   
   if (!detailedLoad) {
     return (
@@ -133,6 +233,8 @@ export default function AdminLoadDetailsPage() {
       </div>
     );
   }
+  
+  const load = detailedLoad;
 
   const handleUpdateStatus = () => {
     updateLoadStatus(loadId, selectedStatus);

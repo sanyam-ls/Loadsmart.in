@@ -1,7 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { useAuth } from "@/lib/auth-context";
+import type { Load } from "@shared/schema";
 import { 
   Package, 
   Search, 
@@ -25,6 +28,7 @@ import {
   Send,
   Receipt,
   Users,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,10 +70,68 @@ import { useToast } from "@/hooks/use-toast";
 import { useAdminData, type AdminLoad, type AdminCarrier } from "@/lib/admin-data-store";
 import { format } from "date-fns";
 
+type LoadWithBidCount = Load & { bidCount?: number };
+
+function mapLoadStatus(status: string | null): AdminLoad["status"] {
+  switch (status) {
+    case "pending": return "Pending";
+    case "priced": return "Active";
+    case "posted_to_carriers": return "Active";
+    case "open_for_bid": return "Bidding";
+    case "counter_received": return "Bidding";
+    case "awarded": return "Assigned";
+    case "in_transit": return "En Route";
+    case "delivered": return "Delivered";
+    case "closed": return "Delivered";
+    case "cancelled": return "Cancelled";
+    default: return "Pending";
+  }
+}
+
+function transformLoadToAdminLoad(load: LoadWithBidCount): AdminLoad {
+  const loadId = load.adminReferenceNumber 
+    ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}`
+    : `LD-${String(load.shipperLoadNumber || 0).padStart(3, '0')}`;
+  
+  return {
+    loadId,
+    shipperId: load.shipperId,
+    shipperName: load.shipperCompanyName || load.shipperContactName || "Unknown Shipper",
+    pickup: load.pickupCity,
+    drop: load.dropoffCity,
+    weight: parseFloat(String(load.weight)) || 0,
+    weightUnit: load.weightUnit || "kg",
+    type: load.requiredTruckType || "Any",
+    status: mapLoadStatus(load.status),
+    assignedCarrier: null,
+    carrierId: load.assignedCarrierId,
+    createdDate: load.createdAt ? new Date(load.createdAt) : new Date(),
+    eta: null,
+    spending: parseFloat(String(load.adminFinalPrice || load.finalPrice || load.estimatedPrice || 0)),
+    bidCount: load.bidCount || 0,
+    distance: parseFloat(String(load.distance || 0)),
+    dimensions: "",
+    priority: load.priority === "high" ? "High" : load.priority === "critical" ? "Critical" : "Normal",
+    title: load.goodsToBeCarried,
+    description: load.specialNotes || "",
+    requiredTruckType: load.requiredTruckType,
+    _originalId: load.id,
+  };
+}
+
+
 export default function AdminLoadsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { loads, carriers, updateLoad, assignCarrier, updateLoadStatus, refreshFromShipperPortal, addActivity } = useAdminData();
+  const { carriers, updateLoad, assignCarrier, updateLoadStatus, addActivity } = useAdminData();
+  
+  const { data: apiLoads = [], isLoading: isLoadingLoads, refetch: refetchLoads } = useQuery<LoadWithBidCount[]>({
+    queryKey: ['/api/loads'],
+  });
+  
+  const loads: AdminLoad[] = useMemo(() => {
+    return apiLoads.map(transformLoadToAdminLoad);
+  }, [apiLoads]);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -99,17 +161,29 @@ export default function AdminLoadsPage() {
     if (user?.id && user?.role === "admin") {
       connectMarketplace("admin", user.id);
       
+      const unsubLoadPosted = onMarketplaceEvent("load_posted", (data) => {
+        toast({
+          title: "New Load Posted",
+          description: `Load ${data.load?.pickupCity || ""} → ${data.load?.dropoffCity || ""} submitted by shipper`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+      });
+      
+      const unsubLoadSubmitted = onMarketplaceEvent("load_submitted", (data) => {
+        toast({
+          title: "New Load Submitted",
+          description: `${data.shipperName || "Shipper"} submitted load: ${data.pickupCity || ""} → ${data.dropoffCity || ""}`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+      });
+      
       const unsubLoadUpdate = onMarketplaceEvent("load_updated", (data) => {
         toast({
           title: "Load Updated",
           description: `Load ${data.load?.pickupCity || ""} → ${data.load?.dropoffCity || ""} status changed to ${data.status}`,
         });
-        if (typeof window !== "undefined") {
-          import("@/lib/queryClient").then(({ queryClient }) => {
-            queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/bids'] });
-          });
-        }
+        queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/bids'] });
       });
 
       const unsubBidReceived = onMarketplaceEvent("bid_received", (data) => {
@@ -117,9 +191,12 @@ export default function AdminLoadsPage() {
           title: "New Bid Received",
           description: `Carrier submitted a bid for Rs. ${parseFloat(data.bid?.amount || "0").toLocaleString("en-IN")}`,
         });
+        queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
       });
 
       return () => {
+        unsubLoadPosted();
+        unsubLoadSubmitted();
         unsubLoadUpdate();
         unsubBidReceived();
         disconnectMarketplace();
@@ -355,8 +432,17 @@ export default function AdminLoadsPage() {
           </div>
           <p className="text-muted-foreground ml-10">Manage all platform loads ({loads.length} total)</p>
         </div>
-        <Button variant="outline" onClick={refreshFromShipperPortal} data-testid="button-sync-loads">
-          <RefreshCw className="h-4 w-4 mr-2" />
+        <Button 
+          variant="outline" 
+          onClick={() => refetchLoads()} 
+          disabled={isLoadingLoads}
+          data-testid="button-sync-loads"
+        >
+          {isLoadingLoads ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
           Sync from Portal
         </Button>
       </div>
@@ -519,7 +605,7 @@ export default function AdminLoadsPage() {
                     <TableRow 
                       key={load.loadId} 
                       className="cursor-pointer hover-elevate"
-                      onClick={() => setLocation(`/admin/loads/${load.loadId}`)}
+                      onClick={() => setLocation(`/admin/loads/${load._originalId || load.loadId}`)}
                       data-testid={`row-load-${load.loadId}`}
                     >
                       <TableCell className="font-mono font-medium" data-testid={`text-load-id-${load.loadId}`}>

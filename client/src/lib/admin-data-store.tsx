@@ -40,6 +40,7 @@ export interface AdminLoad {
   description?: string;
   specialHandling?: string;
   requiredTruckType?: string;
+  _originalId?: string;
 }
 
 export interface LoadShipperDetails {

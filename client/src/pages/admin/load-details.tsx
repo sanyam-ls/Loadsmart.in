@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocation, useParams } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   ChevronLeft,
   Package,
@@ -31,6 +32,7 @@ import {
   CircleDot,
   Send,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,12 +74,28 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAdminData, type DetailedLoad, type AdminLoad, type AdminCarrier } from "@/lib/admin-data-store";
 import { format } from "date-fns";
+import type { Load } from "@shared/schema";
 
 const formatCurrency = (amount: number) => {
   if (amount >= 100000) {
     return `Rs. ${(amount / 100000).toFixed(2)}L`;
   }
   return `Rs. ${amount.toLocaleString("en-IN")}`;
+};
+
+interface SafeUserDTO {
+  id: string;
+  username: string;
+  email: string;
+  company: string | null;
+  phone: string | null;
+  isVerified: boolean;
+  role: string;
+}
+
+type LoadWithRelations = Load & { 
+  shipper?: SafeUserDTO | null; 
+  assignedCarrier?: SafeUserDTO | null; 
 };
 
 export default function AdminLoadDetailsPage() {
@@ -96,6 +114,11 @@ export default function AdminLoadDetailsPage() {
   
   const loadId = params.loadId || "";
   const detailedLoad = useMemo(() => getDetailedLoad(loadId), [loadId, getDetailedLoad]);
+  
+  const { data: apiLoad, isLoading: isApiLoading } = useQuery<LoadWithRelations>({
+    queryKey: ["/api/loads", loadId],
+    enabled: !!loadId,
+  });
   
   if (!detailedLoad) {
     return (
@@ -370,17 +393,17 @@ export default function AdminLoadDetailsPage() {
         <TabsContent value="shipper" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <User className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>{detailedLoad.shipperDetails.name}</CardTitle>
-                    <CardDescription>{detailedLoad.shipperDetails.company}</CardDescription>
+                    <CardTitle>{apiLoad?.shipperContactName || detailedLoad.shipperDetails.name}</CardTitle>
+                    <CardDescription>{apiLoad?.shipperCompanyName || detailedLoad.shipperDetails.company}</CardDescription>
                   </div>
                 </div>
-                {detailedLoad.shipperDetails.isVerified ? (
+                {apiLoad?.shipper?.isVerified || detailedLoad.shipperDetails.isVerified ? (
                   <Badge className="bg-green-500"><BadgeCheck className="h-3 w-3 mr-1" />Verified</Badge>
                 ) : (
                   <Badge variant="outline">Unverified</Badge>
@@ -392,29 +415,30 @@ export default function AdminLoadDetailsPage() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{detailedLoad.shipperDetails.phone}</span>
+                    <span>{apiLoad?.shipperPhone || detailedLoad.shipperDetails.phone}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{detailedLoad.shipperDetails.email}</span>
+                    <span>{apiLoad?.shipper?.email || detailedLoad.shipperDetails.email}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span>{detailedLoad.shipperDetails.address}</span>
+                    <span>{apiLoad?.shipperCompanyAddress || detailedLoad.shipperDetails.address}</span>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Loads Posted</span>
-                    <span className="font-medium">{detailedLoad.shipperDetails.totalLoadsPosted}</span>
+                    <span className="text-muted-foreground">Load ID</span>
+                    <span className="font-medium font-mono">{apiLoad?.id?.slice(0, 8) || loadId.slice(0, 8)}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Rating</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                      <span className="font-medium">{detailedLoad.shipperDetails.rating.toFixed(1)}</span>
+                  {apiLoad?.shipper?.isVerified !== undefined && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Shipper Status</span>
+                      <Badge variant={apiLoad.shipper.isVerified ? "default" : "outline"}>
+                        {apiLoad.shipper.isVerified ? "Verified" : "Pending"}
+                      </Badge>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
               <Separator />
@@ -437,22 +461,22 @@ export default function AdminLoadDetailsPage() {
         </TabsContent>
 
         <TabsContent value="carrier" className="space-y-4">
-          {detailedLoad.carrierDetails ? (
+          {(apiLoad?.assignedCarrier || detailedLoad.carrierDetails) ? (
             <>
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                         <Truck className="h-6 w-6 text-primary" />
                       </div>
                       <div>
-                        <CardTitle>{detailedLoad.carrierDetails.companyName}</CardTitle>
+                        <CardTitle>{apiLoad?.assignedCarrier?.company || detailedLoad.carrierDetails?.companyName || "Assigned Carrier"}</CardTitle>
                         <CardDescription>Assigned Carrier</CardDescription>
                       </div>
                     </div>
-                    <Badge className={detailedLoad.carrierDetails.verificationStatus === "verified" ? "bg-green-500" : ""}>
-                      {detailedLoad.carrierDetails.verificationStatus}
+                    <Badge className={(apiLoad?.assignedCarrier?.isVerified || detailedLoad.carrierDetails?.verificationStatus === "verified") ? "bg-green-500" : ""}>
+                      {apiLoad?.assignedCarrier?.isVerified ? "verified" : (detailedLoad.carrierDetails?.verificationStatus || "pending")}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -461,21 +485,26 @@ export default function AdminLoadDetailsPage() {
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{detailedLoad.carrierDetails.contactNumber}</span>
+                        <span>{apiLoad?.assignedCarrier?.phone || detailedLoad.carrierDetails?.contactNumber || "Not available"}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Fleet Size</span>
-                        <span className="font-medium">{detailedLoad.carrierDetails.fleetSize} vehicles</span>
+                      <div className="flex items-center gap-3">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{apiLoad?.assignedCarrier?.email || "Not available"}</span>
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Rating</span>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                          <span className="font-medium">{detailedLoad.carrierDetails.rating.toFixed(1)}</span>
+                      {apiLoad?.assignedCarrier?.username && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Contact Name</span>
+                          <span className="font-medium">{apiLoad.assignedCarrier.username}</span>
                         </div>
-                      </div>
+                      )}
+                      {detailedLoad.carrierDetails?.fleetSize && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Fleet Size</span>
+                          <span className="font-medium">{detailedLoad.carrierDetails.fleetSize} vehicles</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>

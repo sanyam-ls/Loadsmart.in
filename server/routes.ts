@@ -265,16 +265,49 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Load not found" });
       }
       
+      // Fetch shipper and assigned carrier data for admin view (sanitized DTO with only required fields)
+      let shipper: { id: string; username: string; email: string; company: string | null; phone: string | null; isVerified: boolean; role: string } | null = null;
+      let assignedCarrier: { id: string; username: string; email: string; company: string | null; phone: string | null; isVerified: boolean; role: string } | null = null;
+      
+      if (load.shipperId) {
+        const shipperUser = await storage.getUser(load.shipperId);
+        if (shipperUser) {
+          shipper = {
+            id: shipperUser.id,
+            username: shipperUser.username,
+            email: shipperUser.email,
+            company: shipperUser.company,
+            phone: shipperUser.phone,
+            isVerified: shipperUser.isVerified,
+            role: shipperUser.role,
+          };
+        }
+      }
+      if (load.assignedCarrierId) {
+        const carrierUser = await storage.getUser(load.assignedCarrierId);
+        if (carrierUser) {
+          assignedCarrier = {
+            id: carrierUser.id,
+            username: carrierUser.username,
+            email: carrierUser.email,
+            company: carrierUser.company,
+            phone: carrierUser.phone,
+            isVerified: carrierUser.isVerified,
+            role: carrierUser.role,
+          };
+        }
+      }
+      
       // Admin-as-Mediator: Shippers can only see bids on finalized loads
       const isFinalized = ["assigned", "in_transit", "delivered"].includes(load.status || "");
       const shouldIncludeBids = user.role !== "shipper" || isFinalized;
       
       if (shouldIncludeBids) {
         const loadBids = await storage.getBidsByLoad(load.id);
-        res.json({ ...load, bids: loadBids });
+        res.json({ ...load, bids: loadBids, shipper, assignedCarrier });
       } else {
         // Hide bids and pricing info from shippers pre-finalization
-        res.json({ ...load, bids: [], bidCount: 0 });
+        res.json({ ...load, bids: [], bidCount: 0, shipper, assignedCarrier });
       }
     } catch (error) {
       console.error("Get load error:", error);

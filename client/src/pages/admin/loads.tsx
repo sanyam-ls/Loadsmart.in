@@ -90,11 +90,14 @@ function mapLoadStatus(status: string | null): AdminLoad["status"] {
 
 function transformLoadToAdminLoad(load: LoadWithBidCount): AdminLoad {
   // Use sequential shipperLoadNumber for consistent LD-XXX format across all portals
-  const loadId = `LD-${String(load.shipperLoadNumber || 0).padStart(3, '0')}`;
+  // If shipperLoadNumber is missing (legacy data), use short ID as fallback
+  const loadId = load.shipperLoadNumber 
+    ? `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`
+    : `LD-${load.id.slice(0, 6).toUpperCase()}`;
   
   return {
     loadId,
-    pickupId: load.pickupId || null, // 4-digit code for carrier pickup verification
+    pickupId: load.pickupId ?? undefined, // 4-digit code for carrier pickup verification
     shipperId: load.shipperId,
     shipperName: load.shipperCompanyName || load.shipperContactName || "Unknown Shipper",
     pickup: load.pickupCity,
@@ -112,9 +115,9 @@ function transformLoadToAdminLoad(load: LoadWithBidCount): AdminLoad {
     distance: parseFloat(String(load.distance || 0)),
     dimensions: "",
     priority: load.priority === "high" ? "High" : load.priority === "critical" ? "Critical" : "Normal",
-    title: load.goodsToBeCarried,
-    description: load.specialNotes || "",
-    requiredTruckType: load.requiredTruckType,
+    title: load.goodsToBeCarried ?? undefined,
+    description: load.specialNotes ?? undefined,
+    requiredTruckType: load.requiredTruckType ?? undefined,
     _originalId: load.id,
   };
 }

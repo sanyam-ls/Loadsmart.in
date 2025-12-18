@@ -97,6 +97,20 @@ function formatTimeAgo(date: Date | string | null) {
   return `${diffDays}d ago`;
 }
 
+// Format load ID for display - shipper sees LD-001, LD-002, etc.
+function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
+  // If admin has assigned a reference number, show that (e.g., LD-1083)
+  if (load.adminReferenceNumber) {
+    return `LD-${String(load.adminReferenceNumber).padStart(4, '0')}`;
+  }
+  // Otherwise show shipper's sequential number (e.g., LD-001)
+  if (load.shipperLoadNumber) {
+    return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  // Fallback to first 8 chars of UUID
+  return load.id.slice(0, 8);
+}
+
 export default function ShipperLoadsPage() {
   const [, navigate] = useLocation();
   const searchParams = useSearch();
@@ -357,7 +371,7 @@ export default function ShipperLoadsPage() {
                   onClick={() => navigate(`/shipper/loads/${load.id}`)}
                   data-testid={`row-load-${load.id}`}
                 >
-                  <TableCell className="font-mono text-sm">{load.id.slice(0, 8)}</TableCell>
+                  <TableCell className="font-mono text-sm">{formatLoadId(load)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-3 w-3 text-green-500" />

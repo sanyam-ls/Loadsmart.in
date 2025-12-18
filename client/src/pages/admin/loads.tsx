@@ -150,7 +150,7 @@ export default function AdminLoadsPage() {
     pickup: "",
     drop: "",
     weight: "",
-    type: "Dry Van",
+    type: "Open - 10 Wheeler",
     status: "Active" as AdminLoad["status"],
   });
   const [selectedCarrierId, setSelectedCarrierId] = useState<string>("");
@@ -390,7 +390,7 @@ export default function AdminLoadsPage() {
       pickup: load.pickup || "",
       drop: load.drop || "",
       weight: load.weight?.toString() || "",
-      type: load.type || "Dry Van",
+      type: load.type || "Open - 10 Wheeler",
       status: load.status,
     });
     setIsEditModalOpen(true);
@@ -835,11 +835,17 @@ export default function AdminLoadsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Dry Van">Dry Van</SelectItem>
-                    <SelectItem value="Flatbed">Flatbed</SelectItem>
-                    <SelectItem value="Refrigerated">Refrigerated</SelectItem>
-                    <SelectItem value="Tanker">Tanker</SelectItem>
-                    <SelectItem value="Container">Container</SelectItem>
+                    <SelectItem value="Open - 10 Wheeler">Open - 10 Wheeler</SelectItem>
+                    <SelectItem value="Open - 14 Wheeler">Open - 14 Wheeler</SelectItem>
+                    <SelectItem value="Open - 16 Wheeler">Open - 16 Wheeler</SelectItem>
+                    <SelectItem value="Open - 18 Wheeler">Open - 18 Wheeler</SelectItem>
+                    <SelectItem value="Container - 20 Ft">Container - 20 Ft</SelectItem>
+                    <SelectItem value="Container - 32 Ft">Container - 32 Ft</SelectItem>
+                    <SelectItem value="Container - 40 Ft">Container - 40 Ft</SelectItem>
+                    <SelectItem value="Trailer - 40 Ft">Trailer - 40 Ft</SelectItem>
+                    <SelectItem value="LCV - Tata Ace">LCV - Tata Ace</SelectItem>
+                    <SelectItem value="Tanker - Oil/Fuel">Tanker - Oil/Fuel</SelectItem>
+                    <SelectItem value="Tipper - 10 Wheeler">Tipper - 10 Wheeler</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

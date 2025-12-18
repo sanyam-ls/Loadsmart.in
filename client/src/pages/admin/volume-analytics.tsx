@@ -135,11 +135,11 @@ const routeBreakdown = [
 ];
 
 const loadTypeBreakdown = [
-  { name: "Dry Van", value: 8500000, color: "hsl(217, 91%, 48%)" },
-  { name: "Flatbed", value: 4200000, color: "hsl(142, 76%, 36%)" },
-  { name: "Refrigerated", value: 3100000, color: "hsl(48, 96%, 53%)" },
-  { name: "Tanker", value: 2200000, color: "hsl(280, 70%, 50%)" },
-  { name: "Container", value: 2000000, color: "hsl(340, 75%, 55%)" },
+  { name: "Open - 10 Wheeler", value: 8500000, color: "hsl(217, 91%, 48%)" },
+  { name: "Container - 32 Ft", value: 4200000, color: "hsl(142, 76%, 36%)" },
+  { name: "Trailer - 40 Ft", value: 3100000, color: "hsl(48, 96%, 53%)" },
+  { name: "Open - 14 Wheeler", value: 2200000, color: "hsl(280, 70%, 50%)" },
+  { name: "LCV - Tata Ace", value: 2000000, color: "hsl(340, 75%, 55%)" },
 ];
 
 type TimeRange = "30d" | "90d" | "1y" | "custom";

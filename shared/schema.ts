@@ -238,7 +238,10 @@ export const loads = pgTable("loads", {
   // Cargo details
   weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
   weightUnit: text("weight_unit").default("MT"), // Metric Tons
-  cargoDescription: text("cargo_description"),
+  cargoDescription: text("cargo_description"), // Legacy field
+  goodsToBeCarried: text("goods_to_be_carried"), // Type of goods being transported
+  specialNotes: text("special_notes"), // Special handling instructions
+  shipperPricePerTon: decimal("shipper_price_per_ton", { precision: 10, scale: 2 }), // Price per ton shipper is willing to pay
   materialType: text("material_type"), // Type of goods
   requiredTruckType: text("required_truck_type"),
   

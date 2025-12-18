@@ -42,7 +42,9 @@ const loadFormSchema = z.object({
   dropoffCity: z.string().min(2, "Dropoff city is required"),
   weight: z.string().min(1, "Weight is required"),
   weightUnit: z.string().default("tons"),
-  cargoDescription: z.string().optional(),
+  goodsToBeCarried: z.string().min(2, "Please specify goods to be carried"),
+  specialNotes: z.string().optional(),
+  shipperPricePerTon: z.string().optional(),
   requiredTruckType: z.string().optional(),
   pickupDate: z.string().min(1, "Pickup date is required"),
   deliveryDate: z.string().optional(),
@@ -138,7 +140,9 @@ export default function PostLoadPage() {
       dropoffCity: "",
       weight: "",
       weightUnit: "tons",
-      cargoDescription: "",
+      goodsToBeCarried: "",
+      specialNotes: "",
+      shipperPricePerTon: "",
       requiredTruckType: "",
       pickupDate: "",
       deliveryDate: "",
@@ -148,17 +152,17 @@ export default function PostLoadPage() {
     },
   });
 
-  const watchedFields = form.watch(["pickupCity", "dropoffCity", "weight", "cargoDescription", "requiredTruckType"]);
-  const [pickupCity, dropoffCity, weight, description, truckType] = watchedFields;
+  const watchedFields = form.watch(["pickupCity", "dropoffCity", "weight", "goodsToBeCarried", "requiredTruckType"]);
+  const [pickupCity, dropoffCity, weight, goodsDescription, truckType] = watchedFields;
 
   useEffect(() => {
     if (pickupCity && dropoffCity && weight) {
       const distance = calculateDistance(pickupCity, dropoffCity);
-      const suggestedTruck = truckType || suggestTruckType(Number(weight), description || "");
+      const suggestedTruck = truckType || suggestTruckType(Number(weight), goodsDescription || "");
       const nearbyTrucks = Math.floor(Math.random() * 15) + 3;
       setEstimation({ distance, suggestedTruck, nearbyTrucks });
     }
-  }, [pickupCity, dropoffCity, weight, description, truckType]);
+  }, [pickupCity, dropoffCity, weight, goodsDescription, truckType]);
 
   const updateEstimation = () => {
   };
@@ -188,7 +192,9 @@ export default function PostLoadPage() {
         dropoffAddress: data.dropoffAddress,
         dropoffCity: data.dropoffCity,
         weight: data.weight,
-        cargoDescription: data.cargoDescription || "",
+        goodsToBeCarried: data.goodsToBeCarried || "",
+        specialNotes: data.specialNotes || "",
+        shipperPricePerTon: data.shipperPricePerTon || null,
         requiredTruckType: truckType,
         pickupDate: data.pickupDate,
         deliveryDate: data.deliveryDate || null,
@@ -564,18 +570,74 @@ export default function PostLoadPage() {
                   </div>
                   <FormField
                     control={form.control}
-                    name="cargoDescription"
+                    name="goodsToBeCarried"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cargo Description</FormLabel>
+                        <FormLabel>Goods to be Carried</FormLabel>
                         <FormControl>
-                          <Textarea
-                            placeholder="Describe your cargo (e.g., palletized goods, machinery, perishables...)"
+                          <Input
+                            placeholder="e.g., Steel Coils, Cement Bags, Rice, Machinery..."
                             {...field}
                             onBlur={(e) => { field.onBlur(); updateEstimation(); }}
-                            data-testid="input-cargo-description"
+                            data-testid="input-goods-to-be-carried"
                           />
                         </FormControl>
+                        <FormDescription className="text-xs">
+                          Specify the type of goods you need to transport
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="specialNotes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Special Notes (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Any special handling requirements, loading/unloading instructions, etc."
+                            {...field}
+                            data-testid="input-special-notes"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Your Pricing Preference
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={form.control}
+                    name="shipperPricePerTon"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Price per Ton (Optional)</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rs.</span>
+                            <Input
+                              type="number"
+                              placeholder="Enter your preferred rate per ton"
+                              className="pl-10"
+                              {...field}
+                              data-testid="input-price-per-ton"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          This helps our team understand your budget expectations. Final pricing will be determined by our logistics experts.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

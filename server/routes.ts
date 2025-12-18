@@ -224,9 +224,13 @@ export async function registerRoutes(
         body.deliveryDate = new Date(body.deliveryDate);
       }
 
+      // Get the next sequential load number for this shipper
+      const shipperLoadNumber = await storage.getNextShipperLoadNumber(user.id);
+
       const data = insertLoadSchema.parse({
         ...body,
         shipperId: user.id,
+        shipperLoadNumber,
       });
 
       const load = await storage.createLoad(data);
@@ -1435,6 +1439,12 @@ export async function registerRoutes(
       // Invoice is only generated AFTER carrier is finalized (awarded state)
       // This happens in acceptBid() workflow service or when admin transitions to invoice_sent
 
+      // Assign admin reference number if not already assigned
+      let adminReferenceNumber = load.adminReferenceNumber;
+      if (!adminReferenceNumber) {
+        adminReferenceNumber = await storage.getNextAdminReferenceNumber(load.shipperId);
+      }
+
       // Update load with admin pricing
       const updatedLoad = await storage.updateLoad(load_id, {
         adminSuggestedPrice: suggested_price || final_price,
@@ -1446,6 +1456,7 @@ export async function registerRoutes(
         allowCounterBids: allow_counter_bids || false,
         status: newStatus,
         postedAt: new Date(),
+        adminReferenceNumber,
       });
 
       // Notify shipper

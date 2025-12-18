@@ -35,6 +35,7 @@ import {
   Building2,
   User,
   DollarSign,
+  IndianRupee,
   ArrowRight,
   FileText,
   Search,
@@ -443,9 +444,9 @@ export default function AdminNegotiationsPage() {
             
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1">
-                <DollarSign className="h-4 w-4 text-green-600" />
+                <IndianRupee className="h-4 w-4 text-green-600" />
                 <span className="font-semibold text-lg" data-testid={`text-amount-${bid.id}`}>
-                  ${parseFloat(bid.amount).toLocaleString()}
+                  Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
                 </span>
               </div>
               {bid.truck && (
@@ -685,8 +686,8 @@ export default function AdminNegotiationsPage() {
                             {bid.load?.pickupCity} <ArrowRight className="h-3 w-3 inline" /> {bid.load?.dropoffCity}
                           </div>
                           <div className="flex items-center gap-1">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            <span className="font-semibold">${parseFloat(bid.amount).toLocaleString()}</span>
+                            <IndianRupee className="h-4 w-4 text-green-600" />
+                            <span className="font-semibold">Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}</span>
                           </div>
                         </div>
                         <Button
@@ -743,7 +744,7 @@ export default function AdminNegotiationsPage() {
                                 {bid.carrier?.companyName || bid.carrier?.username}
                               </span>
                               <span className="font-semibold text-green-600">
-                                ${parseFloat(bid.amount).toLocaleString()}
+                                Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
                               </span>
                               {getStatusBadge(bid.status)}
                             </div>

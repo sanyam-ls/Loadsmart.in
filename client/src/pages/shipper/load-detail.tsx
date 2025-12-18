@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
+import { useAuth } from "@/lib/auth-context";
 import { 
   ChevronLeft, MapPin, Calendar, 
   Users, Copy, X, CheckCircle, AlertCircle, Star, FileText, Loader2,
@@ -104,6 +106,7 @@ export default function LoadDetailPage() {
   const [, navigate] = useLocation();
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [cancelDialog, setCancelDialog] = useState(false);
 
   const { data: load, isLoading, error } = useQuery<LoadWithCarrier>({
@@ -115,6 +118,28 @@ export default function LoadDetailPage() {
     queryKey: ["/api/shipments/load", params.id],
     enabled: !!params.id,
   });
+
+  useEffect(() => {
+    if (user?.id && user?.role === "shipper" && params.id) {
+      connectMarketplace("shipper", user.id);
+      
+      const unsubLoadUpdate = onMarketplaceEvent("load_updated", (data) => {
+        if (data.loadId === params.id || data.load?.id === params.id) {
+          toast({
+            title: "Load Updated",
+            description: `Your load status has been updated to: ${data.status}`,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/loads", params.id] });
+          queryClient.invalidateQueries({ queryKey: ["/api/shipments/load", params.id] });
+        }
+      });
+
+      return () => {
+        unsubLoadUpdate();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, params.id, toast]);
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
@@ -403,7 +428,7 @@ export default function LoadDetailPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Final Price</span>
                     <span className="font-semibold text-lg text-green-600 dark:text-green-400">
-                      ${parseFloat(load.adminFinalPrice).toLocaleString()}
+                      Rs. {parseFloat(load.adminFinalPrice).toLocaleString("en-IN")}
                     </span>
                   </div>
                 </>

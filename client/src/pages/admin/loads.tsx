@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
+import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
+import { useAuth } from "@/lib/auth-context";
 import { 
   Package, 
   Search, 
@@ -91,6 +93,39 @@ export default function AdminLoadsPage() {
   });
   const [selectedCarrierId, setSelectedCarrierId] = useState<string>("");
   const itemsPerPage = 10;
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.id && user?.role === "admin") {
+      connectMarketplace("admin", user.id);
+      
+      const unsubLoadUpdate = onMarketplaceEvent("load_updated", (data) => {
+        toast({
+          title: "Load Updated",
+          description: `Load ${data.load?.pickupCity || ""} → ${data.load?.dropoffCity || ""} status changed to ${data.status}`,
+        });
+        if (typeof window !== "undefined") {
+          import("@/lib/queryClient").then(({ queryClient }) => {
+            queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/bids'] });
+          });
+        }
+      });
+
+      const unsubBidReceived = onMarketplaceEvent("bid_received", (data) => {
+        toast({
+          title: "New Bid Received",
+          description: `Carrier submitted a bid for Rs. ${parseFloat(data.bid?.amount || "0").toLocaleString("en-IN")}`,
+        });
+      });
+
+      return () => {
+        unsubLoadUpdate();
+        unsubBidReceived();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, toast]);
 
   const filteredLoads = useMemo(() => {
     let result = [...loads];
@@ -298,7 +333,7 @@ export default function AdminLoadsPage() {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+    return `Rs. ${value.toLocaleString("en-IN")}`;
   };
 
   const verifiedCarriers = carriers.filter(c => c.verificationStatus === "verified");

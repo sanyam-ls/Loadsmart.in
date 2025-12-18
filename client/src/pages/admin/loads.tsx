@@ -89,12 +89,12 @@ function mapLoadStatus(status: string | null): AdminLoad["status"] {
 }
 
 function transformLoadToAdminLoad(load: LoadWithBidCount): AdminLoad {
-  const loadId = load.adminReferenceNumber 
-    ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}`
-    : `LD-${String(load.shipperLoadNumber || 0).padStart(3, '0')}`;
+  // Use sequential shipperLoadNumber for consistent LD-XXX format across all portals
+  const loadId = `LD-${String(load.shipperLoadNumber || 0).padStart(3, '0')}`;
   
   return {
     loadId,
+    pickupId: load.pickupId || null, // 4-digit code for carrier pickup verification
     shipperId: load.shipperId,
     shipperName: load.shipperCompanyName || load.shipperContactName || "Unknown Shipper",
     pickup: load.pickupCity,
@@ -562,6 +562,7 @@ export default function AdminLoadsPage() {
                       <ArrowUpDown className="ml-2 h-3 w-3" />
                     </Button>
                   </TableHead>
+                  <TableHead className="w-[80px]">Pickup ID</TableHead>
                   <TableHead>Shipper</TableHead>
                   <TableHead>Route</TableHead>
                   <TableHead>Details</TableHead>
@@ -596,7 +597,7 @@ export default function AdminLoadsPage() {
               <TableBody>
                 {paginatedLoads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       No loads found
                     </TableCell>
                   </TableRow>
@@ -610,6 +611,15 @@ export default function AdminLoadsPage() {
                     >
                       <TableCell className="font-mono font-medium" data-testid={`text-load-id-${load.loadId}`}>
                         {load.loadId}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs" data-testid={`text-pickup-id-${load.loadId}`}>
+                        {load.pickupId ? (
+                          <Badge variant="outline" className="font-mono">
+                            {load.pickupId}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">

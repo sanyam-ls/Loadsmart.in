@@ -19,6 +19,7 @@ export interface AdminUser {
 
 export interface AdminLoad {
   loadId: string;
+  pickupId: string | null; // Unique 4-digit code given to carrier for pickup verification
   shipperId: string;
   shipperName: string;
   pickup: string;

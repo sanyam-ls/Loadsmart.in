@@ -120,42 +120,6 @@ const simulatedInvoices: Invoice[] = [
     dueDate: "2024-12-26",
   },
   {
-    id: "INV-003",
-    invoiceNumber: "INV-2024-003",
-    loadId: "LOAD-3",
-    shipperId: "SHP-3",
-    shipper: { companyName: "Mahindra Logistics", username: "mahindra" },
-    load: { pickupCity: "Pune", dropoffCity: "Hyderabad", status: "awarded" },
-    subtotal: "28000",
-    taxAmount: "5040",
-    totalAmount: "33040",
-    status: "disputed",
-    shipperStatus: "countered",
-    createdAt: "2024-12-10T08:00:00Z",
-    sentAt: "2024-12-10T08:30:00Z",
-    dueDate: "2024-12-24",
-    counterOffers: [
-      {
-        id: "CO-1",
-        proposedAmount: "28000",
-        reason: "Original quote was Rs. 28,000 as per verbal agreement. Tax should be calculated on agreed amount.",
-        proposedBy: "shipper",
-        status: "rejected",
-        createdAt: new Date("2024-12-11T10:00:00Z"),
-        respondedAt: new Date("2024-12-11T14:00:00Z"),
-        responseNote: "Rate was finalized at Rs. 33,040 including GST as per signed agreement.",
-      },
-      {
-        id: "CO-2",
-        proposedAmount: "30000",
-        reason: "Willing to pay Rs. 30,000 as a compromise. Please consider this as final offer.",
-        proposedBy: "shipper",
-        status: "pending",
-        createdAt: new Date("2024-12-12T09:00:00Z"),
-      },
-    ],
-  },
-  {
     id: "INV-004",
     invoiceNumber: "INV-2024-004",
     loadId: "LOAD-4",
@@ -218,8 +182,6 @@ function getStatusBadge(status: string) {
       return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" data-testid="badge-status-paid"><DollarSign className="h-3 w-3 mr-1" />Paid</Badge>;
     case "overdue":
       return <Badge variant="destructive" data-testid="badge-status-overdue"><AlertCircle className="h-3 w-3 mr-1" />Overdue</Badge>;
-    case "disputed":
-      return <Badge variant="destructive" data-testid="badge-status-disputed"><MessageSquare className="h-3 w-3 mr-1" />Disputed</Badge>;
     default:
       return <Badge variant="outline" data-testid="badge-status-unknown">{status}</Badge>;
   }
@@ -354,8 +316,6 @@ export default function AdminInvoicesPage() {
     sent: invoices.filter((i) => i.status === "sent").length,
     paid: invoices.filter((i) => i.status === "paid").length,
     overdue: invoices.filter((i) => i.status === "overdue").length,
-    disputed: invoices.filter((i) => i.status === "disputed").length,
-    pendingCounter: invoices.filter((i) => i.counterOffers?.some(c => c.status === "pending")).length,
   };
 
   const totalRevenue = invoices
@@ -363,7 +323,7 @@ export default function AdminInvoicesPage() {
     .reduce((sum, i) => sum + parseFloat(i.totalAmount || "0"), 0);
 
   const pendingAmount = invoices
-    .filter(i => ["sent", "disputed"].includes(i.status))
+    .filter(i => i.status === "sent")
     .reduce((sum, i) => sum + parseFloat(i.totalAmount || "0"), 0);
 
   if (isLoading) {
@@ -427,18 +387,15 @@ export default function AdminInvoicesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card data-testid="card-stat-disputes">
+        <Card data-testid="card-stat-overdue">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
-                <MessageSquare className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Disputes</p>
-                <p className="text-xl font-bold">{stats.disputed}</p>
-                {stats.pendingCounter > 0 && (
-                  <p className="text-xs text-amber-600">{stats.pendingCounter} counter pending</p>
-                )}
+                <p className="text-sm text-muted-foreground">Overdue</p>
+                <p className="text-xl font-bold">{stats.overdue}</p>
               </div>
             </div>
           </CardContent>
@@ -473,7 +430,6 @@ export default function AdminInvoicesPage() {
                 <SelectItem value="sent">Sent</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
-                <SelectItem value="disputed">Disputed</SelectItem>
               </SelectContent>
             </Select>
             <Select value={shipperStatusFilter} onValueChange={setShipperStatusFilter}>

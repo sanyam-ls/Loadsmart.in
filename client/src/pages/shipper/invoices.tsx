@@ -142,48 +142,6 @@ const simulatedInvoices: Invoice[] = [
     createdAt: "2024-12-12T10:30:00Z",
   },
   {
-    id: "INV-SHP-003",
-    invoiceNumber: "INV-2024-003",
-    loadId: "LOAD-103",
-    loadRoute: "Pune → Hyderabad",
-    loadStatus: "awarded",
-    shipperId: "current-user",
-    subtotal: "28000",
-    taxPercent: "18",
-    taxAmount: "5040",
-    totalAmount: "33040",
-    paymentTerms: "Net 14",
-    status: "disputed",
-    shipperConfirmed: true,
-    shipperConfirmedAt: "2024-12-10T08:30:00Z",
-    lineItems: [
-      { description: "Freight Charges: Pune to Hyderabad (560 km)", quantity: 1, amount: 25000 },
-      { description: "Fuel Surcharge", quantity: 1, amount: 3000 },
-    ],
-    counterOffers: [
-      {
-        id: "CO-1",
-        proposedAmount: 28000,
-        reason: "The original quote was Rs. 28,000 as per our verbal discussion. GST calculation seems incorrect.",
-        proposedBy: "shipper",
-        status: "rejected",
-        createdAt: new Date("2024-12-11T10:00:00Z"),
-        respondedAt: new Date("2024-12-11T14:00:00Z"),
-        responseNote: "Rate was confirmed at Rs. 33,040 including GST as per signed agreement.",
-      },
-      {
-        id: "CO-2",
-        proposedAmount: 30000,
-        reason: "Willing to pay Rs. 30,000 as final settlement. Please consider this compromise.",
-        proposedBy: "shipper",
-        status: "pending",
-        createdAt: new Date("2024-12-12T09:00:00Z"),
-      },
-    ],
-    dueDate: "2024-12-24",
-    createdAt: "2024-12-10T08:00:00Z",
-  },
-  {
     id: "INV-SHP-004",
     invoiceNumber: "INV-2024-004",
     loadId: "LOAD-104",
@@ -312,7 +270,7 @@ export default function ShipperInvoicesPage() {
     if (status === 'paid') {
       return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"><DollarSign className="h-3 w-3 mr-1" />Paid</Badge>;
     }
-    if (status === 'disputed' || status === 'invoice_rejected') {
+    if (status === 'invoice_rejected') {
       return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"><ArrowLeftRight className="h-3 w-3 mr-1" />Counter Pending</Badge>;
     }
     if (status === 'acknowledged') {
@@ -335,15 +293,13 @@ export default function ShipperInvoicesPage() {
   const activeInvoices = invoices.filter(inv => {
     const status = inv.status.toLowerCase();
     return (inv.shipperConfirmed || status === 'acknowledged') && 
-           status !== 'paid' && 
-           status !== 'disputed';
+           status !== 'paid';
   });
 
-  const disputedInvoices = invoices.filter(inv => inv.status.toLowerCase() === 'disputed');
   const paidInvoices = invoices.filter(inv => inv.status.toLowerCase() === 'paid');
 
   const totalPending = invoices
-    .filter(i => !['paid', 'disputed'].includes(i.status.toLowerCase()))
+    .filter(i => i.status.toLowerCase() !== 'paid')
     .reduce((sum, i) => sum + parseFloat(i.totalAmount || "0"), 0);
 
   const totalPaid = paidInvoices.reduce((sum, i) => sum + parseFloat(i.totalAmount || "0"), 0);
@@ -417,7 +373,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
   }
 
   const renderInvoiceCard = (invoice: Invoice, showActions: boolean = true) => (
-    <Card key={invoice.id} className={invoice.status === 'disputed' ? 'border-amber-300 dark:border-amber-800' : ''} data-testid={`card-invoice-${invoice.id}`}>
+    <Card key={invoice.id} data-testid={`card-invoice-${invoice.id}`}>
       <CardContent className="pt-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2 flex-1">

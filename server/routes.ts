@@ -3198,7 +3198,7 @@ export async function registerRoutes(
 
       const invoices = await storage.getInvoicesByShipper(user.id);
       // Filter to only show sent/approved/paid invoices (not draft/created)
-      const visibleStatuses = ['sent', 'approved', 'acknowledged', 'paid', 'overdue', 'disputed'];
+      const visibleStatuses = ['sent', 'approved', 'acknowledged', 'paid', 'overdue'];
       const visibleInvoices = invoices.filter(inv => visibleStatuses.includes(inv.status || ''));
       res.json(visibleInvoices);
     } catch (error) {
@@ -6115,7 +6115,7 @@ export async function registerRoutes(
       } else if (user.role === "shipper") {
         invoices = await storage.getInvoicesByShipper(user.id);
         // Filter to show only sent+ invoices to shipper
-        const visibleStatuses = ['sent', 'approved', 'acknowledged', 'paid', 'overdue', 'disputed'];
+        const visibleStatuses = ['sent', 'approved', 'acknowledged', 'paid', 'overdue'];
         invoices = invoices.filter(inv => visibleStatuses.includes(inv.status || ''));
       } else if (user.role === "carrier") {
         // Carriers see invoices for loads they delivered

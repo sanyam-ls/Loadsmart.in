@@ -3,7 +3,8 @@ import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   ChevronLeft, MapPin, Calendar, 
-  Users, Copy, X, CheckCircle, AlertCircle, Star, FileText, Loader2
+  Users, Copy, X, CheckCircle, AlertCircle, Star, FileText, Loader2,
+  Building2, User as UserIcon, Phone, IndianRupee, Package, Truck, StickyNote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -243,6 +244,110 @@ export default function LoadDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {(load.shipperCompanyName || load.shipperContactName || load.shipperCompanyAddress || load.shipperPhone) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Shipper Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {load.shipperCompanyName && (
+                    <div className="flex items-start gap-3">
+                      <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Company Name</p>
+                        <p className="font-medium" data-testid="text-company-name">{load.shipperCompanyName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {load.shipperContactName && (
+                    <div className="flex items-start gap-3">
+                      <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Contact Person</p>
+                        <p className="font-medium" data-testid="text-contact-name">{load.shipperContactName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {load.shipperCompanyAddress && (
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Company Address</p>
+                        <p className="font-medium" data-testid="text-company-address">{load.shipperCompanyAddress}</p>
+                      </div>
+                    </div>
+                  )}
+                  {load.shipperPhone && (
+                    <div className="flex items-start gap-3">
+                      <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Phone Number</p>
+                        <p className="font-medium" data-testid="text-phone">{load.shipperPhone}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {(load.goodsToBeCarried || load.specialNotes || load.shipperPricePerTon) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Cargo & Pricing Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {load.goodsToBeCarried && (
+                  <div className="flex items-start gap-3">
+                    <Package className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Goods to be Carried</p>
+                      <p className="font-medium" data-testid="text-goods">{load.goodsToBeCarried}</p>
+                    </div>
+                  </div>
+                )}
+                {load.shipperPricePerTon && (
+                  <>
+                    <Separator />
+                    <div className="flex items-start gap-3">
+                      <IndianRupee className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Your Suggested Price per Ton</p>
+                        <p className="font-medium text-lg" data-testid="text-price-per-ton">
+                          Rs. {parseFloat(load.shipperPricePerTon).toLocaleString("en-IN")} /ton
+                        </p>
+                        {load.weight && (
+                          <p className="text-sm text-muted-foreground">
+                            Estimated total: Rs. {(parseFloat(load.shipperPricePerTon) * parseFloat(load.weight)).toLocaleString("en-IN")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+                {load.specialNotes && (
+                  <>
+                    <Separator />
+                    <div className="flex items-start gap-3">
+                      <StickyNote className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Special Instructions / Notes</p>
+                        <p className="font-medium" data-testid="text-special-notes">{load.specialNotes}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4">

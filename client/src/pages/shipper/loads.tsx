@@ -99,9 +99,9 @@ function formatTimeAgo(date: Date | string | null) {
 
 // Format load ID for display - shipper sees LD-001, LD-002, etc.
 function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
-  // If admin has assigned a reference number, show that (e.g., LD-1083)
+  // If admin has assigned a reference number, show that (e.g., LD-1001, LD-10023)
   if (load.adminReferenceNumber) {
-    return `LD-${String(load.adminReferenceNumber).padStart(4, '0')}`;
+    return `LD-${load.adminReferenceNumber}`;
   }
   // Otherwise show shipper's sequential number (e.g., LD-001)
   if (load.shipperLoadNumber) {

@@ -137,6 +137,22 @@ interface RealLoad {
   finalPrice?: string;
   priceLockedAt?: string;
   submittedAt?: string;
+  shipperLoadNumber?: number | null;
+  adminReferenceNumber?: number | null;
+}
+
+// Format load ID for display - Admin sees LD-1001, LD-1002, etc.
+function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
+  // If admin has assigned a reference number, show that (e.g., LD-1001, LD-10023)
+  if (load.adminReferenceNumber) {
+    return `LD-${load.adminReferenceNumber}`;
+  }
+  // Otherwise show shipper's sequential number (e.g., LD-001)
+  if (load.shipperLoadNumber) {
+    return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  // Fallback to first 8 chars of UUID
+  return load.id.slice(0, 8).toUpperCase();
 }
 
 function getCanonicalStateDisplay(status: string): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string } {
@@ -380,7 +396,7 @@ export default function LoadQueuePage() {
 
   const convertRealToDrawerFormat = (load: RealLoad) => ({
     id: load.id,
-    loadId: load.id.slice(0, 8).toUpperCase(),
+    loadId: formatLoadId(load),
     pickupCity: load.pickupCity,
     dropoffCity: load.dropoffCity,
     weight: load.weight,
@@ -529,7 +545,7 @@ export default function LoadQueuePage() {
                 <TableBody>
                   {realLoads.map((load) => (
                     <TableRow key={load.id} data-testid={`row-real-load-${load.id.slice(0, 8)}`}>
-                      <TableCell className="font-mono font-medium">{load.id.slice(0, 8).toUpperCase()}</TableCell>
+                      <TableCell className="font-mono font-medium">{formatLoadId(load)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1 text-sm">
@@ -1089,7 +1105,7 @@ export default function LoadQueuePage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Load Details - {detailsLoad?.id?.slice(0, 8).toUpperCase()}
+              Load Details - {detailsLoad ? formatLoadId(detailsLoad) : ''}
             </DialogTitle>
             <DialogDescription>
               Complete shipper submission details

@@ -64,8 +64,10 @@ export interface IStorage {
   getAllLoads(): Promise<Load[]>;
   createLoad(load: InsertLoad): Promise<Load>;
   updateLoad(id: string, updates: Partial<Load>): Promise<Load | undefined>;
+  getNextGlobalLoadNumber(): Promise<number>;
   getNextShipperLoadNumber(shipperId: string): Promise<number>;
   getNextAdminReferenceNumber(shipperId: string): Promise<number>;
+  generateUniquePickupId(): Promise<string>;
 
   getBid(id: string): Promise<Bid | undefined>;
   getBidsByLoad(loadId: string): Promise<Bid[]>;
@@ -345,22 +347,40 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getNextShipperLoadNumber(shipperId: string): Promise<number> {
+  async getNextGlobalLoadNumber(): Promise<number> {
+    // Get the next global sequential load number (across all shippers)
     const result = await db
       .select({ maxNum: sql<number>`COALESCE(MAX(${loads.shipperLoadNumber}), 0)` })
-      .from(loads)
-      .where(eq(loads.shipperId, shipperId));
+      .from(loads);
     return (result[0]?.maxNum || 0) + 1;
   }
 
+  async getNextShipperLoadNumber(shipperId: string): Promise<number> {
+    // Legacy - now using global load number instead
+    return this.getNextGlobalLoadNumber();
+  }
+
   async getNextAdminReferenceNumber(shipperId: string): Promise<number> {
-    const result = await db
-      .select({ maxNum: sql<number>`COALESCE(MAX(${loads.adminReferenceNumber}), 0)` })
-      .from(loads)
-      .where(eq(loads.shipperId, shipperId));
-    // Start admin reference numbers at 1001 to differentiate from shipper numbers
-    const maxNum = result[0]?.maxNum || 1000;
-    return Math.max(maxNum + 1, 1001);
+    // Legacy - now using global load number
+    return this.getNextGlobalLoadNumber();
+  }
+
+  async generateUniquePickupId(): Promise<string> {
+    // Generate a unique 4-digit pickup ID
+    let attempts = 0;
+    while (attempts < 100) {
+      const pickupId = String(Math.floor(1000 + Math.random() * 9000)); // 1000-9999
+      const existing = await db.select({ id: loads.id })
+        .from(loads)
+        .where(eq(loads.pickupId, pickupId))
+        .limit(1);
+      if (existing.length === 0) {
+        return pickupId;
+      }
+      attempts++;
+    }
+    // Fallback: use timestamp-based ID
+    return String(Date.now()).slice(-4);
   }
 
   async getBid(id: string): Promise<Bid | undefined> {

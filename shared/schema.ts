@@ -218,9 +218,10 @@ export const loads = pgTable("loads", {
   assignedCarrierId: varchar("assigned_carrier_id").references(() => users.id),
   assignedTruckId: varchar("assigned_truck_id").references(() => trucks.id),
   
-  // Sequential load numbers (per shipper)
-  shipperLoadNumber: integer("shipper_load_number"), // Assigned at creation: LD-001, LD-002, etc.
-  adminReferenceNumber: integer("admin_reference_number"), // Assigned when admin prices: LD-1001, LD-1002, etc.
+  // Sequential load numbers (global - same across all portals)
+  shipperLoadNumber: integer("shipper_load_number"), // Assigned at creation: LD-001, LD-002, etc. (global sequential)
+  adminReferenceNumber: integer("admin_reference_number"), // Legacy - now using shipperLoadNumber
+  pickupId: varchar("pickup_id", { length: 4 }), // Unique 4-digit code given to carrier for pickup verification
   
   // Shipper contact details
   shipperCompanyName: text("shipper_company_name"),

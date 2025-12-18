@@ -121,9 +121,8 @@ export default function AdminLoadDetailsPage() {
   
   const detailedLoad = useMemo(() => {
     if (apiLoad) {
-      const displayLoadId = apiLoad.adminReferenceNumber 
-        ? `LD-${String(apiLoad.adminReferenceNumber).padStart(3, '0')}`
-        : `LD-${String(apiLoad.shipperLoadNumber || 0).padStart(3, '0')}`;
+      // Use sequential shipperLoadNumber for consistent LD-XXX format across all portals
+      const displayLoadId = `LD-${String(apiLoad.shipperLoadNumber || 0).padStart(3, '0')}`;
       return getDetailedLoad(displayLoadId) || createDetailedLoadFromApi(apiLoad, displayLoadId);
     }
     return getDetailedLoad(loadId);
@@ -323,6 +322,11 @@ export default function AdminLoadDetailsPage() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold" data-testid="text-load-id">{detailedLoad.loadId}</h1>
+              {apiLoad?.pickupId && (
+                <Badge variant="secondary" className="font-mono text-xs" data-testid="badge-pickup-id">
+                  Pickup: {apiLoad.pickupId}
+                </Badge>
+              )}
               {getStatusBadge(detailedLoad.status)}
               {getPriorityBadge(detailedLoad.priority || "Normal")}
             </div>
@@ -531,8 +535,18 @@ export default function AdminLoadDetailsPage() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Load ID</span>
-                    <span className="font-medium font-mono">{apiLoad?.id?.slice(0, 8) || loadId.slice(0, 8)}</span>
+                    <span className="font-medium font-mono" data-testid="text-shipper-load-id">
+                      {`LD-${String(apiLoad?.shipperLoadNumber || 0).padStart(3, '0')}`}
+                    </span>
                   </div>
+                  {apiLoad?.pickupId && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Pickup ID</span>
+                      <Badge variant="outline" className="font-mono" data-testid="text-pickup-id">
+                        {apiLoad.pickupId}
+                      </Badge>
+                    </div>
+                  )}
                   {apiLoad?.shipper?.isVerified !== undefined && (
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Shipper Status</span>

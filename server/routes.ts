@@ -1095,7 +1095,13 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const data = insertLoadSchema.parse(req.body);
+      // Get next sequential global load number
+      const shipperLoadNumber = await storage.getNextGlobalLoadNumber();
+      
+      const data = insertLoadSchema.parse({
+        ...req.body,
+        shipperLoadNumber,
+      });
       const load = await storage.createLoad(data);
       res.json(load);
     } catch (error) {
@@ -1369,9 +1375,13 @@ export async function registerRoutes(
         body.deliveryDate = new Date(body.deliveryDate);
       }
 
+      // Get next sequential global load number
+      const shipperLoadNumber = await storage.getNextGlobalLoadNumber();
+
       const data = insertLoadSchema.parse({
         ...body,
         shipperId: user.id,
+        shipperLoadNumber,
         status: 'pending',
         submittedAt: new Date(),
       });
@@ -2226,6 +2236,9 @@ export async function registerRoutes(
         actionType: 'assign',
       });
 
+      // Generate unique 4-digit pickup ID for carrier verification
+      const pickupId = await storage.generateUniquePickupId();
+
       // Update load with canonical awarded status
       const updatedLoad = await storage.updateLoad(load_id, {
         assignedCarrierId: carrier_id,
@@ -2237,6 +2250,7 @@ export async function registerRoutes(
         awardedAt: new Date(),
         statusChangedAt: new Date(),
         statusChangedBy: user.id,
+        pickupId: pickupId,
       });
 
       // Create order/shipment
@@ -2310,6 +2324,9 @@ export async function registerRoutes(
         }
       }
 
+      // Generate unique 4-digit pickup ID for carrier verification
+      const pickupId = await storage.generateUniquePickupId();
+
       // Update load to awarded status
       const updatedLoad = await storage.updateLoad(bid.loadId, {
         assignedCarrierId: bid.carrierId,
@@ -2322,6 +2339,7 @@ export async function registerRoutes(
         finalPrice: bid.amount,
         statusChangedAt: new Date(),
         statusChangedBy: user.id,
+        pickupId: pickupId,
       });
 
       // Create shipment

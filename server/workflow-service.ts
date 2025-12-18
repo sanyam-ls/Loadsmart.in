@@ -278,11 +278,16 @@ export async function acceptBid(
   const load = await storage.getLoad(bid.loadId);
   if (load) {
     await transitionLoadState(bid.loadId, "awarded", acceptedBy, `Bid ${bidId} accepted at Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
+    
+    // Generate unique 4-digit pickup ID for carrier verification
+    const pickupId = await storage.generateUniquePickupId();
+    
     await storage.updateLoad(bid.loadId, {
       assignedCarrierId: bid.carrierId,
       assignedTruckId: bid.truckId,
       finalPrice: acceptedAmount,  // Use the negotiated final price
       awardedBidId: bidId,
+      pickupId: pickupId,  // Unique 4-digit code for carrier pickup
     });
 
     // Create shipment for carrier execution (if not already exists)

@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useOtpRequests, useApproveOtpRequest, useRejectOtpRequest, type OtpRequest, invalidateOtpRequests } from "@/lib/api-hooks";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 
 function formatLoadId(load?: { adminReferenceNumber?: number | null }): string {
   if (load?.adminReferenceNumber) {
@@ -265,27 +265,73 @@ export default function AdminOtpQueue() {
               </CardContent>
             </Card>
           ) : (
-            approvedRequests.map(request => (
-              <Card key={request.id} className="mb-3">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge className="bg-green-500/10 text-green-600">
-                        {request.requestType === "trip_start" ? "Trip Start" : "Trip End"}
-                      </Badge>
-                      <Badge variant="outline">{formatLoadId(request.load)}</Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {request.carrier?.companyName || request.carrier?.username}
-                      </span>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground mb-4">
+                Showing {approvedRequests.length} approved request{approvedRequests.length !== 1 ? 's' : ''}
+              </p>
+              {approvedRequests.map(request => (
+                <Card key={request.id} className="mb-3" data-testid={`approved-request-${request.id}`}>
+                  <CardContent className="pt-4">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge className="bg-green-500/10 text-green-600 dark:text-green-400">
+                            {request.requestType === "trip_start" ? "Trip Start" : "Trip End"}
+                          </Badge>
+                          <Badge variant="outline">{formatLoadId(request.load)}</Badge>
+                        </div>
+                        <Badge variant="secondary">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Approved
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Truck className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">
+                            {request.carrier?.companyName || request.carrier?.username || "Unknown Carrier"}
+                          </span>
+                          {request.carrier?.phone && (
+                            <span className="text-muted-foreground">
+                              <Phone className="h-3 w-3 inline mr-1" />
+                              {request.carrier.phone}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {request.load && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            <span>{request.load.pickupCity || "—"} → {request.load.deliveryCity || request.load.dropoffCity || "—"}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-4 pt-2 text-xs text-muted-foreground border-t">
+                        <div>
+                          <span className="font-medium">Requested:</span>{" "}
+                          {request.requestedAt 
+                            ? format(new Date(request.requestedAt), "MMM d, yyyy 'at' h:mm a")
+                            : "—"}
+                        </div>
+                        <div>
+                          <span className="font-medium">Approved:</span>{" "}
+                          {request.processedAt 
+                            ? format(new Date(request.processedAt), "MMM d, yyyy 'at' h:mm a")
+                            : "—"}
+                        </div>
+                        {request.approvedBy && (
+                          <div>
+                            <span className="font-medium">By:</span> {request.approvedBy.username}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <Badge variant="secondary">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Approved
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </TabsContent>
 

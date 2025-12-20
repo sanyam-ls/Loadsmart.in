@@ -1429,6 +1429,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(otpRequests.requestedAt));
   }
 
+  // Get all OTP requests for admin record keeping
+  async getAllOtpRequests(): Promise<OtpRequest[]> {
+    return db.select()
+      .from(otpRequests)
+      .orderBy(desc(otpRequests.requestedAt));
+  }
+
   // Get OTP requests by shipment
   async getOtpRequestsByShipment(shipmentId: string): Promise<OtpRequest[]> {
     return db.select()

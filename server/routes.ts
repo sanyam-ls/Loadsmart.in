@@ -7017,7 +7017,7 @@ export async function registerRoutes(
     }
   });
 
-  // Admin gets pending OTP requests
+  // Admin gets all OTP requests (pending, approved, rejected) for record keeping
   app.get("/api/otp/requests", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -7025,13 +7025,15 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const pendingRequests = await storage.getPendingOtpRequests();
+      // Get all OTP requests for complete record keeping
+      const allRequests = await storage.getAllOtpRequests();
       
       // Enrich with carrier and load details
-      const enrichedRequests = await Promise.all(pendingRequests.map(async (request) => {
+      const enrichedRequests = await Promise.all(allRequests.map(async (request) => {
         const carrierUser = await storage.getUser(request.carrierId);
         const load = await storage.getLoad(request.loadId);
         const shipment = await storage.getShipment(request.shipmentId);
+        const approvedByUser = request.processedBy ? await storage.getUser(request.processedBy) : null;
         return {
           ...request,
           carrier: carrierUser ? {
@@ -7049,6 +7051,10 @@ export async function registerRoutes(
             dropoffCity: load.dropoffCity,
           } : null,
           shipmentStatus: shipment?.status,
+          approvedBy: approvedByUser ? {
+            id: approvedByUser.id,
+            username: approvedByUser.username,
+          } : null,
         };
       }));
 

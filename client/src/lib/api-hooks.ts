@@ -468,8 +468,25 @@ export interface OtpRequest {
   processedBy?: string;
   otpId?: string;
   notes?: string;
-  carrier?: { username: string; companyName?: string };
-  load?: { pickupCity?: string; deliveryCity?: string; adminReferenceNumber?: number };
+  carrier?: { 
+    id?: string;
+    username: string; 
+    companyName?: string;
+    email?: string;
+    phone?: string;
+  };
+  load?: { 
+    id?: string;
+    pickupCity?: string; 
+    deliveryCity?: string; 
+    dropoffCity?: string;
+    adminReferenceNumber?: number;
+  };
+  shipmentStatus?: string;
+  approvedBy?: {
+    id: string;
+    username: string;
+  };
 }
 
 export function useOtpRequests(status?: string) {

@@ -6040,16 +6040,269 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/shipments/:id - Get specific shipment
-  app.get("/api/shipments/:id", requireAuth, async (req, res) => {
+  // GET /api/shipments/tracking - Get enriched shipments for tracking (shipper/carrier)
+  // NOTE: This must be defined BEFORE /api/shipments/:id to prevent "tracking" matching as an id
+  app.get("/api/shipments/tracking", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      let shipmentsList: any[] = [];
+      
+      if (user.role === "shipper") {
+        shipmentsList = await storage.getShipmentsByShipper(user.id);
+      } else if (user.role === "carrier") {
+        shipmentsList = await storage.getShipmentsByCarrier(user.id);
+      } else if (user.role === "admin") {
+        shipmentsList = await storage.getAllShipments();
+      }
+
+      // Enrich each shipment with load, carrier, truck details
+      const enrichedShipments = await Promise.all(
+        shipmentsList.map(async (shipment) => {
+          const load = await storage.getLoad(shipment.loadId);
+          const carrier = await storage.getUser(shipment.carrierId);
+          const carrierProfile = carrier ? await storage.getCarrierProfile(carrier.id) : null;
+          const truck = shipment.truckId ? await storage.getTruck(shipment.truckId) : null;
+          const events = await storage.getShipmentEvents(shipment.id);
+          const documents = await storage.getDocumentsByLoad(shipment.loadId);
+
+          // Calculate progress based on shipment status and OTP verification
+          let progress = 0;
+          let currentStage = "load_created";
+          
+          if (shipment.startOtpVerified && shipment.endOtpVerified) {
+            progress = 100;
+            currentStage = "delivered";
+          } else if (shipment.status === "in_transit" || shipment.startOtpVerified) {
+            progress = 60;
+            currentStage = "in_transit";
+          } else if (shipment.status === "pickup_scheduled") {
+            progress = 25;
+            currentStage = "carrier_assigned";
+          }
+
+          // Build timeline events from shipment state and actual events
+          const timeline = [];
+          
+          // Load Created - always exists
+          timeline.push({
+            stage: "load_created",
+            completed: true,
+            timestamp: load?.createdAt || shipment.createdAt,
+            location: load?.pickupCity || "Origin",
+          });
+
+          // Carrier Assigned - always true if shipment exists
+          timeline.push({
+            stage: "carrier_assigned",
+            completed: true,
+            timestamp: shipment.createdAt,
+            location: load?.pickupCity || "Origin",
+          });
+
+          // Reached Pickup - tied to start OTP request
+          timeline.push({
+            stage: "reached_pickup",
+            completed: shipment.startOtpRequested || false,
+            timestamp: shipment.startOtpRequestedAt || null,
+            location: load?.pickupCity || "Pickup Location",
+          });
+
+          // Loaded - tied to start OTP verification
+          timeline.push({
+            stage: "loaded",
+            completed: shipment.startOtpVerified || false,
+            timestamp: shipment.startOtpVerifiedAt || null,
+            location: load?.pickupCity || "Pickup Location",
+          });
+
+          // In Transit
+          timeline.push({
+            stage: "in_transit",
+            completed: shipment.startOtpVerified || false,
+            timestamp: shipment.startedAt || shipment.startOtpVerifiedAt || null,
+            location: "En Route",
+          });
+
+          // Arrived at Drop - tied to end OTP request
+          timeline.push({
+            stage: "arrived_at_drop",
+            completed: shipment.endOtpRequested || false,
+            timestamp: shipment.endOtpRequestedAt || null,
+            location: load?.dropoffCity || "Delivery Location",
+          });
+
+          // Delivered - tied to end OTP verification
+          timeline.push({
+            stage: "delivered",
+            completed: shipment.endOtpVerified || false,
+            timestamp: shipment.endOtpVerifiedAt || shipment.completedAt || null,
+            location: load?.dropoffCity || "Delivery Location",
+          });
+
+          return {
+            ...shipment,
+            load: load ? {
+              id: load.id,
+              adminReferenceNumber: load.adminReferenceNumber,
+              pickupCity: load.pickupCity,
+              pickupAddress: load.pickupAddress,
+              dropoffCity: load.dropoffCity,
+              dropoffAddress: load.dropoffAddress,
+              materialType: load.materialType,
+              weight: load.weight,
+              requiredTruckType: load.requiredTruckType,
+            } : null,
+            carrier: carrier ? {
+              id: carrier.id,
+              username: carrier.username,
+              companyName: carrier.companyName || carrier.username,
+              phone: carrier.phone,
+            } : null,
+            truck: truck ? {
+              id: truck.id,
+              registrationNumber: truck.licensePlate,
+              truckType: truck.truckType,
+              capacity: truck.capacity,
+            } : null,
+            events,
+            documents: documents.map(d => ({
+              id: d.id,
+              documentType: d.documentType,
+              status: d.isVerified ? "verified" : "pending",
+              fileName: d.fileName,
+            })),
+            timeline,
+            progress,
+            currentStage,
+          };
+        })
+      );
+
+      res.json(enrichedShipments);
+    } catch (error) {
+      console.error("Get tracking shipments error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/shipments/:id/tracking - Get single enriched shipment for tracking
+  app.get("/api/shipments/:id/tracking", requireAuth, async (req, res) => {
     try {
       const shipment = await storage.getShipment(req.params.id);
       if (!shipment) {
         return res.status(404).json({ error: "Shipment not found" });
       }
-      res.json(shipment);
+
+      const load = await storage.getLoad(shipment.loadId);
+      const carrier = await storage.getUser(shipment.carrierId);
+      const carrierProfile = carrier ? await storage.getCarrierProfile(carrier.id) : null;
+      const truck = shipment.truckId ? await storage.getTruck(shipment.truckId) : null;
+      const events = await storage.getShipmentEvents(shipment.id);
+      const documents = await storage.getDocumentsByLoad(shipment.loadId);
+
+      // Calculate progress
+      let progress = 0;
+      let currentStage = "load_created";
+      
+      if (shipment.startOtpVerified && shipment.endOtpVerified) {
+        progress = 100;
+        currentStage = "delivered";
+      } else if (shipment.status === "in_transit" || shipment.startOtpVerified) {
+        progress = 60;
+        currentStage = "in_transit";
+      } else if (shipment.status === "pickup_scheduled") {
+        progress = 25;
+        currentStage = "carrier_assigned";
+      }
+
+      // Build timeline
+      const timeline = [
+        {
+          stage: "load_created",
+          completed: true,
+          timestamp: load?.createdAt || shipment.createdAt,
+          location: load?.pickupCity || "Origin",
+        },
+        {
+          stage: "carrier_assigned",
+          completed: true,
+          timestamp: shipment.createdAt,
+          location: load?.pickupCity || "Origin",
+        },
+        {
+          stage: "reached_pickup",
+          completed: shipment.startOtpRequested || false,
+          timestamp: shipment.startOtpRequestedAt || null,
+          location: load?.pickupCity || "Pickup Location",
+        },
+        {
+          stage: "loaded",
+          completed: shipment.startOtpVerified || false,
+          timestamp: shipment.startOtpVerifiedAt || null,
+          location: load?.pickupCity || "Pickup Location",
+        },
+        {
+          stage: "in_transit",
+          completed: shipment.startOtpVerified || false,
+          timestamp: shipment.startedAt || shipment.startOtpVerifiedAt || null,
+          location: "En Route",
+        },
+        {
+          stage: "arrived_at_drop",
+          completed: shipment.endOtpRequested || false,
+          timestamp: shipment.endOtpRequestedAt || null,
+          location: load?.dropoffCity || "Delivery Location",
+        },
+        {
+          stage: "delivered",
+          completed: shipment.endOtpVerified || false,
+          timestamp: shipment.endOtpVerifiedAt || shipment.completedAt || null,
+          location: load?.dropoffCity || "Delivery Location",
+        },
+      ];
+
+      res.json({
+        ...shipment,
+        load: load ? {
+          id: load.id,
+          adminReferenceNumber: load.adminReferenceNumber,
+          pickupCity: load.pickupCity,
+          pickupAddress: load.pickupAddress,
+          dropoffCity: load.dropoffCity,
+          dropoffAddress: load.dropoffAddress,
+          materialType: load.materialType,
+          weight: load.weight,
+          requiredTruckType: load.requiredTruckType,
+        } : null,
+        carrier: carrier ? {
+          id: carrier.id,
+          username: carrier.username,
+          companyName: carrier.companyName || carrier.username,
+          phone: carrier.phone,
+        } : null,
+        truck: truck ? {
+          id: truck.id,
+          registrationNumber: truck.licensePlate,
+          truckType: truck.truckType,
+          capacity: truck.capacity,
+        } : null,
+        events,
+        documents: documents.map(d => ({
+          id: d.id,
+          documentType: d.documentType,
+          status: d.isVerified ? "verified" : "pending",
+          fileName: d.fileName,
+        })),
+        timeline,
+        progress,
+        currentStage,
+      });
     } catch (error) {
-      console.error("Get shipment error:", error);
+      console.error("Get tracking shipment error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -6061,6 +6314,21 @@ export async function registerRoutes(
       res.json(shipment || null);
     } catch (error) {
       console.error("Get shipment by load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/shipments/:id - Get specific shipment
+  // NOTE: This must be defined AFTER /api/shipments/tracking and /api/shipments/load/:loadId
+  app.get("/api/shipments/:id", requireAuth, async (req, res) => {
+    try {
+      const shipment = await storage.getShipment(req.params.id);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+      res.json(shipment);
+    } catch (error) {
+      console.error("Get shipment error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

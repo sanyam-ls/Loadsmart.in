@@ -88,6 +88,19 @@ The Shipper Portal includes a CAN-Bus GPS + Telematics system. It provides real-
 -   **Authentication**: `express-session`, `connect-pg-simple`
 -   **Development**: `tsx`, `esbuild`
 
+### API Route Ordering (Important)
+
+Express routes must be ordered from specific to generic to prevent greedy matching:
+
+```
+/api/shipments/tracking       (BEFORE :id)
+/api/shipments/:id/tracking   (BEFORE generic :id)
+/api/shipments/load/:loadId   (BEFORE generic :id)
+/api/shipments/:id            (LAST - catches all remaining)
+```
+
+**Why:** If `/api/shipments/:id` is defined first, requests to `/api/shipments/tracking` will match "tracking" as an ID, returning 404.
+
 ### Build & Development Tools
 
 -   **Frontend**: `vite`, `tailwindcss`, `autoprefixer`, `postcss`

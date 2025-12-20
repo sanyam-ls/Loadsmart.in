@@ -35,6 +35,7 @@ import CarrierDocumentsPage from "@/pages/carrier/documents";
 import CarrierRevenuePage from "@/pages/carrier/revenue";
 import CarrierDriversPage from "@/pages/carrier/drivers";
 import CarrierHistoryPage from "@/pages/carrier/history";
+import CarrierShipmentsPage from "@/pages/carrier/shipments";
 
 import SoloLoadFeed from "@/pages/solo/load-feed";
 import SoloMyBids from "@/pages/solo/my-bids";
@@ -54,6 +55,7 @@ import AdminNegotiationsPage from "@/pages/admin/negotiations";
 import AdminInvoicesPage from "@/pages/admin/invoices";
 import AdminCarrierVerificationPage from "@/pages/admin/carrier-verification";
 import NegotiationInbox from "@/pages/admin/negotiation-inbox";
+import AdminOtpQueuePage from "@/pages/admin/otp-queue";
 import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import { AdminDataProvider } from "@/lib/admin-data-store";
@@ -132,6 +134,7 @@ function AppContent() {
               <Route path="/carrier/revenue" component={CarrierRevenuePage} />
               <Route path="/carrier/drivers" component={CarrierDriversPage} />
               <Route path="/carrier/history" component={CarrierHistoryPage} />
+              <Route path="/carrier/shipments" component={CarrierShipmentsPage} />
               
               <Route path="/solo" component={SoloLoadFeed} />
               <Route path="/solo/loads" component={SoloLoadFeed} />
@@ -157,6 +160,7 @@ function AppContent() {
               <Route path="/admin/verification" component={AdminCarrierVerificationPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
               <Route path="/admin/invoices" component={AdminInvoicesPage} />
+              <Route path="/admin/otp-queue" component={AdminOtpQueuePage} />
               
               <Route path="/settings" component={SettingsPage} />
               

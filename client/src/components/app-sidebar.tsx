@@ -18,6 +18,7 @@ import {
   User,
   History,
   ClipboardList,
+  Key,
 } from "lucide-react";
 import {
   Sidebar,
@@ -51,6 +52,7 @@ const carrierItems = [
   { title: "Drivers", url: "/carrier/drivers", icon: User },
   { title: "Available Loads", url: "/carrier/loads", icon: Route },
   { title: "My Bids", url: "/carrier/bids", icon: Gavel },
+  { title: "My Shipments", url: "/carrier/shipments", icon: Package },
   { title: "Active Trips", url: "/carrier/trips", icon: MapPin },
   { title: "Trip History", url: "/carrier/history", icon: History },
   { title: "Revenue", url: "/carrier/revenue", icon: DollarSign },
@@ -67,6 +69,7 @@ const soloItems = [
 const adminItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
   { title: "Load Queue", url: "/admin/queue", icon: ClipboardList },
+  { title: "OTP Requests", url: "/admin/otp-queue", icon: Key },
   { title: "Bids & Negotiations", url: "/admin/negotiations", icon: Gavel },
   { title: "Invoices", url: "/admin/invoices", icon: FileText },
   { title: "Users", url: "/admin/users", icon: Users },

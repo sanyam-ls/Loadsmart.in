@@ -1353,6 +1353,14 @@ export class DatabaseStorage implements IStorage {
     return otp;
   }
 
+  // Get all OTP verifications for a shipment
+  async getOtpVerificationsByShipment(shipmentId: string): Promise<OtpVerification[]> {
+    return await db.select()
+      .from(otpVerifications)
+      .where(eq(otpVerifications.shipmentId, shipmentId))
+      .orderBy(desc(otpVerifications.createdAt));
+  }
+
   // Update OTP verification
   async updateOtpVerification(id: string, updates: Partial<OtpVerification>): Promise<OtpVerification | undefined> {
     const [updated] = await db.update(otpVerifications)

@@ -455,4 +455,113 @@ export function invalidateInvoices() {
   queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
 }
 
+// OTP Hooks
+export interface OtpRequest {
+  id: string;
+  requestType: 'trip_start' | 'trip_end' | 'registration';
+  carrierId: string;
+  shipmentId: string;
+  loadId: string;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  requestedAt?: string;
+  processedAt?: string;
+  processedBy?: string;
+  otpId?: string;
+  notes?: string;
+  carrier?: { username: string; companyName?: string };
+  load?: { pickupCity?: string; deliveryCity?: string; adminReferenceNumber?: number };
+}
+
+export function useOtpRequests(status?: string) {
+  return useQuery<OtpRequest[]>({
+    queryKey: ['/api/otp/requests', status],
+    staleTime: 5000,
+    refetchInterval: 10000,
+  });
+}
+
+export function useApproveOtpRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requestId, validityMinutes = 10 }: { requestId: string; validityMinutes?: number }) => {
+      const res = await apiRequest('POST', `/api/otp/approve/${requestId}`, { validityMinutes });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+    },
+  });
+}
+
+export function useRejectOtpRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requestId, notes }: { requestId: string; notes?: string }) => {
+      const res = await apiRequest('POST', `/api/otp/reject/${requestId}`, { notes });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+    },
+  });
+}
+
+export function useRequestTripStartOtp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (shipmentId: string) => {
+      const res = await apiRequest('POST', '/api/otp/request-start', { shipmentId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+    },
+  });
+}
+
+export function useRequestTripEndOtp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (shipmentId: string) => {
+      const res = await apiRequest('POST', '/api/otp/request-end', { shipmentId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+    },
+  });
+}
+
+export function useVerifyOtp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ shipmentId, otpCode, otpType }: { shipmentId: string; otpCode: string; otpType: 'trip_start' | 'trip_end' }) => {
+      const res = await apiRequest('POST', '/api/otp/verify', { shipmentId, otpCode, otpType });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+    },
+  });
+}
+
+export function useOtpStatus(shipmentId: string | undefined) {
+  return useQuery({
+    queryKey: ['/api/otp/status', shipmentId],
+    enabled: !!shipmentId,
+    staleTime: 5000,
+    refetchInterval: 10000,
+  });
+}
+
+export function invalidateOtpRequests() {
+  queryClient.invalidateQueries({ queryKey: ['/api/otp/requests'] });
+}
+
 export { queryClient };

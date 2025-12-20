@@ -1,0 +1,465 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { Loader2, CheckCircle, XCircle, Clock, RefreshCw, Key, Truck, MapPin, Copy, Phone, MessageSquare } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { useOtpRequests, useApproveOtpRequest, useRejectOtpRequest, type OtpRequest, invalidateOtpRequests } from "@/lib/api-hooks";
+import { formatDistanceToNow } from "date-fns";
+
+function formatLoadId(load?: { adminReferenceNumber?: number | null }): string {
+  if (load?.adminReferenceNumber) {
+    return `LD-${load.adminReferenceNumber}`;
+  }
+  return "Unknown";
+}
+
+interface OtpRequestCardProps {
+  request: OtpRequest;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}
+
+function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
+  const typeLabel = request.requestType === "trip_start" ? "Trip Start" : request.requestType === "trip_end" ? "Trip End" : "Registration";
+  const typeColor = request.requestType === "trip_start" ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+  
+  return (
+    <Card className="mb-3" data-testid={`otp-request-card-${request.id}`}>
+      <CardContent className="pt-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className={typeColor}>{typeLabel}</Badge>
+              <Badge variant="outline">{formatLoadId(request.load)}</Badge>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              <Clock className="inline h-3 w-3 mr-1" />
+              {request.requestedAt ? formatDistanceToNow(new Date(request.requestedAt), { addSuffix: true }) : "Just now"}
+            </span>
+          </div>
+          
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm">
+              <Truck className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{request.carrier?.companyName || request.carrier?.username || "Unknown Carrier"}</span>
+            </div>
+            {request.load && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>{request.load.pickupCity || "—"} → {request.load.deliveryCity || "—"}</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-2 pt-2">
+            <Button 
+              size="sm" 
+              onClick={() => onApprove(request.id)}
+              data-testid={`button-approve-${request.id}`}
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Approve & Generate OTP
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => onReject(request.id)}
+              data-testid={`button-reject-${request.id}`}
+            >
+              <XCircle className="h-4 w-4 mr-1" />
+              Reject
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function AdminOtpQueue() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState("pending");
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<OtpRequest | null>(null);
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [validityMinutes, setValidityMinutes] = useState(10);
+  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
+  const [showOtpDialog, setShowOtpDialog] = useState(false);
+
+  const { data: requests, isLoading, refetch } = useOtpRequests();
+  const approveMutation = useApproveOtpRequest();
+  const rejectMutation = useRejectOtpRequest();
+
+  const pendingRequests = (requests || []).filter(r => r.status === "pending");
+  const approvedRequests = (requests || []).filter(r => r.status === "approved");
+  const rejectedRequests = (requests || []).filter(r => r.status === "rejected");
+
+  const handleApproveClick = (id: string) => {
+    const request = requests?.find(r => r.id === id);
+    if (request) {
+      setSelectedRequest(request);
+      setApproveDialogOpen(true);
+    }
+  };
+
+  const handleRejectClick = (id: string) => {
+    const request = requests?.find(r => r.id === id);
+    if (request) {
+      setSelectedRequest(request);
+      setRejectNotes("");
+      setRejectDialogOpen(true);
+    }
+  };
+
+  const handleApproveConfirm = async () => {
+    if (!selectedRequest) return;
+    
+    try {
+      const result = await approveMutation.mutateAsync({
+        requestId: selectedRequest.id,
+        validityMinutes,
+      });
+      
+      setApproveDialogOpen(false);
+      setGeneratedOtp(result.otp.otpCode);
+      setShowOtpDialog(true);
+      
+      toast({
+        title: "OTP Generated",
+        description: "Share this OTP with the carrier via phone or message.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!selectedRequest) return;
+    
+    try {
+      await rejectMutation.mutateAsync({
+        requestId: selectedRequest.id,
+        notes: rejectNotes,
+      });
+      
+      setRejectDialogOpen(false);
+      toast({
+        title: "Request Rejected",
+        description: "The carrier has been notified.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyOtpToClipboard = () => {
+    if (generatedOtp) {
+      navigator.clipboard.writeText(generatedOtp);
+      toast({
+        title: "Copied",
+        description: "OTP copied to clipboard",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container py-6 max-w-4xl">
+      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Key className="h-6 w-6" />
+            OTP Request Queue
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Review and approve carrier OTP requests for trip actions
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => refetch()}
+          data-testid="button-refresh-otp"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="pending" data-testid="tab-pending">
+            Pending
+            {pendingRequests.length > 0 && (
+              <Badge variant="destructive" className="ml-2">{pendingRequests.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="approved" data-testid="tab-approved">
+            Approved
+          </TabsTrigger>
+          <TabsTrigger value="rejected" data-testid="tab-rejected">
+            Rejected
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending">
+          {pendingRequests.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Key className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Pending Requests</h3>
+                <p className="text-muted-foreground text-sm">
+                  All OTP requests have been processed.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            pendingRequests.map(request => (
+              <OtpRequestCard
+                key={request.id}
+                request={request}
+                onApprove={handleApproveClick}
+                onReject={handleRejectClick}
+              />
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="approved">
+          {approvedRequests.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No approved requests yet.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            approvedRequests.map(request => (
+              <Card key={request.id} className="mb-3">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="bg-green-500/10 text-green-600">
+                        {request.requestType === "trip_start" ? "Trip Start" : "Trip End"}
+                      </Badge>
+                      <Badge variant="outline">{formatLoadId(request.load)}</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {request.carrier?.companyName || request.carrier?.username}
+                      </span>
+                    </div>
+                    <Badge variant="secondary">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Approved
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="rejected">
+          {rejectedRequests.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <XCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No rejected requests.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            rejectedRequests.map(request => (
+              <Card key={request.id} className="mb-3">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="bg-red-500/10 text-red-600">
+                        {request.requestType === "trip_start" ? "Trip Start" : "Trip End"}
+                      </Badge>
+                      <Badge variant="outline">{formatLoadId(request.load)}</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {request.carrier?.companyName || request.carrier?.username}
+                      </span>
+                    </div>
+                    <Badge variant="destructive">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Rejected
+                    </Badge>
+                  </div>
+                  {request.notes && (
+                    <p className="text-sm text-muted-foreground mt-2">Reason: {request.notes}</p>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve OTP Request</DialogTitle>
+            <DialogDescription>
+              Generate a one-time password for the carrier to start or end their trip.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Carrier</Label>
+              <p className="text-sm font-medium">
+                {selectedRequest?.carrier?.companyName || selectedRequest?.carrier?.username}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Route</Label>
+              <p className="text-sm">
+                {selectedRequest?.load?.pickupCity || "—"} → {selectedRequest?.load?.deliveryCity || "—"}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="validity">OTP Validity (minutes)</Label>
+              <Input
+                id="validity"
+                type="number"
+                min={5}
+                max={60}
+                value={validityMinutes}
+                onChange={(e) => setValidityMinutes(parseInt(e.target.value) || 10)}
+                data-testid="input-validity-minutes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApproveConfirm} 
+              disabled={approveMutation.isPending}
+              data-testid="button-confirm-approve"
+            >
+              {approveMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Key className="h-4 w-4 mr-2" />
+              )}
+              Generate OTP
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject OTP Request</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting this OTP request. The carrier will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reject-notes">Reason (optional)</Label>
+              <Textarea
+                id="reject-notes"
+                placeholder="Enter reason for rejection..."
+                value={rejectNotes}
+                onChange={(e) => setRejectNotes(e.target.value)}
+                data-testid="input-reject-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleRejectConfirm} 
+              disabled={rejectMutation.isPending}
+              data-testid="button-confirm-reject"
+            >
+              {rejectMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
+              Reject Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              OTP Generated Successfully
+            </DialogTitle>
+            <DialogDescription>
+              Share this OTP with the carrier through a secure channel (phone call or SMS).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+            <div className="bg-muted rounded-lg p-6 text-center">
+              <p className="text-sm text-muted-foreground mb-2">One-Time Password</p>
+              <p className="text-4xl font-mono font-bold tracking-[0.5em]" data-testid="text-generated-otp">
+                {generatedOtp}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Valid for {validityMinutes} minutes
+              </p>
+            </div>
+            <div className="flex justify-center gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={copyOtpToClipboard}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy OTP
+              </Button>
+            </div>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <div className="flex gap-2 flex-1 justify-start text-muted-foreground text-sm items-center">
+              <Phone className="h-4 w-4" />
+              <span>Call or message the carrier to share this OTP</span>
+            </div>
+            <Button onClick={() => setShowOtpDialog(false)} data-testid="button-close-otp-dialog">
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

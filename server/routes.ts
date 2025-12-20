@@ -7027,6 +7027,33 @@ export async function registerRoutes(
       }
 
       const requests = await storage.getOtpRequestsByShipment(shipmentId);
+      const now = new Date();
+      
+      // Check for approved requests with valid (non-expired) OTPs
+      const startApprovedRequest = requests.find(r => 
+        r.requestType === "trip_start" && r.status === "approved" && r.otpId
+      );
+      const endApprovedRequest = requests.find(r => 
+        r.requestType === "trip_end" && r.status === "approved" && r.otpId
+      );
+
+      // Check if the OTP associated with approved request is still valid
+      let startOtpApproved = false;
+      let endOtpApproved = false;
+
+      if (startApprovedRequest?.otpId && !shipment.startOtpVerified) {
+        const otp = await storage.getOtpVerification(startApprovedRequest.otpId);
+        // OTP is valid if it exists, hasn't been used (verified/expired), and hasn't expired
+        // Accept both "pending" and "approved" status as valid for entry
+        const isValidStatus = otp && (otp.status === "pending" || otp.status === "approved");
+        startOtpApproved = isValidStatus && new Date(otp!.expiresAt) > now;
+      }
+
+      if (endApprovedRequest?.otpId && !shipment.endOtpVerified) {
+        const otp = await storage.getOtpVerification(endApprovedRequest.otpId);
+        const isValidStatus = otp && (otp.status === "pending" || otp.status === "approved");
+        endOtpApproved = isValidStatus && new Date(otp!.expiresAt) > now;
+      }
 
       res.json({
         shipmentId,
@@ -7034,6 +7061,9 @@ export async function registerRoutes(
         startOtpVerified: shipment.startOtpVerified,
         endOtpRequested: shipment.endOtpRequested,
         endOtpVerified: shipment.endOtpVerified,
+        // Approved means there's an approved request with a valid (non-expired) OTP
+        startOtpApproved,
+        endOtpApproved,
         requests: requests.map(r => ({
           id: r.id,
           type: r.requestType,

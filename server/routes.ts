@@ -7029,16 +7029,25 @@ export async function registerRoutes(
       
       // Enrich with carrier and load details
       const enrichedRequests = await Promise.all(pendingRequests.map(async (request) => {
-        const carrier = await storage.getUser(request.carrierId);
+        const carrierUser = await storage.getUser(request.carrierId);
         const load = await storage.getLoad(request.loadId);
         const shipment = await storage.getShipment(request.shipmentId);
         return {
           ...request,
-          carrierName: carrier?.companyName || carrier?.username,
-          carrierPhone: carrier?.phone,
-          loadNumber: load?.shipperLoadNumber ? `LD-${String(load.shipperLoadNumber).padStart(3, '0')}` : load?.id.slice(0, 8),
-          pickupCity: load?.pickupCity,
-          dropoffCity: load?.dropoffCity,
+          carrier: carrierUser ? {
+            id: carrierUser.id,
+            companyName: carrierUser.companyName,
+            username: carrierUser.username,
+            email: carrierUser.email,
+            phone: carrierUser.phone,
+          } : null,
+          load: load ? {
+            id: load.id,
+            adminReferenceNumber: load.adminReferenceNumber,
+            pickupCity: load.pickupCity,
+            deliveryCity: load.dropoffCity,
+            dropoffCity: load.dropoffCity,
+          } : null,
           shipmentStatus: shipment?.status,
         };
       }));

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Loader2, Truck, Package, MapPin, Clock, CheckCircle, RefreshCw, ArrowRight, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, Truck, Package, MapPin, Clock, CheckCircle, RefreshCw, ArrowRight, Calendar, Key } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/empty-state";
 import { OtpTripActions } from "@/components/otp-trip-actions";
 import { useShipments, useLoads, invalidateAllData } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
+import { onMarketplaceEvent } from "@/lib/marketplace-socket";
+import { useToast } from "@/hooks/use-toast";
 import type { Shipment, Load } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -35,9 +37,40 @@ interface ShipmentWithLoad extends Shipment {
 
 export default function CarrierShipmentsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { data: shipments, isLoading: shipmentsLoading, refetch } = useShipments();
   const { data: loads } = useLoads();
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubApproved = onMarketplaceEvent("otp_approved", (data) => {
+      refetch();
+      toast({
+        title: "OTP Approved",
+        description: data.otpType === "trip_start" 
+          ? "Trip start OTP has been approved. You can now begin your trip."
+          : "Trip end OTP has been approved. Trip completed successfully.",
+      });
+    });
+
+    const unsubCompleted = onMarketplaceEvent("trip_completed", () => {
+      refetch();
+      toast({
+        title: "Trip Completed",
+        description: "Your trip has been marked as delivered.",
+      });
+    });
+
+    const unsubRequested = onMarketplaceEvent("otp_requested", () => {
+      refetch();
+    });
+
+    return () => {
+      unsubApproved();
+      unsubCompleted();
+      unsubRequested();
+    };
+  }, [refetch, toast]);
 
   const carrierShipments: ShipmentWithLoad[] = (shipments || [])
     .filter(s => s.carrierId === user?.id)

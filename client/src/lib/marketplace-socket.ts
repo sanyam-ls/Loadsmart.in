@@ -119,6 +119,32 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         verificationHandlers?.forEach(handler => handler(message));
       }
 
+      if (message.type === "otp_approved") {
+        queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/otp-queue"] });
+        
+        const otpApprovedHandlers = handlers.get("otp_approved");
+        otpApprovedHandlers?.forEach(handler => handler(message));
+      }
+
+      if (message.type === "trip_completed") {
+        queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/otp-queue"] });
+        
+        const tripCompletedHandlers = handlers.get("trip_completed");
+        tripCompletedHandlers?.forEach(handler => handler(message));
+      }
+
+      if (message.type === "otp_requested") {
+        queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/otp-queue"] });
+        
+        const otpRequestedHandlers = handlers.get("otp_requested");
+        otpRequestedHandlers?.forEach(handler => handler(message));
+      }
+
       const typeHandlers = handlers.get(message.type);
       if (typeHandlers) {
         typeHandlers.forEach(handler => handler(message));

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   MapPin, Package, Truck, CheckCircle, Clock, FileText, 
-  Navigation, Building, ArrowRight, RefreshCw, Phone, Loader2
+  Navigation, Building, ArrowRight, RefreshCw, Phone, Loader2,
+  Eye, X, Download, Calendar
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
-import { format } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { format, addHours, differenceInHours } from "date-fns";
+
+import lrConsignmentNote from "@assets/generated_images/lr_consignment_note_document.png";
+import ewayBill from "@assets/generated_images/e-way_bill_document.png";
+import podDocument from "@assets/generated_images/proof_of_delivery_document.png";
+import loadingPhotos from "@assets/generated_images/loading_photos_cargo_truck.png";
 
 type ShipmentStage = "load_created" | "carrier_assigned" | "reached_pickup" | "loaded" | "in_transit" | "arrived_at_drop" | "delivered";
 
@@ -86,6 +93,55 @@ const stageIcons: Record<ShipmentStage, typeof MapPin> = {
   delivered: CheckCircle,
 };
 
+const documentImages: Record<string, string> = {
+  "LR / Consignment Note": lrConsignmentNote,
+  "E-way Bill": ewayBill,
+  "Loading Photos": loadingPhotos,
+  "Proof of Delivery (POD)": podDocument,
+};
+
+function calculateETA(shipment: TrackedShipment): { date: string; time: string } | null {
+  if (shipment.currentStage === "delivered") {
+    const deliveredEvent = shipment.timeline.find(e => e.stage === "delivered" && e.timestamp);
+    if (deliveredEvent?.timestamp) {
+      const dt = new Date(deliveredEvent.timestamp);
+      return {
+        date: format(dt, "MMM d, yyyy"),
+        time: format(dt, "h:mm a"),
+      };
+    }
+    return null;
+  }
+  
+  if (shipment.eta) {
+    const etaDate = new Date(shipment.eta);
+    return {
+      date: format(etaDate, "MMM d, yyyy"),
+      time: format(etaDate, "h:mm a"),
+    };
+  }
+  
+  const inTransitEvent = shipment.timeline.find(e => e.stage === "in_transit" && e.timestamp);
+  if (inTransitEvent?.timestamp) {
+    const estimatedArrival = addHours(new Date(inTransitEvent.timestamp), 12);
+    return {
+      date: format(estimatedArrival, "MMM d, yyyy"),
+      time: format(estimatedArrival, "h:mm a"),
+    };
+  }
+  
+  const loadedEvent = shipment.timeline.find(e => e.stage === "loaded" && e.timestamp);
+  if (loadedEvent?.timestamp) {
+    const estimatedArrival = addHours(new Date(loadedEvent.timestamp), 14);
+    return {
+      date: format(estimatedArrival, "MMM d, yyyy"),
+      time: format(estimatedArrival, "h:mm a"),
+    };
+  }
+  
+  return null;
+}
+
 function getStatusBadge(stage: string) {
   if (stage === "delivered") {
     return (
@@ -125,9 +181,20 @@ export default function TrackingPage() {
   });
 
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
+  const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
 
   const activeShipments = shipments.filter(s => s.currentStage !== "delivered");
   const selectedShipment = shipments.find(s => s.id === selectedShipmentId) || activeShipments[0] || null;
+  const estimatedArrival = selectedShipment ? calculateETA(selectedShipment) : null;
+
+  function openDocumentViewer(docType: string) {
+    const image = documentImages[docType];
+    if (image) {
+      setSelectedDocument({ type: docType, image });
+      setDocumentViewerOpen(true);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -248,13 +315,18 @@ export default function TrackingPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Estimated Arrival</p>
-                    <p className="font-semibold">
-                      {selectedShipment.eta 
-                        ? format(new Date(selectedShipment.eta), "MMM d 'at' h:mm a")
-                        : "Pending"
-                      }
+                    <p className="text-sm text-muted-foreground flex items-center justify-end gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {selectedShipment.currentStage === "delivered" ? "Delivered" : "Estimated Arrival"}
                     </p>
+                    {estimatedArrival ? (
+                      <div>
+                        <p className="font-semibold text-lg" data-testid="text-eta-date">{estimatedArrival.date}</p>
+                        <p className="text-sm text-muted-foreground" data-testid="text-eta-time">{estimatedArrival.time}</p>
+                      </div>
+                    ) : (
+                      <p className="font-semibold text-muted-foreground">Pending</p>
+                    )}
                   </div>
                 </div>
                 <Progress value={selectedShipment.progress} className="mt-4" />
@@ -357,26 +429,34 @@ export default function TrackingPage() {
                           d.documentType.toLowerCase().includes(docType.toLowerCase().split(" ")[0])
                         );
                         return (
-                          <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div 
+                            key={index} 
+                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer"
+                            onClick={() => openDocumentViewer(docType)}
+                            data-testid={`document-${docType.toLowerCase().replace(/[^a-z]/g, '-')}`}
+                          >
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-muted-foreground" />
                               <span className="text-sm">{docType}</span>
                             </div>
-                            {doc?.status === "verified" ? (
-                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Verified
-                              </Badge>
-                            ) : doc ? (
-                              <Badge variant="secondary">
-                                <ArrowRight className="h-3 w-3 mr-1" />
-                                Uploaded
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-muted-foreground">
-                                Pending
-                              </Badge>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {doc?.status === "verified" ? (
+                                <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Verified
+                                </Badge>
+                              ) : doc ? (
+                                <Badge variant="secondary">
+                                  <ArrowRight className="h-3 w-3 mr-1" />
+                                  Uploaded
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-muted-foreground">
+                                  Sample
+                                </Badge>
+                              )}
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            </div>
                           </div>
                         );
                       })}
@@ -392,6 +472,59 @@ export default function TrackingPage() {
           )}
         </Card>
       </div>
+
+      <Dialog open={documentViewerOpen} onOpenChange={setDocumentViewerOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {selectedDocument?.type}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedShipment && (
+                <span>
+                  Load {formatLoadId(selectedShipment.load?.adminReferenceNumber)} - {selectedShipment.load?.pickupCity} to {selectedShipment.load?.dropoffCity}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDocument && (
+            <div className="mt-4">
+              <div className="border rounded-lg overflow-hidden bg-white">
+                <img 
+                  src={selectedDocument.image} 
+                  alt={selectedDocument.type}
+                  className="w-full h-auto object-contain"
+                  data-testid="img-document-viewer"
+                />
+              </div>
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = selectedDocument.image;
+                    link.download = `${selectedDocument.type.replace(/[^a-z0-9]/gi, '_')}.png`;
+                    link.click();
+                  }}
+                  data-testid="button-download-document"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => setDocumentViewerOpen(false)}
+                  data-testid="button-close-document"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

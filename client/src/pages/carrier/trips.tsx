@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   MapPin, Truck, Clock, CheckCircle, Upload, Navigation, Fuel, User, 
   AlertTriangle, TrendingUp, Route, Calendar, Timer, Shield, Gauge,
-  ArrowRight, Package, Building2, PlayCircle, PauseCircle, Coffee
+  ArrowRight, Package, Building2, PlayCircle, PauseCircle, Coffee,
+  FileText, Eye, Download, Key, Lock, Unlock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,11 +12,40 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { useToast } from "@/hooks/use-toast";
 import { useCarrierData, type CarrierTrip } from "@/lib/carrier-data-store";
-import { format } from "date-fns";
+import { format, addHours } from "date-fns";
+import { OtpTripActions } from "@/components/otp-trip-actions";
+
+import lrConsignmentNote from "@assets/generated_images/lr_consignment_note_document.png";
+import ewayBill from "@assets/generated_images/e-way_bill_document.png";
+import podDocument from "@assets/generated_images/proof_of_delivery_document.png";
+import loadingPhotos from "@assets/generated_images/loading_photos_cargo_truck.png";
+
+const documentImages: Record<string, string> = {
+  "LR / Consignment Note": lrConsignmentNote,
+  "E-way Bill": ewayBill,
+  "Loading Photos": loadingPhotos,
+  "Proof of Delivery (POD)": podDocument,
+};
+
+interface RealShipment {
+  id: string;
+  loadId: string;
+  status: string;
+  startOtpRequested: boolean;
+  startOtpVerified: boolean;
+  endOtpRequested: boolean;
+  endOtpVerified: boolean;
+  load?: {
+    adminReferenceNumber?: number;
+    pickupCity?: string;
+    dropoffCity?: string;
+  };
+}
 
 function formatCurrency(amount: number): string {
   if (amount >= 100000) {
@@ -37,6 +68,30 @@ export default function TripsPage() {
   const { activeTrips, updateTripStatus } = useCarrierData();
   const [selectedTrip, setSelectedTrip] = useState<CarrierTrip | null>(activeTrips[0] || null);
   const [detailTab, setDetailTab] = useState("overview");
+  const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
+
+  const { data: realShipments = [], refetch: refetchShipments } = useQuery<RealShipment[]>({
+    queryKey: ['/api/shipments'],
+    refetchInterval: 30000,
+  });
+
+  const matchedShipment = useMemo(() => {
+    if (!selectedTrip) return null;
+    const loadNum = selectedTrip.loadId.replace('LD-', '');
+    return realShipments.find(s => 
+      s.load?.adminReferenceNumber?.toString() === loadNum ||
+      s.loadId === selectedTrip.loadId
+    );
+  }, [selectedTrip, realShipments]);
+
+  function openDocumentViewer(docType: string) {
+    const image = documentImages[docType];
+    if (image) {
+      setSelectedDocument({ type: docType, image });
+      setDocumentViewerOpen(true);
+    }
+  }
 
   const stats = useMemo(() => {
     const inTransit = activeTrips.filter(t => t.status === "in_transit").length;
@@ -204,8 +259,10 @@ export default function TripsPage() {
               
               <CardContent className="p-0">
                 <Tabs value={detailTab} onValueChange={setDetailTab}>
-                  <TabsList className="w-full justify-start rounded-none border-b px-4">
+                  <TabsList className="w-full justify-start rounded-none border-b px-4 flex-wrap">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="security">Security</TabsTrigger>
+                    <TabsTrigger value="documents">Documents</TabsTrigger>
                     <TabsTrigger value="fuel">Fuel</TabsTrigger>
                     <TabsTrigger value="driver">Driver</TabsTrigger>
                     <TabsTrigger value="timeline">Timeline</TabsTrigger>
@@ -286,6 +343,94 @@ export default function TripsPage() {
                           ))}
                         </div>
                       </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="security" className="mt-0 space-y-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Key className="h-5 w-5 text-primary" />
+                            OTP Security Gate
+                          </CardTitle>
+                          <CardDescription>
+                            Secure your trip with OTP verification at pickup and delivery
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {matchedShipment ? (
+                            <OtpTripActions 
+                              shipment={matchedShipment as any} 
+                              onStateChange={() => refetchShipments()}
+                            />
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                                <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                  <Lock className="h-5 w-5 text-amber-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-medium">Trip Start</p>
+                                  <p className="text-sm text-muted-foreground">Verify OTP at pickup location</p>
+                                </div>
+                                <Badge variant="outline">Pending</Badge>
+                              </div>
+                              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                                  <Lock className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-medium">Trip End</p>
+                                  <p className="text-sm text-muted-foreground">Verify OTP at delivery location</p>
+                                </div>
+                                <Badge variant="outline" className="text-muted-foreground">Locked</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground text-center">
+                                OTP data will sync when shipment is connected
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                    
+                    <TabsContent value="documents" className="mt-0 space-y-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            Trip Documents
+                          </CardTitle>
+                          <CardDescription>
+                            View and manage shipment documents
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {["LR / Consignment Note", "E-way Bill", "Loading Photos", "Proof of Delivery (POD)"].map((docType, index) => (
+                              <div 
+                                key={index} 
+                                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer"
+                                onClick={() => openDocumentViewer(docType)}
+                                data-testid={`trip-document-${index}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-sm">{docType}</p>
+                                    <p className="text-xs text-muted-foreground">Click to view</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-muted-foreground">Sample</Badge>
+                                  <Eye className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
                     </TabsContent>
                     
                     <TabsContent value="fuel" className="mt-0 space-y-4">
@@ -510,6 +655,45 @@ export default function TripsPage() {
           )}
         </Card>
       </div>
+
+      <Dialog open={documentViewerOpen} onOpenChange={setDocumentViewerOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {selectedDocument?.type}
+            </DialogTitle>
+            <DialogDescription>
+              View and download this document
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            {selectedDocument?.image && (
+              <img 
+                src={selectedDocument.image} 
+                alt={selectedDocument.type}
+                className="max-w-full max-h-[60vh] object-contain rounded-lg border"
+                data-testid="document-image"
+              />
+            )}
+            <Button 
+              variant="outline"
+              onClick={() => {
+                if (selectedDocument?.image) {
+                  const link = document.createElement('a');
+                  link.href = selectedDocument.image;
+                  link.download = `${selectedDocument.type.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+                  link.click();
+                }
+              }}
+              data-testid="button-download-document"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Document
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

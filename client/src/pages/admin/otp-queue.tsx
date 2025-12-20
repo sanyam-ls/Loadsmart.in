@@ -137,7 +137,7 @@ export default function AdminOtpQueue() {
       });
       
       setApproveDialogOpen(false);
-      setGeneratedOtp(result.otp.otpCode);
+      setGeneratedOtp(result.otp.code);
       setShowOtpDialog(true);
       
       toast({

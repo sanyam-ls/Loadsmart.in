@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   MapPin, Truck, Clock, CheckCircle, Upload, Navigation, Fuel, User, 
   AlertTriangle, TrendingUp, Route, Calendar, Timer, Shield, Gauge,
   ArrowRight, Package, Building2, PlayCircle, PauseCircle, Coffee,
-  FileText, Eye, Download, Key, Lock, Unlock
+  FileText, Eye, Download, Key, Lock, Unlock, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,6 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useCarrierData, type CarrierTrip } from "@/lib/carrier-data-store";
 import { format, addHours } from "date-fns";
 import { OtpTripActions } from "@/components/otp-trip-actions";
+import { useAuth } from "@/lib/auth-context";
+import { useShipments, useLoads } from "@/lib/api-hooks";
+import { onMarketplaceEvent } from "@/lib/marketplace-socket";
+import type { Shipment, Load } from "@shared/schema";
 
 import lrConsignmentNote from "@assets/generated_images/lr_consignment_note_document.png";
 import ewayBill from "@assets/generated_images/e-way_bill_document.png";
@@ -47,11 +51,12 @@ interface RealShipment {
   };
 }
 
-function formatCurrency(amount: number): string {
-  if (amount >= 100000) {
-    return `Rs. ${(amount / 100000).toFixed(1)}L`;
+function formatCurrency(amount: number | undefined | null): string {
+  const value = amount ?? 0;
+  if (value >= 100000) {
+    return `Rs. ${(value / 100000).toFixed(1)}L`;
   }
-  return `Rs. ${amount.toLocaleString()}`;
+  return `Rs. ${value.toLocaleString()}`;
 }
 
 const statusConfig: Record<CarrierTrip["status"], { label: string; color: string }> = {
@@ -63,27 +68,121 @@ const statusConfig: Record<CarrierTrip["status"], { label: string; color: string
   delivered: { label: "Delivered", color: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400" },
 };
 
+function convertShipmentToTrip(shipment: Shipment, load: Load | undefined): CarrierTrip {
+  const loadId = load?.adminReferenceNumber 
+    ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}` 
+    : `LD-${shipment.loadId.slice(0, 6)}`;
+  
+  let status: CarrierTrip["status"] = "awaiting_pickup";
+  let progress = 0;
+  
+  if (shipment.endOtpVerified) {
+    status = "delivered";
+    progress = 100;
+  } else if (shipment.status === "in_transit") {
+    status = "in_transit";
+    progress = 50;
+  } else if (shipment.startOtpVerified) {
+    status = "in_transit";
+    progress = 30;
+  } else if (shipment.startOtpRequested) {
+    status = "awaiting_pickup";
+    progress = 10;
+  }
+
+  const totalDistance = typeof load?.distance === 'number' ? load.distance : 500;
+  const rate = (load as any)?.adminPrice || load?.finalPrice || 0;
+  const now = new Date();
+  const createdAt = shipment.createdAt instanceof Date ? shipment.createdAt : new Date(shipment.createdAt || now);
+
+  return {
+    tripId: `real-${shipment.id}`,
+    loadId,
+    pickup: load?.pickupCity || "Unknown",
+    dropoff: load?.dropoffCity || "Unknown",
+    status,
+    progress,
+    totalDistance,
+    completedDistance: Math.round(totalDistance * (progress / 100)),
+    eta: addHours(now, 12),
+    originalEta: addHours(now, 12),
+    rate,
+    profitabilityEstimate: Math.round(rate * 0.25),
+    currentLocation: load?.pickupCity || "En route",
+    driverAssigned: "Driver",
+    driverAssignedId: "driver-1",
+    truckAssigned: "Truck",
+    truckAssignedId: "truck-1",
+    loadType: (load as any)?.cargoType || "General",
+    weight: typeof load?.weight === 'number' ? load.weight : 10,
+    startDate: createdAt,
+    fuel: { fuelConsumed: 0, costPerLiter: 95, totalFuelCost: 0, fuelEfficiency: 4, costOverrun: 0, refuelAlerts: [] },
+    driverInsights: { driverName: "Driver", driverLicense: "DL-000000", drivingHoursToday: 0, breaksTaken: 0, speedingAlerts: 0, harshBrakingEvents: 0, safetyScore: 85, idleTime: 0 },
+    allStops: [
+      { stopId: "s1", location: load?.pickupCity || "Origin", type: "pickup", status: shipment.startOtpVerified ? "completed" : "pending", scheduledTime: createdAt, actualTime: shipment.startOtpVerified ? createdAt : null },
+      { stopId: "s2", location: load?.dropoffCity || "Destination", type: "delivery", status: shipment.endOtpVerified ? "completed" : "pending", scheduledTime: addHours(createdAt, 12), actualTime: shipment.endOtpVerified ? now : null },
+    ],
+    timeline: [
+      { eventId: "e1", type: "pickup", description: "Shipment assigned", timestamp: createdAt, location: load?.pickupCity || "Origin" },
+    ],
+    shipperName: (load as any)?.shipperName || "Shipper",
+  };
+}
+
 export default function TripsPage() {
   const { toast } = useToast();
-  const { activeTrips, updateTripStatus } = useCarrierData();
-  const [selectedTrip, setSelectedTrip] = useState<CarrierTrip | null>(activeTrips[0] || null);
+  const { user } = useAuth();
+  const { activeTrips: simulatedTrips, updateTripStatus } = useCarrierData();
+  const { data: shipments = [], refetch: refetchShipments } = useShipments();
+  const { data: loads = [] } = useLoads();
+  const [selectedTrip, setSelectedTrip] = useState<CarrierTrip | null>(null);
   const [detailTab, setDetailTab] = useState("overview");
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
 
-  const { data: realShipments = [], refetch: refetchShipments } = useQuery<RealShipment[]>({
-    queryKey: ['/api/shipments'],
-    refetchInterval: 30000,
-  });
+  const realTrips = useMemo(() => {
+    const carrierShipments = shipments.filter(s => s.carrierId === user?.id && s.status !== "delivered" && s.status !== "cancelled");
+    return carrierShipments.map(shipment => {
+      const load = loads.find(l => l.id === shipment.loadId);
+      return convertShipmentToTrip(shipment, load);
+    });
+  }, [shipments, loads, user?.id]);
+
+  const activeTrips = useMemo(() => {
+    const realTripIds = new Set(realTrips.map(t => t.loadId));
+    const filteredSimulated = simulatedTrips.filter(t => !realTripIds.has(t.loadId));
+    return [...realTrips, ...filteredSimulated];
+  }, [realTrips, simulatedTrips]);
+
+  useEffect(() => {
+    if (!selectedTrip && activeTrips.length > 0) {
+      setSelectedTrip(activeTrips[0]);
+    }
+  }, [activeTrips, selectedTrip]);
+
+  useEffect(() => {
+    const unsubApproved = onMarketplaceEvent("otp_approved", () => {
+      refetchShipments();
+      toast({ title: "OTP Approved", description: "Trip OTP has been verified" });
+    });
+    const unsubCompleted = onMarketplaceEvent("trip_completed", () => {
+      refetchShipments();
+      toast({ title: "Trip Completed", description: "Trip marked as delivered" });
+    });
+    const unsubRequested = onMarketplaceEvent("otp_requested", () => {
+      refetchShipments();
+    });
+    return () => { unsubApproved(); unsubCompleted(); unsubRequested(); };
+  }, [refetchShipments, toast]);
 
   const matchedShipment = useMemo(() => {
     if (!selectedTrip) return null;
-    const loadNum = selectedTrip.loadId.replace('LD-', '');
-    return realShipments.find(s => 
-      s.load?.adminReferenceNumber?.toString() === loadNum ||
-      s.loadId === selectedTrip.loadId
-    );
-  }, [selectedTrip, realShipments]);
+    const loadNum = selectedTrip.loadId.replace('LD-', '').replace(/^0+/, '');
+    return shipments.find(s => {
+      const load = loads.find(l => l.id === s.loadId);
+      return load?.adminReferenceNumber?.toString() === loadNum || s.id === selectedTrip.tripId.replace('real-', '');
+    });
+  }, [selectedTrip, shipments, loads]);
 
   function openDocumentViewer(docType: string) {
     const image = documentImages[docType];
@@ -97,9 +196,9 @@ export default function TripsPage() {
     const inTransit = activeTrips.filter(t => t.status === "in_transit").length;
     const pickingUp = activeTrips.filter(t => t.status === "awaiting_pickup" || t.status === "picked_up").length;
     const delivering = activeTrips.filter(t => t.status === "out_for_delivery").length;
-    const totalRevenue = activeTrips.reduce((sum, t) => sum + t.rate, 0);
+    const totalRevenue = activeTrips.reduce((sum, t) => sum + (t.rate || 0), 0);
     const avgProgress = activeTrips.length > 0 
-      ? Math.round(activeTrips.reduce((sum, t) => sum + t.progress, 0) / activeTrips.length)
+      ? Math.round(activeTrips.reduce((sum, t) => sum + (t.progress || 0), 0) / activeTrips.length)
       : 0;
     
     return { inTransit, pickingUp, delivering, totalRevenue, avgProgress };

@@ -1,0 +1,225 @@
+(ADMIN-AUTHORIZED • MAP-TRACKED • STATE-LOCKED)
+
+You are extending an admin-managed freight marketplace with OTP-based security gates for carrier onboarding and trip execution.
+
+This workflow must interact seamlessly with:
+	•	Admin Console
+	•	Carrier Portal
+	•	Shipper Portal
+	•	Existing load → bid → negotiate → invoice → execution flow
+
+No step may operate independently.
+
+⸻
+
+CORE SECURITY PRINCIPLE (OVERRIDE RULE)
+
+Carriers cannot act on critical milestones without Admin authorization via OTP.
+
+OTP is required for:
+	1.	Carrier registration
+	2.	Trip start
+	3.	Trip completion
+
+No OTP → no action.
+
+⸻
+
+1. CARRIER REGISTRATION — OTP-GATED ENTRY
+
+Objective
+
+Ensure only verified, traceable carriers enter the ecosystem.
+
+Workflow
+	1.	Carrier selects Carrier Type at signup:
+	•	SOLO DRIVER (Owner-Operator)
+	•	COMPANY / FLEET
+	2.	Carrier submits:
+	•	Phone number (mandatory)
+	•	Basic identity details
+	•	Carrier type–specific information
+	•	Solo: DL, RC, Aadhaar/PAN
+	•	Company: Company name, GST, fleet details
+	3.	OTP is sent to carrier phone number
+	•	OTP is mandatory to proceed
+	•	No OTP verification → registration blocked
+	4.	After OTP verification:
+	•	Carrier account is created with status:
+	•	UNVERIFIED
+	•	Carrier is routed to Verification Queue (Admin)
+	5.	Admin reviews documents and approves/rejects:
+	•	Only VERIFIED carriers can:
+	•	See real admin-posted loads
+	•	Bid
+	•	Accept trips
+
+OTP at registration is non-optional and non-bypassable.
+
+⸻
+
+2. TRIP START — ADMIN-GENERATED OTP ONLY
+
+Objective
+
+Prevent fake pickups, ghost trips, and unauthorized starts.
+
+Preconditions
+	•	Load is:
+	•	Fully negotiated
+	•	Carrier finalized
+	•	Invoice approved by shipper
+	•	Load status = READY_FOR_PICKUP
+
+Workflow
+	1.	Carrier opens My Trips → Assigned Trip
+	•	“Start Trip” button is visible but disabled
+	2.	Carrier clicks “Request Start OTP”
+	•	Request is sent to Admin in real time
+	3.	Admin verifies:
+	•	Load details
+	•	Carrier identity
+	•	Pickup readiness
+	4.	Admin generates Trip Start OTP
+	•	OTP is time-bound (short validity)
+	•	OTP is visible only to Admin
+	•	Admin communicates OTP to carrier (call / message)
+	5.	Carrier enters OTP in app
+	•	System validates OTP
+	6.	On successful OTP validation:
+	•	Trip status changes to IN_TRANSIT
+	•	GPS tracking activates
+	•	Google Maps API loads:
+	•	Pickup → Delivery route
+	•	Live route visualization
+	•	Distance, ETA, checkpoints
+
+❌ Carrier cannot start trip without OTP
+❌ OTP cannot be reused
+❌ OTP expires automatically
+
+⸻
+
+3. LIVE TRIP TRACKING — MAP-LOCKED EXECUTION
+
+During Trip
+	•	Carrier app shows:
+	•	Live Google Maps route
+	•	Current location
+	•	Remaining distance
+	•	ETA
+	•	Admin dashboard shows:
+	•	Live truck movement
+	•	Route deviation alerts (if any)
+	•	Status updates
+	•	Shipper portal shows:
+	•	Read-only live tracking
+	•	No controls
+
+Tracking begins only after Start OTP validation.
+
+⸻
+
+4. TRIP END — ADMIN-AUTHORIZED CLOSURE OTP
+
+Objective
+
+Prevent premature delivery closure or fake POD completion.
+
+Preconditions
+	•	Trip status = IN_TRANSIT
+	•	Carrier reaches delivery location (geo-fenced or manual confirmation)
+
+Workflow
+	1.	Carrier clicks “End Trip”
+	•	Button is visible but disabled
+	2.	Carrier clicks “Request End OTP”
+	•	Request sent to Admin in real time
+	3.	Admin verifies:
+	•	Delivery completion
+	•	POD readiness (if applicable)
+	4.	Admin generates Trip End OTP
+	•	Time-bound
+	•	Single-use
+	5.	Carrier enters OTP
+	•	System validates OTP
+	6.	On success:
+	•	Trip status changes to COMPLETED
+	•	GPS tracking stops
+	•	POD upload (if required) is unlocked
+	•	Revenue is marked as billable
+
+❌ No OTP → no trip completion
+❌ Carrier cannot self-close trips
+
+⸻
+
+5. STATE SYNCHRONIZATION (NON-NEGOTIABLE)
+
+Every OTP action must instantly update:
+	•	Admin dashboard
+	•	Carrier trip view
+	•	Shipper tracking view
+	•	Load status
+	•	Notifications
+
+No refresh assumptions.
+No delayed sync.
+
+⸻
+
+6. NOTIFICATIONS (REAL-TIME & ROLE-BASED)
+
+Carrier
+	•	“OTP required to start trip”
+	•	“OTP verified — trip started”
+	•	“OTP required to end trip”
+	•	“Trip completed successfully”
+
+Admin
+	•	“Carrier requested Start OTP”
+	•	“Carrier requested End OTP”
+	•	“Trip started”
+	•	“Trip completed”
+
+Shipper
+	•	“Trip started”
+	•	“In transit”
+	•	“Delivered”
+
+⸻
+
+7. FAILURE & SAFETY RULES
+
+System must block actions if:
+	•	OTP is invalid
+	•	OTP is expired
+	•	Carrier is unverified
+	•	Load is not in correct state
+
+No overrides.
+No manual toggles.
+
+⸻
+
+8. SIMULATED + REAL DATA COMPATIBILITY
+	•	OTP flow must work with:
+	•	Real loads
+	•	Simulated/demo loads
+	•	Simulated OTPs must:
+	•	Behave identically
+	•	Follow same state transitions
+	•	Use same permissions
+
+⸻
+
+FINAL ENFORCEMENT
+
+This workflow ensures:
+	•	Admin retains operational control
+	•	Carriers cannot manipulate trip lifecycle
+	•	Shippers get clean, trustworthy execution
+	•	Fraud vectors are minimized
+
+OTP is the gatekeeper of trust.
+No OTP → no entry, no start, no completion.

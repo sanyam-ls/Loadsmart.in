@@ -7,6 +7,7 @@ import {
   adminAuditLogs, apiLogs, adminActionsQueue, featureFlags,
   invoiceHistory, carrierProposals, loadStateChangeLogs, shipperInvoiceResponses,
   carrierVerifications, carrierVerificationDocuments, bidNegotiations, negotiationThreads,
+  otpVerifications, otpRequests,
   validStateTransitions,
   type User, type InsertUser,
   type Truck, type InsertTruck,
@@ -36,6 +37,8 @@ import {
   type CarrierVerificationDocument, type InsertCarrierVerificationDocument,
   type BidNegotiation, type InsertBidNegotiation,
   type NegotiationThread, type InsertNegotiationThread,
+  type OtpVerification, type InsertOtpVerification,
+  type OtpRequest, type InsertOtpRequest,
   type LoadStatus,
 } from "@shared/schema";
 
@@ -1315,6 +1318,170 @@ export class DatabaseStorage implements IStorage {
       accepted: threads.filter(t => t.status === "accepted").length,
       rejected: threads.filter(t => t.status === "rejected").length,
     };
+  }
+
+  // ==================== OTP OPERATIONS ====================
+  
+  // Generate a 6-digit OTP code
+  generateOtpCode(): string {
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
+
+  // Create an OTP verification record
+  async createOtpVerification(otp: InsertOtpVerification): Promise<OtpVerification> {
+    const [newOtp] = await db.insert(otpVerifications).values(otp).returning();
+    return newOtp;
+  }
+
+  // Get OTP by ID
+  async getOtpVerification(id: string): Promise<OtpVerification | undefined> {
+    const [otp] = await db.select().from(otpVerifications).where(eq(otpVerifications.id, id));
+    return otp;
+  }
+
+  // Get pending OTP for a shipment and type
+  async getPendingOtpForShipment(shipmentId: string, otpType: string): Promise<OtpVerification | undefined> {
+    const [otp] = await db.select()
+      .from(otpVerifications)
+      .where(and(
+        eq(otpVerifications.shipmentId, shipmentId),
+        eq(otpVerifications.otpType, otpType),
+        eq(otpVerifications.status, "pending")
+      ))
+      .orderBy(desc(otpVerifications.createdAt))
+      .limit(1);
+    return otp;
+  }
+
+  // Update OTP verification
+  async updateOtpVerification(id: string, updates: Partial<OtpVerification>): Promise<OtpVerification | undefined> {
+    const [updated] = await db.update(otpVerifications)
+      .set(updates)
+      .where(eq(otpVerifications.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Verify an OTP code
+  async verifyOtp(id: string, code: string): Promise<{ success: boolean; message: string; otp?: OtpVerification }> {
+    const otp = await this.getOtpVerification(id);
+    if (!otp) {
+      return { success: false, message: "OTP not found" };
+    }
+    if (otp.status !== "pending") {
+      return { success: false, message: "OTP already used or expired" };
+    }
+    if (new Date() > new Date(otp.expiresAt)) {
+      await this.updateOtpVerification(id, { status: "expired" });
+      return { success: false, message: "OTP has expired" };
+    }
+    if (otp.attempts && otp.maxAttempts && otp.attempts >= otp.maxAttempts) {
+      return { success: false, message: "Maximum attempts exceeded" };
+    }
+    if (otp.otpCode !== code) {
+      await this.updateOtpVerification(id, { attempts: (otp.attempts || 0) + 1 });
+      return { success: false, message: "Invalid OTP code" };
+    }
+    // OTP verified successfully
+    const updated = await this.updateOtpVerification(id, { 
+      status: "verified", 
+      verifiedAt: new Date() 
+    });
+    return { success: true, message: "OTP verified successfully", otp: updated };
+  }
+
+  // Create an OTP request (carrier requesting start/end OTP)
+  async createOtpRequest(request: InsertOtpRequest): Promise<OtpRequest> {
+    const [newRequest] = await db.insert(otpRequests).values(request).returning();
+    return newRequest;
+  }
+
+  // Get OTP request by ID
+  async getOtpRequest(id: string): Promise<OtpRequest | undefined> {
+    const [request] = await db.select().from(otpRequests).where(eq(otpRequests.id, id));
+    return request;
+  }
+
+  // Get pending OTP requests for admin queue
+  async getPendingOtpRequests(): Promise<OtpRequest[]> {
+    return db.select()
+      .from(otpRequests)
+      .where(eq(otpRequests.status, "pending"))
+      .orderBy(asc(otpRequests.requestedAt));
+  }
+
+  // Get OTP requests by shipment
+  async getOtpRequestsByShipment(shipmentId: string): Promise<OtpRequest[]> {
+    return db.select()
+      .from(otpRequests)
+      .where(eq(otpRequests.shipmentId, shipmentId))
+      .orderBy(desc(otpRequests.requestedAt));
+  }
+
+  // Update OTP request
+  async updateOtpRequest(id: string, updates: Partial<OtpRequest>): Promise<OtpRequest | undefined> {
+    const [updated] = await db.update(otpRequests)
+      .set(updates)
+      .where(eq(otpRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Admin generates OTP for a request
+  async approveOtpRequest(requestId: string, adminId: string, validityMinutes: number = 10): Promise<{ request: OtpRequest; otp: OtpVerification }> {
+    const request = await this.getOtpRequest(requestId);
+    if (!request) {
+      throw new Error("OTP request not found");
+    }
+    if (request.status !== "pending") {
+      throw new Error("OTP request already processed");
+    }
+
+    // Generate OTP
+    const otpCode = this.generateOtpCode();
+    const expiresAt = new Date(Date.now() + validityMinutes * 60 * 1000);
+
+    const otp = await this.createOtpVerification({
+      otpType: request.requestType,
+      otpCode,
+      carrierId: request.carrierId,
+      shipmentId: request.shipmentId,
+      loadId: request.loadId,
+      generatedBy: adminId,
+      validityMinutes,
+      expiresAt,
+      status: "pending",
+    });
+
+    // Update request
+    const updatedRequest = await this.updateOtpRequest(requestId, {
+      status: "approved",
+      processedAt: new Date(),
+      processedBy: adminId,
+      otpId: otp.id,
+    });
+
+    return { request: updatedRequest!, otp };
+  }
+
+  // Reject OTP request
+  async rejectOtpRequest(requestId: string, adminId: string, notes?: string): Promise<OtpRequest> {
+    const request = await this.getOtpRequest(requestId);
+    if (!request) {
+      throw new Error("OTP request not found");
+    }
+    if (request.status !== "pending") {
+      throw new Error("OTP request already processed");
+    }
+
+    const updated = await this.updateOtpRequest(requestId, {
+      status: "rejected",
+      processedAt: new Date(),
+      processedBy: adminId,
+      notes,
+    });
+
+    return updated!;
   }
 
   // Startup migration to fix missing shipperLoadNumber and pickupId values

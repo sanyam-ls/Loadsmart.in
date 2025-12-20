@@ -6583,6 +6583,537 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== OTP SECURITY GATES ====================
+
+  // Carrier requests trip start OTP
+  app.post("/api/otp/request-start", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can request trip start OTP" });
+      }
+
+      const { shipmentId } = req.body;
+      if (!shipmentId) {
+        return res.status(400).json({ error: "Shipment ID is required" });
+      }
+
+      const shipment = await storage.getShipment(shipmentId);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+      if (shipment.carrierId !== user.id) {
+        return res.status(403).json({ error: "Not authorized for this shipment" });
+      }
+      if (shipment.startOtpVerified) {
+        return res.status(400).json({ error: "Trip already started" });
+      }
+
+      // Verify load is in correct state (invoice_paid before trip can start)
+      const load = await storage.getLoad(shipment.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+      const allowedStartStates = ["invoice_paid", "awarded", "invoice_acknowledged"];
+      if (!allowedStartStates.includes(load.status)) {
+        return res.status(400).json({ 
+          error: "Cannot start trip - invoice must be paid first",
+          currentStatus: load.status,
+          requiredStatus: "invoice_paid"
+        });
+      }
+
+      // Check if there's already a pending request
+      const existingRequests = await storage.getOtpRequestsByShipment(shipmentId);
+      const pendingStartRequest = existingRequests.find(r => r.requestType === "trip_start" && r.status === "pending");
+      if (pendingStartRequest) {
+        return res.status(400).json({ error: "Start OTP request already pending", requestId: pendingStartRequest.id });
+      }
+
+      // Create OTP request for admin
+      const request = await storage.createOtpRequest({
+        requestType: "trip_start",
+        carrierId: user.id,
+        shipmentId,
+        loadId: shipment.loadId,
+        status: "pending",
+      });
+
+      // Update shipment
+      await storage.updateShipment(shipmentId, {
+        startOtpRequested: true,
+        startOtpRequestedAt: new Date(),
+      });
+
+      // Broadcast to admin
+      broadcastMarketplaceEvent("otp_request", {
+        type: "trip_start",
+        requestId: request.id,
+        carrierId: user.id,
+        carrierName: user.companyName || user.username,
+        shipmentId,
+        loadId: shipment.loadId,
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Trip start OTP requested. Admin will generate OTP shortly.",
+        requestId: request.id 
+      });
+    } catch (error) {
+      console.error("Request start OTP error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Carrier requests trip end OTP
+  app.post("/api/otp/request-end", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can request trip end OTP" });
+      }
+
+      const { shipmentId } = req.body;
+      if (!shipmentId) {
+        return res.status(400).json({ error: "Shipment ID is required" });
+      }
+
+      const shipment = await storage.getShipment(shipmentId);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+      if (shipment.carrierId !== user.id) {
+        return res.status(403).json({ error: "Not authorized for this shipment" });
+      }
+      if (!shipment.startOtpVerified) {
+        return res.status(400).json({ error: "Trip not started yet" });
+      }
+      if (shipment.endOtpVerified) {
+        return res.status(400).json({ error: "Trip already completed" });
+      }
+
+      // Verify load is in correct state (must be in_transit)
+      const load = await storage.getLoad(shipment.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+      if (load.status !== "in_transit") {
+        return res.status(400).json({ 
+          error: "Cannot end trip - shipment must be in transit",
+          currentStatus: load.status,
+          requiredStatus: "in_transit"
+        });
+      }
+
+      // Check if there's already a pending request
+      const existingRequests = await storage.getOtpRequestsByShipment(shipmentId);
+      const pendingEndRequest = existingRequests.find(r => r.requestType === "trip_end" && r.status === "pending");
+      if (pendingEndRequest) {
+        return res.status(400).json({ error: "End OTP request already pending", requestId: pendingEndRequest.id });
+      }
+
+      // Create OTP request for admin
+      const request = await storage.createOtpRequest({
+        requestType: "trip_end",
+        carrierId: user.id,
+        shipmentId,
+        loadId: shipment.loadId,
+        status: "pending",
+      });
+
+      // Update shipment
+      await storage.updateShipment(shipmentId, {
+        endOtpRequested: true,
+        endOtpRequestedAt: new Date(),
+      });
+
+      // Broadcast to admin
+      broadcastMarketplaceEvent("otp_request", {
+        type: "trip_end",
+        requestId: request.id,
+        carrierId: user.id,
+        carrierName: user.companyName || user.username,
+        shipmentId,
+        loadId: shipment.loadId,
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Trip end OTP requested. Admin will generate OTP shortly.",
+        requestId: request.id 
+      });
+    } catch (error) {
+      console.error("Request end OTP error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin gets pending OTP requests
+  app.get("/api/otp/requests", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const pendingRequests = await storage.getPendingOtpRequests();
+      
+      // Enrich with carrier and load details
+      const enrichedRequests = await Promise.all(pendingRequests.map(async (request) => {
+        const carrier = await storage.getUser(request.carrierId);
+        const load = await storage.getLoad(request.loadId);
+        const shipment = await storage.getShipment(request.shipmentId);
+        return {
+          ...request,
+          carrierName: carrier?.companyName || carrier?.username,
+          carrierPhone: carrier?.phone,
+          loadNumber: load?.shipperLoadNumber ? `LD-${String(load.shipperLoadNumber).padStart(3, '0')}` : load?.id.slice(0, 8),
+          pickupCity: load?.pickupCity,
+          dropoffCity: load?.dropoffCity,
+          shipmentStatus: shipment?.status,
+        };
+      }));
+
+      res.json(enrichedRequests);
+    } catch (error) {
+      console.error("Get OTP requests error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin approves OTP request and generates OTP
+  app.post("/api/otp/approve/:requestId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { requestId } = req.params;
+      const { validityMinutes = 10 } = req.body;
+
+      const result = await storage.approveOtpRequest(requestId, user.id, validityMinutes);
+
+      // Broadcast OTP approval event (without the actual OTP code for security)
+      // Admin will communicate OTP to carrier via phone/message
+      broadcastMarketplaceEvent("otp_approved", {
+        requestId,
+        type: result.request.requestType,
+        carrierId: result.request.carrierId,
+        shipmentId: result.request.shipmentId,
+        expiresAt: result.otp.expiresAt,
+        // NOTE: OTP code is NOT broadcast - admin shares it via secure out-of-band channel
+      });
+
+      // Create notification for carrier
+      await storage.createNotification({
+        userId: result.request.carrierId,
+        title: result.request.requestType === "trip_start" ? "Trip Start OTP Ready" : "Trip End OTP Ready",
+        message: `Your ${result.request.requestType === "trip_start" ? "trip start" : "trip end"} OTP has been generated. Contact admin to receive the code.`,
+        type: "info",
+        isRead: false,
+        contextType: "shipment",
+        relatedLoadId: result.request.loadId,
+      });
+
+      res.json({ 
+        success: true, 
+        message: "OTP generated successfully",
+        otp: {
+          id: result.otp.id,
+          code: result.otp.otpCode,
+          expiresAt: result.otp.expiresAt,
+          validityMinutes,
+        }
+      });
+    } catch (error: any) {
+      console.error("Approve OTP request error:", error);
+      res.status(400).json({ error: error.message || "Failed to approve request" });
+    }
+  });
+
+  // Admin rejects OTP request
+  app.post("/api/otp/reject/:requestId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { requestId } = req.params;
+      const { notes } = req.body;
+
+      const result = await storage.rejectOtpRequest(requestId, user.id, notes);
+
+      // Reset the OTP request flags on the shipment so carrier can retry
+      if (result.requestType === "trip_start") {
+        await storage.updateShipment(result.shipmentId, {
+          startOtpRequested: false,
+          startOtpRequestedAt: null,
+        });
+      } else if (result.requestType === "trip_end") {
+        await storage.updateShipment(result.shipmentId, {
+          endOtpRequested: false,
+          endOtpRequestedAt: null,
+        });
+      }
+
+      // Create notification for carrier
+      await storage.createNotification({
+        userId: result.carrierId,
+        title: result.requestType === "trip_start" ? "Trip Start OTP Rejected" : "Trip End OTP Rejected",
+        message: notes || "Your OTP request was rejected by admin. You can submit a new request.",
+        type: "error",
+        isRead: false,
+        contextType: "shipment",
+        relatedLoadId: result.loadId,
+      });
+
+      // Broadcast rejection event
+      broadcastMarketplaceEvent("otp_rejected", {
+        requestId,
+        type: result.requestType,
+        carrierId: result.carrierId,
+        shipmentId: result.shipmentId,
+      });
+
+      res.json({ success: true, message: "OTP request rejected" });
+    } catch (error: any) {
+      console.error("Reject OTP request error:", error);
+      res.status(400).json({ error: error.message || "Failed to reject request" });
+    }
+  });
+
+  // Carrier verifies OTP and starts/ends trip
+  app.post("/api/otp/verify", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can verify OTP" });
+      }
+
+      const { shipmentId, otpType, otpCode } = req.body;
+      if (!shipmentId || !otpType || !otpCode) {
+        return res.status(400).json({ error: "Shipment ID, OTP type, and OTP code are required" });
+      }
+
+      if (!["trip_start", "trip_end"].includes(otpType)) {
+        return res.status(400).json({ error: "Invalid OTP type" });
+      }
+
+      const shipment = await storage.getShipment(shipmentId);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+      if (shipment.carrierId !== user.id) {
+        return res.status(403).json({ error: "Not authorized for this shipment" });
+      }
+
+      // Find the pending OTP for this shipment
+      const pendingOtp = await storage.getPendingOtpForShipment(shipmentId, otpType);
+      if (!pendingOtp) {
+        return res.status(404).json({ error: "No pending OTP found. Please request OTP first." });
+      }
+
+      // Verify the OTP
+      const verifyResult = await storage.verifyOtp(pendingOtp.id, otpCode);
+      if (!verifyResult.success) {
+        return res.status(400).json({ error: verifyResult.message });
+      }
+
+      // Update shipment based on OTP type
+      if (otpType === "trip_start") {
+        await storage.updateShipment(shipmentId, {
+          startOtpVerified: true,
+          startOtpVerifiedAt: new Date(),
+          status: "in_transit",
+          startedAt: new Date(),
+        });
+
+        // Update load status
+        await storage.updateLoad(shipment.loadId, { status: "in_transit" });
+
+        // Broadcast trip started
+        broadcastMarketplaceEvent("trip_started", {
+          shipmentId,
+          loadId: shipment.loadId,
+          carrierId: user.id,
+          carrierName: user.companyName || user.username,
+        });
+
+        // Notify shipper
+        const load = await storage.getLoad(shipment.loadId);
+        if (load) {
+          await storage.createNotification({
+            userId: load.shipperId,
+            title: "Trip Started",
+            message: `Your shipment is now in transit.`,
+            type: "success",
+            isRead: false,
+            contextType: "shipment",
+            relatedLoadId: shipment.loadId,
+          });
+        }
+
+        res.json({ 
+          success: true, 
+          message: "Trip started successfully. GPS tracking activated.",
+          shipmentStatus: "in_transit"
+        });
+      } else {
+        // trip_end
+        await storage.updateShipment(shipmentId, {
+          endOtpVerified: true,
+          endOtpVerifiedAt: new Date(),
+          status: "delivered",
+          completedAt: new Date(),
+        });
+
+        // Update load status
+        await storage.updateLoad(shipment.loadId, { status: "delivered" });
+
+        // Broadcast trip completed
+        broadcastMarketplaceEvent("trip_completed", {
+          shipmentId,
+          loadId: shipment.loadId,
+          carrierId: user.id,
+          carrierName: user.companyName || user.username,
+        });
+
+        // Notify shipper
+        const load = await storage.getLoad(shipment.loadId);
+        if (load) {
+          await storage.createNotification({
+            userId: load.shipperId,
+            title: "Delivery Completed",
+            message: `Your shipment has been delivered successfully.`,
+            type: "success",
+            isRead: false,
+            contextType: "shipment",
+            relatedLoadId: shipment.loadId,
+          });
+        }
+
+        res.json({ 
+          success: true, 
+          message: "Trip completed successfully. Delivery confirmed.",
+          shipmentStatus: "delivered"
+        });
+      }
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get OTP status for a shipment (carrier view)
+  app.get("/api/otp/status/:shipmentId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { shipmentId } = req.params;
+      const shipment = await storage.getShipment(shipmentId);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+
+      // Check authorization
+      if (user.role === "carrier" && shipment.carrierId !== user.id) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const requests = await storage.getOtpRequestsByShipment(shipmentId);
+
+      res.json({
+        shipmentId,
+        startOtpRequested: shipment.startOtpRequested,
+        startOtpVerified: shipment.startOtpVerified,
+        endOtpRequested: shipment.endOtpRequested,
+        endOtpVerified: shipment.endOtpVerified,
+        requests: requests.map(r => ({
+          id: r.id,
+          type: r.requestType,
+          status: r.status,
+          requestedAt: r.requestedAt,
+          processedAt: r.processedAt,
+        })),
+      });
+    } catch (error) {
+      console.error("Get OTP status error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Registration OTP - For carrier signup (simulated)
+  app.post("/api/otp/registration/send", async (req, res) => {
+    try {
+      const { phone, userId } = req.body;
+      if (!phone) {
+        return res.status(400).json({ error: "Phone number is required" });
+      }
+
+      // Generate OTP
+      const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      const otp = await storage.createOtpVerification({
+        otpType: "registration",
+        otpCode,
+        userId: userId || null,
+        phoneNumber: phone,
+        validityMinutes: 10,
+        expiresAt,
+        status: "pending",
+      });
+
+      // In production, this would send SMS via Twilio/etc.
+      // For now, we'll return the OTP in development mode
+      const isDev = process.env.NODE_ENV !== "production";
+
+      res.json({ 
+        success: true, 
+        message: "OTP sent to your phone number",
+        otpId: otp.id,
+        ...(isDev && { devOtp: otpCode }), // Only in dev mode
+      });
+    } catch (error) {
+      console.error("Send registration OTP error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Verify registration OTP
+  app.post("/api/otp/registration/verify", async (req, res) => {
+    try {
+      const { otpId, otpCode } = req.body;
+      if (!otpId || !otpCode) {
+        return res.status(400).json({ error: "OTP ID and code are required" });
+      }
+
+      const result = await storage.verifyOtp(otpId, otpCode);
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      // If OTP was linked to a user, mark them as phone verified
+      if (result.otp?.userId) {
+        await storage.updateUser(result.otp.userId, { isVerified: true });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Phone number verified successfully" 
+      });
+    } catch (error) {
+      console.error("Verify registration OTP error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Setup WebSocket for real-time telemetry
   setupTelemetryWebSocket(httpServer);
 

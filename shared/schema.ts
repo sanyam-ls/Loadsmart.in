@@ -687,11 +687,12 @@ export const bids = pgTable("bids", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Shipments table (for tracking)
+// Shipments table (for tracking) - OTP-gated execution
 export const shipments = pgTable("shipments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   loadId: varchar("load_id").notNull().references(() => loads.id),
   carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  shipperId: varchar("shipper_id").references(() => users.id),
   truckId: varchar("truck_id").references(() => trucks.id),
   status: text("status").default("pickup_scheduled"),
   currentLat: decimal("current_lat", { precision: 10, scale: 7 }),
@@ -700,6 +701,16 @@ export const shipments = pgTable("shipments", {
   eta: timestamp("eta"),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  // OTP-gated execution fields
+  startOtpRequested: boolean("start_otp_requested").default(false),
+  startOtpRequestedAt: timestamp("start_otp_requested_at"),
+  startOtpVerified: boolean("start_otp_verified").default(false),
+  startOtpVerifiedAt: timestamp("start_otp_verified_at"),
+  endOtpRequested: boolean("end_otp_requested").default(false),
+  endOtpRequestedAt: timestamp("end_otp_requested_at"),
+  endOtpVerified: boolean("end_otp_verified").default(false),
+  endOtpVerifiedAt: timestamp("end_otp_verified_at"),
 });
 
 // Shipment timeline events
@@ -712,6 +723,49 @@ export const shipmentEvents = pgTable("shipment_events", {
   lng: decimal("lng", { precision: 10, scale: 7 }),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// OTP Types for security gates
+export const otpTypes = ["registration", "trip_start", "trip_end"] as const;
+export type OtpType = typeof otpTypes[number];
+
+// OTP Statuses
+export const otpStatuses = ["pending", "verified", "expired", "cancelled"] as const;
+export type OtpStatus = typeof otpStatuses[number];
+
+// OTP Verifications table - Admin-authorized security gates
+export const otpVerifications = pgTable("otp_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  otpType: text("otp_type").notNull(), // registration, trip_start, trip_end
+  otpCode: text("otp_code").notNull(), // 6-digit code
+  userId: varchar("user_id").references(() => users.id), // For registration OTPs
+  carrierId: varchar("carrier_id").references(() => users.id), // For trip OTPs
+  shipmentId: varchar("shipment_id").references(() => shipments.id), // For trip OTPs
+  loadId: varchar("load_id").references(() => loads.id), // For trip OTPs
+  phoneNumber: text("phone_number"), // For registration OTPs
+  status: text("status").default("pending"), // pending, verified, expired, cancelled
+  generatedBy: varchar("generated_by").references(() => users.id), // Admin who generated (for trip OTPs)
+  validityMinutes: integer("validity_minutes").default(10), // OTP validity period
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verifiedAt: timestamp("verified_at"),
+  attempts: integer("attempts").default(0), // Failed attempts count
+  maxAttempts: integer("max_attempts").default(3), // Maximum allowed attempts
+});
+
+// OTP Request Queue - Carrier requests awaiting admin approval
+export const otpRequests = pgTable("otp_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestType: text("request_type").notNull(), // trip_start, trip_end
+  carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  shipmentId: varchar("shipment_id").notNull().references(() => shipments.id),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  status: text("status").default("pending"), // pending, approved, rejected
+  requestedAt: timestamp("requested_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+  processedBy: varchar("processed_by").references(() => users.id), // Admin who processed
+  otpId: varchar("otp_id").references(() => otpVerifications.id), // Generated OTP (if approved)
+  notes: text("notes"),
 });
 
 // Messages table (for negotiation chat)
@@ -1281,8 +1335,10 @@ export const insertBidSchema = createInsertSchema(bids).omit({ id: true, created
 export const insertAdminDecisionSchema = createInsertSchema(adminDecisions).omit({ id: true, createdAt: true });
 export const insertPricingTemplateSchema = createInsertSchema(pricingTemplates).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAdminPricingSchema = createInsertSchema(adminPricings).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertShipmentSchema = createInsertSchema(shipments).omit({ id: true });
+export const insertShipmentSchema = createInsertSchema(shipments).omit({ id: true, createdAt: true });
 export const insertShipmentEventSchema = createInsertSchema(shipmentEvents).omit({ id: true, createdAt: true });
+export const insertOtpVerificationSchema = createInsertSchema(otpVerifications).omit({ id: true, createdAt: true });
+export const insertOtpRequestSchema = createInsertSchema(otpRequests).omit({ id: true, requestedAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export const insertDocumentSchema = createInsertSchema(documents).omit({ id: true, createdAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
@@ -1325,6 +1381,10 @@ export type InsertShipment = z.infer<typeof insertShipmentSchema>;
 export type Shipment = typeof shipments.$inferSelect;
 export type InsertShipmentEvent = z.infer<typeof insertShipmentEventSchema>;
 export type ShipmentEvent = typeof shipmentEvents.$inferSelect;
+export type InsertOtpVerification = z.infer<typeof insertOtpVerificationSchema>;
+export type OtpVerification = typeof otpVerifications.$inferSelect;
+export type InsertOtpRequest = z.infer<typeof insertOtpRequestSchema>;
+export type OtpRequest = typeof otpRequests.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;

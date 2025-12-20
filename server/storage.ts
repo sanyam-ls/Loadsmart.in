@@ -428,7 +428,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getShipmentsByShipper(shipperId: string): Promise<Shipment[]> {
-    return db.select().from(shipments).where(eq(shipments.shipperId, shipperId));
+    // Shipments are linked to shippers through the loads table
+    // Join shipments with loads to find shipments for loads belonging to this shipper
+    const result = await db
+      .select({
+        shipment: shipments
+      })
+      .from(shipments)
+      .innerJoin(loads, eq(shipments.loadId, loads.id))
+      .where(eq(loads.shipperId, shipperId))
+      .orderBy(desc(shipments.createdAt));
+    
+    return result.map(r => r.shipment);
   }
 
   async getAllShipments(): Promise<Shipment[]> {

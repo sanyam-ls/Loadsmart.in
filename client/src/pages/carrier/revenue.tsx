@@ -10,11 +10,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/stat-card";
 import { useCarrierData } from "@/lib/carrier-data-store";
+import { useShipments, useLoads, useSettlements } from "@/lib/api-hooks";
+import { useAuth } from "@/lib/auth-context";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import { format } from "date-fns";
+import type { Shipment, Load } from "@shared/schema";
 
 function formatCurrency(amount: number): string {
   if (amount >= 10000000) {
@@ -29,8 +32,50 @@ function formatCurrency(amount: number): string {
 const CHART_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16"];
 
 export default function CarrierRevenuePage() {
-  const { getRevenueAnalytics, completedTrips } = useCarrierData();
-  const analytics = useMemo(() => getRevenueAnalytics(), [getRevenueAnalytics]);
+  const { getRevenueAnalytics, completedTrips: mockCompletedTrips } = useCarrierData();
+  const { user } = useAuth();
+  const { data: allShipments = [] } = useShipments();
+  const { data: allLoads = [] } = useLoads();
+  const { data: allSettlements } = useSettlements();
+  
+  // Calculate real revenue from settlements and shipments
+  const realRevenueData = useMemo(() => {
+    const myShipments = allShipments.filter((s: Shipment) => 
+      s.carrierId === user?.id && s.status === 'delivered'
+    );
+    const carrierSettlements = Array.isArray(allSettlements) 
+      ? allSettlements.filter((s: any) => s.carrierId === user?.id && s.status === 'paid')
+      : [];
+    
+    // Calculate total real revenue from paid settlements
+    const totalRealRevenue = carrierSettlements.reduce((sum: number, s: any) => 
+      sum + parseFloat(s.carrierPayoutAmount?.toString() || '0'), 0
+    );
+    
+    // Calculate revenue from delivered shipments (fallback if no settlements)
+    const shipmentRevenue = myShipments.reduce((sum: number, s: Shipment) => {
+      const load = allLoads.find((l: Load) => l.id === s.loadId);
+      return sum + (load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0);
+    }, 0);
+    
+    return {
+      totalRevenue: totalRealRevenue || shipmentRevenue,
+      completedTripsCount: myShipments.length,
+      hasRealData: myShipments.length > 0 || carrierSettlements.length > 0
+    };
+  }, [allShipments, allLoads, allSettlements, user?.id]);
+  
+  const baseAnalytics = useMemo(() => getRevenueAnalytics(), [getRevenueAnalytics]);
+  
+  // Merge real data with mock analytics
+  const analytics = useMemo(() => ({
+    ...baseAnalytics,
+    totalRevenue: realRevenueData.hasRealData 
+      ? realRevenueData.totalRevenue + baseAnalytics.totalRevenue 
+      : baseAnalytics.totalRevenue,
+  }), [baseAnalytics, realRevenueData]);
+  
+  const completedTrips = realRevenueData.completedTripsCount + mockCompletedTrips.length;
 
   const monthlyChartData = analytics.monthlyReports.map(m => ({
     name: m.month,
@@ -60,7 +105,7 @@ export default function CarrierRevenuePage() {
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-revenue-title">Revenue Analytics</h1>
           <p className="text-muted-foreground">
-            Financial performance from {completedTrips.length} completed trips
+            Financial performance from {completedTrips} completed trips
           </p>
         </div>
       </div>

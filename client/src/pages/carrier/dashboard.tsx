@@ -158,13 +158,21 @@ export default function CarrierDashboard() {
   const bids = (allBids || []).filter((b: Bid) => b.carrierId === user?.id);
   const loads = allLoads || [];
   const shipments = (allShipments || []).filter((s: Shipment) => s.carrierId === user?.id);
-  const carrierSettlements = (allSettlements || []).filter((s: any) => s.carrierId === user?.id);
+  const carrierSettlements = Array.isArray(allSettlements) ? allSettlements.filter((s: any) => s.carrierId === user?.id) : [];
 
-  const activeTruckCount = trucks.filter((t: TruckType) => t.status === "on_trip" || t.status === "en_route").length;
-  const availableTruckCount = trucks.filter((t: TruckType) => t.status === "available" || t.status === "idle").length;
+  // Active trucks are those currently assigned to in-progress shipments
+  const activeShipmentTruckIds = shipments
+    .filter((s: Shipment) => ['in_transit', 'picked_up', 'out_for_delivery'].includes(s.status || ''))
+    .map((s: Shipment) => s.truckId)
+    .filter(Boolean);
+  const activeTruckCount = activeShipmentTruckIds.length;
+  const availableTruckCount = trucks.filter((t: TruckType) => t.isAvailable === true).length;
   const pendingBidsCount = bids.filter((b: Bid) => b.status === "pending" || b.status === "countered").length;
-  const activeTripsCount = shipments.filter((s: Shipment) => s.status === "in_transit").length;
-  const driversEnRoute = activeTripsCount;
+  // Active trips: in_transit, picked_up, out_for_delivery, at_checkpoint, pickup_scheduled
+  const activeTripsCount = shipments.filter((s: Shipment) => 
+    ['in_transit', 'picked_up', 'out_for_delivery', 'at_checkpoint', 'pickup_scheduled'].includes(s.status || '')
+  ).length;
+  const driversEnRoute = shipments.filter((s: Shipment) => s.status === "in_transit").length;
   
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -196,27 +204,29 @@ export default function CarrierDashboard() {
 
   const topRecommendedLoads = availableLoads.slice(0, 4).map((load: Load) => ({
     loadId: load.id,
-    pickup: `${load.pickupCity}`,
-    dropoff: `${load.dropoffCity}`,
+    pickup: `${load.pickupCity || 'Unknown'}`,
+    dropoff: `${load.dropoffCity || 'Unknown'}`,
     distance: load.distance ? parseFloat(load.distance) : null,
-    loadType: load.truckType || 'General',
-    budget: load.adminPrice ? parseFloat(load.adminPrice) : null,
+    loadType: load.requiredTruckType || 'General',
+    budget: load.adminFinalPrice ? parseFloat(load.adminFinalPrice) : null,
   }));
 
   const displayTrips = shipments
-    .filter((s: Shipment) => s.status === 'in_transit')
+    .filter((s: Shipment) => ['in_transit', 'picked_up', 'out_for_delivery', 'at_checkpoint', 'pickup_scheduled'].includes(s.status || ''))
     .slice(0, 4)
     .map((shipment: Shipment) => {
       const load = loads.find((l: Load) => l.id === shipment.loadId);
+      const truck = trucks.find((t: TruckType) => t.id === shipment.truckId);
       return {
         tripId: shipment.id,
         pickup: load?.pickupCity || 'Unknown',
         dropoff: load?.dropoffCity || 'Unknown',
-        eta: shipment.estimatedDelivery,
-        driverAssigned: shipment.driverName,
-        truckAssigned: shipment.truckNumber,
-        loadType: load?.truckType || 'General',
+        eta: shipment.eta,
+        driverAssigned: 'Driver Assigned',
+        truckAssigned: truck?.licensePlate || 'Truck Assigned',
+        loadType: load?.requiredTruckType || 'General',
         totalDistance: load?.distance ? parseFloat(load.distance) : null,
+        status: shipment.status,
       };
     });
 

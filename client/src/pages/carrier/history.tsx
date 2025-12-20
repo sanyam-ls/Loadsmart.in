@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Search, Calendar, MapPin, Truck, User, Star, Clock, 
   CheckCircle, TrendingUp, Fuel, DollarSign, ArrowRight, Filter
@@ -27,7 +27,13 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { useCarrierData, type CompletedTrip } from "@/lib/carrier-data-store";
+import { useShipments, useLoads, useTrucks } from "@/lib/api-hooks";
+import { useAuth } from "@/lib/auth-context";
+import { onMarketplaceEvent } from "@/lib/marketplace-socket";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import { format, subMonths, isAfter } from "date-fns";
+import type { Shipment, Load } from "@shared/schema";
 
 function formatCurrency(amount: number): string {
   if (amount >= 100000) {
@@ -36,12 +42,78 @@ function formatCurrency(amount: number): string {
   return `Rs. ${amount.toLocaleString()}`;
 }
 
+function convertShipmentToCompletedTrip(shipment: Shipment, load: Load | undefined): CompletedTrip {
+  const loadId = load?.adminReferenceNumber 
+    ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}` 
+    : `LD-${shipment.loadId.slice(0, 6)}`;
+  
+  const rate = load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) : 50000;
+  const distance = load?.distance ? parseFloat(load.distance) : 500;
+  
+  return {
+    tripId: `real-${shipment.id}`,
+    loadId,
+    route: `${load?.pickupCity || 'Origin'} to ${load?.dropoffCity || 'Destination'}`,
+    distanceTraveled: distance,
+    fuelUsed: Math.round(distance / 4),
+    profitEarned: Math.round(rate * 0.2),
+    tripTime: Math.round(distance / 50),
+    onTimeDelivery: true,
+    driverPerformanceRating: 4.5,
+    truckPerformanceRating: 4.2,
+    shipperRating: 4.8,
+    completedAt: shipment.completedAt ? new Date(shipment.completedAt) : new Date(),
+    driverName: 'Driver Assigned',
+    truckPlate: 'Truck Assigned',
+    loadType: load?.requiredTruckType || 'General',
+  };
+}
+
 export default function CarrierHistoryPage() {
-  const { completedTrips } = useCarrierData();
+  const { completedTrips: mockCompletedTrips } = useCarrierData();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { data: allShipments = [], refetch: refetchShipments } = useShipments();
+  const { data: allLoads = [] } = useLoads();
+  const { data: allTrucks = [] } = useTrucks();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState("all");
   const [loadTypeFilter, setLoadTypeFilter] = useState("all");
   const [selectedTrip, setSelectedTrip] = useState<CompletedTrip | null>(null);
+  
+  // Real-time updates when trips are completed
+  useEffect(() => {
+    const unsubCompleted = onMarketplaceEvent("trip_completed", () => {
+      refetchShipments();
+      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+      toast({ title: "Trip Completed", description: "A new trip has been added to history" });
+    });
+    return () => { unsubCompleted(); };
+  }, [refetchShipments, toast]);
+
+  // Convert real delivered shipments to completed trips
+  const completedTrips = useMemo(() => {
+    const myShipments = allShipments.filter((s: Shipment) => 
+      s.carrierId === user?.id && s.status === 'delivered'
+    );
+    
+    const realTrips: CompletedTrip[] = myShipments.map((shipment: Shipment) => {
+      const load = allLoads.find((l: Load) => l.id === shipment.loadId);
+      const truck = allTrucks.find((t: any) => t.id === shipment.truckId);
+      const trip = convertShipmentToCompletedTrip(shipment, load);
+      if (truck) {
+        trip.truckPlate = truck.licensePlate || trip.truckPlate;
+      }
+      return trip;
+    });
+    
+    // Merge with mock data, real trips first
+    const realTripIds = new Set(realTrips.map(t => t.tripId));
+    const filteredMock = mockCompletedTrips.filter(t => !realTripIds.has(t.tripId));
+    
+    return [...realTrips, ...filteredMock];
+  }, [allShipments, allLoads, allTrucks, mockCompletedTrips, user?.id]);
 
   const filteredTrips = useMemo(() => {
     return completedTrips.filter((trip) => {

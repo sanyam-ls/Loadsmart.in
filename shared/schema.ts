@@ -110,6 +110,73 @@ export const truckCategories = [
 ] as const;
 export type TruckCategory = typeof truckCategories[number];
 
+// Enhanced truck body categories with metadata for UI
+export const truckBodyCategories = [
+  { 
+    id: "open", 
+    name: "Open Body", 
+    description: "Open flatbed trucks for general cargo",
+    tonnageRange: "7.5-43 Ton",
+    icon: "truck"
+  },
+  { 
+    id: "container", 
+    name: "Container", 
+    description: "Closed body trucks for protected cargo",
+    tonnageRange: "7.5-30 Ton",
+    icon: "container"
+  },
+  { 
+    id: "lcv", 
+    name: "LCV (Light Commercial)", 
+    description: "Small trucks for light loads",
+    tonnageRange: "0.75-7 Ton",
+    icon: "truck"
+  },
+  { 
+    id: "trailer", 
+    name: "Trailer", 
+    description: "Large trailers for heavy cargo",
+    tonnageRange: "16-43 Ton",
+    icon: "trailer"
+  },
+  { 
+    id: "tipper", 
+    name: "Tipper", 
+    description: "Trucks with tipping body for loose materials",
+    tonnageRange: "9-30 Ton",
+    icon: "tipper"
+  },
+  { 
+    id: "tanker", 
+    name: "Tanker", 
+    description: "For liquid cargo - oil, water, chemicals",
+    tonnageRange: "8-36 Ton",
+    icon: "tanker"
+  },
+  { 
+    id: "dumper", 
+    name: "Dumper/Hyva", 
+    description: "For construction materials and bulk",
+    tonnageRange: "9-36 Ton",
+    icon: "dumper"
+  },
+  { 
+    id: "bulker", 
+    name: "Bulker", 
+    description: "For cement, fly ash and powder materials",
+    tonnageRange: "20-36 Ton",
+    icon: "bulker"
+  },
+  { 
+    id: "mini_pickup", 
+    name: "Mini/Pickup Truck", 
+    description: "Small pickups for local delivery",
+    tonnageRange: "0.5-2 Ton",
+    icon: "pickup"
+  },
+] as const;
+
 // Open truck subtypes by size
 export const openTruckSubtypes = [
   "17_feet", "19_feet", "20_feet", "22_feet", "24_feet",

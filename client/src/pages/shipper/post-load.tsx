@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2 } from "lucide-react";
+import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,6 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { AddressAutocomplete, getRouteInfo } from "@/components/address-autocomplete";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -55,28 +63,173 @@ const loadFormSchema = z.object({
 
 type LoadFormData = z.infer<typeof loadFormSchema>;
 
-import { indianTruckTypes, truckCategories } from "@shared/schema";
+import { indianTruckTypes, truckBodyCategories } from "@shared/schema";
 
-const truckTypesByCategory = truckCategories.reduce((acc, category) => {
-  acc[category] = indianTruckTypes.filter(t => t.category === category);
+const truckTypesByCategory = truckBodyCategories.reduce((acc, category) => {
+  acc[category.id] = indianTruckTypes.filter(t => t.category === category.id);
   return acc;
 }, {} as Record<string, typeof indianTruckTypes[number][]>);
-
-const categoryLabels: Record<string, string> = {
-  open: "Open Body (7.5-43 Ton)",
-  container: "Container (7.5-30 Ton)",
-  lcv: "LCV (2.5-7 Ton)",
-  mini_pickup: "Mini/Pickup (0.75-2 Ton)",
-  trailer: "Trailer (16-43 Ton)",
-  tipper: "Tipper (9-30 Ton)",
-  tanker: "Tanker (8-36 Ton)",
-  dumper: "Dumper (9-36 Ton)",
-  bulker: "Bulker (20-36 Ton)",
-};
 
 function getTruckLabel(value: string): string {
   const truck = indianTruckTypes.find(t => t.value === value);
   return truck?.label || value;
+}
+
+function getTruckCategoryInfo(truckValue: string) {
+  const truck = indianTruckTypes.find(t => t.value === truckValue);
+  if (!truck) return null;
+  return truckBodyCategories.find(c => c.id === truck.category);
+}
+
+function TruckTypeSelector({ 
+  value, 
+  onChange, 
+  suggestedTruck 
+}: { 
+  value?: string; 
+  onChange: (value: string) => void;
+  suggestedTruck?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+  };
+
+  const handleTruckSelect = (truckValue: string) => {
+    onChange(truckValue);
+    setIsOpen(false);
+    setSelectedCategory(null);
+  };
+
+  const handleBack = () => {
+    setSelectedCategory(null);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setSelectedCategory(null);
+  };
+
+  const selectedTruck = value ? indianTruckTypes.find(t => t.value === value) : null;
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-between h-9 font-normal"
+        onClick={() => setIsOpen(true)}
+        data-testid="select-truck-type"
+      >
+        {selectedTruck ? (
+          <span className="flex items-center gap-2 truncate">
+            <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="truncate">{selectedTruck.label}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Select truck type</span>
+        )}
+        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+      </Button>
+
+      <Sheet open={isOpen} onOpenChange={handleClose}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+          {!selectedCategory ? (
+            <>
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>Choose a Body Type</SheetTitle>
+                <SheetDescription>What type of truck do you require?</SheetDescription>
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100vh-120px)]">
+                <div className="p-2">
+                  {truckBodyCategories.map((category) => {
+                    const trucksInCategory = truckTypesByCategory[category.id] || [];
+                    if (trucksInCategory.length === 0) return null;
+                    
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        className="w-full flex items-center gap-4 p-4 hover-elevate active-elevate-2 rounded-md text-left"
+                        onClick={() => handleCategorySelect(category.id)}
+                        data-testid={`category-${category.id}`}
+                      >
+                        <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center shrink-0">
+                          {category.id === "container" ? (
+                            <Container className="h-6 w-6 text-muted-foreground" />
+                          ) : category.id === "tanker" ? (
+                            <Droplet className="h-6 w-6 text-muted-foreground" />
+                          ) : (
+                            <Truck className="h-6 w-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium">{category.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {category.tonnageRange}, {category.description}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </>
+          ) : (
+            <>
+              <SheetHeader className="p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleBack}
+                    data-testid="button-back-category"
+                  >
+                    <ArrowRight className="h-4 w-4 rotate-180" />
+                  </Button>
+                  <div>
+                    <SheetTitle>
+                      {truckBodyCategories.find(c => c.id === selectedCategory)?.name}
+                    </SheetTitle>
+                    <SheetDescription>Select a specific truck configuration</SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100vh-120px)]">
+                <div className="p-2 space-y-1">
+                  {truckTypesByCategory[selectedCategory]?.map((truck) => (
+                    <button
+                      key={truck.value}
+                      type="button"
+                      className={`w-full flex items-center justify-between gap-3 p-4 rounded-md text-left hover-elevate active-elevate-2 ${
+                        value === truck.value ? "bg-primary/10 border border-primary" : ""
+                      }`}
+                      onClick={() => handleTruckSelect(truck.value)}
+                      data-testid={`truck-${truck.value}`}
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium">{truck.label}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {truck.capacityMin}-{truck.capacityMax} tons
+                        </div>
+                      </div>
+                      {value === truck.value && (
+                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
 }
 
 const savedTemplates = [
@@ -536,27 +689,13 @@ export default function PostLoadPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Truck Type</FormLabel>
-                          <Select onValueChange={(value) => { field.onChange(value); updateEstimation(); }} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-truck-type">
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="max-h-[300px]">
-                              {truckCategories.map((category) => (
-                                <SelectGroup key={category}>
-                                  <SelectLabel className="text-xs font-semibold text-muted-foreground">
-                                    {categoryLabels[category]}
-                                  </SelectLabel>
-                                  {truckTypesByCategory[category]?.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                      {type.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <TruckTypeSelector
+                              value={field.value}
+                              onChange={(value) => { field.onChange(value); updateEstimation(); }}
+                              suggestedTruck={estimation?.suggestedTruck}
+                            />
+                          </FormControl>
                           {estimation?.suggestedTruck && !field.value && (
                             <FormDescription className="flex items-center gap-1 text-primary">
                               <Sparkles className="h-3 w-3" />

@@ -55,6 +55,8 @@ interface CarrierLoad {
   deliveryDate?: string | null;
   shipperLoadNumber?: number | null;
   adminReferenceNumber?: number | null;
+  advancePaymentPercent?: number | null;
+  cargoDescription?: string | null;
 }
 
 // Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
@@ -262,6 +264,8 @@ export default function CarrierLoadsPage() {
   const [bidAmount, setBidAmount] = useState("");
   const [simulatedLoadStates, setSimulatedLoadStates] = useState<Record<string, { myBid?: { amount: string }, status?: string }>>({});
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailLoad, setDetailLoad] = useState<CarrierLoad | null>(null);
 
   useEffect(() => {
     if (user?.id && user?.role === "carrier") {
@@ -314,6 +318,8 @@ export default function CarrierLoadsPage() {
     postedAt: string | null;
     pickupDate: string | null;
     deliveryDate: string | null;
+    advancePaymentPercent: number | null;
+    cargoDescription: string | null;
   }
 
   const { data: rawApiLoads = [], isLoading, error } = useQuery<ApiLoad[]>({
@@ -340,6 +346,8 @@ export default function CarrierLoadsPage() {
       isSimulated: false,
       pickupDate: load.pickupDate,
       deliveryDate: load.deliveryDate,
+      advancePaymentPercent: load.advancePaymentPercent,
+      cargoDescription: load.cargoDescription,
     }));
   }, [rawApiLoads]);
 
@@ -748,7 +756,15 @@ export default function CarrierLoadsPage() {
       ) : viewMode === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredAndSortedLoads.slice(0, 30).map((load) => (
-            <Card key={load.id} className={`hover-elevate ${highlightedId === load.id ? "ring-2 ring-primary ring-offset-2 animate-pulse" : ""}`} data-testid={`load-card-${load.id}`}>
+            <Card 
+              key={load.id} 
+              className={`hover-elevate cursor-pointer ${highlightedId === load.id ? "ring-2 ring-primary ring-offset-2 animate-pulse" : ""}`} 
+              data-testid={`load-card-${load.id}`}
+              onClick={() => {
+                setDetailLoad(load);
+                setDetailDialogOpen(true);
+              }}
+            >
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -814,7 +830,10 @@ export default function CarrierLoadsPage() {
                     <p className="text-xl font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</p>
                   </div>
                   <Button 
-                    onClick={() => handleBid(load)} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBid(load);
+                    }} 
                     data-testid={`button-bid-${load.id}`}
                     variant={load.priceFixed ? "default" : "outline"}
                     disabled={!!load.myBid}
@@ -913,6 +932,155 @@ export default function CarrierLoadsPage() {
       <p className="text-sm text-muted-foreground">
         Showing {Math.min(filteredAndSortedLoads.length, viewMode === "list" ? 50 : 30)} of {filteredAndSortedLoads.length} loads
       </p>
+
+      {/* Load Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Load Details
+            </DialogTitle>
+            <DialogDescription>
+              Complete information about this load
+            </DialogDescription>
+          </DialogHeader>
+          
+          {detailLoad && (
+            <div className="space-y-4 py-4">
+              <Card>
+                <CardContent className="pt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={`${getMatchScoreBadge((detailLoad as any).matchScore || 80)} no-default-hover-elevate no-default-active-elevate`}>
+                        <Target className="h-3 w-3 mr-1" />
+                        {(detailLoad as any).matchScore || 80}% Match
+                      </Badge>
+                      {detailLoad.priceFixed ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate">
+                          <Lock className="h-3 w-3 mr-1" />
+                          Fixed Price
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 no-default-hover-elevate no-default-active-elevate">
+                          <Unlock className="h-3 w-3 mr-1" />
+                          Negotiable
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-sm font-mono text-muted-foreground">{formatLoadId(detailLoad)}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-green-500" />
+                    <span className="font-medium">{detailLoad.origin}</span>
+                    <ArrowRight className="h-4 w-4" />
+                    <MapPin className="h-4 w-4 text-red-500" />
+                    <span className="font-medium">{detailLoad.destination}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {detailLoad.shipperName && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Shipper:</span>
+                        <span className="font-medium">{detailLoad.shipperName}</span>
+                      </div>
+                    )}
+                    {detailLoad.loadType && (
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Type:</span>
+                        <span className="font-medium">{detailLoad.loadType}</span>
+                      </div>
+                    )}
+                    {detailLoad.weight && (
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Weight:</span>
+                        <span className="font-medium">{detailLoad.weight} Tons</span>
+                      </div>
+                    )}
+                    {detailLoad.estimatedDistance && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Distance:</span>
+                        <span className="font-medium">{detailLoad.estimatedDistance} km</span>
+                      </div>
+                    )}
+                    {detailLoad.cargoDescription && (
+                      <div className="flex items-center gap-2 col-span-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Cargo:</span>
+                        <span className="font-medium">{detailLoad.cargoDescription}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Price & Payment Information */}
+              <Card className="border-primary/30">
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Admin Price</span>
+                    <span className="text-xl font-bold text-primary">{formatCurrency(parseFloat(detailLoad.adminFinalPrice || "0"))}</span>
+                  </div>
+                  
+                  {(detailLoad.advancePaymentPercent !== null && detailLoad.advancePaymentPercent !== undefined && detailLoad.advancePaymentPercent > 0) && (
+                    <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-green-600" />
+                        <span className="font-medium text-green-700 dark:text-green-400">Advance Payment Required</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Advance Percentage:</span>
+                        <span className="font-semibold">{detailLoad.advancePaymentPercent}%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Advance Amount:</span>
+                        <span className="font-bold text-green-600 dark:text-green-400">
+                          {formatCurrency(Math.round(parseFloat(detailLoad.adminFinalPrice || "0") * (detailLoad.advancePaymentPercent / 100)))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Balance on Delivery:</span>
+                        <span className="font-medium">
+                          {formatCurrency(Math.round(parseFloat(detailLoad.adminFinalPrice || "0") * (1 - detailLoad.advancePaymentPercent / 100)))}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(!detailLoad.advancePaymentPercent || detailLoad.advancePaymentPercent === 0) && (
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">No advance payment required for this load.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)} data-testid="button-close-detail">
+              Close
+            </Button>
+            <Button 
+              onClick={() => {
+                setDetailDialogOpen(false);
+                if (detailLoad) {
+                  handleBid(detailLoad as any);
+                }
+              }}
+              disabled={!!detailLoad?.myBid}
+              data-testid="button-bid-from-detail"
+            >
+              {detailLoad?.myBid ? "Bid Placed" : detailLoad?.priceFixed ? "Accept Load" : "Place Bid"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={bidDialogOpen} onOpenChange={setBidDialogOpen}>
         <DialogContent className="max-w-lg">

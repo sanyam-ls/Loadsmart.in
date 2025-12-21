@@ -144,6 +144,7 @@ export function PricingDrawer({
   const [fixedFee, setFixedFee] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [platformMarginPercent, setPlatformMarginPercent] = useState(10);
+  const [advancePaymentPercent, setAdvancePaymentPercent] = useState(0);
   const [notes, setNotes] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   
@@ -204,11 +205,11 @@ export function PricingDrawer({
     const w = parseFloat(load?.weight?.toString() || "0");
     if (w <= 0) return 1;
     // Convert KG to MT if weight unit is KG
-    if (load?.weight_unit === 'KG') {
+    if (load?.weightUnit === 'KG') {
       return Math.round((w / 1000) * 100) / 100; // Round to 2 decimal places
     }
     return w; // Already in MT
-  }, [load?.weight, load?.weight_unit]);
+  }, [load?.weight, load?.weightUnit]);
 
   // Use custom tonnage if set, otherwise use load weight
   const weightInTons = customTonnage !== null ? customTonnage : loadWeightInTons;
@@ -397,6 +398,7 @@ export function PricingDrawer({
         fixed_fee: fixedFee,
         discount_amount: discountAmount,
         platform_margin_percent: platformMarginPercent,
+        advance_payment_percent: advancePaymentPercent,
         notes,
         template_id: selectedTemplate || null,
       });
@@ -810,6 +812,41 @@ export function PricingDrawer({
                           <span className="text-muted-foreground">Carrier Payout:</span>
                           <span className="font-medium">{formatRupees(carrierPayout)}</span>
                         </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Advance Payment Percentage */}
+                    <Card>
+                      <CardContent className="pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <IndianRupee className="h-4 w-4 text-green-600" />
+                            <Label className="text-sm font-medium">Advance Payment</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Slider
+                              value={[advancePaymentPercent]}
+                              onValueChange={([val]) => setAdvancePaymentPercent(val)}
+                              min={0}
+                              max={100}
+                              step={5}
+                              className="w-24"
+                              data-testid="slider-advance-payment"
+                            />
+                            <span className="text-sm font-medium w-10">{advancePaymentPercent}%</span>
+                          </div>
+                        </div>
+                        {advancePaymentPercent > 0 && (
+                          <div className="flex items-center justify-between text-sm bg-green-50 dark:bg-green-950/30 p-2 rounded-md">
+                            <span className="text-muted-foreground">Advance Amount:</span>
+                            <span className="font-semibold text-green-600 dark:text-green-400">
+                              {formatRupees(Math.round(finalPrice * (advancePaymentPercent / 100)))}
+                            </span>
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Percentage of final price to be paid as advance before pickup
+                        </p>
                       </CardContent>
                     </Card>
 

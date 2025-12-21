@@ -88,7 +88,31 @@ export async function registerRoutes(
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const data = insertUserSchema.parse(req.body);
+      const { otpId, ...userData } = req.body;
+      const data = insertUserSchema.parse(userData);
+      
+      // Carriers must verify their phone number with OTP
+      if (data.role === "carrier") {
+        if (!otpId) {
+          return res.status(400).json({ error: "Phone verification required for carrier registration" });
+        }
+        
+        const otpRecord = await storage.getOtpVerification(otpId);
+        if (!otpRecord) {
+          return res.status(400).json({ error: "OTP verification not found. Please verify your phone again." });
+        }
+        
+        if (otpRecord.status !== "verified") {
+          return res.status(400).json({ error: "Phone number not verified. Please complete OTP verification." });
+        }
+        
+        if (otpRecord.phoneNumber !== data.phone) {
+          return res.status(400).json({ error: "Phone number mismatch. The verified phone number doesn't match the one provided." });
+        }
+        
+        // Clean up used OTP by marking it as consumed
+        await storage.updateOtpVerification(otpId, { status: "consumed" });
+      }
       
       const existingUser = await storage.getUserByUsername(data.username);
       if (existingUser) {
@@ -7384,15 +7408,13 @@ export async function registerRoutes(
         status: "pending",
       });
 
-      // In production, this would send SMS via Twilio/etc.
-      // For now, we'll return the OTP in development mode
-      const isDev = process.env.NODE_ENV !== "production";
-
+      // Since no SMS service is configured, return OTP in response for in-app display
+      // In production with Twilio, you would send SMS here and not return the code
       res.json({ 
         success: true, 
-        message: "OTP sent to your phone number",
+        message: "OTP generated for verification",
         otpId: otp.id,
-        ...(isDev && { devOtp: otpCode }), // Only in dev mode
+        otpCode: otpCode, // Displayed in-app since no SMS service is configured
       });
     } catch (error) {
       console.error("Send registration OTP error:", error);

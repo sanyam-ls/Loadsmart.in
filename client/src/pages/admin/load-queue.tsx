@@ -517,7 +517,7 @@ export default function LoadQueuePage() {
         </div>
       </div>
 
-      {/* Invoice Sending Table - Loads with Carrier Finalized (awarded) status */}
+      {/* Invoice Sending - Compact grid of carrier finalized loads */}
       {(() => {
         const invoiceLoads = realLoads
           .filter(l => l.status === 'awarded')
@@ -535,103 +535,80 @@ export default function LoadQueuePage() {
                 Invoice Sending ({invoiceLoads.length})
               </CardTitle>
               <CardDescription>
-                Carrier finalized loads ready for invoice - send invoice to complete the transaction
+                Send invoices to shippers for finalized loads
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="max-h-[500px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Load ID</TableHead>
-                      <TableHead>Route</TableHead>
-                      <TableHead>Shipper</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Admin Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoiceLoads.map((load) => {
-                      const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
-                      const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
-                      const gstAmount = Math.round(priceNum * 0.18);
-                      const totalWithGst = priceNum + gstAmount;
+            <CardContent className="pt-0">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {invoiceLoads.map((load) => {
+                  const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
+                  const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
+                  const gstAmount = Math.round(priceNum * 0.18);
+                  const totalWithGst = priceNum + gstAmount;
+                  
+                  return (
+                    <div 
+                      key={load.id} 
+                      className="border rounded-lg p-3 bg-card hover-elevate"
+                      data-testid={`card-invoice-load-${load.id.slice(0, 8)}`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className="font-mono text-sm font-medium">{formatLoadId(load)}</span>
+                        <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs">
+                          Ready
+                        </Badge>
+                      </div>
                       
-                      return (
-                        <TableRow key={load.id} data-testid={`row-invoice-load-${load.id.slice(0, 8)}`}>
-                          <TableCell className="font-mono font-medium">{formatLoadId(load)}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-1 text-sm">
-                                <MapPin className="h-3 w-3 text-green-500" />
-                                <span className="truncate max-w-[120px]">{load.pickupCity}</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-sm">
-                                <MapPin className="h-3 w-3 text-red-500" />
-                                <span className="truncate max-w-[120px]">{load.dropoffCity}</span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{load.shipperName || "Unknown"}</span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
-                              {load.cargoDescription && (
-                                <p className="text-xs text-muted-foreground truncate max-w-[100px]">
-                                  {load.cargoDescription}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="text-xs text-muted-foreground">
-                                Subtotal: Rs. {priceNum.toLocaleString('en-IN')}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                GST (18%): Rs. {gstAmount.toLocaleString('en-IN')}
-                              </span>
-                              <span className="font-semibold text-green-600 dark:text-green-400">
-                                Total: Rs. {totalWithGst.toLocaleString('en-IN')}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="bg-emerald-500 text-white">
-                              Carrier Finalized
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button 
-                                size="icon" 
-                                variant="ghost"
-                                onClick={() => openLoadDetails(load)}
-                                data-testid={`button-view-invoice-details-${load.id.slice(0, 8)}`}
-                                title="View full details"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                onClick={() => openRealLoadPricingDrawer(load)}
-                                data-testid={`button-send-invoice-${load.id.slice(0, 8)}`}
-                              >
-                                <Send className="h-4 w-4 mr-1" />
-                                Send Invoice
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+                      <div className="space-y-1 mb-3">
+                        <div className="flex items-center gap-1 text-sm">
+                          <MapPin className="h-3 w-3 text-green-500 shrink-0" />
+                          <span className="truncate">{load.pickupCity}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm">
+                          <MapPin className="h-3 w-3 text-red-500 shrink-0" />
+                          <span className="truncate">{load.dropoffCity}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm mb-3">
+                        <span className="text-muted-foreground">{load.shipperName || "Shipper"}</span>
+                        <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
+                      </div>
+                      
+                      <div className="border-t pt-2 mb-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Total (incl. GST)</span>
+                          <span className="font-bold text-green-600 dark:text-green-400">
+                            Rs. {totalWithGst.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => openLoadDetails(load)}
+                          data-testid={`button-view-invoice-details-${load.id.slice(0, 8)}`}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        <Button 
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => openRealLoadPricingDrawer(load)}
+                          data-testid={`button-send-invoice-${load.id.slice(0, 8)}`}
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Send
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         );

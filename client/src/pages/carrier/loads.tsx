@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { 
   Search, MapPin, LayoutGrid, List, Package, Star, 
-  Truck, TrendingUp, ArrowRight, Building2, 
+  Truck, TrendingUp, ArrowRight, Building2, Calendar,
   Target, Timer, Sparkles, ShieldCheck, Lock, Unlock, Loader2
 } from "lucide-react";
 import { connectMarketplace, onMarketplaceEvent, disconnectMarketplace } from "@/lib/marketplace-socket";
@@ -57,6 +57,7 @@ interface CarrierLoad {
   adminReferenceNumber?: number | null;
   advancePaymentPercent?: number | null;
   cargoDescription?: string | null;
+  postedAt?: string | null;
 }
 
 // Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
@@ -348,6 +349,7 @@ export default function CarrierLoadsPage() {
       deliveryDate: load.deliveryDate,
       advancePaymentPercent: load.advancePaymentPercent,
       cargoDescription: load.cargoDescription,
+      postedAt: load.postedAt,
     }));
   }, [rawApiLoads]);
 
@@ -1013,6 +1015,21 @@ export default function CarrierLoadsPage() {
                         <Package className="h-4 w-4 text-muted-foreground" />
                         <span className="text-muted-foreground">Cargo:</span>
                         <span className="font-medium">{detailLoad.cargoDescription}</span>
+                      </div>
+                    )}
+                    {detailLoad.postedAt && (
+                      <div className="flex items-center gap-2 col-span-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Posted:</span>
+                        <span className="font-medium">
+                          {new Date(detailLoad.postedAt).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
                       </div>
                     )}
                   </div>

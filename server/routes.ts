@@ -3720,6 +3720,11 @@ export async function registerRoutes(
       const taxAmount = Math.round(subtotal * (gstPercent / 100));
       const totalAmount = subtotal + taxAmount;
       
+      // Calculate advance payment from load
+      const advancePercent = load.advancePaymentPercent || 0;
+      const advanceAmount = advancePercent > 0 ? (totalAmount * (advancePercent / 100)).toFixed(2) : null;
+      const balanceOnDelivery = advancePercent > 0 ? (totalAmount - parseFloat(advanceAmount || "0")).toFixed(2) : null;
+      
       if (existingInvoice) {
         // Use existing invoice
         invoice = existingInvoice;
@@ -3730,6 +3735,9 @@ export async function registerRoutes(
             taxPercent: gstPercent.toString(),
             taxAmount: taxAmount.toString(),
             totalAmount: totalAmount.toString(),
+            advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
+            advancePaymentAmount: advanceAmount,
+            balanceOnDelivery: balanceOnDelivery,
           });
         }
       } else {
@@ -3751,6 +3759,9 @@ export async function registerRoutes(
           taxPercent: gstPercent.toString(),
           taxAmount: taxAmount.toString(),
           totalAmount: totalAmount.toString(),
+          advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
+          advancePaymentAmount: advanceAmount,
+          balanceOnDelivery: balanceOnDelivery,
           status: "draft",
           dueDate,
           lineItems: [

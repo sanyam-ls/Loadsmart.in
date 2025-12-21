@@ -311,6 +311,12 @@ export async function acceptBid(
       if (!existingInvoice) {
         const invoiceNumber = await storage.generateInvoiceNumber();
         const finalAmount = acceptedAmount || load.adminFinalPrice || "0";  // Use negotiated price
+        const totalWithTax = (parseFloat(finalAmount) * 1.18).toFixed(2);
+        
+        // Calculate advance payment from load
+        const advancePercent = load.advancePaymentPercent || 0;
+        const advanceAmount = advancePercent > 0 ? (parseFloat(totalWithTax) * (advancePercent / 100)).toFixed(2) : null;
+        const balanceOnDelivery = advancePercent > 0 ? (parseFloat(totalWithTax) - parseFloat(advanceAmount || "0")).toFixed(2) : null;
         
         await storage.createInvoice({
           invoiceNumber,
@@ -326,7 +332,10 @@ export async function acceptBid(
           discountReason: null,
           taxPercent: "18",
           taxAmount: (parseFloat(finalAmount) * 0.18).toFixed(2),
-          totalAmount: (parseFloat(finalAmount) * 1.18).toFixed(2),
+          totalAmount: totalWithTax,
+          advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
+          advancePaymentAmount: advanceAmount,
+          balanceOnDelivery: balanceOnDelivery,
           paymentTerms: "Net 30",
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           notes: `Invoice generated for load ${load.id} after carrier finalization`,

@@ -450,6 +450,12 @@ export const invoices = pgTable("invoices", {
   paymentTerms: text("payment_terms").default("Net 30"), // T+X days or COD
   paymentTermsDays: integer("payment_terms_days").default(30),
   dueDate: timestamp("due_date"),
+  
+  // Advance payment
+  advancePaymentPercent: integer("advance_payment_percent"),
+  advancePaymentAmount: decimal("advance_payment_amount", { precision: 12, scale: 2 }),
+  balanceOnDelivery: decimal("balance_on_delivery", { precision: 12, scale: 2 }),
+  
   status: text("status").default("draft"),
   notes: text("notes"),
   lineItems: jsonb("line_items"),

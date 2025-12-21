@@ -1469,7 +1469,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { load_id, suggested_price, final_price, post_mode, invite_carrier_ids, comment, allow_counter_bids } = req.body;
+      const { load_id, suggested_price, final_price, post_mode, invite_carrier_ids, comment, allow_counter_bids, advance_payment_percent } = req.body;
 
       if (!load_id || !final_price || !post_mode) {
         return res.status(400).json({ error: "load_id, final_price, and post_mode are required" });
@@ -1519,6 +1519,7 @@ export async function registerRoutes(
         adminDecisionId: decision.id,
         invitedCarrierIds: invite_carrier_ids || null,
         allowCounterBids: allow_counter_bids || false,
+        advancePaymentPercent: advance_payment_percent ?? null,
         status: newStatus,
         postedAt: new Date(),
         adminReferenceNumber,

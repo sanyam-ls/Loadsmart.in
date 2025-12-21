@@ -519,7 +519,13 @@ export default function LoadQueuePage() {
 
       {/* Invoice Sending Table - Loads with Carrier Finalized (awarded) status */}
       {(() => {
-        const invoiceLoads = realLoads.filter(l => l.status === 'awarded');
+        const invoiceLoads = realLoads
+          .filter(l => l.status === 'awarded')
+          .sort((a, b) => {
+            const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+            const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+            return dateB - dateA;
+          });
         if (invoiceLoads.length === 0) return null;
         return (
           <Card className="border-emerald-500/30">
@@ -533,7 +539,7 @@ export default function LoadQueuePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="max-h-[300px]">
+              <ScrollArea className="max-h-[500px]">
                 <Table>
                   <TableHeader>
                     <TableRow>

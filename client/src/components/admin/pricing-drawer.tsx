@@ -821,19 +821,22 @@ export function PricingDrawer({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <IndianRupee className="h-4 w-4 text-green-600" />
-                            <Label className="text-sm font-medium">Advance Payment</Label>
+                            <Label className="text-sm font-medium">Advance Payment (%)</Label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Slider
-                              value={[advancePaymentPercent]}
-                              onValueChange={([val]) => setAdvancePaymentPercent(val)}
+                            <Input
+                              type="number"
+                              value={advancePaymentPercent}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 0;
+                                setAdvancePaymentPercent(Math.min(100, Math.max(0, val)));
+                              }}
                               min={0}
                               max={100}
-                              step={5}
-                              className="w-24"
-                              data-testid="slider-advance-payment"
+                              className="w-20 text-right"
+                              data-testid="input-advance-payment"
                             />
-                            <span className="text-sm font-medium w-10">{advancePaymentPercent}%</span>
+                            <span className="text-sm font-medium">%</span>
                           </div>
                         </div>
                         {advancePaymentPercent > 0 && (

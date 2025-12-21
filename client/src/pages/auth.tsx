@@ -54,16 +54,14 @@ const registerSchema = z.object({
   message: "Carrier type is required for carriers",
   path: ["carrierType"],
 }).refine((data) => {
-  if (data.role === "carrier") {
-    if (!data.phone || data.phone.trim() === "") {
-      return false;
-    }
-    const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/;
-    return phoneRegex.test(data.phone.replace(/[\s-]/g, ""));
+  // Phone is required for all roles
+  if (!data.phone || data.phone.trim() === "") {
+    return false;
   }
-  return true;
+  const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/;
+  return phoneRegex.test(data.phone.replace(/[\s-]/g, ""));
 }, {
-  message: "Valid Indian phone number is required for carriers (10 digits starting with 6-9)",
+  message: "Valid Indian phone number is required (10 digits starting with 6-9)",
   path: ["phone"],
 });
 
@@ -218,8 +216,8 @@ export default function AuthPage() {
   };
 
   const handleRegister = async (data: RegisterFormData) => {
-    // Carriers must verify their phone number before registration
-    if (data.role === "carrier" && !otpVerified) {
+    // All users must verify their phone number before registration
+    if (!otpVerified) {
       toast({ 
         title: "Phone Verification Required", 
         description: "Please verify your phone number with OTP before creating your account.", 
@@ -238,7 +236,7 @@ export default function AuthPage() {
         companyName: data.companyName,
         phone: data.phone,
         carrierType: data.carrierType,
-        otpId: data.role === "carrier" ? otpId || undefined : undefined,
+        otpId: otpId || undefined,
       });
       if (success) {
         toast({ title: "Account created!", description: "Welcome to FreightFlow." });
@@ -253,8 +251,8 @@ export default function AuthPage() {
     }
   };
 
-  // Check if carrier can register (must have verified phone)
-  const canCarrierRegister = selectedRole !== "carrier" || otpVerified;
+  // Check if user can register (must have verified phone for all roles)
+  const canRegister = otpVerified;
 
   return (
     <div className="min-h-screen flex">
@@ -464,89 +462,87 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      {selectedRole === "carrier" && (
-                        <div className="space-y-3">
-                          <FormField
-                            control={registerForm.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
-                                <FormControl>
-                                  <div className="flex gap-2">
-                                    <div className="relative flex-1">
-                                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                      <Input 
-                                        type="tel" 
-                                        placeholder="+91 98765 43210" 
-                                        className="pl-10"
-                                        disabled={otpVerified}
-                                        {...field} 
-                                        data-testid="input-register-phone" 
-                                      />
-                                    </div>
-                                    {!otpVerified ? (
-                                      <Button 
-                                        type="button"
-                                        variant="outline"
-                                        onClick={handleSendOtp}
-                                        disabled={sendingOtp || (otpSent && otpCountdown > 0)}
-                                        data-testid="button-send-otp"
-                                      >
-                                        {sendingOtp ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : otpSent && otpCountdown > 0 ? (
-                                          `${otpCountdown}s`
-                                        ) : otpSent ? (
-                                          "Resend"
-                                        ) : (
-                                          "Send OTP"
-                                        )}
-                                      </Button>
-                                    ) : (
-                                      <div className="flex items-center gap-1 text-green-600 px-3">
-                                        <CheckCircle className="h-4 w-4" />
-                                        <span className="text-sm font-medium">Verified</span>
-                                      </div>
-                                    )}
+                      <div className="space-y-3">
+                        <FormField
+                          control={registerForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number</FormLabel>
+                              <FormControl>
+                                <div className="flex gap-2">
+                                  <div className="relative flex-1">
+                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                      type="tel" 
+                                      placeholder="+91 98765 43210" 
+                                      className="pl-10"
+                                      disabled={otpVerified}
+                                      {...field} 
+                                      data-testid="input-register-phone" 
+                                    />
                                   </div>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          {otpSent && !otpVerified && (
-                            <div className="space-y-2">
-                              <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                  <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    type="text"
-                                    placeholder="Enter 6-digit OTP"
-                                    className="pl-10 tracking-widest font-mono"
-                                    maxLength={6}
-                                    value={enteredOtp}
-                                    onChange={(e) => setEnteredOtp(e.target.value.replace(/\D/g, ""))}
-                                    data-testid="input-otp-code"
-                                  />
+                                  {!otpVerified ? (
+                                    <Button 
+                                      type="button"
+                                      variant="outline"
+                                      onClick={handleSendOtp}
+                                      disabled={sendingOtp || (otpSent && otpCountdown > 0)}
+                                      data-testid="button-send-otp"
+                                    >
+                                      {sendingOtp ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : otpSent && otpCountdown > 0 ? (
+                                        `${otpCountdown}s`
+                                      ) : otpSent ? (
+                                        "Resend"
+                                      ) : (
+                                        "Send OTP"
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <div className="flex items-center gap-1 text-green-600 px-3">
+                                      <CheckCircle className="h-4 w-4" />
+                                      <span className="text-sm font-medium">Verified</span>
+                                    </div>
+                                  )}
                                 </div>
-                                <Button 
-                                  type="button"
-                                  onClick={handleVerifyOtp}
-                                  disabled={enteredOtp.length !== 6 || verifyingOtp}
-                                  data-testid="button-verify-otp"
-                                >
-                                  {verifyingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
-                                </Button>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                OTP has been displayed in the notification. Enter it above to verify your phone.
-                              </p>
-                            </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
                           )}
-                        </div>
-                      )}
+                        />
+                        
+                        {otpSent && !otpVerified && (
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="text"
+                                  placeholder="Enter 6-digit OTP"
+                                  className="pl-10 tracking-widest font-mono"
+                                  maxLength={6}
+                                  value={enteredOtp}
+                                  onChange={(e) => setEnteredOtp(e.target.value.replace(/\D/g, ""))}
+                                  data-testid="input-otp-code"
+                                />
+                              </div>
+                              <Button 
+                                type="button"
+                                onClick={handleVerifyOtp}
+                                disabled={enteredOtp.length !== 6 || verifyingOtp}
+                                data-testid="button-verify-otp"
+                              >
+                                {verifyingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              OTP has been displayed in the notification. Enter it above to verify your phone.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={registerForm.control}
@@ -578,10 +574,10 @@ export default function AuthPage() {
                       <Button 
                         type="submit" 
                         className="w-full" 
-                        disabled={isLoading || !canCarrierRegister} 
+                        disabled={isLoading || !canRegister} 
                         data-testid="button-register"
                       >
-                        {isLoading ? "Creating account..." : !canCarrierRegister ? "Verify Phone First" : "Create Account"}
+                        {isLoading ? "Creating account..." : !canRegister ? "Verify Phone First" : "Create Account"}
                       </Button>
                     </form>
                   </Form>

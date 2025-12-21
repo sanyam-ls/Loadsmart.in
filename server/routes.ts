@@ -91,28 +91,26 @@ export async function registerRoutes(
       const { otpId, ...userData } = req.body;
       const data = insertUserSchema.parse(userData);
       
-      // Carriers must verify their phone number with OTP
-      if (data.role === "carrier") {
-        if (!otpId) {
-          return res.status(400).json({ error: "Phone verification required for carrier registration" });
-        }
-        
-        const otpRecord = await storage.getOtpVerification(otpId);
-        if (!otpRecord) {
-          return res.status(400).json({ error: "OTP verification not found. Please verify your phone again." });
-        }
-        
-        if (otpRecord.status !== "verified") {
-          return res.status(400).json({ error: "Phone number not verified. Please complete OTP verification." });
-        }
-        
-        if (otpRecord.phoneNumber !== data.phone) {
-          return res.status(400).json({ error: "Phone number mismatch. The verified phone number doesn't match the one provided." });
-        }
-        
-        // Clean up used OTP by marking it as consumed
-        await storage.updateOtpVerification(otpId, { status: "consumed" });
+      // All users must verify their phone number with OTP
+      if (!otpId) {
+        return res.status(400).json({ error: "Phone verification required for registration" });
       }
+      
+      const otpRecord = await storage.getOtpVerification(otpId);
+      if (!otpRecord) {
+        return res.status(400).json({ error: "OTP verification not found. Please verify your phone again." });
+      }
+      
+      if (otpRecord.status !== "verified") {
+        return res.status(400).json({ error: "Phone number not verified. Please complete OTP verification." });
+      }
+      
+      if (otpRecord.phoneNumber !== data.phone) {
+        return res.status(400).json({ error: "Phone number mismatch. The verified phone number doesn't match the one provided." });
+      }
+      
+      // Clean up used OTP by marking it as consumed
+      await storage.updateOtpVerification(otpId, { status: "consumed" });
       
       const existingUser = await storage.getUserByUsername(data.username);
       if (existingUser) {

@@ -517,176 +517,235 @@ export default function LoadQueuePage() {
         </div>
       </div>
 
-      {realLoads.length > 0 && (
-        <Card className="border-primary/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-primary" />
-              Loads Requiring Admin Action ({realLoads.length})
-            </CardTitle>
-            <CardDescription>
-              Shipper submissions in various workflow stages requiring admin attention
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="max-h-[400px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Load ID</TableHead>
-                    <TableHead>Route</TableHead>
-                    <TableHead>Shipper</TableHead>
-                    <TableHead>Cargo</TableHead>
-                    <TableHead>Admin Price</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {realLoads.map((load) => (
-                    <TableRow key={load.id} data-testid={`row-real-load-${load.id.slice(0, 8)}`}>
-                      <TableCell className="font-mono font-medium">{formatLoadId(load)}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1 text-sm">
-                            <MapPin className="h-3 w-3 text-green-500" />
-                            <span className="truncate max-w-[120px]">{load.pickupCity}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-sm">
-                            <MapPin className="h-3 w-3 text-red-500" />
-                            <span className="truncate max-w-[120px]">{load.dropoffCity}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{load.shipperName || "Unknown"}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
-                          {load.cargoDescription && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[100px]">
-                              {load.cargoDescription}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          // Show price: finalPrice (negotiated) > adminFinalPrice > adminPrice
-                          const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
-                          if (price) {
-                            const priceNum = typeof price === 'string' ? parseFloat(price) : price;
-                            const isBidPrice = load.finalPrice && !load.adminPrice;
-                            // Calculate GST for awarded loads (ready for invoice)
-                            const gstPercent = 18;
-                            const gstAmount = Math.round(priceNum * (gstPercent / 100));
-                            const totalWithGst = priceNum + gstAmount;
-                            const showGst = load.status === 'awarded';
-                            
-                            return (
-                              <div className="flex flex-col">
-                                {showGst ? (
-                                  <>
-                                    <span className="text-xs text-muted-foreground">
-                                      Subtotal: Rs. {priceNum.toLocaleString('en-IN')}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      GST (18%): Rs. {gstAmount.toLocaleString('en-IN')}
-                                    </span>
-                                    <span className="font-semibold text-green-600 dark:text-green-400">
-                                      Total: Rs. {totalWithGst.toLocaleString('en-IN')}
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="font-medium text-green-600 dark:text-green-400">
-                                    Rs. {priceNum.toLocaleString('en-IN')}
-                                  </span>
-                                )}
-                                {isBidPrice && (
-                                  <span className="text-xs text-muted-foreground">(Bid Price)</span>
-                                )}
+      {/* Invoice Sending Table - Loads with Carrier Finalized (awarded) status */}
+      {(() => {
+        const invoiceLoads = realLoads.filter(l => l.status === 'awarded');
+        if (invoiceLoads.length === 0) return null;
+        return (
+          <Card className="border-emerald-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Send className="h-5 w-5 text-emerald-500" />
+                Invoice Sending ({invoiceLoads.length})
+              </CardTitle>
+              <CardDescription>
+                Carrier finalized loads ready for invoice - send invoice to complete the transaction
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="max-h-[300px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Load ID</TableHead>
+                      <TableHead>Route</TableHead>
+                      <TableHead>Shipper</TableHead>
+                      <TableHead>Cargo</TableHead>
+                      <TableHead>Admin Price</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoiceLoads.map((load) => {
+                      const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
+                      const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
+                      const gstAmount = Math.round(priceNum * 0.18);
+                      const totalWithGst = priceNum + gstAmount;
+                      
+                      return (
+                        <TableRow key={load.id} data-testid={`row-invoice-load-${load.id.slice(0, 8)}`}>
+                          <TableCell className="font-mono font-medium">{formatLoadId(load)}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1 text-sm">
+                                <MapPin className="h-3 w-3 text-green-500" />
+                                <span className="truncate max-w-[120px]">{load.pickupCity}</span>
                               </div>
-                            );
-                          }
-                          return <span className="text-muted-foreground text-sm">Not priced</span>;
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const stateDisplay = getCanonicalStateDisplay(load.status);
-                          return (
-                            <Badge variant={stateDisplay.variant} className={stateDisplay.className}>
-                              {load.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
-                              {load.status === "priced" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                              {load.status === "invoice_sent" && <Send className="h-3 w-3 mr-1" />}
-                              {stateDisplay.label}
+                              <div className="flex items-center gap-1 text-sm">
+                                <MapPin className="h-3 w-3 text-red-500" />
+                                <span className="truncate max-w-[120px]">{load.dropoffCity}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{load.shipperName || "Unknown"}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
+                              {load.cargoDescription && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[100px]">
+                                  {load.cargoDescription}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="text-xs text-muted-foreground">
+                                Subtotal: Rs. {priceNum.toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                GST (18%): Rs. {gstAmount.toLocaleString('en-IN')}
+                              </span>
+                              <span className="font-semibold text-green-600 dark:text-green-400">
+                                Total: Rs. {totalWithGst.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-emerald-500 text-white">
+                              Carrier Finalized
                             </Badge>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button 
-                            size="icon" 
-                            variant="ghost"
-                            onClick={() => openLoadDetails(load)}
-                            data-testid={`button-view-details-${load.id.slice(0, 8)}`}
-                            title="View full details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {(() => {
-                            const adminAction = getAdminActionForState(load.status);
-                            if (adminAction) {
-                              const handleAction = () => {
-                                if (adminAction.action === "price" || adminAction.action === "reprice" || adminAction.action === "send_invoice" || adminAction.action === "push_to_carriers") {
-                                  openRealLoadPricingDrawer(load);
-                                } else if (adminAction.action === "view_bids" || adminAction.action === "negotiate" || adminAction.action === "track_shipment" || adminAction.action === "view_invoice") {
-                                  openRealLoadPricingDrawer(load);
-                                } else {
-                                  openRealLoadPricingDrawer(load);
-                                }
-                              };
-                              return (
-                                <Button 
-                                  size="sm" 
-                                  onClick={handleAction}
-                                  data-testid={`button-action-real-${load.id.slice(0, 8)}`}
-                                >
-                                  {adminAction.action === "price" && <Calculator className="h-4 w-4 mr-1" />}
-                                  {adminAction.action === "send_invoice" && <Send className="h-4 w-4 mr-1" />}
-                                  {adminAction.action === "reprice" && <Calculator className="h-4 w-4 mr-1" />}
-                                  {adminAction.action === "negotiate" && <Users className="h-4 w-4 mr-1" />}
-                                  {adminAction.action === "view_invoice" && <Receipt className="h-4 w-4 mr-1" />}
-                                  {adminAction.action === "push_to_carriers" && <Truck className="h-4 w-4 mr-1" />}
-                                  {adminAction.action === "view_bids" && <Gavel className="h-4 w-4 mr-1" />}
-                                  {adminAction.action === "track_shipment" && <MapPin className="h-4 w-4 mr-1" />}
-                                  {adminAction.buttonLabel}
-                                </Button>
-                              );
-                            }
-                            return (
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button 
+                                size="icon" 
+                                variant="ghost"
+                                onClick={() => openLoadDetails(load)}
+                                data-testid={`button-view-invoice-details-${load.id.slice(0, 8)}`}
+                                title="View full details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                               <Button 
                                 size="sm" 
-                                onClick={() => openLoadDetails(load)}
-                                data-testid={`button-details-${load.id.slice(0, 8)}`}
+                                onClick={() => openRealLoadPricingDrawer(load)}
+                                data-testid={`button-send-invoice-${load.id.slice(0, 8)}`}
                               >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View Details
+                                <Send className="h-4 w-4 mr-1" />
+                                Send Invoice
                               </Button>
-                            );
-                          })()}
-                        </div>
-                      </TableCell>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Pricing & Posting Table - Loads with pending status */}
+      {(() => {
+        const pricingLoads = realLoads.filter(l => l.status === 'pending' || l.status === 'priced');
+        if (pricingLoads.length === 0) return null;
+        return (
+          <Card className="border-amber-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-amber-500" />
+                Pricing & Posting ({pricingLoads.length})
+              </CardTitle>
+              <CardDescription>
+                New shipper submissions awaiting pricing and posting to carriers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="max-h-[300px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Load ID</TableHead>
+                      <TableHead>Route</TableHead>
+                      <TableHead>Shipper</TableHead>
+                      <TableHead>Cargo</TableHead>
+                      <TableHead>Admin Price</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
+                  </TableHeader>
+                  <TableBody>
+                    {pricingLoads.map((load) => {
+                      const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
+                      const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
+                      
+                      return (
+                        <TableRow key={load.id} data-testid={`row-pricing-load-${load.id.slice(0, 8)}`}>
+                          <TableCell className="font-mono font-medium">{formatLoadId(load)}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1 text-sm">
+                                <MapPin className="h-3 w-3 text-green-500" />
+                                <span className="truncate max-w-[120px]">{load.pickupCity}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-sm">
+                                <MapPin className="h-3 w-3 text-red-500" />
+                                <span className="truncate max-w-[120px]">{load.dropoffCity}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{load.shipperName || "Unknown"}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
+                              {load.cargoDescription && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[100px]">
+                                  {load.cargoDescription}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {priceNum > 0 ? (
+                              <span className="font-medium text-green-600 dark:text-green-400">
+                                Rs. {priceNum.toLocaleString('en-IN')}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Not priced</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const stateDisplay = getCanonicalStateDisplay(load.status);
+                              return (
+                                <Badge variant={stateDisplay.variant} className={stateDisplay.className}>
+                                  {load.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                                  {load.status === "priced" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                  {stateDisplay.label}
+                                </Badge>
+                              );
+                            })()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button 
+                                size="icon" 
+                                variant="ghost"
+                                onClick={() => openLoadDetails(load)}
+                                data-testid={`button-view-pricing-details-${load.id.slice(0, 8)}`}
+                                title="View full details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                onClick={() => openRealLoadPricingDrawer(load)}
+                                data-testid={`button-price-load-${load.id.slice(0, 8)}`}
+                              >
+                                <Calculator className="h-4 w-4 mr-1" />
+                                Price Load
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
 
       <Card>
         <CardHeader className="pb-3">

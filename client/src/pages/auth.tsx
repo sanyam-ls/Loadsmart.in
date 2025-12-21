@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Truck, Eye, EyeOff, ArrowRight, Phone } from "lucide-react";
+import { Truck, Eye, EyeOff, ArrowRight, Phone, Shield, CheckCircle, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -74,8 +74,72 @@ export default function AuthPage() {
   const [, navigate] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [enteredOtp, setEnteredOtp] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
   const { login, register } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (otpCountdown > 0) {
+      const timer = setTimeout(() => setOtpCountdown(otpCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCountdown]);
+
+  const handleSendOtp = async () => {
+    const phone = registerForm.getValues("phone");
+    if (!phone || phone.trim() === "") {
+      toast({ title: "Phone Required", description: "Please enter your phone number first.", variant: "destructive" });
+      return;
+    }
+
+    const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/;
+    if (!phoneRegex.test(phone.replace(/[\s-]/g, ""))) {
+      toast({ title: "Invalid Phone", description: "Please enter a valid Indian phone number.", variant: "destructive" });
+      return;
+    }
+
+    setSendingOtp(true);
+    try {
+      const response = await fetch("/api/otp/registration/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setOtpSent(true);
+        setOtpCountdown(60);
+        setOtpCode(data.otpCode);
+        toast({ 
+          title: "OTP Sent!", 
+          description: `Your verification code is: ${data.otpCode}. This code is displayed here for demo purposes.`,
+          duration: 15000,
+        });
+      } else {
+        toast({ title: "Failed to send OTP", description: data.error || "Please try again.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to send OTP. Please try again.", variant: "destructive" });
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = () => {
+    if (enteredOtp === otpCode) {
+      setOtpVerified(true);
+      toast({ title: "Phone Verified!", description: "Your phone number has been verified successfully." });
+    } else {
+      toast({ title: "Invalid OTP", description: "The code you entered doesn't match. Please try again.", variant: "destructive" });
+    }
+  };
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),

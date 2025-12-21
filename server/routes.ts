@@ -2814,7 +2814,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { pricing_id, final_price, post_mode, invite_carrier_ids, notes, allow_counter_bids } = req.body;
+      const { pricing_id, final_price, post_mode, invite_carrier_ids, notes, allow_counter_bids, advance_payment_percent } = req.body;
 
       const pricing = await storage.getAdminPricing(pricing_id);
       if (!pricing) {
@@ -2856,6 +2856,7 @@ export async function registerRoutes(
         adminId: user.id,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || [],
+        advancePaymentPercent: advance_payment_percent ?? null,
         priceLockedAt: new Date(),
         priceLockedBy: user.id,
         statusChangedBy: user.id,
@@ -2957,7 +2958,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { pricing_id, post_mode, invite_carrier_ids, allow_counter_bids } = req.body;
+      const { pricing_id, post_mode, invite_carrier_ids, allow_counter_bids, advance_payment_percent } = req.body;
 
       const pricing = await storage.getAdminPricing(pricing_id);
       if (!pricing) {
@@ -2989,6 +2990,7 @@ export async function registerRoutes(
         adminId: pricing.adminId,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || pricing.invitedCarrierIds || [],
+        advancePaymentPercent: advance_payment_percent ?? null,
         priceLockedAt: new Date(),
         priceLockedBy: user.id,
         postedAt: new Date(),

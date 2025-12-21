@@ -415,6 +415,7 @@ export function PricingDrawer({
         post_mode: postMode,
         invite_carrier_ids: postMode === "invite" ? selectedCarriers : [],
         allow_counter_bids: allowCounterBids,
+        advance_payment_percent: advancePaymentPercent,
         notes,
       });
       await response.json();

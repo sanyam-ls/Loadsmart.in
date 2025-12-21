@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Truck, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Truck, Eye, EyeOff, ArrowRight, Phone } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -53,6 +53,18 @@ const registerSchema = z.object({
 }, {
   message: "Carrier type is required for carriers",
   path: ["carrierType"],
+}).refine((data) => {
+  if (data.role === "carrier") {
+    if (!data.phone || data.phone.trim() === "") {
+      return false;
+    }
+    const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/;
+    return phoneRegex.test(data.phone.replace(/[\s-]/g, ""));
+  }
+  return true;
+}, {
+  message: "Valid Indian phone number is required for carriers (10 digits starting with 6-9)",
+  path: ["phone"],
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -336,6 +348,33 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
+                      {selectedRole === "carrier" && (
+                        <FormField
+                          control={registerForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input 
+                                    type="tel" 
+                                    placeholder="+91 98765 43210" 
+                                    className="pl-10"
+                                    {...field} 
+                                    data-testid="input-register-phone" 
+                                  />
+                                </div>
+                              </FormControl>
+                              <p className="text-xs text-muted-foreground">
+                                OTP will be sent to this number for trip verification
+                              </p>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={registerForm.control}

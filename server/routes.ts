@@ -7078,22 +7078,23 @@ export async function registerRoutes(
 
       const result = await storage.approveOtpRequest(requestId, user.id, validityMinutes);
 
-      // Broadcast OTP approval event (without the actual OTP code for security)
-      // Admin will communicate OTP to carrier via phone/message
+      // Broadcast OTP approval event with OTP code to carrier
+      // OTP is delivered directly via WebSocket for in-app notification
       broadcastMarketplaceEvent("otp_approved", {
         requestId,
         type: result.request.requestType,
         carrierId: result.request.carrierId,
         shipmentId: result.request.shipmentId,
         expiresAt: result.otp.expiresAt,
-        // NOTE: OTP code is NOT broadcast - admin shares it via secure out-of-band channel
+        otpCode: result.otp.otpCode,
+        validityMinutes,
       });
 
-      // Create notification for carrier
+      // Create notification for carrier with OTP code
       await storage.createNotification({
         userId: result.request.carrierId,
         title: result.request.requestType === "trip_start" ? "Trip Start OTP Ready" : "Trip End OTP Ready",
-        message: `Your ${result.request.requestType === "trip_start" ? "trip start" : "trip end"} OTP has been generated. Contact admin to receive the code.`,
+        message: `Your OTP code is: ${result.otp.otpCode}. Valid for ${validityMinutes} minutes. Enter this code to ${result.request.requestType === "trip_start" ? "start your trip" : "complete your delivery"}.`,
         type: "info",
         isRead: false,
         contextType: "shipment",

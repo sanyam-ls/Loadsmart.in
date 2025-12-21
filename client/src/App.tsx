@@ -60,6 +60,7 @@ import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import { AdminDataProvider } from "@/lib/admin-data-store";
 import { CarrierDataProvider } from "@/lib/carrier-data-store";
+import { CarrierOtpNotification } from "@/components/carrier-otp-notification";
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -170,6 +171,7 @@ function AppContent() {
         </div>
       </div>
       <AIConcierge />
+      <CarrierOtpNotification />
     </SidebarProvider>
   );
 }

@@ -6918,12 +6918,12 @@ export async function registerRoutes(
       if (!load) {
         return res.status(404).json({ error: "Load not found" });
       }
-      const allowedStartStates = ["invoice_paid", "awarded", "invoice_acknowledged"];
+      const allowedStartStates = ["invoice_paid", "awarded", "invoice_acknowledged", "invoice_sent"];
       if (!allowedStartStates.includes(load.status)) {
         return res.status(400).json({ 
-          error: "Cannot start trip - invoice must be paid first",
+          error: "Cannot start trip - invoice must be sent first",
           currentStatus: load.status,
-          requiredStatus: "invoice_paid"
+          allowedStates: allowedStartStates
         });
       }
 

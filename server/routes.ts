@@ -4806,6 +4806,208 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/carrier/documents - Upload a new document
+  app.post("/api/carrier/documents", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const { documentType, fileName, fileUrl, fileSize, expiryDate, truckId } = req.body;
+
+      // Validate required fields
+      if (!documentType || !fileName || !fileUrl) {
+        return res.status(400).json({ error: "Document type, file name, and file URL are required" });
+      }
+
+      // Validate document type
+      const validDocTypes = ["license", "rc", "insurance", "fitness", "permit", "puc", "pan_card", "aadhar", "pod", "invoice", "other"];
+      if (!validDocTypes.includes(documentType)) {
+        return res.status(400).json({ error: "Invalid document type" });
+      }
+
+      // Validate file URL format (must be data URL or valid HTTP URL)
+      if (!fileUrl.startsWith("data:") && !fileUrl.startsWith("http://") && !fileUrl.startsWith("https://")) {
+        return res.status(400).json({ error: "Invalid file URL format. Must be a data URL or HTTP URL" });
+      }
+
+      // Validate file size (max 10MB for base64, accounting for ~33% overhead)
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      if (fileSize && fileSize > maxFileSize) {
+        return res.status(400).json({ error: "File size exceeds maximum allowed (10MB)" });
+      }
+
+      const newDoc = await storage.createDocument({
+        userId: user.id,
+        documentType,
+        fileName,
+        fileUrl,
+        fileSize: fileSize || 0,
+        expiryDate: expiryDate ? new Date(expiryDate) : null,
+        truckId: truckId || null,
+        isVerified: false,
+      });
+
+      res.json(newDoc);
+    } catch (error) {
+      console.error("Upload document error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier/documents/:id - Get a specific document
+  app.get("/api/carrier/documents/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const doc = await storage.getDocument(req.params.id);
+      if (!doc || doc.userId !== user.id) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      res.json(doc);
+    } catch (error) {
+      console.error("Get document error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/carrier/documents/:id - Update a document
+  app.patch("/api/carrier/documents/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const doc = await storage.getDocument(req.params.id);
+      if (!doc || doc.userId !== user.id) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const { fileName, fileUrl, fileSize, expiryDate } = req.body;
+      const updates: any = {};
+      if (fileName) updates.fileName = fileName;
+      if (fileUrl) updates.fileUrl = fileUrl;
+      if (fileSize !== undefined) updates.fileSize = fileSize;
+      if (expiryDate !== undefined) updates.expiryDate = expiryDate ? new Date(expiryDate) : null;
+
+      const updated = await storage.updateDocument(req.params.id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update document error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // DELETE /api/carrier/documents/:id - Delete a document
+  app.delete("/api/carrier/documents/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const doc = await storage.getDocument(req.params.id);
+      if (!doc || doc.userId !== user.id) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      await storage.deleteDocument(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete document error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/carrier/documents/generate-samples - Generate AI sample documents
+  app.post("/api/carrier/documents/generate-samples", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Create sample documents for demonstration
+      const sampleDocuments = [
+        {
+          userId: user.id,
+          documentType: "license",
+          fileName: "Driving_License_Sample.pdf",
+          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          fileSize: 156000,
+          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+          isVerified: false,
+        },
+        {
+          userId: user.id,
+          documentType: "rc",
+          fileName: "Registration_Certificate_Sample.pdf",
+          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          fileSize: 234000,
+          expiryDate: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000), // 2 years from now
+          isVerified: false,
+        },
+        {
+          userId: user.id,
+          documentType: "insurance",
+          fileName: "Vehicle_Insurance_Sample.pdf",
+          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          fileSize: 512000,
+          expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now (expiring soon!)
+          isVerified: false,
+        },
+        {
+          userId: user.id,
+          documentType: "fitness",
+          fileName: "Fitness_Certificate_Sample.pdf",
+          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          fileSize: 189000,
+          expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), // 6 months from now
+          isVerified: false,
+        },
+        {
+          userId: user.id,
+          documentType: "permit",
+          fileName: "All_India_Permit_Sample.pdf",
+          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          fileSize: 267000,
+          expiryDate: new Date(Date.now() + 545 * 24 * 60 * 60 * 1000), // 18 months from now
+          isVerified: false,
+        },
+        {
+          userId: user.id,
+          documentType: "puc",
+          fileName: "PUC_Certificate_Sample.pdf",
+          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          fileSize: 98000,
+          expiryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // Expired 10 days ago!
+          isVerified: false,
+        },
+      ];
+
+      const createdDocs = [];
+      for (const docData of sampleDocuments) {
+        const doc = await storage.createDocument(docData);
+        createdDocs.push(doc);
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Sample documents generated successfully",
+        documents: createdDocs 
+      });
+    } catch (error) {
+      console.error("Generate sample documents error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // GET /api/carrier/solo/truck - Get single truck for solo carrier
   app.get("/api/carrier/solo/truck", requireAuth, async (req, res) => {
     try {

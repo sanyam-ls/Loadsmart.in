@@ -96,7 +96,9 @@ export interface IStorage {
 
   getDocumentsByUser(userId: string): Promise<Document[]>;
   getDocumentsByLoad(loadId: string): Promise<Document[]>;
+  getDocument(id: string): Promise<Document | undefined>;
   createDocument(doc: InsertDocument): Promise<Document>;
+  updateDocument(id: string, updates: Partial<Document>): Promise<Document | undefined>;
   deleteDocument(id: string): Promise<boolean>;
 
   getNotification(id: string): Promise<Notification | undefined>;
@@ -488,9 +490,19 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(documents).where(eq(documents.loadId, loadId)).orderBy(desc(documents.createdAt));
   }
 
+  async getDocument(id: string): Promise<Document | undefined> {
+    const [doc] = await db.select().from(documents).where(eq(documents.id, id));
+    return doc;
+  }
+
   async createDocument(doc: InsertDocument): Promise<Document> {
     const [newDoc] = await db.insert(documents).values(doc).returning();
     return newDoc;
+  }
+
+  async updateDocument(id: string, updates: Partial<Document>): Promise<Document | undefined> {
+    const [updated] = await db.update(documents).set(updates).where(eq(documents.id, id)).returning();
+    return updated;
   }
 
   async deleteDocument(id: string): Promise<boolean> {

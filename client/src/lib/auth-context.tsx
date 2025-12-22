@@ -3,6 +3,7 @@ import type { User, UserRole } from "@shared/schema";
 
 interface AuthUser extends Omit<User, "password"> {
   role: UserRole;
+  carrierType?: "enterprise" | "solo";
 }
 
 interface AuthContextType {

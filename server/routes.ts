@@ -172,7 +172,15 @@ export async function registerRoutes(
       req.session.userId = user.id;
       
       const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
+      
+      // Include carrierType for carrier users
+      let carrierType: string | undefined;
+      if (user.role === "carrier") {
+        const carrierProfile = await storage.getCarrierProfile(user.id);
+        carrierType = carrierProfile?.carrierType || "enterprise";
+      }
+      
+      res.json({ user: { ...userWithoutPassword, carrierType } });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -192,7 +200,15 @@ export async function registerRoutes(
       }
 
       const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
+      
+      // Include carrierType for carrier users
+      let carrierType: string | undefined;
+      if (user.role === "carrier") {
+        const carrierProfile = await storage.getCarrierProfile(user.id);
+        carrierType = carrierProfile?.carrierType || "enterprise";
+      }
+      
+      res.json({ user: { ...userWithoutPassword, carrierType } });
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ error: "Internal server error" });

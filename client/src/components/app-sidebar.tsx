@@ -60,10 +60,16 @@ const carrierItems = [
 ];
 
 const soloItems = [
-  { title: "Load Feed", url: "/solo", icon: Route },
-  { title: "My Bids", url: "/solo/bids", icon: Gavel },
-  { title: "My Trips", url: "/solo/trips", icon: Truck },
-  { title: "Earnings", url: "/solo/earnings", icon: DollarSign },
+  { title: "Dashboard", url: "/carrier", icon: LayoutDashboard },
+  { title: "My Truck", url: "/carrier/my-truck", icon: Truck },
+  { title: "My Info", url: "/carrier/my-info", icon: User },
+  { title: "Available Loads", url: "/carrier/loads", icon: Route },
+  { title: "My Bids", url: "/carrier/bids", icon: Gavel },
+  { title: "My Shipments", url: "/carrier/shipments", icon: Package },
+  { title: "Active Trips", url: "/carrier/trips", icon: MapPin },
+  { title: "Trip History", url: "/carrier/history", icon: History },
+  { title: "Revenue", url: "/carrier/revenue", icon: DollarSign },
+  { title: "My Documents", url: "/carrier/my-documents", icon: FileText },
 ];
 
 const adminItems = [
@@ -83,15 +89,15 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
 
-  const isSoloPortal = location.startsWith("/solo");
+  // Detect solo carrier from user's carrierType
+  const isSoloCarrier = user?.role === "carrier" && user?.carrierType === "solo";
 
   const getNavItems = () => {
-    if (isSoloPortal) return soloItems;
     switch (user?.role) {
       case "shipper":
         return shipperItems;
       case "carrier":
-        return carrierItems;
+        return isSoloCarrier ? soloItems : carrierItems;
       case "admin":
         return adminItems;
       default:
@@ -100,12 +106,11 @@ export function AppSidebar() {
   };
 
   const getRoleLabel = () => {
-    if (isSoloPortal) return "Solo Driver";
     switch (user?.role) {
       case "shipper":
         return "Shipper Portal";
       case "carrier":
-        return "Carrier Portal";
+        return isSoloCarrier ? "Solo Driver" : "Carrier Portal";
       case "admin":
         return "Admin Console";
       default:

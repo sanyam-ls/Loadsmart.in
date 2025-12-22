@@ -4742,6 +4742,184 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/carrier/documents/expiring - Get documents nearing expiry
+  app.get("/api/carrier/documents/expiring", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const windowDays = parseInt(req.query.windowDays as string) || 30;
+      const now = new Date();
+      const futureDate = new Date(now.getTime() + windowDays * 24 * 60 * 60 * 1000);
+
+      // Get all documents for this carrier
+      const allDocs = await storage.getDocumentsByUser(user.id);
+      
+      // Categorize by expiry status
+      const expired: typeof allDocs = [];
+      const expiringSoon: typeof allDocs = [];
+      const healthy: typeof allDocs = [];
+
+      for (const doc of allDocs) {
+        if (!doc.expiryDate) {
+          healthy.push(doc);
+          continue;
+        }
+        const expiryDate = new Date(doc.expiryDate);
+        if (expiryDate < now) {
+          expired.push(doc);
+        } else if (expiryDate <= futureDate) {
+          expiringSoon.push(doc);
+        } else {
+          healthy.push(doc);
+        }
+      }
+
+      res.json({
+        expired,
+        expiringSoon,
+        healthy,
+        summary: {
+          totalDocs: allDocs.length,
+          expiredCount: expired.length,
+          expiringSoonCount: expiringSoon.length,
+          healthyCount: healthy.length,
+        }
+      });
+    } catch (error) {
+      console.error("Get expiring documents error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier/solo/truck - Get single truck for solo carrier
+  app.get("/api/carrier/solo/truck", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      if (carrierProfile?.carrierType !== "solo") {
+        return res.status(403).json({ error: "Solo carrier access only" });
+      }
+
+      const trucks = await storage.getTrucksByCarrier(user.id);
+      const truck = trucks[0]; // Solo carriers have one truck
+
+      if (!truck) {
+        return res.json({ truck: null, documents: [], documentAlerts: [] });
+      }
+
+      // Get truck documents
+      const allDocs = await storage.getDocumentsByUser(user.id);
+      const truckDocs = allDocs.filter(d => d.truckId === truck.id || 
+        ["rc", "insurance", "fitness", "license"].includes(d.documentType));
+
+      // Calculate document alerts
+      const now = new Date();
+      const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const documentAlerts = truckDocs.filter(d => {
+        if (!d.expiryDate) return false;
+        const expiry = new Date(d.expiryDate);
+        return expiry <= thirtyDays;
+      }).map(d => ({
+        documentId: d.id,
+        documentType: d.documentType,
+        fileName: d.fileName,
+        expiryDate: d.expiryDate,
+        daysUntilExpiry: d.expiryDate ? Math.ceil((new Date(d.expiryDate).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)) : null,
+        isExpired: d.expiryDate ? new Date(d.expiryDate) < now : false,
+      }));
+
+      res.json({ truck, documents: truckDocs, documentAlerts });
+    } catch (error) {
+      console.error("Get solo truck error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier/solo/profile - Get owner-operator profile
+  app.get("/api/carrier/solo/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      const trucks = await storage.getTrucksByCarrier(user.id);
+      const truck = trucks[0];
+
+      // Get driver-specific documents (license, etc.)
+      const allDocs = await storage.getDocumentsByUser(user.id);
+      const driverDocs = allDocs.filter(d => 
+        ["license", "pan_card", "aadhar"].includes(d.documentType)
+      );
+
+      // Get performance metrics
+      const shipments = await storage.getShipmentsByCarrier(user.id);
+      const completedTrips = shipments.filter(s => s.status === "delivered").length;
+      const totalTrips = shipments.length;
+
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          companyName: user.companyName,
+          avatar: user.avatar,
+        },
+        carrierProfile,
+        truck,
+        driverDocuments: driverDocs,
+        stats: {
+          completedTrips,
+          totalTrips,
+          rating: carrierProfile?.rating || "4.5",
+          reliabilityScore: carrierProfile?.reliabilityScore || "0",
+        }
+      });
+    } catch (error) {
+      console.error("Get solo profile error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/carrier/solo/profile - Update owner-operator profile
+  app.patch("/api/carrier/solo/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const { phone, companyName, bio } = req.body;
+
+      // Update user fields
+      if (phone || companyName) {
+        await storage.updateUser(user.id, { phone, companyName });
+      }
+
+      // Update carrier profile bio
+      if (bio !== undefined) {
+        const profile = await storage.getCarrierProfile(user.id);
+        if (profile) {
+          await storage.updateCarrierProfile(user.id, { bio });
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Update solo profile error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // POST /api/admin/settlements - Create carrier settlement
   app.post("/api/admin/settlements", requireAuth, async (req, res) => {
     try {

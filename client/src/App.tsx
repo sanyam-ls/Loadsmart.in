@@ -36,6 +36,9 @@ import CarrierRevenuePage from "@/pages/carrier/revenue";
 import CarrierDriversPage from "@/pages/carrier/drivers";
 import CarrierHistoryPage from "@/pages/carrier/history";
 import CarrierShipmentsPage from "@/pages/carrier/shipments";
+import MyTruckPage from "@/pages/carrier/my-truck";
+import MyInfoPage from "@/pages/carrier/my-info";
+import MyDocumentsPage from "@/pages/carrier/my-documents";
 
 import SoloLoadFeed from "@/pages/solo/load-feed";
 import SoloMyBids from "@/pages/solo/my-bids";
@@ -136,6 +139,9 @@ function AppContent() {
               <Route path="/carrier/drivers" component={CarrierDriversPage} />
               <Route path="/carrier/history" component={CarrierHistoryPage} />
               <Route path="/carrier/shipments" component={CarrierShipmentsPage} />
+              <Route path="/carrier/my-truck" component={MyTruckPage} />
+              <Route path="/carrier/my-info" component={MyInfoPage} />
+              <Route path="/carrier/my-documents" component={MyDocumentsPage} />
               
               <Route path="/solo" component={SoloLoadFeed} />
               <Route path="/solo/loads" component={SoloLoadFeed} />

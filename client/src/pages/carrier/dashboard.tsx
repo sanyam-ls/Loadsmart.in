@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
 import { useAuth } from "@/lib/auth-context";
-import { useTrucks, useBids, useLoads, useShipments, useSettlements } from "@/lib/api-hooks";
+import { useTrucks, useLoads, useShipments } from "@/lib/api-hooks";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { connectMarketplace, onMarketplaceEvent, offMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -23,7 +23,7 @@ import {
   Tooltip as RechartsTooltip, 
   ResponsiveContainer 
 } from "recharts";
-import type { Truck as TruckType, Bid, Load, Shipment } from "@shared/schema";
+import type { Truck as TruckType, Load, Shipment } from "@shared/schema";
 
 const formatCurrency = (amount: number): string => {
   if (amount >= 10000000) {
@@ -140,13 +140,27 @@ export default function CarrierDashboard() {
     }
   }, [user?.id, toast, refetchVerification]);
   
-  const { data: allTrucks, isLoading: trucksLoading } = useTrucks();
-  const { data: allBids, isLoading: bidsLoading } = useBids();
+  // Use new stats endpoint for dashboard data
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery<{
+    activeTruckCount: number;
+    totalTruckCount: number;
+    availableTruckCount: number;
+    pendingBidsCount: number;
+    activeTripsCount: number;
+    driversEnRoute: number;
+    currentMonthRevenue: number;
+    completedTripsThisMonth: number;
+    totalShipments: number;
+    hasRevenueData: boolean;
+  }>({
+    queryKey: ["/api/carrier/dashboard/stats"],
+  });
+
+  const { data: allTrucks } = useTrucks();
   const { data: allLoads, isLoading: loadsLoading } = useLoads();
   const { data: allShipments } = useShipments();
-  const { data: allSettlements } = useSettlements();
 
-  if (trucksLoading || bidsLoading || loadsLoading) {
+  if (statsLoading || loadsLoading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -154,43 +168,24 @@ export default function CarrierDashboard() {
     );
   }
 
+  // Use stats from the API endpoint
+  const activeTruckCount = dashboardStats?.activeTruckCount || 0;
+  const availableTruckCount = dashboardStats?.availableTruckCount || 0;
+  const totalTruckCount = dashboardStats?.totalTruckCount || 0;
+  const pendingBidsCount = dashboardStats?.pendingBidsCount || 0;
+  const activeTripsCount = dashboardStats?.activeTripsCount || 0;
+  const driversEnRoute = dashboardStats?.driversEnRoute || 0;
+  const currentMonthRevenue = dashboardStats?.currentMonthRevenue || 0;
+  const hasRevenueData = dashboardStats?.hasRevenueData || false;
+
   const trucks = (allTrucks || []).filter((t: TruckType) => t.carrierId === user?.id);
-  const bids = (allBids || []).filter((b: Bid) => b.carrierId === user?.id);
   const loads = allLoads || [];
   const shipments = (allShipments || []).filter((s: Shipment) => s.carrierId === user?.id);
-  const carrierSettlements = Array.isArray(allSettlements) ? allSettlements.filter((s: any) => s.carrierId === user?.id) : [];
-
-  // Active trucks are those currently assigned to in-progress shipments
-  const activeShipmentTruckIds = shipments
-    .filter((s: Shipment) => ['in_transit', 'picked_up', 'out_for_delivery'].includes(s.status || ''))
-    .map((s: Shipment) => s.truckId)
-    .filter(Boolean);
-  const activeTruckCount = activeShipmentTruckIds.length;
-  const availableTruckCount = trucks.filter((t: TruckType) => t.isAvailable === true).length;
-  const pendingBidsCount = bids.filter((b: Bid) => b.status === "pending" || b.status === "countered").length;
-  // Active trips: in_transit, picked_up, out_for_delivery, at_checkpoint, pickup_scheduled
-  const activeTripsCount = shipments.filter((s: Shipment) => 
-    ['in_transit', 'picked_up', 'out_for_delivery', 'at_checkpoint', 'pickup_scheduled'].includes(s.status || '')
-  ).length;
-  const driversEnRoute = shipments.filter((s: Shipment) => s.status === "in_transit").length;
-  
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  
-  const currentMonthSettlements = carrierSettlements.filter((s: any) => {
-    if (s.status !== 'paid' || !s.paidAt) return false;
-    const paidDate = new Date(s.paidAt);
-    return paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear;
-  });
-  
-  const currentMonthRevenue = currentMonthSettlements
-    .reduce((sum: number, s: any) => sum + parseFloat(s.carrierPayoutAmount?.toString() || '0'), 0);
   
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const currentMonth = now.getMonth();
   const currentMonthName = monthNames[currentMonth];
-  
-  const hasRevenueData = currentMonthSettlements.length > 0;
   
   const monthlyRevenueData = hasRevenueData 
     ? [{ month: currentMonthName, revenue: currentMonthRevenue, fullMonth: `${monthNames[currentMonth]} (Current Month)` }]
@@ -318,7 +313,7 @@ export default function CarrierDashboard() {
         >
           <StatCard
             title="Active Trucks"
-            value={`${activeTruckCount} / ${trucks.length}`}
+            value={`${activeTruckCount} / ${totalTruckCount}`}
             icon={Truck}
             subtitle={`${availableTruckCount} available now`}
           />
@@ -357,7 +352,7 @@ export default function CarrierDashboard() {
             title="Monthly Revenue"
             value={currentMonthRevenue > 0 ? formatCurrency(currentMonthRevenue) : "No data"}
             icon={DollarSign}
-            subtitle={carrierSettlements.length > 0 ? `${carrierSettlements.length} settlement(s)` : "Complete trips to earn"}
+            subtitle={hasRevenueData ? `${dashboardStats?.completedTripsThisMonth || 0} trips completed` : "Complete trips to earn"}
           />
         </div>
       </div>

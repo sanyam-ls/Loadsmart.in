@@ -4625,6 +4625,107 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/carrier/dashboard/stats - Get carrier dashboard statistics
+  app.get("/api/carrier/dashboard/stats", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Get carrier's shipments
+      const allShipments = await storage.getShipmentsByCarrier(user.id);
+      
+      // Get carrier's bids
+      const allBids = await storage.getBidsByCarrier(user.id);
+      
+      // Get carrier's trucks
+      const allTrucks = await storage.getTrucksByCarrier(user.id);
+      
+      // Get carrier's settlements
+      const settlements = await storage.getSettlementsByCarrier(user.id);
+
+      // Calculate stats
+      const activeStatuses = ['in_transit', 'picked_up', 'out_for_delivery', 'at_checkpoint', 'pickup_scheduled', 'assigned'];
+      const activeShipments = allShipments.filter(s => activeStatuses.includes(s.status || ''));
+      
+      // Active trucks - those assigned to active shipments
+      const activeTruckIds = new Set(activeShipments.map(s => s.truckId).filter(Boolean));
+      const activeTruckCount = activeTruckIds.size;
+      
+      // Available trucks
+      const availableTruckCount = allTrucks.filter(t => t.isAvailable === true).length;
+      
+      // Pending bids
+      const pendingBidsCount = allBids.filter(b => b.status === "pending" || b.status === "countered").length;
+      
+      // Active trips count
+      const activeTripsCount = activeShipments.length;
+      
+      // Drivers en route (in_transit only)
+      const driversEnRoute = allShipments.filter(s => s.status === "in_transit").length;
+      
+      // Monthly revenue from paid settlements
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      const currentMonthSettlements = settlements.filter((s: any) => {
+        if (s.status !== 'paid' || !s.paidAt) return false;
+        const paidDate = new Date(s.paidAt);
+        return paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear;
+      });
+      
+      const currentMonthRevenue = currentMonthSettlements.reduce(
+        (sum: number, s: any) => sum + parseFloat(s.carrierPayoutAmount?.toString() || s.netPayout?.toString() || '0'), 
+        0
+      );
+      
+      // Calculate revenue from completed shipments if no settlements exist
+      // Use invoice data from completed deliveries
+      let calculatedRevenue = currentMonthRevenue;
+      if (calculatedRevenue === 0) {
+        const completedShipments = allShipments.filter(s => 
+          s.status === 'delivered' && s.deliveredAt
+        );
+        
+        for (const shipment of completedShipments) {
+          const deliveredDate = new Date(shipment.deliveredAt!);
+          if (deliveredDate.getMonth() === currentMonth && deliveredDate.getFullYear() === currentYear) {
+            const load = await storage.getLoad(shipment.loadId);
+            if (load && load.adminFinalPrice) {
+              // Estimate carrier payout as 85% of load price (15% platform fee)
+              calculatedRevenue += parseFloat(load.adminFinalPrice) * 0.85;
+            }
+          }
+        }
+      }
+      
+      // Completed trips this month
+      const completedTripsThisMonth = allShipments.filter(s => {
+        if (s.status !== 'delivered' || !s.deliveredAt) return false;
+        const deliveredDate = new Date(s.deliveredAt);
+        return deliveredDate.getMonth() === currentMonth && deliveredDate.getFullYear() === currentYear;
+      }).length;
+
+      res.json({
+        activeTruckCount,
+        totalTruckCount: allTrucks.length,
+        availableTruckCount,
+        pendingBidsCount,
+        activeTripsCount,
+        driversEnRoute,
+        currentMonthRevenue: calculatedRevenue,
+        completedTripsThisMonth,
+        totalShipments: allShipments.length,
+        hasRevenueData: calculatedRevenue > 0 || currentMonthSettlements.length > 0,
+      });
+    } catch (error) {
+      console.error("Get carrier dashboard stats error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // POST /api/admin/settlements - Create carrier settlement
   app.post("/api/admin/settlements", requireAuth, async (req, res) => {
     try {

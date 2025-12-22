@@ -50,6 +50,32 @@ draft → pending → priced → posted_to_carriers → open_for_bid → counter
 - `getLoadsForRole()`: Role-based load visibility filtering
 - `acceptBid()`: Accepts bid, auto-creates shipment and invoice, closes other bids
 - `checkCarrierEligibility()`: Validates carrier can bid on a load
+- `checkCarrierDocumentCompliance()`: Validates carrier has valid documents for bidding/trip start
+
+### Solo Carrier Portal
+
+Specialized portal for owner-operators with single-truck operations:
+
+**Navigation (Simplified):**
+- "My Truck" (instead of "My Fleet")
+- "My Info" (instead of "Drivers")
+- "My Documents" (instead of "Documents")
+- No "Add Driver" or fleet management sections
+
+**Key Features:**
+- Compliance Status Indicator on My Truck page (green/amber/red)
+- Cash-flow focused Revenue view with "My Earnings" tab
+- Document expiry enforcement blocks bidding and trip starts
+- Carrier type detected via `carrierType` field on auth context
+
+**Document Compliance Enforcement:**
+- Required documents: license, rc, insurance, permit, fitness, puc
+- Expired docs return 403 on POST /api/bids and POST /api/otp/request-start
+- Visual warning on My Truck page with actionable guidance
+
+**Admin Visibility:**
+- Solo Driver badges on carrier cards in /admin/carriers
+- Carrier type filter (All/Solo/Enterprise) for filtering carriers
 
 ### Real-time Marketplace Updates
 

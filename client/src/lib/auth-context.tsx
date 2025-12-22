@@ -9,6 +9,7 @@ interface AuthUser extends Omit<User, "password"> {
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
+  carrierType: "enterprise" | "solo" | undefined;
   login: (username: string, password: string) => Promise<boolean>;
   register: (userData: { username: string; email: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string }) => Promise<boolean>;
   logout: () => void;
@@ -99,8 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const carrierType = user?.carrierType;
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, switchRole }}>
+    <AuthContext.Provider value={{ user, isLoading, carrierType, login, register, logout, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

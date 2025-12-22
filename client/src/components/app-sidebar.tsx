@@ -87,10 +87,10 @@ const adminItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { user, carrierType } = useAuth();
 
-  // Detect solo carrier from user's carrierType
-  const isSoloCarrier = user?.role === "carrier" && user?.carrierType === "solo";
+  // Detect solo carrier from carrierType
+  const isSoloCarrier = user?.role === "carrier" && carrierType === "solo";
 
   const getNavItems = () => {
     switch (user?.role) {

@@ -4682,16 +4682,16 @@ export async function registerRoutes(
       );
       
       // Calculate revenue from completed shipments if no settlements exist
-      // Use invoice data from completed deliveries
+      // Use invoice data from completed deliveries (field is completedAt, not deliveredAt)
       let calculatedRevenue = currentMonthRevenue;
       if (calculatedRevenue === 0) {
         const completedShipments = allShipments.filter(s => 
-          s.status === 'delivered' && s.deliveredAt
+          s.status === 'delivered' && s.completedAt
         );
         
         for (const shipment of completedShipments) {
-          const deliveredDate = new Date(shipment.deliveredAt!);
-          if (deliveredDate.getMonth() === currentMonth && deliveredDate.getFullYear() === currentYear) {
+          const completedDate = new Date(shipment.completedAt!);
+          if (completedDate.getMonth() === currentMonth && completedDate.getFullYear() === currentYear) {
             const load = await storage.getLoad(shipment.loadId);
             if (load && load.adminFinalPrice) {
               // Estimate carrier payout as 85% of load price (15% platform fee)
@@ -4703,9 +4703,9 @@ export async function registerRoutes(
       
       // Completed trips this month
       const completedTripsThisMonth = allShipments.filter(s => {
-        if (s.status !== 'delivered' || !s.deliveredAt) return false;
-        const deliveredDate = new Date(s.deliveredAt);
-        return deliveredDate.getMonth() === currentMonth && deliveredDate.getFullYear() === currentYear;
+        if (s.status !== 'delivered' || !s.completedAt) return false;
+        const completedDate = new Date(s.completedAt);
+        return completedDate.getMonth() === currentMonth && completedDate.getFullYear() === currentYear;
       }).length;
 
       res.json({

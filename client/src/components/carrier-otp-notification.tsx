@@ -19,8 +19,10 @@ export function CarrierOtpNotification() {
   const [otpData, setOtpData] = useState<OtpNotification | null>(null);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
-  const { user } = useAuth();
+  const auth = useAuth();
   const { toast } = useToast();
+  
+  const user = auth?.user;
 
   useEffect(() => {
     if (!user || user.role !== "carrier") return;

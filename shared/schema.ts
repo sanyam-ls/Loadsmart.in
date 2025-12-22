@@ -39,7 +39,7 @@ export const validStateTransitions: Record<LoadStatus, LoadStatus[]> = {
   posted_to_carriers: ["open_for_bid", "awarded", "cancelled"],
   open_for_bid: ["counter_received", "awarded", "cancelled"],
   counter_received: ["open_for_bid", "awarded", "cancelled"],
-  awarded: ["invoice_created", "open_for_bid", "cancelled"],
+  awarded: ["invoice_created", "invoice_sent", "open_for_bid", "cancelled"],
   invoice_created: ["invoice_sent", "awarded", "cancelled"],
   invoice_sent: ["invoice_acknowledged", "invoice_created", "cancelled"],
   invoice_acknowledged: ["invoice_paid", "invoice_sent", "cancelled"],

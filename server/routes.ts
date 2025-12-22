@@ -13,7 +13,8 @@ import {
   canUserBidOnLoad, 
   acceptBid, 
   rejectBid,
-  transitionLoadState
+  transitionLoadState,
+  checkCarrierDocumentCompliance
 } from "./workflow-service";
 import { setupTelemetryWebSocket } from "./websocket-telemetry";
 import { 
@@ -751,6 +752,17 @@ export async function registerRoutes(
       const user = await storage.getUser(req.session.userId!);
       if (!user || user.role !== "carrier") {
         return res.status(403).json({ error: "Only carriers can place bids" });
+      }
+
+      // Check document compliance before allowing bid placement
+      const compliance = await checkCarrierDocumentCompliance(user.id);
+      if (!compliance.compliant) {
+        return res.status(403).json({ 
+          error: "Document compliance issue",
+          message: compliance.reason,
+          expiredDocuments: compliance.expiredDocuments,
+          action: "Please renew expired documents before placing bids"
+        });
       }
 
       const data = insertBidSchema.parse({
@@ -7206,6 +7218,17 @@ export async function registerRoutes(
       }
       if (shipment.startOtpVerified) {
         return res.status(400).json({ error: "Trip already started" });
+      }
+
+      // Check document compliance before allowing trip start
+      const compliance = await checkCarrierDocumentCompliance(user.id);
+      if (!compliance.compliant) {
+        return res.status(403).json({ 
+          error: "Document compliance issue",
+          message: compliance.reason,
+          expiredDocuments: compliance.expiredDocuments,
+          action: "Please renew expired documents before starting the trip"
+        });
       }
 
       // Verify load is in correct state (invoice_paid before trip can start)

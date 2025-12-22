@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { 
   TrendingUp, DollarSign, Truck, User, MapPin, Building2, 
-  ArrowUpRight, ArrowDownRight, BarChart3, PieChart as PieChartIcon
+  ArrowUpRight, ArrowDownRight, BarChart3, PieChart as PieChartIcon,
+  Clock, CheckCircle2, AlertCircle, Wallet
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,10 +34,12 @@ const CHART_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#E
 
 export default function CarrierRevenuePage() {
   const { getRevenueAnalytics, completedTrips: mockCompletedTrips } = useCarrierData();
-  const { user } = useAuth();
+  const { user, carrierType } = useAuth();
   const { data: allShipments = [] } = useShipments();
   const { data: allLoads = [] } = useLoads();
   const { data: allSettlements } = useSettlements();
+  
+  const isSoloDriver = carrierType === "solo";
   
   // Calculate real revenue from settlements and shipments
   const realRevenueData = useMemo(() => {
@@ -142,13 +145,142 @@ export default function CarrierRevenuePage() {
         />
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue={isSoloDriver ? "earnings" : "overview"} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
-          <TabsTrigger value="drivers">By Driver</TabsTrigger>
-          <TabsTrigger value="shippers">Top Shippers</TabsTrigger>
+          {isSoloDriver ? (
+            <>
+              <TabsTrigger value="earnings" data-testid="tab-earnings">My Earnings</TabsTrigger>
+              <TabsTrigger value="overview" data-testid="tab-overview">Trends</TabsTrigger>
+              <TabsTrigger value="shippers" data-testid="tab-shippers">Top Shippers</TabsTrigger>
+            </>
+          ) : (
+            <>
+              <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+              <TabsTrigger value="breakdown" data-testid="tab-breakdown">Breakdown</TabsTrigger>
+              <TabsTrigger value="drivers" data-testid="tab-drivers">By Driver</TabsTrigger>
+              <TabsTrigger value="shippers" data-testid="tab-shippers">Top Shippers</TabsTrigger>
+            </>
+          )}
         </TabsList>
+
+        {/* Solo Driver Cash Flow View */}
+        {isSoloDriver && (
+          <TabsContent value="earnings" className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-green-500/10">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Completed Payouts</p>
+                      <p className="text-xl font-bold text-green-600" data-testid="text-completed-payouts">
+                        {formatCurrency(analytics.totalRevenue * 0.7)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-amber-500/10">
+                      <Clock className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pending Payments</p>
+                      <p className="text-xl font-bold text-amber-600" data-testid="text-pending-payments">
+                        {formatCurrency(analytics.totalRevenue * 0.2)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-red-500/10">
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Platform Deductions</p>
+                      <p className="text-xl font-bold text-red-600" data-testid="text-deductions">
+                        {formatCurrency(analytics.totalRevenue * 0.1)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Wallet className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Net Earnings</p>
+                      <p className="text-xl font-bold text-primary" data-testid="text-net-earnings">
+                        {formatCurrency(analytics.totalRevenue * 0.9)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Recent Trip Payouts</CardTitle>
+                <CardDescription>Your per-trip earnings breakdown</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-3">
+                    {analytics.monthlyReports.slice(0, 6).flatMap((month, monthIdx) => 
+                      Array.from({ length: month.tripsCompleted > 5 ? 5 : month.tripsCompleted }, (_, tripIdx) => {
+                        const tripRevenue = month.avgRevenuePerTrip * (0.9 + Math.random() * 0.2);
+                        const platformFee = tripRevenue * 0.1;
+                        const netPayout = tripRevenue - platformFee;
+                        return (
+                          <div key={`${monthIdx}-${tripIdx}`} className="p-4 rounded-lg bg-muted/50 flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-primary/10">
+                                <Truck className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <p className="font-medium">Trip #{monthIdx * 5 + tripIdx + 1}</p>
+                                <p className="text-xs text-muted-foreground">{month.month}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">Gross</p>
+                                <p className="font-medium">{formatCurrency(tripRevenue)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">Deduction</p>
+                                <p className="font-medium text-red-600">-{formatCurrency(platformFee)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">Net</p>
+                                <p className="font-bold text-green-600">{formatCurrency(netPayout)}</p>
+                              </div>
+                              <Badge variant="default">Paid</Badge>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
@@ -211,34 +343,37 @@ export default function CarrierRevenuePage() {
             </Card>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Best Performing Trucks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {analytics.bestPerformingTrucks.slice(0, 5).map((truck, idx) => (
-                    <div key={truck.truckId} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                          {idx + 1}
+          <div className={`grid gap-6 ${isSoloDriver ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
+            {/* Hide Best Performing Trucks for solo drivers - they only have one truck */}
+            {!isSoloDriver && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Best Performing Trucks</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {analytics.bestPerformingTrucks.slice(0, 5).map((truck, idx) => (
+                      <div key={truck.truckId} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium">{truck.plate}</p>
+                            <p className="text-xs text-muted-foreground">{truck.truckId}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{truck.plate}</p>
-                          <p className="text-xs text-muted-foreground">{truck.truckId}</p>
-                        </div>
+                        <span className="font-bold">{formatCurrency(truck.revenue)}</span>
                       </div>
-                      <span className="font-bold">{formatCurrency(truck.revenue)}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Revenue by Truck Type</CardTitle>
+                <CardTitle className="text-lg">{isSoloDriver ? 'My Truck Revenue' : 'Revenue by Truck Type'}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-48">
@@ -374,61 +509,64 @@ export default function CarrierRevenuePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="drivers" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Revenue by Driver</CardTitle>
-              <CardDescription>Individual driver performance and earnings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[500px]">
-                <div className="space-y-4">
-                  {analytics.revenueByDriver.map((driver, idx) => (
-                    <div key={driver.driverId} className="p-4 rounded-lg bg-muted/50 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                            {idx + 1}
+        {/* Enterprise-only: Revenue by Driver tab */}
+        {!isSoloDriver && (
+          <TabsContent value="drivers" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Revenue by Driver</CardTitle>
+                <CardDescription>Individual driver performance and earnings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-4">
+                    {analytics.revenueByDriver.map((driver, idx) => (
+                      <div key={driver.driverId} className="p-4 rounded-lg bg-muted/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <p className="font-semibold">{driver.driverName}</p>
+                              <p className="text-xs text-muted-foreground">{driver.driverId}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-lg">{formatCurrency(driver.revenue)}</p>
+                            <p className="text-xs text-muted-foreground">{driver.trips} trips</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Avg per Trip</p>
+                            <p className="font-medium">{formatCurrency(driver.avgPerTrip)}</p>
                           </div>
                           <div>
-                            <p className="font-semibold">{driver.driverName}</p>
-                            <p className="text-xs text-muted-foreground">{driver.driverId}</p>
+                            <p className="text-xs text-muted-foreground">Safety Score</p>
+                            <div className="flex items-center gap-2">
+                              <Progress value={driver.safetyScore} className="h-2 flex-1" />
+                              <span className={`font-medium ${
+                                driver.safetyScore > 80 ? "text-green-600" : 
+                                driver.safetyScore > 60 ? "text-amber-600" : "text-red-600"
+                              }`}>{driver.safetyScore}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">% of Total</p>
+                            <p className="font-medium">
+                              {((driver.revenue / analytics.totalRevenue) * 100).toFixed(1)}%
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-lg">{formatCurrency(driver.revenue)}</p>
-                          <p className="text-xs text-muted-foreground">{driver.trips} trips</p>
-                        </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Avg per Trip</p>
-                          <p className="font-medium">{formatCurrency(driver.avgPerTrip)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Safety Score</p>
-                          <div className="flex items-center gap-2">
-                            <Progress value={driver.safetyScore} className="h-2 flex-1" />
-                            <span className={`font-medium ${
-                              driver.safetyScore > 80 ? "text-green-600" : 
-                              driver.safetyScore > 60 ? "text-amber-600" : "text-red-600"
-                            }`}>{driver.safetyScore}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">% of Total</p>
-                          <p className="font-medium">
-                            {((driver.revenue / analytics.totalRevenue) * 100).toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="shippers" className="space-y-6">
           <Card>

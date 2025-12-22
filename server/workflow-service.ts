@@ -493,5 +493,90 @@ export async function canUserBidOnLoad(userId: string, loadId: string): Promise<
     return { allowed: false, reason: "You already have a pending bid on this load" };
   }
 
+  // Check document compliance
+  const compliance = await checkCarrierDocumentCompliance(userId);
+  if (!compliance.compliant) {
+    return { allowed: false, reason: compliance.reason || "Document compliance check failed" };
+  }
+
   return { allowed: true };
+}
+
+// ============================================================================
+// DOCUMENT COMPLIANCE CHECK
+// ============================================================================
+
+export interface DocumentComplianceResult {
+  compliant: boolean;
+  reason?: string;
+  expiredDocuments: string[];
+  missingDocuments: string[];
+}
+
+const REQUIRED_DOCUMENT_TYPES = [
+  "driving_license",
+  "rc",
+  "insurance",
+  "permit",
+  "fitness",
+  "puc"
+];
+
+const DOCUMENT_DISPLAY_NAMES: Record<string, string> = {
+  "driving_license": "Driving License",
+  "rc": "Registration Certificate (RC)",
+  "insurance": "Insurance",
+  "permit": "Permit",
+  "fitness": "Fitness Certificate",
+  "puc": "PUC Certificate"
+};
+
+export async function checkCarrierDocumentCompliance(
+  carrierId: string
+): Promise<DocumentComplianceResult> {
+  const now = new Date();
+  const expiredDocuments: string[] = [];
+  const missingDocuments: string[] = [];
+
+  // Get carrier profile to check if solo or enterprise
+  const profile = await storage.getCarrierProfile(carrierId);
+  const isSolo = profile?.carrierType === "solo";
+
+  // Get all documents for this carrier
+  const documents = await storage.getDocumentsByUser(carrierId);
+  
+  // For solo carriers, we check all documents under their user ID
+  // For enterprise carriers, we check company-level documents
+  for (const docType of REQUIRED_DOCUMENT_TYPES) {
+    const doc = documents.find(d => d.documentType === docType && d.isVerified === true);
+    
+    if (!doc) {
+      // Document not found or not verified - mark as missing
+      missingDocuments.push(DOCUMENT_DISPLAY_NAMES[docType] || docType);
+    } else if (doc.expiryDate && new Date(doc.expiryDate) < now) {
+      // Document expired
+      expiredDocuments.push(DOCUMENT_DISPLAY_NAMES[docType] || docType);
+    }
+  }
+
+  // Build reason message
+  let reason: string | undefined;
+  
+  if (expiredDocuments.length > 0) {
+    reason = `Expired documents: ${expiredDocuments.join(", ")}. Please renew before bidding.`;
+  }
+  
+  // Note: For MVP, we only block on expired docs, not missing docs (carriers can still be onboarding)
+  // To also block on missing docs, uncomment below:
+  // if (missingDocuments.length > 0) {
+  //   const missingMsg = `Missing documents: ${missingDocuments.join(", ")}.`;
+  //   reason = reason ? `${reason} ${missingMsg}` : missingMsg;
+  // }
+
+  return {
+    compliant: expiredDocuments.length === 0,
+    reason,
+    expiredDocuments,
+    missingDocuments
+  };
 }

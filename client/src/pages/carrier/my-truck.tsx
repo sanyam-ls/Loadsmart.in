@@ -16,7 +16,10 @@ import {
   Package,
   Clock,
   Upload,
-  Plus
+  Plus,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, differenceInDays } from "date-fns";
@@ -162,6 +165,41 @@ export default function MyTruckPage() {
   const expiredCount = documentAlerts.filter(a => a.isExpired).length;
   const expiringSoonCount = documentAlerts.filter(a => !a.isExpired).length;
 
+  // Determine compliance status: green, amber, or red
+  const getComplianceStatus = () => {
+    if (expiredCount > 0) {
+      return {
+        status: "red" as const,
+        icon: ShieldX,
+        title: "Compliance Blocked",
+        description: "You cannot bid on loads or start trips until expired documents are renewed.",
+        color: "text-red-600 dark:text-red-400",
+        bgColor: "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800",
+      };
+    } else if (expiringSoonCount > 0) {
+      return {
+        status: "amber" as const,
+        icon: ShieldAlert,
+        title: "Documents Expiring Soon",
+        description: "Some documents will expire soon. Renew them to avoid bidding restrictions.",
+        color: "text-amber-600 dark:text-amber-400",
+        bgColor: "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800",
+      };
+    } else {
+      return {
+        status: "green" as const,
+        icon: ShieldCheck,
+        title: "Fully Compliant",
+        description: "All your documents are valid. You can bid on loads and start trips.",
+        color: "text-green-600 dark:text-green-400",
+        bgColor: "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800",
+      };
+    }
+  };
+
+  const compliance = getComplianceStatus();
+  const ComplianceIcon = compliance.icon;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -171,6 +209,32 @@ export default function MyTruckPage() {
           Manage Documents
         </Button>
       </div>
+
+      {/* Compliance Status Indicator */}
+      <Card className={`border ${compliance.bgColor}`} data-testid="card-compliance-status">
+        <CardContent className="flex items-center gap-4 py-4">
+          <div className={`p-3 rounded-full ${compliance.status === 'red' ? 'bg-red-100 dark:bg-red-900' : compliance.status === 'amber' ? 'bg-amber-100 dark:bg-amber-900' : 'bg-green-100 dark:bg-green-900'}`}>
+            <ComplianceIcon className={`h-8 w-8 ${compliance.color}`} />
+          </div>
+          <div className="flex-1">
+            <h3 className={`font-semibold ${compliance.color}`} data-testid="text-compliance-title">
+              {compliance.title}
+            </h3>
+            <p className="text-sm text-muted-foreground" data-testid="text-compliance-description">
+              {compliance.description}
+            </p>
+          </div>
+          {compliance.status !== "green" && (
+            <Button 
+              variant={compliance.status === "red" ? "destructive" : "outline"}
+              onClick={() => navigate("/carrier/my-documents")}
+              data-testid="button-fix-compliance"
+            >
+              {compliance.status === "red" ? "Fix Now" : "Review Documents"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       {(expiredCount > 0 || expiringSoonCount > 0) && (
         <Alert variant={expiredCount > 0 ? "destructive" : "default"} className={expiredCount === 0 ? "border-amber-500 bg-amber-50 dark:bg-amber-950" : ""}>

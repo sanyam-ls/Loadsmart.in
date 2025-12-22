@@ -101,6 +101,7 @@ export default function AdminCarriersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activityFilter, setActivityFilter] = useState<string>("all");
+  const [carrierTypeFilter, setCarrierTypeFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<string>("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -138,6 +139,14 @@ export default function AdminCarriersPage() {
       );
     }
     
+    // Filter by carrier type (solo vs enterprise)
+    if (carrierTypeFilter !== "all") {
+      result = result.filter(carrier => {
+        const type = carrier.profile?.carrierType || "enterprise";
+        return type === carrierTypeFilter;
+      });
+    }
+    
     result.sort((a, b) => {
       const aVal = (a as any)[sortField];
       const bVal = (b as any)[sortField];
@@ -155,7 +164,7 @@ export default function AdminCarriersPage() {
     });
     
     return result;
-  }, [verifiedCarriers, searchQuery, sortField, sortDirection]);
+  }, [verifiedCarriers, searchQuery, carrierTypeFilter, sortField, sortDirection]);
 
   const paginatedCarriers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -451,6 +460,16 @@ export default function AdminCarriersPage() {
                   <SelectItem value="low">Low</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={carrierTypeFilter} onValueChange={setCarrierTypeFilter}>
+                <SelectTrigger className="w-[140px]" data-testid="select-carrier-type-filter">
+                  <SelectValue placeholder="Carrier Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="solo">Solo Drivers</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -526,6 +545,11 @@ export default function AdminCarriersPage() {
                               {carrier.companyName || carrier.username}
                               {carrier.isVerified && (
                                 <Shield className="h-3 w-3 text-primary" />
+                              )}
+                              {carrier.profile?.carrierType === "solo" && (
+                                <Badge variant="outline" className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700" data-testid={`badge-solo-${carrier.id}`}>
+                                  Solo Driver
+                                </Badge>
                               )}
                             </div>
                             <div className="text-sm text-muted-foreground">{carrier.email}</div>

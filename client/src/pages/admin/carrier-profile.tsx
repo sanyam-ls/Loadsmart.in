@@ -289,19 +289,55 @@ export default function CarrierProfilePage() {
 
         <TabsContent value="overview" className="space-y-6 mt-6">
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Company Info */}
+            {/* Solo Driver: Driver Info / Enterprise: Company Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Company Information</CardTitle>
+                <CardTitle className="text-lg">
+                  {profile?.carrierType === "solo" ? "Driver Information" : "Company Information"}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Company Name</p>
-                    <p className="font-medium">{carrier.companyName || "Not specified"}</p>
-                  </div>
-                </div>
+                {profile?.carrierType === "solo" ? (
+                  <>
+                    {/* Solo Driver - Show driver name and truck info */}
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Driver Name</p>
+                        <p className="font-medium">{carrier.username}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Truck Number</p>
+                        <p className="font-medium">
+                          {carrier.trucks && carrier.trucks.length > 0 
+                            ? carrier.trucks[0].registrationNumber || "Not registered"
+                            : "No truck registered"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Driver ID</p>
+                        <p className="font-medium text-xs font-mono">{carrier.id}</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Enterprise Carrier - Show company info */}
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Company Name</p>
+                        <p className="font-medium">{carrier.companyName || "Not specified"}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="flex items-center gap-3">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <div>

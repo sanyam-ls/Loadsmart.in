@@ -968,8 +968,21 @@ export async function registerRoutes(
       const carriersWithProfiles = await Promise.all(
         carriers.map(async (carrier) => {
           const profile = await storage.getCarrierProfile(carrier.id);
+          const verification = await storage.getCarrierVerificationByCarrier(carrier.id);
           const { password: _, ...carrierWithoutPassword } = carrier;
-          return { ...carrierWithoutPassword, carrierProfile: profile };
+          
+          // Add verificationStatus to profile for dashboard filtering
+          const profileWithVerification = profile ? {
+            ...profile,
+            verificationStatus: verification?.status || 'pending'
+          } : {
+            verificationStatus: verification?.status || 'pending'
+          };
+          
+          return { 
+            ...carrierWithoutPassword, 
+            carrierProfile: profileWithVerification 
+          };
         })
       );
 

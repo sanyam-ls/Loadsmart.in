@@ -123,7 +123,7 @@ export default function AdminOverview() {
   const completedLoads = allLoads.filter((l: Load) => ['delivered', 'closed'].includes(l.status || ''));
   const pendingLoads = allLoads.filter((l: Load) => ['pending', 'priced'].includes(l.status || ''));
 
-  const verifiedCarriers = allCarriers.filter(c => c.carrierProfile?.verificationStatus === 'verified');
+  const verifiedCarriers = allCarriers.filter(c => (c.carrierProfile as any)?.verificationStatus === 'approved');
   
   const totalSpend = allInvoices
     .filter(inv => inv.status === 'paid')
@@ -137,7 +137,7 @@ export default function AdminOverview() {
     monthlyChange: 12,
   };
 
-  const pendingVerifications = allCarriers.filter(c => c.carrierProfile?.verificationStatus === 'pending').length;
+  const pendingVerifications = allCarriers.filter(c => (c.carrierProfile as any)?.verificationStatus === 'pending').length;
 
   const loadDistribution = [
     { name: "Completed", value: completedLoads.length, color: "hsl(142, 76%, 36%)" },

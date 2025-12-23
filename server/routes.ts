@@ -164,10 +164,9 @@ export async function registerRoutes(
     // Only seed for solodriver1 test account
     if (user.username !== "solodriver1") return;
     
-    // Check if documents already exist
+    // Check if documents already exist - don't seed if there are any documents
     const existingDocs = await storage.getDocumentsByUser(user.id);
-    const hasAiDocs = existingDocs.some(d => d.fileUrl?.includes("/assets/generated_images/"));
-    if (hasAiDocs) return; // Already seeded
+    if (existingDocs.length > 0) return; // Already has documents, don't add duplicates
     
     console.log("Seeding AI-generated sample documents for solodriver1...");
     

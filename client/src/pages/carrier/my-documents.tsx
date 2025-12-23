@@ -666,12 +666,25 @@ export default function MyDocumentsPage() {
               </DialogHeader>
 
               <div className="py-4">
-                <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4">
-                  <div className="text-center text-muted-foreground">
-                    <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Document Preview</p>
-                    <p className="text-xs">{selectedDocument.fileName}</p>
-                  </div>
+                <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden">
+                  {selectedDocument.fileUrl?.includes("/assets/generated_images/") || 
+                   selectedDocument.fileUrl?.endsWith(".png") || 
+                   selectedDocument.fileUrl?.endsWith(".jpg") || 
+                   selectedDocument.fileUrl?.endsWith(".jpeg") ||
+                   selectedDocument.fileUrl?.startsWith("data:image/") ? (
+                    <img 
+                      src={selectedDocument.fileUrl} 
+                      alt={selectedDocument.fileName}
+                      className="w-full h-full object-contain"
+                      data-testid="img-document-preview"
+                    />
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Document Preview</p>
+                      <p className="text-xs">{selectedDocument.fileName}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">

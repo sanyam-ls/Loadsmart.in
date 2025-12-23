@@ -4867,6 +4867,55 @@ export async function registerRoutes(
         isVerified: false,
       });
 
+      // Auto-create or update verification record when carrier uploads documents
+      // This ensures the carrier appears in admin's verification queue
+      let verification = await storage.getCarrierVerificationByCarrier(user.id);
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      
+      if (!verification) {
+        // Create a new verification record for this carrier
+        verification = await storage.createCarrierVerification({
+          carrierId: user.id,
+          carrierType: carrierProfile?.carrierType || "enterprise",
+          fleetSize: carrierProfile?.fleetSize || 1,
+          status: "pending",
+          notes: null,
+        });
+      } else if (verification.status === "rejected") {
+        // Reset to pending if carrier uploads new documents after rejection
+        await storage.updateCarrierVerification(verification.id, {
+          status: "pending",
+          rejectionReason: null,
+        });
+        verification = await storage.getCarrierVerification(verification.id);
+      }
+
+      // Also create a verification document linked to the verification record
+      if (verification) {
+        // Check if verification document of same type exists
+        const existingVerifDocs = await storage.getVerificationDocuments(verification.id);
+        const existingVerifDoc = existingVerifDocs.find(d => d.documentType === documentType);
+        
+        if (existingVerifDoc) {
+          // Update existing verification document
+          await storage.updateVerificationDocument(existingVerifDoc.id, {
+            fileName,
+            fileUrl,
+            status: "pending",
+          });
+        } else {
+          // Create new verification document
+          await storage.createVerificationDocument({
+            verificationId: verification.id,
+            carrierId: user.id,
+            documentType,
+            fileName,
+            fileUrl,
+            status: "pending",
+          });
+        }
+      }
+
       res.json(newDoc);
     } catch (error) {
       console.error("Upload document error:", error);

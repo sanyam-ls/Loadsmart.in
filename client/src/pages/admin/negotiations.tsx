@@ -424,6 +424,15 @@ export default function AdminNegotiationsPage() {
     return <Badge variant="outline" className="text-xs"><Building2 className="h-3 w-3 mr-1" />Enterprise</Badge>;
   };
 
+  // Get display name based on carrier type: solo drivers show username, enterprise shows company name
+  const getCarrierDisplayName = (carrier?: { username?: string; companyName?: string; carrierType?: string }) => {
+    if (!carrier) return "Unknown Carrier";
+    if (carrier.carrierType === "solo") {
+      return carrier.username || carrier.companyName || "Solo Driver";
+    }
+    return carrier.companyName || carrier.username || "Unknown Carrier";
+  };
+
   const BidCard = ({ bid }: { bid: Bid }) => (
     <Card className="hover-elevate" data-testid={`card-bid-${bid.id}`}>
       <CardContent className="p-4">
@@ -431,7 +440,7 @@ export default function AdminNegotiationsPage() {
           <div className="space-y-2 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold" data-testid={`text-carrier-${bid.id}`}>
-                {bid.carrier?.companyName || bid.carrier?.username}
+                {getCarrierDisplayName(bid.carrier)}
               </span>
               {getCarrierTypeBadge(bid.carrier?.carrierType)}
               {getStatusBadge(bid.status)}
@@ -677,7 +686,7 @@ export default function AdminNegotiationsPage() {
                         <div className="space-y-2 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold">
-                              {bid.carrier?.companyName || bid.carrier?.username}
+                              {getCarrierDisplayName(bid.carrier)}
                             </span>
                             {getCarrierTypeBadge(bid.carrier?.carrierType)}
                             {getStatusBadge(bid.status)}
@@ -741,7 +750,7 @@ export default function AdminNegotiationsPage() {
                             <div className="flex items-center gap-3">
                               {getCarrierTypeBadge(bid.carrier?.carrierType)}
                               <span className="font-medium">
-                                {bid.carrier?.companyName || bid.carrier?.username}
+                                {getCarrierDisplayName(bid.carrier)}
                               </span>
                               <span className="font-semibold text-green-600">
                                 Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
@@ -795,7 +804,7 @@ export default function AdminNegotiationsPage() {
             <div className="py-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Carrier:</span>
-                <span className="font-medium">{selectedBid.carrier?.companyName || selectedBid.carrier?.username}</span>
+                <span className="font-medium">{getCarrierDisplayName(selectedBid.carrier)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Final Agreed Price:</span>
@@ -919,7 +928,7 @@ export default function AdminNegotiationsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5" />
-              Negotiate with {chatBid?.carrier?.companyName || chatBid?.carrier?.username}
+              Negotiate with {getCarrierDisplayName(chatBid?.carrier)}
             </DialogTitle>
             <DialogDescription>
               {chatBid?.load?.pickupCity} to {chatBid?.load?.dropoffCity} - Current bid: Rs. {parseFloat(chatBid?.amount || "0").toLocaleString("en-IN")}
@@ -945,7 +954,7 @@ export default function AdminNegotiationsPage() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium">
-                      {msg.sender === "admin" ? "You (Admin)" : chatBid?.carrier?.companyName || "Carrier"}
+                      {msg.sender === "admin" ? "You (Admin)" : getCarrierDisplayName(chatBid?.carrier)}
                     </span>
                     {msg.isSimulated && (
                       <Badge variant="outline" className="text-xs">Simulated</Badge>

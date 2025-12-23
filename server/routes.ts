@@ -469,8 +469,18 @@ export async function registerRoutes(
         bidsList.map(async (bid) => {
           const carrier = await storage.getUser(bid.carrierId);
           const load = await storage.getLoad(bid.loadId);
+          const truck = bid.truckId ? await storage.getTruck(bid.truckId) : null;
+          const carrierProfile = await storage.getCarrierProfile(bid.carrierId);
           const { password: _, ...carrierWithoutPassword } = carrier || {};
-          return { ...bid, carrier: carrierWithoutPassword, load };
+          return { 
+            ...bid, 
+            carrier: {
+              ...carrierWithoutPassword,
+              carrierType: carrierProfile?.carrierType || "enterprise"
+            }, 
+            load,
+            truck
+          };
         })
       );
 

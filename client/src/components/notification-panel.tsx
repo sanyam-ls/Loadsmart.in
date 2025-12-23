@@ -116,21 +116,57 @@ export function NotificationPanel() {
       switch (contextType) {
         case "invoice":
         case "invoice_generated":
+        case "invoice_acknowledged":
+        case "invoice_paid":
+        case "invoice_created":
+        case "invoice_sent":
         case "payment_received":
           navigate(`/admin/invoices${loadId ? `?load=${loadId}` : ''}`);
           break;
         case "bid":
         case "bid_received":
+        case "bid_accepted":
+        case "bid_rejected":
         case "counter_offer":
+        case "counter_received":
         case "negotiation":
+          navigate(`/admin/bids${loadId ? `?highlight=${loadId}` : ''}`);
+          break;
+        case "load":
+        case "load_created":
+        case "load_posted":
+        case "load_priced":
+        case "pending":
           navigate(`/admin/load-queue${loadId ? `?highlight=${loadId}` : ''}`);
           break;
         case "carrier":
         case "verification":
-          navigate('/admin/carrier-verification');
+        case "document":
+        case "document_uploaded":
+          navigate('/admin/verification');
+          break;
+        case "shipment":
+        case "shipment_update":
+        case "delivery_complete":
+        case "in_transit":
+        case "otp":
+          if (loadId) {
+            navigate(`/admin/loads/${loadId}`);
+          } else {
+            navigate('/admin/loads');
+          }
+          break;
+        case "user":
+        case "user_registered":
+          navigate('/admin/users');
           break;
         default:
-          navigate(`/admin/load-queue${loadId ? `?highlight=${loadId}` : ''}`);
+          // Try to route based on what data is available
+          if (loadId) {
+            navigate(`/admin/loads/${loadId}`);
+          } else {
+            navigate('/admin');
+          }
       }
     } else if (user?.role === "carrier") {
       switch (contextType) {

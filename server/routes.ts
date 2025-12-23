@@ -779,6 +779,7 @@ export async function registerRoutes(
           title: "Carrier Accepted Counter Offer",
           message: `${user.companyName || user.username} accepted the counter offer for load ${load.pickupCity} to ${load.dropoffCity}`,
           type: "info",
+          contextType: "bid_accepted",
           relatedLoadId: bid.loadId,
           relatedBidId: bidId,
         });
@@ -3498,6 +3499,7 @@ export async function registerRoutes(
           title: "Shipper Approved Invoice",
           message: `Shipper ${user.companyName || user.username} approved invoice for ${load.pickupCity} → ${load.dropoffCity}. Ready for transit.`,
           type: "success",
+          contextType: "invoice_paid",
           relatedLoadId: load.id,
         });
       }
@@ -3578,7 +3580,9 @@ export async function registerRoutes(
           title: "Invoice Rejected by Shipper",
           message: `Invoice ${invoice.invoiceNumber} was rejected: "${reason}"`,
           type: "error",
+          contextType: "invoice",
           relatedLoadId: invoice.loadId,
+          relatedInvoiceId: invoice.id,
         });
       }
 
@@ -3668,7 +3672,9 @@ export async function registerRoutes(
           title: "Invoice Negotiation Requested",
           message: `Shipper ${user.companyName || user.username} proposes Rs. ${parseFloat(proposedAmount).toLocaleString('en-IN')} (was Rs. ${parseFloat(invoice.totalAmount?.toString() || '0').toLocaleString('en-IN')})`,
           type: "warning",
+          contextType: "invoice",
           relatedLoadId: invoice.loadId,
+          relatedInvoiceId: invoice.id,
         });
       }
 
@@ -4319,7 +4325,9 @@ export async function registerRoutes(
           title: "Invoice Acknowledged",
           message: `${user.companyName || user.username} acknowledged invoice ${invoice.invoiceNumber}`,
           type: "success",
+          contextType: "invoice_acknowledged",
           relatedLoadId: invoice.loadId,
+          relatedInvoiceId: invoice.id,
         });
       }
 
@@ -4420,7 +4428,9 @@ export async function registerRoutes(
           title: "Payment Received",
           message: `Payment of Rs. ${parseFloat(invoice.totalAmount).toLocaleString('en-IN')} received for invoice ${invoice.invoiceNumber}`,
           type: "success",
+          contextType: "invoice_paid",
           relatedLoadId: invoice.loadId,
+          relatedInvoiceId: invoice.id,
         });
       }
 
@@ -4482,7 +4492,9 @@ export async function registerRoutes(
           title: "Invoice Query Raised",
           message: `${user.companyName || user.username} raised a query on invoice ${invoice.invoiceNumber}: "${message.slice(0, 50)}..."`,
           type: "warning",
+          contextType: "invoice",
           relatedLoadId: invoice.loadId,
+          relatedInvoiceId: invoice.id,
         });
       }
 
@@ -4567,7 +4579,9 @@ export async function registerRoutes(
           title: "Invoice Counter Offer Received",
           message: `Shipper ${user.companyName || user.username} proposes Rs. ${parseFloat(proposedAmount).toLocaleString('en-IN')} (was Rs. ${parseFloat(invoice.totalAmount?.toString() || '0').toLocaleString('en-IN')})`,
           type: "warning",
+          contextType: "invoice",
           relatedLoadId: invoice.loadId,
+          relatedInvoiceId: invoice.id,
         });
       }
 
@@ -4704,6 +4718,7 @@ export async function registerRoutes(
         title: "Proposal Accepted",
         message: `${user.companyName || user.username} accepted your proposal for payout Rs. ${parseFloat(proposal.proposedPayout).toLocaleString('en-IN')}`,
         type: "success",
+        contextType: "invoice_paid",
         relatedLoadId: proposal.loadId,
       });
 
@@ -4748,6 +4763,7 @@ export async function registerRoutes(
         title: "Counter Offer Received",
         message: `${user.companyName || user.username} countered with Rs. ${parseFloat(counterAmount).toLocaleString('en-IN')}`,
         type: "warning",
+        contextType: "counter_offer",
         relatedLoadId: proposal.loadId,
       });
 

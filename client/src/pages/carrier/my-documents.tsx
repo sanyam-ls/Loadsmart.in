@@ -35,7 +35,6 @@ import {
   Download,
   Eye,
   Trash2,
-  Sparkles,
   File,
   X,
   Loader2
@@ -148,26 +147,6 @@ export default function MyDocumentsPage() {
       toast({
         title: "Delete Failed",
         description: "Failed to delete document. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const generateSamplesMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/carrier/documents/generate-samples");
-    },
-    onSuccess: () => {
-      toast({
-        title: "Sample Documents Generated",
-        description: "AI-generated sample documents have been added to your account for demonstration.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents/expiring"] });
-    },
-    onError: () => {
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate sample documents. Please try again.",
         variant: "destructive",
       });
     },
@@ -391,25 +370,10 @@ export default function MyDocumentsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold" data-testid="text-page-title">My Documents</h1>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => generateSamplesMutation.mutate()}
-            disabled={generateSamplesMutation.isPending}
-            data-testid="button-generate-samples"
-          >
-            {generateSamplesMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            Generate AI Samples
-          </Button>
-          <Button onClick={() => setUploadDialogOpen(true)} data-testid="button-upload-document">
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Document
-          </Button>
-        </div>
+        <Button onClick={() => setUploadDialogOpen(true)} data-testid="button-upload-document">
+          <Upload className="h-4 w-4 mr-2" />
+          Upload Document
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

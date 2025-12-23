@@ -159,6 +159,90 @@ export async function registerRoutes(
     }
   });
 
+  // Helper function to seed AI-generated sample documents for demo accounts
+  async function seedSampleDocumentsForSoloDriver(user: any) {
+    // Only seed for solodriver1 test account
+    if (user.username !== "solodriver1") return;
+    
+    // Check if documents already exist
+    const existingDocs = await storage.getDocumentsByUser(user.id);
+    const hasAiDocs = existingDocs.some(d => d.fileUrl?.includes("/assets/generated_images/"));
+    if (hasAiDocs) return; // Already seeded
+    
+    console.log("Seeding AI-generated sample documents for solodriver1...");
+    
+    const aiCertificateImages = {
+      license: "/assets/generated_images/indian_driving_license_card.png",
+      rc: "/assets/generated_images/indian_rc_book_certificate.png",
+      insurance: "/assets/generated_images/indian_vehicle_insurance_policy.png",
+      fitness: "/assets/generated_images/indian_vehicle_fitness_certificate.png",
+      permit: "/assets/generated_images/indian_national_transport_permit.png",
+      puc: "/assets/generated_images/indian_puc_certificate_document.png",
+    };
+    
+    const sampleDocuments = [
+      {
+        userId: user.id,
+        documentType: "license",
+        fileName: "DL_Solo_Transport_MH12_AI_Generated.png",
+        fileUrl: aiCertificateImages.license,
+        fileSize: 256000,
+        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+        isVerified: true,
+      },
+      {
+        userId: user.id,
+        documentType: "rc",
+        fileName: "RC_Book_Solo_Transport_MH12AB1234_AI_Generated.png",
+        fileUrl: aiCertificateImages.rc,
+        fileSize: 334000,
+        expiryDate: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000), // 2 years
+        isVerified: true,
+      },
+      {
+        userId: user.id,
+        documentType: "insurance",
+        fileName: "Insurance_Policy_Solo_Transport_AI_Generated.png",
+        fileUrl: aiCertificateImages.insurance,
+        fileSize: 412000,
+        expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days (expiring soon)
+        isVerified: false,
+      },
+      {
+        userId: user.id,
+        documentType: "fitness",
+        fileName: "Fitness_Certificate_Solo_Transport_AI_Generated.png",
+        fileUrl: aiCertificateImages.fitness,
+        fileSize: 289000,
+        expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), // 6 months
+        isVerified: true,
+      },
+      {
+        userId: user.id,
+        documentType: "permit",
+        fileName: "National_Permit_Solo_Transport_AI_Generated.png",
+        fileUrl: aiCertificateImages.permit,
+        fileSize: 367000,
+        expiryDate: new Date(Date.now() + 545 * 24 * 60 * 60 * 1000), // 18 months
+        isVerified: true,
+      },
+      {
+        userId: user.id,
+        documentType: "puc",
+        fileName: "PUC_Certificate_Solo_Transport_AI_Generated.png",
+        fileUrl: aiCertificateImages.puc,
+        fileSize: 198000,
+        expiryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // Expired 10 days ago
+        isVerified: false,
+      },
+    ];
+    
+    for (const docData of sampleDocuments) {
+      await storage.createDocument(docData);
+    }
+    console.log("Sample documents seeded successfully for solodriver1");
+  }
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -174,6 +258,11 @@ export async function registerRoutes(
       }
 
       req.session.userId = user.id;
+      
+      // Seed sample documents for solo driver test account (idempotent)
+      if (user.role === "carrier") {
+        await seedSampleDocumentsForSoloDriver(user);
+      }
       
       const { password: _, ...userWithoutPassword } = user;
       
@@ -5004,102 +5093,6 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error) {
       console.error("Delete document error:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  // POST /api/carrier/documents/generate-samples - Generate AI sample documents
-  app.post("/api/carrier/documents/generate-samples", requireAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.session.userId!);
-      if (!user || user.role !== "carrier") {
-        return res.status(403).json({ error: "Carrier access required" });
-      }
-
-      // Create AI-generated sample documents with realistic certificate images
-      const carrierName = user.companyName || user.username || "Carrier";
-      const sanitizedName = carrierName.replace(/[^a-zA-Z0-9]/g, "_");
-      
-      // AI-generated certificate image URLs (base path for static assets)
-      const aiCertificateImages = {
-        license: "/assets/generated_images/indian_driving_license_card.png",
-        rc: "/assets/generated_images/indian_rc_book_certificate.png",
-        insurance: "/assets/generated_images/indian_vehicle_insurance_policy.png",
-        fitness: "/assets/generated_images/indian_vehicle_fitness_certificate.png",
-        permit: "/assets/generated_images/indian_national_transport_permit.png",
-        puc: "/assets/generated_images/indian_puc_certificate_document.png",
-      };
-      
-      const sampleDocuments = [
-        {
-          userId: user.id,
-          documentType: "license",
-          fileName: `DL_${sanitizedName}_MH12_AI_Generated.png`,
-          fileUrl: aiCertificateImages.license,
-          fileSize: 256000,
-          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-          isVerified: true,
-        },
-        {
-          userId: user.id,
-          documentType: "rc",
-          fileName: `RC_Book_${sanitizedName}_MH12AB1234_AI_Generated.png`,
-          fileUrl: aiCertificateImages.rc,
-          fileSize: 334000,
-          expiryDate: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000), // 2 years from now
-          isVerified: true,
-        },
-        {
-          userId: user.id,
-          documentType: "insurance",
-          fileName: `Insurance_Policy_${sanitizedName}_AI_Generated.png`,
-          fileUrl: aiCertificateImages.insurance,
-          fileSize: 412000,
-          expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now (expiring soon!)
-          isVerified: false,
-        },
-        {
-          userId: user.id,
-          documentType: "fitness",
-          fileName: `Fitness_Certificate_${sanitizedName}_AI_Generated.png`,
-          fileUrl: aiCertificateImages.fitness,
-          fileSize: 289000,
-          expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), // 6 months from now
-          isVerified: true,
-        },
-        {
-          userId: user.id,
-          documentType: "permit",
-          fileName: `National_Permit_${sanitizedName}_AI_Generated.png`,
-          fileUrl: aiCertificateImages.permit,
-          fileSize: 367000,
-          expiryDate: new Date(Date.now() + 545 * 24 * 60 * 60 * 1000), // 18 months from now
-          isVerified: true,
-        },
-        {
-          userId: user.id,
-          documentType: "puc",
-          fileName: `PUC_Certificate_${sanitizedName}_AI_Generated.png`,
-          fileUrl: aiCertificateImages.puc,
-          fileSize: 198000,
-          expiryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // Expired 10 days ago!
-          isVerified: false,
-        },
-      ];
-
-      const createdDocs = [];
-      for (const docData of sampleDocuments) {
-        const doc = await storage.createDocument(docData);
-        createdDocs.push(doc);
-      }
-
-      res.json({ 
-        success: true, 
-        message: "Sample documents generated successfully",
-        documents: createdDocs 
-      });
-    } catch (error) {
-      console.error("Generate sample documents error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

@@ -392,21 +392,19 @@ export default function MyDocumentsPage() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold" data-testid="text-page-title">My Documents</h1>
         <div className="flex items-center gap-2">
-          {summary.totalDocs === 0 && (
-            <Button
-              variant="outline"
-              onClick={() => generateSamplesMutation.mutate()}
-              disabled={generateSamplesMutation.isPending}
-              data-testid="button-generate-samples"
-            >
-              {generateSamplesMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4 mr-2" />
-              )}
-              Generate Sample Docs
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={() => generateSamplesMutation.mutate()}
+            disabled={generateSamplesMutation.isPending}
+            data-testid="button-generate-samples"
+          >
+            {generateSamplesMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Generate AI Samples
+          </Button>
           <Button onClick={() => setUploadDialogOpen(true)} data-testid="button-upload-document">
             <Upload className="h-4 w-4 mr-2" />
             Upload Document

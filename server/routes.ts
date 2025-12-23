@@ -5016,30 +5016,32 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Carrier access required" });
       }
 
-      // Create sample documents for demonstration
+      // Create AI-generated sample documents for demonstration
+      const carrierName = user.companyName || user.username || "Carrier";
+      const sanitizedName = carrierName.replace(/[^a-zA-Z0-9]/g, "_");
       const sampleDocuments = [
         {
           userId: user.id,
           documentType: "license",
-          fileName: "Driving_License_Sample.pdf",
+          fileName: `DL_${sanitizedName}_MH12_AI_Verified.pdf`,
           fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
           fileSize: 156000,
           expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-          isVerified: false,
+          isVerified: true,
         },
         {
           userId: user.id,
           documentType: "rc",
-          fileName: "Registration_Certificate_Sample.pdf",
+          fileName: `RC_Book_${sanitizedName}_MH12AB1234_AI_Scanned.pdf`,
           fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
           fileSize: 234000,
           expiryDate: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000), // 2 years from now
-          isVerified: false,
+          isVerified: true,
         },
         {
           userId: user.id,
           documentType: "insurance",
-          fileName: "Vehicle_Insurance_Sample.pdf",
+          fileName: `Insurance_Policy_${sanitizedName}_ICICI_Lombard_AI.pdf`,
           fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
           fileSize: 512000,
           expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now (expiring soon!)
@@ -5048,25 +5050,25 @@ export async function registerRoutes(
         {
           userId: user.id,
           documentType: "fitness",
-          fileName: "Fitness_Certificate_Sample.pdf",
+          fileName: `Fitness_Certificate_RTO_${sanitizedName}_AI_OCR.pdf`,
           fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
           fileSize: 189000,
           expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), // 6 months from now
-          isVerified: false,
+          isVerified: true,
         },
         {
           userId: user.id,
           documentType: "permit",
-          fileName: "All_India_Permit_Sample.pdf",
+          fileName: `National_Permit_All_India_${sanitizedName}_AI_Generated.pdf`,
           fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
           fileSize: 267000,
           expiryDate: new Date(Date.now() + 545 * 24 * 60 * 60 * 1000), // 18 months from now
-          isVerified: false,
+          isVerified: true,
         },
         {
           userId: user.id,
           documentType: "puc",
-          fileName: "PUC_Certificate_Sample.pdf",
+          fileName: `PUC_Certificate_${sanitizedName}_EXPIRED_AI_Alert.pdf`,
           fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
           fileSize: 98000,
           expiryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // Expired 10 days ago!

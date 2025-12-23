@@ -567,8 +567,8 @@ export default function CarrierVerificationPage() {
       </Tabs>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5" />
               {selectedVerification?.carrier?.companyName || "Carrier Details"}
@@ -579,7 +579,7 @@ export default function CarrierVerificationPage() {
           </DialogHeader>
           
           {selectedVerification && (
-            <ScrollArea className="flex-1 max-h-[70vh] pr-4">
+            <div className="flex-1 overflow-y-auto pr-2 min-h-0">
               <div className="space-y-6 pb-4">
                 <Card>
                   <CardHeader className="pb-2">
@@ -624,10 +624,10 @@ export default function CarrierVerificationPage() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Uploaded Documents</CardTitle>
-                    <CardDescription>Review and verify each document</CardDescription>
+                    <CardDescription>Review and verify each document (scroll to see all)</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                       {(selectedVerification.documents || []).length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No documents uploaded yet</p>
                       ) : (
@@ -670,10 +670,10 @@ export default function CarrierVerificationPage() {
                   </CardContent>
                 </Card>
               </div>
-            </ScrollArea>
+            </div>
           )}
           
-          <DialogFooter className="border-t pt-4">
+          <DialogFooter className="flex-shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => setDetailsOpen(false)}>
               Close
             </Button>

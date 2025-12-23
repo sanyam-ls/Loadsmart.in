@@ -279,7 +279,10 @@ export default function AdminInvoicesPage() {
     },
     onSuccess: () => {
       toast({ title: "Invoice Sent", description: "Invoice has been sent to the shipper." });
+      // Sync data across portal
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -292,7 +295,10 @@ export default function AdminInvoicesPage() {
     },
     onSuccess: () => {
       toast({ title: "Invoice Marked as Paid", description: "Payment has been recorded for this invoice." });
+      // Sync data across portal
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

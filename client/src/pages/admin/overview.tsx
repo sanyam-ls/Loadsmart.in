@@ -96,11 +96,20 @@ export default function AdminOverview() {
   const chartGridColor = theme === "dark" ? "hsl(220, 12%, 18%)" : "hsl(220, 12%, 92%)";
 
   const handleRefresh = () => {
+    // Refresh all base API data
     queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
     queryClient.invalidateQueries({ queryKey: ['/api/users'] });
     queryClient.invalidateQueries({ queryKey: ['/api/carriers'] });
     queryClient.invalidateQueries({ queryKey: ['/api/bids'] });
     queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+    
+    // Refresh all admin-specific endpoints for consistent data across portal
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/carriers'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/verifications'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/queue'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/negotiations'] });
   };
 
   if (loadsLoading || usersLoading || carriersLoading) {

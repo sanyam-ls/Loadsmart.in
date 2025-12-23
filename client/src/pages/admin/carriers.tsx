@@ -195,7 +195,9 @@ export default function AdminCarriersPage() {
           title: "Carrier Updated",
           description: `${formData.companyName} has been updated`,
         });
+        // Sync data across portal
         queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carriers"] });
         setIsEditModalOpen(false);
         setSelectedCarrier(null);
       } catch (error) {
@@ -216,7 +218,10 @@ export default function AdminCarriersPage() {
           title: "Carrier Verified",
           description: `${selectedCarrier.companyName} is now verified`,
         });
+        // Sync data across portal
         queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carriers"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
         setIsVerifyModalOpen(false);
         setSelectedCarrier(null);
       } catch (error) {
@@ -237,7 +242,10 @@ export default function AdminCarriersPage() {
           title: "Carrier Unverified",
           description: `${selectedCarrier.companyName} verification removed`,
         });
+        // Sync data across portal
         queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carriers"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
         setIsRejectModalOpen(false);
         setSelectedCarrier(null);
         setRejectReason("");

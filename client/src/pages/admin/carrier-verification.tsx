@@ -155,8 +155,10 @@ export default function CarrierVerificationPage() {
       return apiRequest("POST", `/api/admin/verifications/${id}/approve`, {});
     },
     onSuccess: () => {
+      // Invalidate all related queries for consistent data across portal
       queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carriers"] }); // Update dashboard
       toast({
         title: "Carrier Verified",
         description: "The carrier has been verified and added to the directory.",
@@ -178,7 +180,9 @@ export default function CarrierVerificationPage() {
       return apiRequest("POST", `/api/admin/verifications/${id}/reject`, { reason });
     },
     onSuccess: () => {
+      // Invalidate all related queries for consistent data across portal
       queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carriers"] }); // Update dashboard
       toast({
         title: "Verification Rejected",
         description: "The carrier verification has been rejected.",

@@ -99,7 +99,10 @@ export default function CarrierProfilePage() {
     },
     onSuccess: () => {
       refetch();
+      // Sync data across portal
       queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carriers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
       toast({ title: "Carrier Updated", description: "Carrier verification status changed" });
     },
   });

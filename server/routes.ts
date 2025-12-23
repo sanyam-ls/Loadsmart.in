@@ -5016,61 +5016,72 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Carrier access required" });
       }
 
-      // Create AI-generated sample documents for demonstration
+      // Create AI-generated sample documents with realistic certificate images
       const carrierName = user.companyName || user.username || "Carrier";
       const sanitizedName = carrierName.replace(/[^a-zA-Z0-9]/g, "_");
+      
+      // AI-generated certificate image URLs (base path for static assets)
+      const aiCertificateImages = {
+        license: "/assets/generated_images/indian_driving_license_card.png",
+        rc: "/assets/generated_images/indian_rc_book_certificate.png",
+        insurance: "/assets/generated_images/indian_vehicle_insurance_policy.png",
+        fitness: "/assets/generated_images/indian_vehicle_fitness_certificate.png",
+        permit: "/assets/generated_images/indian_national_transport_permit.png",
+        puc: "/assets/generated_images/indian_puc_certificate_document.png",
+      };
+      
       const sampleDocuments = [
         {
           userId: user.id,
           documentType: "license",
-          fileName: `DL_${sanitizedName}_MH12_AI_Verified.pdf`,
-          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-          fileSize: 156000,
+          fileName: `DL_${sanitizedName}_MH12_AI_Generated.png`,
+          fileUrl: aiCertificateImages.license,
+          fileSize: 256000,
           expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
           isVerified: true,
         },
         {
           userId: user.id,
           documentType: "rc",
-          fileName: `RC_Book_${sanitizedName}_MH12AB1234_AI_Scanned.pdf`,
-          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-          fileSize: 234000,
+          fileName: `RC_Book_${sanitizedName}_MH12AB1234_AI_Generated.png`,
+          fileUrl: aiCertificateImages.rc,
+          fileSize: 334000,
           expiryDate: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000), // 2 years from now
           isVerified: true,
         },
         {
           userId: user.id,
           documentType: "insurance",
-          fileName: `Insurance_Policy_${sanitizedName}_ICICI_Lombard_AI.pdf`,
-          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-          fileSize: 512000,
+          fileName: `Insurance_Policy_${sanitizedName}_AI_Generated.png`,
+          fileUrl: aiCertificateImages.insurance,
+          fileSize: 412000,
           expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now (expiring soon!)
           isVerified: false,
         },
         {
           userId: user.id,
           documentType: "fitness",
-          fileName: `Fitness_Certificate_RTO_${sanitizedName}_AI_OCR.pdf`,
-          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-          fileSize: 189000,
+          fileName: `Fitness_Certificate_${sanitizedName}_AI_Generated.png`,
+          fileUrl: aiCertificateImages.fitness,
+          fileSize: 289000,
           expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), // 6 months from now
           isVerified: true,
         },
         {
           userId: user.id,
           documentType: "permit",
-          fileName: `National_Permit_All_India_${sanitizedName}_AI_Generated.pdf`,
-          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-          fileSize: 267000,
+          fileName: `National_Permit_${sanitizedName}_AI_Generated.png`,
+          fileUrl: aiCertificateImages.permit,
+          fileSize: 367000,
           expiryDate: new Date(Date.now() + 545 * 24 * 60 * 60 * 1000), // 18 months from now
           isVerified: true,
         },
         {
           userId: user.id,
           documentType: "puc",
-          fileName: `PUC_Certificate_${sanitizedName}_EXPIRED_AI_Alert.pdf`,
-          fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-          fileSize: 98000,
+          fileName: `PUC_Certificate_${sanitizedName}_AI_Generated.png`,
+          fileUrl: aiCertificateImages.puc,
+          fileSize: 198000,
           expiryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // Expired 10 days ago!
           isVerified: false,
         },

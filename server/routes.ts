@@ -4838,6 +4838,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "File size exceeds maximum allowed (10MB)" });
       }
 
+      // Delete existing documents of the same type (replacement behavior)
+      // This ensures uploading a new insurance doc replaces the old one
+      const existingDocs = await storage.getDocumentsByUserId(user.id);
+      const docsToReplace = existingDocs.filter(d => d.documentType === documentType);
+      for (const oldDoc of docsToReplace) {
+        await storage.deleteDocument(oldDoc.id);
+      }
+
       const newDoc = await storage.createDocument({
         userId: user.id,
         documentType,

@@ -1406,6 +1406,33 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Verify/reject a document
+  app.patch("/api/admin/documents/:id/verify", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { isVerified, rejectionReason } = req.body;
+      const document = await storage.getDocument(req.params.id);
+      
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const updated = await storage.updateDocument(req.params.id, { 
+        isVerified,
+        // Could add rejectionReason field to schema if needed
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Verify document error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // ============================================
   // TELEMETRY API ROUTES (CAN-Bus / Vehicle Tracking)
   // ============================================

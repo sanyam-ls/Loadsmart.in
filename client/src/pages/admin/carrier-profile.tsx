@@ -18,6 +18,11 @@ import {
   RefreshCw,
   Calendar,
   Activity,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +39,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -85,6 +98,8 @@ export default function CarrierProfilePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
+  const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
 
   const carrierId = params?.carrierId;
 
@@ -106,6 +121,40 @@ export default function CarrierProfilePage() {
       toast({ title: "Carrier Updated", description: "Carrier verification status changed" });
     },
   });
+
+  const documentVerifyMutation = useMutation({
+    mutationFn: async ({ documentId, isVerified }: { documentId: string; isVerified: boolean }) => {
+      return apiRequest("PATCH", `/api/admin/documents/${documentId}/verify`, { isVerified });
+    },
+    onSuccess: (_, { isVerified }) => {
+      refetch();
+      setDocumentPreviewOpen(false);
+      setSelectedDocument(null);
+      toast({ 
+        title: isVerified ? "Document Verified" : "Document Rejected",
+        description: isVerified ? "The document has been approved." : "The document has been rejected."
+      });
+    },
+    onError: () => {
+      toast({ 
+        title: "Error",
+        description: "Failed to update document status",
+        variant: "destructive"
+      });
+    },
+  });
+
+  const documentTypeLabels: Record<string, string> = {
+    license: "Driving License",
+    rc: "RC Book",
+    insurance: "Insurance Policy",
+    fitness: "Fitness Certificate",
+    permit: "Road Permit",
+    puc: "PUC Certificate",
+    pod: "Proof of Delivery",
+    lr: "Lorry Receipt",
+    eway: "E-Way Bill",
+  };
 
   const handleSync = () => {
     refetch();
@@ -517,21 +566,67 @@ export default function CarrierProfilePage() {
                       <TableHead>Document</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Uploaded</TableHead>
+                      <TableHead>Expiry</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {carrier.documents.map((doc: any) => (
-                      <TableRow key={doc.id}>
+                      <TableRow key={doc.id} data-testid={`row-document-${doc.id}`}>
                         <TableCell className="font-medium">{doc.fileName || doc.name}</TableCell>
-                        <TableCell>{doc.documentType || doc.type}</TableCell>
+                        <TableCell>{documentTypeLabels[doc.documentType] || doc.documentType || doc.type}</TableCell>
                         <TableCell>
                           {doc.createdAt ? format(new Date(doc.createdAt), "MMM dd, yyyy") : "N/A"}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={doc.status === "approved" ? "default" : "secondary"}>
-                            {doc.status}
-                          </Badge>
+                          {doc.expiryDate ? format(new Date(doc.expiryDate), "MMM dd, yyyy") : "No expiry"}
+                        </TableCell>
+                        <TableCell>
+                          {doc.isVerified ? (
+                            <Badge variant="default">Verified</Badge>
+                          ) : (
+                            <Badge variant="secondary">Pending</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                setSelectedDocument(doc);
+                                setDocumentPreviewOpen(true);
+                              }}
+                              data-testid={`button-view-document-${doc.id}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {!doc.isVerified && (
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-green-600 hover:text-green-700"
+                                  onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: true })}
+                                  disabled={documentVerifyMutation.isPending}
+                                  data-testid={`button-approve-document-${doc.id}`}
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: false })}
+                                  disabled={documentVerifyMutation.isPending}
+                                  data-testid={`button-reject-document-${doc.id}`}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -547,6 +642,140 @@ export default function CarrierProfilePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={documentPreviewOpen} onOpenChange={setDocumentPreviewOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          {selectedDocument && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <DialogTitle>
+                      {documentTypeLabels[selectedDocument.documentType] || selectedDocument.documentType}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {selectedDocument.fileName}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="py-4">
+                <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden">
+                  {selectedDocument.fileUrl?.includes("/assets/generated_images/") || 
+                   selectedDocument.fileUrl?.endsWith(".png") || 
+                   selectedDocument.fileUrl?.endsWith(".jpg") || 
+                   selectedDocument.fileUrl?.endsWith(".jpeg") ||
+                   selectedDocument.fileUrl?.startsWith("data:image/") ? (
+                    <img 
+                      src={selectedDocument.fileUrl} 
+                      alt={selectedDocument.fileName}
+                      className="w-full h-full object-contain"
+                      data-testid="img-document-preview"
+                    />
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Document Preview</p>
+                      <p className="text-xs">{selectedDocument.fileName}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">File Size</p>
+                    <p className="font-medium">
+                      {selectedDocument.fileSize 
+                        ? `${(selectedDocument.fileSize / 1024).toFixed(1)} KB`
+                        : "Unknown"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Status</p>
+                    <div className="mt-1">
+                      {selectedDocument.isVerified ? (
+                        <Badge variant="default">Verified</Badge>
+                      ) : (
+                        <Badge variant="secondary">Pending Review</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Uploaded</p>
+                    <p className="font-medium">
+                      {selectedDocument.createdAt ? format(new Date(selectedDocument.createdAt), "dd MMM yyyy") : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Expiry Date</p>
+                    <p className="font-medium">
+                      {selectedDocument.expiryDate 
+                        ? format(new Date(selectedDocument.expiryDate), "dd MMM yyyy")
+                        : "No expiry date"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                {!selectedDocument.isVerified && (
+                  <>
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => documentVerifyMutation.mutate({ documentId: selectedDocument.id, isVerified: false })}
+                      disabled={documentVerifyMutation.isPending}
+                      data-testid="button-reject-document-dialog"
+                    >
+                      {documentVerifyMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <XCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Reject
+                    </Button>
+                    <Button 
+                      variant="default"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => documentVerifyMutation.mutate({ documentId: selectedDocument.id, isVerified: true })}
+                      disabled={documentVerifyMutation.isPending}
+                      data-testid="button-approve-document-dialog"
+                    >
+                      {documentVerifyMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                      )}
+                      Verify
+                    </Button>
+                  </>
+                )}
+                <div className="flex-1" />
+                <Button 
+                  variant="outline"
+                  onClick={() => window.open(selectedDocument.fileUrl, "_blank")}
+                  data-testid="button-download-document"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => window.open(selectedDocument.fileUrl, "_blank")}
+                  data-testid="button-view-full-document"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Full
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

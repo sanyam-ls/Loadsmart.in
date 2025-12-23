@@ -70,15 +70,40 @@ export default function CarrierRevenuePage() {
   
   const baseAnalytics = useMemo(() => getRevenueAnalytics(), [getRevenueAnalytics]);
   
-  // Merge real data with mock analytics
-  const analytics = useMemo(() => ({
-    ...baseAnalytics,
-    totalRevenue: realRevenueData.hasRealData 
-      ? realRevenueData.totalRevenue + baseAnalytics.totalRevenue 
-      : baseAnalytics.totalRevenue,
-  }), [baseAnalytics, realRevenueData]);
+  // For solo drivers, only show their actual data (no mock data)
+  // For enterprise carriers, merge real data with mock analytics for demo purposes
+  const analytics = useMemo(() => {
+    if (isSoloDriver) {
+      // Solo drivers only see their actual revenue
+      return {
+        ...baseAnalytics,
+        totalRevenue: realRevenueData.totalRevenue,
+        monthlyReports: [],
+        revenueByTruckType: [],
+        revenueByDriver: [],
+        revenueByRegion: [],
+        topShippers: [],
+        bidWinRatio: 0,
+        loadAcceptanceRate: 0,
+        avgRevenuePerTrip: realRevenueData.completedTripsCount > 0 
+          ? Math.round(realRevenueData.totalRevenue / realRevenueData.completedTripsCount)
+          : 0,
+        yoyGrowth: 0,
+        bestPerformingTrucks: []
+      };
+    }
+    return {
+      ...baseAnalytics,
+      totalRevenue: realRevenueData.hasRealData 
+        ? realRevenueData.totalRevenue + baseAnalytics.totalRevenue 
+        : baseAnalytics.totalRevenue,
+    };
+  }, [baseAnalytics, realRevenueData, isSoloDriver]);
   
-  const completedTrips = realRevenueData.completedTripsCount + mockCompletedTrips.length;
+  // Solo drivers only see their own completed trips count
+  const completedTrips = isSoloDriver 
+    ? realRevenueData.completedTripsCount 
+    : realRevenueData.completedTripsCount + mockCompletedTrips.length;
 
   const monthlyChartData = analytics.monthlyReports.map(m => ({
     name: m.month,
@@ -166,119 +191,138 @@ export default function CarrierRevenuePage() {
         {/* Solo Driver Cash Flow View */}
         {isSoloDriver && (
           <TabsContent value="earnings" className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {completedTrips === 0 ? (
+              /* Empty state for solo drivers with no completed trips */
               <Card>
                 <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-green-500/10">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="p-4 rounded-full bg-muted mb-4">
+                      <Wallet className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Completed Payouts</p>
-                      <p className="text-xl font-bold text-green-600" data-testid="text-completed-payouts">
-                        {formatCurrency(analytics.totalRevenue * 0.7)}
-                      </p>
-                    </div>
+                    <h3 className="text-lg font-semibold mb-2">No earnings yet</h3>
+                    <p className="text-muted-foreground max-w-md">
+                      Complete trips to start earning revenue. Your earnings, payouts, and trip history will appear here.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-amber-500/10">
-                      <Clock className="h-5 w-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Pending Payments</p>
-                      <p className="text-xl font-bold text-amber-600" data-testid="text-pending-payments">
-                        {formatCurrency(analytics.totalRevenue * 0.2)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-red-500/10">
-                      <AlertCircle className="h-5 w-5 text-red-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Platform Deductions</p>
-                      <p className="text-xl font-bold text-red-600" data-testid="text-deductions">
-                        {formatCurrency(analytics.totalRevenue * 0.1)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Wallet className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Net Earnings</p>
-                      <p className="text-xl font-bold text-primary" data-testid="text-net-earnings">
-                        {formatCurrency(analytics.totalRevenue * 0.9)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-green-500/10">
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Completed Payouts</p>
+                          <p className="text-xl font-bold text-green-600" data-testid="text-completed-payouts">
+                            {formatCurrency(analytics.totalRevenue * 0.7)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-amber-500/10">
+                          <Clock className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Pending Payments</p>
+                          <p className="text-xl font-bold text-amber-600" data-testid="text-pending-payments">
+                            {formatCurrency(analytics.totalRevenue * 0.2)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-red-500/10">
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Platform Deductions</p>
+                          <p className="text-xl font-bold text-red-600" data-testid="text-deductions">
+                            {formatCurrency(analytics.totalRevenue * 0.1)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Wallet className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Net Earnings</p>
+                          <p className="text-xl font-bold text-primary" data-testid="text-net-earnings">
+                            {formatCurrency(analytics.totalRevenue * 0.9)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Recent Trip Payouts</CardTitle>
-                <CardDescription>Your per-trip earnings breakdown</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-3">
-                    {analytics.monthlyReports.slice(0, 6).flatMap((month, monthIdx) => 
-                      Array.from({ length: month.tripsCompleted > 5 ? 5 : month.tripsCompleted }, (_, tripIdx) => {
-                        const tripRevenue = month.avgRevenuePerTrip * (0.9 + Math.random() * 0.2);
-                        const platformFee = tripRevenue * 0.1;
-                        const netPayout = tripRevenue - platformFee;
-                        return (
-                          <div key={`${monthIdx}-${tripIdx}`} className="p-4 rounded-lg bg-muted/50 flex items-center justify-between gap-4 flex-wrap">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 rounded-lg bg-primary/10">
-                                <Truck className="h-4 w-4 text-primary" />
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Recent Trip Payouts</CardTitle>
+                    <CardDescription>Your per-trip earnings breakdown</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[400px]">
+                      <div className="space-y-3">
+                        {analytics.monthlyReports.slice(0, 6).flatMap((month, monthIdx) => 
+                          Array.from({ length: month.tripsCompleted > 5 ? 5 : month.tripsCompleted }, (_, tripIdx) => {
+                            const tripRevenue = month.avgRevenuePerTrip * (0.9 + Math.random() * 0.2);
+                            const platformFee = tripRevenue * 0.1;
+                            const netPayout = tripRevenue - platformFee;
+                            return (
+                              <div key={`${monthIdx}-${tripIdx}`} className="p-4 rounded-lg bg-muted/50 flex items-center justify-between gap-4 flex-wrap">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 rounded-lg bg-primary/10">
+                                    <Truck className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">Trip #{monthIdx * 5 + tripIdx + 1}</p>
+                                    <p className="text-xs text-muted-foreground">{month.month}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">Gross</p>
+                                    <p className="font-medium">{formatCurrency(tripRevenue)}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">Deduction</p>
+                                    <p className="font-medium text-red-600">-{formatCurrency(platformFee)}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">Net</p>
+                                    <p className="font-bold text-green-600">{formatCurrency(netPayout)}</p>
+                                  </div>
+                                  <Badge variant="default">Paid</Badge>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-medium">Trip #{monthIdx * 5 + tripIdx + 1}</p>
-                                <p className="text-xs text-muted-foreground">{month.month}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div className="text-right">
-                                <p className="text-xs text-muted-foreground">Gross</p>
-                                <p className="font-medium">{formatCurrency(tripRevenue)}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs text-muted-foreground">Deduction</p>
-                                <p className="font-medium text-red-600">-{formatCurrency(platformFee)}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs text-muted-foreground">Net</p>
-                                <p className="font-bold text-green-600">{formatCurrency(netPayout)}</p>
-                              </div>
-                              <Badge variant="default">Paid</Badge>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+                            );
+                          })
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </TabsContent>
         )}
 

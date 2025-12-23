@@ -313,7 +313,7 @@ export default function CarrierProfilePage() {
                         <p className="text-sm text-muted-foreground">Truck Number</p>
                         <p className="font-medium">
                           {carrier.trucks && carrier.trucks.length > 0 
-                            ? carrier.trucks[0].registrationNumber || "Not registered"
+                            ? carrier.trucks[0].licensePlate || "Not registered"
                             : "No truck registered"}
                         </p>
                       </div>

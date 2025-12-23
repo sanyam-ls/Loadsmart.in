@@ -4,8 +4,16 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupMarketplaceWebSocket } from "./websocket-marketplace";
 import { storage } from "./storage";
+import path from "path";
+import fs from "fs";
 
 const app = express();
+
+// Serve AI-generated assets from attached_assets folder (for both dev and prod)
+const assetsPath = path.resolve(process.cwd(), "attached_assets");
+if (fs.existsSync(assetsPath)) {
+  app.use("/assets", express.static(assetsPath));
+}
 const httpServer = createServer(app);
 
 setupMarketplaceWebSocket(httpServer);

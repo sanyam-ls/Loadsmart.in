@@ -2,9 +2,12 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { 
   insertUserSchema, insertLoadSchema, insertTruckSchema, insertBidSchema,
-  insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema
+  insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema,
+  trucks as trucksTable
 } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -5119,6 +5122,48 @@ export async function registerRoutes(
       res.json({ truck, documents: truckDocs, documentAlerts });
     } catch (error) {
       console.error("Get solo truck error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/carrier/truck/:truckId - Update truck info
+  app.patch("/api/carrier/truck/:truckId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const { truckId } = req.params;
+      const trucks = await storage.getTrucksByCarrier(user.id);
+      const truck = trucks.find(t => t.id === truckId);
+
+      if (!truck) {
+        return res.status(404).json({ error: "Truck not found" });
+      }
+
+      const { licensePlate, truckType, capacity, capacityUnit, currentLocation, make, model, year, city, registrationDate } = req.body;
+
+      // Update truck in database
+      const updatedTruck = await db.update(trucksTable)
+        .set({
+          ...(licensePlate && { licensePlate }),
+          ...(truckType && { truckType }),
+          ...(capacity !== undefined && { capacity: parseInt(capacity) }),
+          ...(capacityUnit && { capacityUnit }),
+          ...(currentLocation !== undefined && { currentLocation }),
+          ...(make !== undefined && { make }),
+          ...(model !== undefined && { model }),
+          ...(year !== undefined && { year: parseInt(year) }),
+          ...(city !== undefined && { city }),
+          ...(registrationDate !== undefined && { registrationDate: registrationDate ? new Date(registrationDate) : null }),
+        })
+        .where(eq(trucksTable.id, truckId))
+        .returning();
+
+      res.json(updatedTruck[0]);
+    } catch (error) {
+      console.error("Update truck error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

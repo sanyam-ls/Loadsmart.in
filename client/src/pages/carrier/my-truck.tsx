@@ -1,10 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Truck, 
   FileText, 
@@ -19,10 +24,14 @@ import {
   Plus,
   ShieldCheck,
   ShieldAlert,
-  ShieldX
+  ShieldX,
+  Pencil
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { format, differenceInDays } from "date-fns";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { indianTruckTypes } from "@shared/schema";
 
 interface DocumentAlert {
   documentId: string;
@@ -41,6 +50,11 @@ interface TruckData {
   capacityUnit: string;
   isAvailable: boolean;
   currentLocation: string | null;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  city: string | null;
+  registrationDate: string | null;
 }
 
 interface TruckDocument {
@@ -78,11 +92,48 @@ const getExpiryBadge = (expiryDate: string | null) => {
   }
 };
 
+// Indian truck manufacturers
+const truckMakes = [
+  "Tata Motors",
+  "Ashok Leyland",
+  "Mahindra",
+  "Eicher",
+  "BharatBenz",
+  "Volvo",
+  "Scania",
+  "Isuzu",
+  "Force Motors",
+  "SML Isuzu",
+  "Other"
+];
+
+// Common Indian cities
+const indianCities = [
+  "Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", 
+  "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Ludhiana",
+  "Coimbatore", "Nagpur", "Indore", "Bhopal", "Surat", "Vadodara",
+  "Other"
+];
+
 export default function MyTruckPage() {
   const { user, carrierType } = useAuth();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    licensePlate: "",
+    truckType: "",
+    capacity: "",
+    capacityUnit: "tons",
+    currentLocation: "",
+    make: "",
+    model: "",
+    year: "",
+    city: "",
+    registrationDate: ""
+  });
 
-  const { data, isLoading, error } = useQuery<{
+  const { data, isLoading, error, refetch } = useQuery<{
     truck: TruckData | null;
     documents: TruckDocument[];
     documentAlerts: DocumentAlert[];
@@ -90,6 +141,57 @@ export default function MyTruckPage() {
     queryKey: ["/api/carrier/solo/truck"],
     enabled: !!user && user.role === "carrier" && carrierType === "solo",
   });
+
+  const updateTruckMutation = useMutation({
+    mutationFn: async (truckData: Partial<TruckData> & { truckId: string }) => {
+      const { truckId, ...rest } = truckData;
+      return apiRequest("PATCH", `/api/carrier/truck/${truckId}`, rest);
+    },
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/solo/truck"] });
+      setEditDialogOpen(false);
+      toast({ title: "Truck Updated", description: "Your truck information has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update truck info.", variant: "destructive" });
+    }
+  });
+
+  const openEditDialog = (truck: TruckData) => {
+    setEditForm({
+      licensePlate: truck.licensePlate || "",
+      truckType: truck.truckType || "",
+      capacity: String(truck.capacity || ""),
+      capacityUnit: truck.capacityUnit || "tons",
+      currentLocation: truck.currentLocation || "",
+      make: truck.make || "",
+      model: truck.model || "",
+      year: truck.year ? String(truck.year) : "",
+      city: truck.city || "",
+      registrationDate: truck.registrationDate ? truck.registrationDate.split("T")[0] : ""
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveTruck = () => {
+    const { truck } = data || {};
+    if (!truck) return;
+    
+    updateTruckMutation.mutate({
+      truckId: truck.id,
+      licensePlate: editForm.licensePlate,
+      truckType: editForm.truckType,
+      capacity: parseInt(editForm.capacity) || 0,
+      capacityUnit: editForm.capacityUnit,
+      currentLocation: editForm.currentLocation || null,
+      make: editForm.make || null,
+      model: editForm.model || null,
+      year: editForm.year ? parseInt(editForm.year) : null,
+      city: editForm.city || null,
+      registrationDate: editForm.registrationDate || null
+    });
+  };
 
   if (carrierType === undefined) {
     return (
@@ -259,12 +361,23 @@ export default function MyTruckPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              Vehicle Details
-            </CardTitle>
-            <CardDescription>Your registered truck information</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                Vehicle Details
+              </CardTitle>
+              <CardDescription>Your registered truck information</CardDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => openEditDialog(truck)}
+              data-testid="button-edit-truck"
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -274,7 +387,9 @@ export default function MyTruckPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Truck Type</p>
-                <p className="font-medium" data-testid="text-truck-type">{truck.truckType}</p>
+                <p className="font-medium" data-testid="text-truck-type">
+                  {indianTruckTypes.find(t => t.value === truck.truckType)?.label || truck.truckType}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Capacity</p>
@@ -286,6 +401,38 @@ export default function MyTruckPage() {
                   {truck.isAvailable ? "Available" : "On Trip"}
                 </Badge>
               </div>
+              {truck.make && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Make</p>
+                  <p className="font-medium" data-testid="text-make">{truck.make}</p>
+                </div>
+              )}
+              {truck.model && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Model</p>
+                  <p className="font-medium" data-testid="text-model">{truck.model}</p>
+                </div>
+              )}
+              {truck.year && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Year</p>
+                  <p className="font-medium" data-testid="text-year">{truck.year}</p>
+                </div>
+              )}
+              {truck.city && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Reg. City</p>
+                  <p className="font-medium" data-testid="text-city">{truck.city}</p>
+                </div>
+              )}
+              {truck.registrationDate && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Reg. Date</p>
+                  <p className="font-medium" data-testid="text-reg-date">
+                    {format(new Date(truck.registrationDate), "dd MMM yyyy")}
+                  </p>
+                </div>
+              )}
             </div>
             {truck.currentLocation && (
               <div className="pt-4 border-t">
@@ -397,6 +544,154 @@ export default function MyTruckPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Truck Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Truck Information</DialogTitle>
+            <DialogDescription>Update your truck details below</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="licensePlate">License Plate / Truck Number</Label>
+                <Input 
+                  id="licensePlate"
+                  value={editForm.licensePlate}
+                  onChange={(e) => setEditForm({...editForm, licensePlate: e.target.value})}
+                  placeholder="MH 12 AB 1234"
+                  data-testid="input-license-plate"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="truckType">Truck Type</Label>
+                <Select 
+                  value={editForm.truckType} 
+                  onValueChange={(val) => setEditForm({...editForm, truckType: val})}
+                >
+                  <SelectTrigger data-testid="select-truck-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {indianTruckTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="make">Make / Manufacturer</Label>
+                <Select 
+                  value={editForm.make} 
+                  onValueChange={(val) => setEditForm({...editForm, make: val})}
+                >
+                  <SelectTrigger data-testid="select-make">
+                    <SelectValue placeholder="Select make" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {truckMakes.map((make) => (
+                      <SelectItem key={make} value={make}>{make}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="model">Model</Label>
+                <Input 
+                  id="model"
+                  value={editForm.model}
+                  onChange={(e) => setEditForm({...editForm, model: e.target.value})}
+                  placeholder="e.g. 1109"
+                  data-testid="input-model"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="year">Year of Manufacture</Label>
+                <Input 
+                  id="year"
+                  type="number"
+                  value={editForm.year}
+                  onChange={(e) => setEditForm({...editForm, year: e.target.value})}
+                  placeholder="e.g. 2020"
+                  min={2000}
+                  max={new Date().getFullYear()}
+                  data-testid="input-year"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="capacity">Capacity (tons)</Label>
+                <Input 
+                  id="capacity"
+                  type="number"
+                  value={editForm.capacity}
+                  onChange={(e) => setEditForm({...editForm, capacity: e.target.value})}
+                  placeholder="e.g. 22"
+                  data-testid="input-capacity"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">Registration City</Label>
+                <Select 
+                  value={editForm.city} 
+                  onValueChange={(val) => setEditForm({...editForm, city: val})}
+                >
+                  <SelectTrigger data-testid="select-city">
+                    <SelectValue placeholder="Select city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {indianCities.map((city) => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="registrationDate">Registration Date</Label>
+                <Input 
+                  id="registrationDate"
+                  type="date"
+                  value={editForm.registrationDate}
+                  onChange={(e) => setEditForm({...editForm, registrationDate: e.target.value})}
+                  data-testid="input-registration-date"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="currentLocation">Current Location</Label>
+              <Input 
+                id="currentLocation"
+                value={editForm.currentLocation}
+                onChange={(e) => setEditForm({...editForm, currentLocation: e.target.value})}
+                placeholder="e.g. Ludhiana, Punjab"
+                data-testid="input-current-location"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} data-testid="button-cancel-edit">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveTruck} 
+              disabled={updateTruckMutation.isPending}
+              data-testid="button-save-truck"
+            >
+              {updateTruckMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

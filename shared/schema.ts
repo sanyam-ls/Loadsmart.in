@@ -276,6 +276,12 @@ export const trucks = pgTable("trucks", {
   currentLng: decimal("current_lng", { precision: 10, scale: 7 }),
   currentLocation: text("current_location"),
   createdAt: timestamp("created_at").defaultNow(),
+  // Extended truck info fields
+  make: text("make"), // Truck manufacturer (Tata, Ashok Leyland, etc.)
+  model: text("model"), // Model name
+  year: integer("year"), // Manufacturing year
+  city: text("city"), // Registration city
+  registrationDate: timestamp("registration_date"), // Vehicle registration date
 });
 
 // Loads table (updated for 12-state canonical lifecycle)

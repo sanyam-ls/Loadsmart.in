@@ -92,6 +92,9 @@ export default function CarrierHistoryPage() {
     return () => { unsubCompleted(); };
   }, [refetchShipments, toast]);
 
+  // Check if this is a solo carrier
+  const isSoloCarrier = user?.carrierType === 'solo';
+
   // Convert real delivered shipments to completed trips
   const completedTrips = useMemo(() => {
     const myShipments = allShipments.filter((s: Shipment) => 
@@ -108,12 +111,17 @@ export default function CarrierHistoryPage() {
       return trip;
     });
     
-    // Merge with mock data, real trips first
+    // For solo carriers, only show their actual trips (no mock data)
+    if (isSoloCarrier) {
+      return realTrips;
+    }
+    
+    // For enterprise carriers, merge with mock data for demo purposes
     const realTripIds = new Set(realTrips.map(t => t.tripId));
     const filteredMock = mockCompletedTrips.filter(t => !realTripIds.has(t.tripId));
     
     return [...realTrips, ...filteredMock];
-  }, [allShipments, allLoads, allTrucks, mockCompletedTrips, user?.id]);
+  }, [allShipments, allLoads, allTrucks, mockCompletedTrips, user?.id, isSoloCarrier]);
 
   const filteredTrips = useMemo(() => {
     return completedTrips.filter((trip) => {

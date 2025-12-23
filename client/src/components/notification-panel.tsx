@@ -114,13 +114,29 @@ export function NotificationPanel() {
     const title = notification.title?.toLowerCase() || '';
     const message = notification.message?.toLowerCase() || '';
 
-    // Helper to infer context from title/message for old notifications without contextType
-    const inferInvoiceContext = title.includes('invoice') || title.includes('payment') || message.includes('invoice');
-    const inferBidContext = title.includes('bid') || title.includes('counter') || title.includes('negotiat') || message.includes('bid');
-    const inferShipmentContext = title.includes('shipment') || title.includes('delivery') || title.includes('transit') || message.includes('shipment');
+    // Infer actual context from title/message - this takes priority for routing
+    // because many old notifications have generic "load" contextType
+    const isInvoiceRelated = title.includes('invoice') || title.includes('payment') || message.includes('invoice');
+    const isBidRelated = (title.includes('bid') || title.includes('counter') || title.includes('negotiat') || message.includes('bid')) && !isInvoiceRelated;
+    const isShipmentRelated = title.includes('shipment') || title.includes('delivery') || title.includes('transit') || message.includes('shipment');
+    const isCarrierRelated = title.includes('carrier') || title.includes('verification') || title.includes('document');
 
     if (user?.role === "admin") {
-      // First check explicit contextType
+      // FIRST: Route based on title/message content (most reliable for older notifications)
+      if (isInvoiceRelated) {
+        navigate(`/admin/invoices${loadId ? `?load=${loadId}` : ''}`);
+        return;
+      }
+      if (isBidRelated) {
+        navigate(`/admin/negotiations${loadId ? `?highlight=${loadId}` : ''}`);
+        return;
+      }
+      if (isCarrierRelated) {
+        navigate('/admin/verification');
+        return;
+      }
+      
+      // SECOND: Check explicit contextType for new notifications
       switch (contextType) {
         case "invoice":
         case "invoice_generated":
@@ -139,13 +155,6 @@ export function NotificationPanel() {
         case "counter_received":
         case "negotiation":
           navigate(`/admin/negotiations${loadId ? `?highlight=${loadId}` : ''}`);
-          return;
-        case "load":
-        case "load_created":
-        case "load_posted":
-        case "load_priced":
-        case "pending":
-          navigate(`/admin/queue${loadId ? `?highlight=${loadId}` : ''}`);
           return;
         case "carrier":
         case "verification":
@@ -168,17 +177,20 @@ export function NotificationPanel() {
         case "user_registered":
           navigate('/admin/users');
           return;
+        case "load":
+        case "load_created":
+        case "load_posted":
+        case "load_priced":
+        case "pending":
+          navigate(`/admin/queue${loadId ? `?highlight=${loadId}` : ''}`);
+          return;
       }
       
-      // Fallback: infer from title/message for old notifications
-      if (inferInvoiceContext) {
-        navigate(`/admin/invoices${loadId ? `?load=${loadId}` : ''}`);
-      } else if (inferBidContext) {
-        navigate(`/admin/negotiations${loadId ? `?highlight=${loadId}` : ''}`);
-      } else if (inferShipmentContext && loadId) {
+      // THIRD: Default fallback
+      if (isShipmentRelated && loadId) {
         navigate(`/admin/loads/${loadId}`);
       } else if (loadId) {
-        navigate(`/admin/loads/${loadId}`);
+        navigate(`/admin/queue${loadId ? `?highlight=${loadId}` : ''}`);
       } else {
         navigate('/admin');
       }

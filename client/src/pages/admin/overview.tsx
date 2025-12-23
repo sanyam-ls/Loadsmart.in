@@ -123,7 +123,9 @@ export default function AdminOverview() {
   const completedLoads = allLoads.filter((l: Load) => ['delivered', 'closed'].includes(l.status || ''));
   const pendingLoads = allLoads.filter((l: Load) => ['pending', 'priced'].includes(l.status || ''));
 
-  const verifiedCarriers = allCarriers.filter(c => (c.carrierProfile as any)?.verificationStatus === 'approved');
+  const verifiedCarriers = allCarriers.filter(c => 
+    (c.carrierProfile as any)?.verificationStatus === 'approved' || c.isVerified === true
+  );
   
   const totalSpend = allInvoices
     .filter(inv => inv.status === 'paid')

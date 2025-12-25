@@ -265,11 +265,16 @@ export async function registerRoutes(
       
       const { password: _, ...userWithoutPassword } = user;
       
-      // Include carrierType for carrier users
+      // Include carrierType for carrier users - auto-detect solo based on fleetSize
       let carrierType: string | undefined;
       if (user.role === "carrier") {
         const carrierProfile = await storage.getCarrierProfile(user.id);
-        carrierType = carrierProfile?.carrierType || "enterprise";
+        // Auto-detect solo driver: if fleetSize is 1 or carrierType explicitly set to "solo"
+        if (carrierProfile?.carrierType === "solo" || (carrierProfile?.fleetSize && carrierProfile.fleetSize <= 1)) {
+          carrierType = "solo";
+        } else {
+          carrierType = carrierProfile?.carrierType || "enterprise";
+        }
       }
       
       res.json({ user: { ...userWithoutPassword, carrierType } });
@@ -293,11 +298,16 @@ export async function registerRoutes(
 
       const { password: _, ...userWithoutPassword } = user;
       
-      // Include carrierType for carrier users
+      // Include carrierType for carrier users - auto-detect solo based on fleetSize
       let carrierType: string | undefined;
       if (user.role === "carrier") {
         const carrierProfile = await storage.getCarrierProfile(user.id);
-        carrierType = carrierProfile?.carrierType || "enterprise";
+        // Auto-detect solo driver: if fleetSize is 1 or carrierType explicitly set to "solo"
+        if (carrierProfile?.carrierType === "solo" || (carrierProfile?.fleetSize && carrierProfile.fleetSize <= 1)) {
+          carrierType = "solo";
+        } else {
+          carrierType = carrierProfile?.carrierType || "enterprise";
+        }
       }
       
       res.json({ user: { ...userWithoutPassword, carrierType } });

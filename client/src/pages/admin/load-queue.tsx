@@ -731,7 +731,7 @@ export default function LoadQueuePage() {
                       <TableHead>Route</TableHead>
                       <TableHead>Shipper</TableHead>
                       <TableHead>Cargo</TableHead>
-                      <TableHead>Admin Price</TableHead>
+                      <TableHead>Total Price</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -1275,7 +1275,7 @@ export default function LoadQueuePage() {
                       )}
                       {detailsLoad.adminPrice && (
                         <div>
-                          <Label className="text-muted-foreground text-xs">Admin Price</Label>
+                          <Label className="text-muted-foreground text-xs">Total Price</Label>
                           <p className="font-medium text-green-600 dark:text-green-400">
                             Rs. {Number(detailsLoad.adminPrice).toLocaleString('en-IN')}
                           </p>

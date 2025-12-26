@@ -274,7 +274,7 @@ export default function SoloLoadFeed() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Admin Price</label>
+              <label className="text-sm font-medium mb-2 block">Total Price</label>
               <div className="text-lg font-bold text-muted-foreground">
                 Rs. {formatPrice(selectedLoad?.adminFinalPrice || null)}
               </div>

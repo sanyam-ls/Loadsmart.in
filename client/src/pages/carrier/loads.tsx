@@ -828,7 +828,7 @@ export default function CarrierLoadsPage() {
                 
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div>
-                    <p className="text-xs text-muted-foreground">Admin Price</p>
+                    <p className="text-xs text-muted-foreground">Total Price</p>
                     <p className="text-xl font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</p>
                   </div>
                   <Button 
@@ -1040,7 +1040,7 @@ export default function CarrierLoadsPage() {
               <Card className="border-primary/30">
                 <CardContent className="pt-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Admin Price</span>
+                    <span className="text-muted-foreground">Total Price</span>
                     <span className="text-xl font-bold text-primary">{formatCurrency(parseFloat(detailLoad.adminFinalPrice || "0"))}</span>
                   </div>
                   
@@ -1160,7 +1160,7 @@ export default function CarrierLoadsPage() {
                   </div>
                   
                   <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-muted-foreground">Admin Price</span>
+                    <span className="text-muted-foreground">Total Price</span>
                     <span className="text-lg font-bold">{formatCurrency(parseFloat(selectedLoad.adminFinalPrice || "0"))}</span>
                   </div>
                 </CardContent>

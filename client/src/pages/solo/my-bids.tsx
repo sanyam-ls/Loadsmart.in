@@ -157,7 +157,7 @@ export default function SoloMyBids() {
                     </div>
                     {bid.load?.adminFinalPrice && (
                       <div className="text-right">
-                        <div className="text-xs text-muted-foreground mb-1">Admin Price</div>
+                        <div className="text-xs text-muted-foreground mb-1">Total Price</div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <IndianRupee className="h-3 w-3" />
                           {formatPrice(bid.load.adminFinalPrice)}

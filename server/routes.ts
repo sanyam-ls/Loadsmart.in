@@ -275,8 +275,12 @@ export async function registerRoutes(
       let carrierType: string | undefined;
       if (user.role === "carrier") {
         const carrierProfile = await storage.getCarrierProfile(user.id);
-        // Auto-detect solo driver: if fleetSize is 1 or carrierType explicitly set to "solo"
-        if (carrierProfile?.carrierType === "solo" || (carrierProfile?.fleetSize && carrierProfile.fleetSize <= 1)) {
+        // Auto-detect solo driver: if carrierType is "solo" OR fleetSize is 0 or 1
+        const fleetSize = carrierProfile?.fleetSize;
+        const isSoloByType = carrierProfile?.carrierType === "solo";
+        const isSoloByFleetSize = typeof fleetSize === "number" && fleetSize <= 1;
+        
+        if (isSoloByType || isSoloByFleetSize) {
           carrierType = "solo";
         } else {
           carrierType = carrierProfile?.carrierType || "enterprise";
@@ -308,8 +312,12 @@ export async function registerRoutes(
       let carrierType: string | undefined;
       if (user.role === "carrier") {
         const carrierProfile = await storage.getCarrierProfile(user.id);
-        // Auto-detect solo driver: if fleetSize is 1 or carrierType explicitly set to "solo"
-        if (carrierProfile?.carrierType === "solo" || (carrierProfile?.fleetSize && carrierProfile.fleetSize <= 1)) {
+        // Auto-detect solo driver: if carrierType is "solo" OR fleetSize is 0 or 1
+        const fleetSize = carrierProfile?.fleetSize;
+        const isSoloByType = carrierProfile?.carrierType === "solo";
+        const isSoloByFleetSize = typeof fleetSize === "number" && fleetSize <= 1;
+        
+        if (isSoloByType || isSoloByFleetSize) {
           carrierType = "solo";
         } else {
           carrierType = carrierProfile?.carrierType || "enterprise";

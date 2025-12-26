@@ -7878,16 +7878,98 @@ export async function registerRoutes(
     }
   });
 
-  // Admin approves OTP request and generates OTP
+  // Shipper gets OTP requests for their loads with carrier details (no phone/email)
+  app.get("/api/otp/shipper-requests", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      // Get all OTP requests
+      const allRequests = await storage.getAllOtpRequests();
+      
+      // Filter to only show requests for shipper's loads
+      const shipperLoads = await storage.getLoadsByShipper(user.id);
+      const shipperLoadIds = new Set(shipperLoads.map(l => l.id));
+      const shipperRequests = allRequests.filter(r => shipperLoadIds.has(r.loadId));
+      
+      // Enrich with carrier and load details (no phone/email for privacy)
+      const enrichedRequests = await Promise.all(shipperRequests.map(async (request) => {
+        const carrierUser = await storage.getUser(request.carrierId);
+        const load = await storage.getLoad(request.loadId);
+        const shipment = await storage.getShipment(request.shipmentId);
+        const approvedByUser = request.processedBy ? await storage.getUser(request.processedBy) : null;
+        const carrierProfile = carrierUser ? await storage.getCarrierProfile(carrierUser.id) : null;
+        const trucks = carrierUser ? await storage.getTrucksByCarrier(carrierUser.id) : [];
+        const assignedTruck = trucks.length > 0 ? trucks[0] : null;
+        
+        // Determine if solo driver: fleetSize explicitly 0, or carrierType is 'solo'
+        const isSoloDriver = carrierProfile && (
+          carrierProfile.fleetSize === 0 || 
+          (carrierProfile.fleetSize === null && carrierProfile.carrierType === 'solo') ||
+          carrierProfile.carrierType === 'solo'
+        );
+        
+        return {
+          ...request,
+          carrier: carrierUser ? {
+            id: carrierUser.id,
+            companyName: isSoloDriver ? undefined : carrierUser.companyName,
+            driverName: carrierUser.fullName || carrierUser.username,
+            username: carrierUser.username,
+            isSoloDriver,
+            rating: carrierProfile?.rating || "4.5",
+            totalDeliveries: carrierProfile?.totalDeliveries || 0,
+            badgeLevel: carrierProfile?.badgeLevel || "bronze",
+            truckNumber: assignedTruck?.licensePlate || null,
+            truckType: assignedTruck?.truckType || null,
+          } : null,
+          load: load ? {
+            id: load.id,
+            adminReferenceNumber: load.adminReferenceNumber,
+            pickupCity: load.pickupCity,
+            deliveryCity: load.dropoffCity,
+            dropoffCity: load.dropoffCity,
+          } : null,
+          shipmentStatus: shipment?.status,
+          approvedBy: approvedByUser ? {
+            id: approvedByUser.id,
+            username: approvedByUser.username,
+          } : null,
+        };
+      }));
+
+      res.json(enrichedRequests);
+    } catch (error) {
+      console.error("Get shipper OTP requests error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin or Shipper approves OTP request and generates OTP
   app.post("/api/otp/approve/:requestId", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || user.role !== "admin") {
-        return res.status(403).json({ error: "Admin access required" });
+      if (!user || (user.role !== "admin" && user.role !== "shipper")) {
+        return res.status(403).json({ error: "Admin or Shipper access required" });
       }
 
       const { requestId } = req.params;
       const { validityMinutes = 10 } = req.body;
+
+      // For shippers, verify this OTP request is for their load
+      const otpRequest = await storage.getOtpRequest(requestId);
+      if (!otpRequest) {
+        return res.status(404).json({ error: "OTP request not found" });
+      }
+      
+      if (user.role === "shipper") {
+        const load = await storage.getLoad(otpRequest.loadId);
+        if (!load || load.shipperId !== user.id) {
+          return res.status(403).json({ error: "You can only approve OTP requests for your own loads" });
+        }
+      }
 
       const result = await storage.approveOtpRequest(requestId, user.id, validityMinutes);
 
@@ -7930,16 +8012,29 @@ export async function registerRoutes(
     }
   });
 
-  // Admin rejects OTP request
+  // Admin or Shipper rejects OTP request
   app.post("/api/otp/reject/:requestId", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || user.role !== "admin") {
-        return res.status(403).json({ error: "Admin access required" });
+      if (!user || (user.role !== "admin" && user.role !== "shipper")) {
+        return res.status(403).json({ error: "Admin or Shipper access required" });
       }
 
       const { requestId } = req.params;
       const { notes } = req.body;
+
+      // For shippers, verify this OTP request is for their load
+      const otpRequest = await storage.getOtpRequest(requestId);
+      if (!otpRequest) {
+        return res.status(404).json({ error: "OTP request not found" });
+      }
+      
+      if (user.role === "shipper") {
+        const load = await storage.getLoad(otpRequest.loadId);
+        if (!load || load.shipperId !== user.id) {
+          return res.status(403).json({ error: "You can only reject OTP requests for your own loads" });
+        }
+      }
 
       const result = await storage.rejectOtpRequest(requestId, user.id, notes);
 

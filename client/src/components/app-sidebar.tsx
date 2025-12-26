@@ -40,6 +40,7 @@ const shipperItems = [
   { title: "Dashboard", url: "/shipper", icon: LayoutDashboard },
   { title: "Post Load", url: "/shipper/post-load", icon: Plus },
   { title: "My Loads", url: "/shipper/loads", icon: Package },
+  { title: "OTP Verification", url: "/shipper/otp-queue", icon: Key },
   { title: "Invoices", url: "/shipper/invoices", icon: FileText },
   { title: "Track Shipments", url: "/shipper/tracking", icon: Route },
   { title: "Documents", url: "/shipper/documents", icon: FileText },

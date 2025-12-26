@@ -497,6 +497,57 @@ export function useOtpRequests(status?: string) {
   });
 }
 
+// Shipper OTP request with enhanced carrier details (no phone/email)
+export interface ShipperOtpRequest {
+  id: string;
+  requestType: 'trip_start' | 'trip_end' | 'registration';
+  carrierId: string;
+  shipmentId: string;
+  loadId: string;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  requestedAt?: string;
+  processedAt?: string;
+  processedBy?: string;
+  otpId?: string;
+  notes?: string;
+  carrier?: { 
+    id?: string;
+    username: string; 
+    companyName?: string;
+    driverName?: string;
+    isSoloDriver?: boolean;
+    rating?: string;
+    totalDeliveries?: number;
+    badgeLevel?: string;
+    truckNumber?: string | null;
+    truckType?: string | null;
+  };
+  load?: { 
+    id?: string;
+    pickupCity?: string; 
+    deliveryCity?: string; 
+    dropoffCity?: string;
+    adminReferenceNumber?: number;
+  };
+  shipmentStatus?: string;
+  approvedBy?: {
+    id: string;
+    username: string;
+  };
+}
+
+export function useShipperOtpRequests() {
+  return useQuery<ShipperOtpRequest[]>({
+    queryKey: ['/api/otp/shipper-requests'],
+    staleTime: 5000,
+    refetchInterval: 10000,
+  });
+}
+
+export function invalidateShipperOtpRequests() {
+  queryClient.invalidateQueries({ queryKey: ['/api/otp/shipper-requests'] });
+}
+
 export function useApproveOtpRequest() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -506,6 +557,7 @@ export function useApproveOtpRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/otp/requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/shipper-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
     },
   });
@@ -520,6 +572,7 @@ export function useRejectOtpRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/otp/requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/shipper-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
     },
   });

@@ -139,7 +139,7 @@ export function PricingDrawer({
 
   // Pricing state
   const [suggestedPrice, setSuggestedPrice] = useState(0);
-  const [finalPrice, setFinalPrice] = useState(0);
+  const [grossPrice, setGrossPrice] = useState(0); // Total price before margin deduction (what shipper pays)
   const [markupPercent, setMarkupPercent] = useState(0);
   const [fixedFee, setFixedFee] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -182,19 +182,23 @@ export function PricingDrawer({
     enabled: open && !isCarrierFinalized,
   });
 
-  // Calculate derived values
+  // Calculate derived values - margin is calculated from gross price
   const platformMargin = useMemo(() => {
-    return Math.round(finalPrice * (platformMarginPercent / 100));
-  }, [finalPrice, platformMarginPercent]);
+    return Math.round(grossPrice * (platformMarginPercent / 100));
+  }, [grossPrice, platformMarginPercent]);
 
-  const carrierPayout = useMemo(() => {
-    return finalPrice - platformMargin;
-  }, [finalPrice, platformMargin]);
+  // Final price (carrier payout) = gross price - platform margin
+  const finalPrice = useMemo(() => {
+    return grossPrice - platformMargin;
+  }, [grossPrice, platformMargin]);
+
+  // carrierPayout is the same as finalPrice (what carrier receives)
+  const carrierPayout = finalPrice;
 
   const priceDeviation = useMemo(() => {
     if (suggestedPrice === 0) return 0;
-    return ((finalPrice - suggestedPrice) / suggestedPrice) * 100;
-  }, [finalPrice, suggestedPrice]);
+    return ((grossPrice - suggestedPrice) / suggestedPrice) * 100;
+  }, [grossPrice, suggestedPrice]);
 
   const requiresApproval = useMemo(() => {
     return Math.abs(priceDeviation) > 15;
@@ -249,18 +253,18 @@ export function PricingDrawer({
     }
   }, [open, load?.id, isCarrierFinalized]);
 
-  // Update final price when adjustments change (only when not using per-ton rate)
+  // Update gross price when adjustments change (only when not using per-ton rate)
   useEffect(() => {
     if (!usePerTonRate && suggestedPrice > 0) {
       const adjusted = suggestedPrice * (1 + markupPercent / 100) + fixedFee - discountAmount;
-      setFinalPrice(Math.round(Math.max(0, adjusted)));
+      setGrossPrice(Math.round(Math.max(0, adjusted)));
     }
   }, [suggestedPrice, markupPercent, fixedFee, discountAmount, usePerTonRate]);
 
-  // Update final price when per-ton rate changes
+  // Update gross price when per-ton rate changes
   useEffect(() => {
     if (usePerTonRate && ratePerTon > 0) {
-      setFinalPrice(calculatedFromPerTon);
+      setGrossPrice(calculatedFromPerTon);
     }
   }, [usePerTonRate, ratePerTon, calculatedFromPerTon]);
 
@@ -290,7 +294,7 @@ export function PricingDrawer({
       const data: PricingSuggestion = await response.json();
 
       setSuggestedPrice(data.suggested_price);
-      setFinalPrice(data.suggested_price);
+      setGrossPrice(data.suggested_price);
       setBreakdown(data.breakdown);
       setParams(data.params);
       setConfidenceScore(data.confidence_score);
@@ -302,7 +306,7 @@ export function PricingDrawer({
       const basePrice = distance * 45 * (1 + Math.max(0, weight - 5) * 0.02);
       const estimated = Math.round(basePrice * 1.2 + 500);
       setSuggestedPrice(estimated);
-      setFinalPrice(estimated);
+      setGrossPrice(estimated);
     } finally {
       setIsLoading(false);
     }
@@ -347,8 +351,8 @@ export function PricingDrawer({
   };
 
   const validatePricing = (): string | null => {
-    if (finalPrice <= 0) {
-      return "Final price must be greater than zero.";
+    if (grossPrice <= 0) {
+      return "Total price must be greater than zero.";
     }
     if (postMode === "invite" && selectedCarriers.length === 0) {
       return "Please select at least one carrier to invite.";
@@ -393,7 +397,8 @@ export function PricingDrawer({
       const saveResponse = await apiRequest("POST", "/api/admin/pricing/save", {
         load_id: load.id,
         suggested_price: suggestedPrice,
-        final_price: finalPrice,
+        gross_price: grossPrice,
+        final_price: finalPrice, // Carrier payout (after margin)
         markup_percent: markupPercent,
         fixed_fee: fixedFee,
         discount_amount: discountAmount,
@@ -740,20 +745,20 @@ export function PricingDrawer({
 
                     <Separator />
 
-                    {/* Final Price */}
+                    {/* Total Price (Shipper pays) */}
                     <Card className={requiresApproval ? "border-amber-500" : "border-green-500"}>
                       <CardContent className="pt-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <IndianRupee className="h-5 w-5" />
-                            <span className="font-medium">Final Price</span>
+                            <span className="font-medium">Total Price</span>
                           </div>
                           <Input
                             type="number"
-                            value={finalPrice}
-                            onChange={(e) => setFinalPrice(parseInt(e.target.value) || 0)}
+                            value={grossPrice}
+                            onChange={(e) => setGrossPrice(parseInt(e.target.value) || 0)}
                             className="w-32 text-right font-bold text-lg"
-                            data-testid="input-final-price"
+                            data-testid="input-gross-price"
                           />
                         </div>
 
@@ -779,12 +784,12 @@ export function PricingDrawer({
                       </CardContent>
                     </Card>
 
-                    {/* Margin Preview */}
+                    {/* Margin & Final Price */}
                     <Card>
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm flex items-center gap-2">
                           <BarChart3 className="h-4 w-4" />
-                          Margin Preview
+                          Margin & Final Price
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
@@ -809,9 +814,10 @@ export function PricingDrawer({
                           <span className="text-muted-foreground">Platform Earnings:</span>
                           <span className="font-medium text-primary">{formatRupees(platformMargin)}</span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Carrier Payout:</span>
-                          <span className="font-medium">{formatRupees(carrierPayout)}</span>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Final Price (Carrier Payout):</span>
+                          <span className="font-bold text-lg text-green-600 dark:text-green-400">{formatRupees(finalPrice)}</span>
                         </div>
                       </CardContent>
                     </Card>
@@ -930,7 +936,7 @@ export function PricingDrawer({
                       className="w-full"
                       size="lg"
                       onClick={handleLockAndPost}
-                      disabled={isLocking || finalPrice <= 0}
+                      disabled={isLocking || grossPrice <= 0}
                       data-testid="button-lock-post"
                     >
                       {isLocking ? (

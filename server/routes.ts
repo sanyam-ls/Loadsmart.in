@@ -7,7 +7,8 @@ import { eq } from "drizzle-orm";
 import { 
   insertUserSchema, insertLoadSchema, insertTruckSchema, insertBidSchema,
   insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema,
-  trucks as trucksTable
+  trucks as trucksTable,
+  carrierProfiles as carrierProfilesTable
 } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -1413,6 +1414,66 @@ export async function registerRoutes(
       res.json(carrierWithoutPassword);
     } catch (error) {
       console.error("Verify carrier error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Update carrier type (solo/enterprise)
+  app.patch("/api/admin/carriers/:id/type", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { carrierType, fleetSize } = req.body;
+      
+      if (carrierType && !["solo", "enterprise"].includes(carrierType)) {
+        return res.status(400).json({ error: "Invalid carrier type. Must be 'solo' or 'enterprise'" });
+      }
+
+      const carrierId = req.params.id;
+      const carrier = await storage.getUser(carrierId);
+      
+      if (!carrier || carrier.role !== "carrier") {
+        return res.status(404).json({ error: "Carrier not found" });
+      }
+
+      // Get existing profile or create one
+      let profile = await storage.getCarrierProfile(carrierId);
+      
+      if (profile) {
+        // Update existing profile
+        const updatedProfile = await db.update(carrierProfilesTable)
+          .set({
+            ...(carrierType && { carrierType }),
+            ...(fleetSize !== undefined && { fleetSize: parseInt(fleetSize) }),
+          })
+          .where(eq(carrierProfilesTable.userId, carrierId))
+          .returning();
+        
+        res.json({ 
+          success: true, 
+          message: `Carrier type updated to ${carrierType || profile.carrierType}`,
+          profile: updatedProfile[0] 
+        });
+      } else {
+        // Create new profile
+        const newProfile = await storage.createCarrierProfile({
+          userId: carrierId,
+          carrierType: carrierType || "solo",
+          fleetSize: fleetSize ? parseInt(fleetSize) : 1,
+          serviceZones: [],
+        });
+        
+        res.json({ 
+          success: true, 
+          message: `Carrier profile created with type ${carrierType || "solo"}`,
+          profile: newProfile 
+        });
+      }
+    } catch (error) {
+      console.error("Update carrier type error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

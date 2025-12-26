@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Truck, MapPin, Package, FileText, ArrowRight } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,7 +61,9 @@ const categoryLabels: Record<string, string> = {
 export default function AddTruckPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { carrierType } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const isSoloCarrier = carrierType === "solo";
 
   const form = useForm<TruckFormData>({
     resolver: zodResolver(truckFormSchema),
@@ -89,7 +92,7 @@ export default function AddTruckPage() {
 
       if (response.ok) {
         toast({ title: "Truck added!", description: "Your truck is now listed and ready for loads." });
-        navigate("/carrier/fleet");
+        navigate(isSoloCarrier ? "/carrier/my-truck" : "/carrier/fleet");
       } else {
         toast({ title: "Error", description: "Failed to add truck. Please try again.", variant: "destructive" });
       }

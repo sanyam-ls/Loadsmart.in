@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   FileText, Check, Clock, AlertCircle, Eye, Download, 
   CreditCard, MessageSquare, CheckCircle, XCircle, Loader2,
-  ArrowLeftRight, History, ChevronDown, ChevronUp, DollarSign, Building2
+  ArrowLeftRight, History, ChevronDown, ChevronUp, DollarSign, Building2, Star
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -87,6 +87,7 @@ interface Invoice {
   dueDate: string;
   createdAt: string;
   notes?: string;
+  advancePaymentPercent?: number;
 }
 
 const simulatedInvoices: Invoice[] = [
@@ -644,6 +645,33 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                     </div>
                   </CardContent>
                 </Card>
+
+                {selectedInvoice.advancePaymentPercent !== undefined && selectedInvoice.advancePaymentPercent !== null && selectedInvoice.advancePaymentPercent > 0 && (
+                  <Card className="border-green-200 dark:border-green-700/50 bg-green-50/50 dark:bg-green-900/10">
+                    <CardContent className="pt-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-green-600" />
+                        <span className="font-medium text-green-700 dark:text-green-400">Carrier Advance Payment</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Advance Percentage:</span>
+                        <span className="font-semibold">{selectedInvoice.advancePaymentPercent}%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Advance Amount (Upfront):</span>
+                        <span className="font-bold text-green-600 dark:text-green-400">
+                          {formatCurrency(Math.round(parseFloat(selectedInvoice.subtotal || '0') * (selectedInvoice.advancePaymentPercent / 100)))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Balance Due on Delivery:</span>
+                        <span className="font-medium">
+                          {formatCurrency(Math.round(parseFloat(selectedInvoice.subtotal || '0') * (1 - selectedInvoice.advancePaymentPercent / 100)))}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {selectedInvoice.acknowledgedAt && (
                   <Card>

@@ -134,9 +134,14 @@ export async function registerRoutes(
       });
 
       if (user.role === "carrier") {
+        // Get carrierType from registration data (solo or enterprise)
+        const carrierType = req.body.carrierType || "enterprise";
+        const isSolo = carrierType === "solo";
+        
         await storage.createCarrierProfile({
           userId: user.id,
-          fleetSize: 0,
+          carrierType: carrierType,
+          fleetSize: isSolo ? 1 : 0,
           serviceZones: [],
           reliabilityScore: "0",
           communicationScore: "0",

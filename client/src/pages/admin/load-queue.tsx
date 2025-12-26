@@ -614,6 +614,99 @@ export default function LoadQueuePage() {
         );
       })()}
 
+      {/* Invoice Tracking - Loads with invoice already sent */}
+      {(() => {
+        const sentLoads = realLoads
+          .filter(l => l.status === 'invoice_sent' || l.status === 'invoice_created' || l.status === 'invoice_acknowledged')
+          .sort((a, b) => {
+            const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+            const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+            return dateB - dateA;
+          });
+        if (sentLoads.length === 0) return null;
+        return (
+          <Card className="border-blue-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-blue-500" />
+                Invoice Tracking ({sentLoads.length})
+              </CardTitle>
+              <CardDescription>
+                Invoices sent to shippers awaiting acknowledgment
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {sentLoads.map((load) => {
+                  const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
+                  const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
+                  const gstAmount = Math.round(priceNum * 0.18);
+                  const totalWithGst = priceNum + gstAmount;
+                  
+                  return (
+                    <div 
+                      key={load.id} 
+                      className="border rounded-lg p-3 bg-card hover-elevate"
+                      data-testid={`card-sent-invoice-${load.id.slice(0, 8)}`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className="font-mono text-sm font-medium">{formatLoadId(load)}</span>
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-xs ${
+                            load.status === 'invoice_acknowledged' 
+                              ? 'bg-green-500/20 text-green-700 dark:text-green-400'
+                              : 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
+                          }`}
+                        >
+                          {load.status === 'invoice_acknowledged' ? 'Acknowledged' : 'Sent'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-1 mb-3">
+                        <div className="flex items-center gap-1 text-sm">
+                          <MapPin className="h-3 w-3 text-green-500 shrink-0" />
+                          <span className="truncate">{load.pickupCity}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm">
+                          <MapPin className="h-3 w-3 text-red-500 shrink-0" />
+                          <span className="truncate">{load.dropoffCity}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm mb-3">
+                        <span className="text-muted-foreground">{load.shipperName || "Shipper"}</span>
+                        <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
+                      </div>
+                      
+                      <div className="border-t pt-2 mb-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Total (incl. GST)</span>
+                          <span className="font-bold text-blue-600 dark:text-blue-400">
+                            Rs. {totalWithGst.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => openLoadDetails(load)}
+                        data-testid={`button-view-sent-details-${load.id.slice(0, 8)}`}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View Details
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Pricing & Posting Table - Loads with pending status */}
       {(() => {
         const pricingLoads = realLoads.filter(l => l.status === 'pending' || l.status === 'priced');

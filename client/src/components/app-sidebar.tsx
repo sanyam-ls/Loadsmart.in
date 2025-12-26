@@ -76,7 +76,6 @@ const soloItems = [
 const adminItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
   { title: "Load Queue", url: "/admin/queue", icon: ClipboardList },
-  { title: "OTP Requests", url: "/admin/otp-queue", icon: Key },
   { title: "Bids & Negotiations", url: "/admin/negotiations", icon: Gavel },
   { title: "Invoices", url: "/admin/invoices", icon: FileText },
   { title: "Users", url: "/admin/users", icon: Users },

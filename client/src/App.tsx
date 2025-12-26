@@ -59,7 +59,6 @@ import AdminNegotiationsPage from "@/pages/admin/negotiations";
 import AdminInvoicesPage from "@/pages/admin/invoices";
 import AdminCarrierVerificationPage from "@/pages/admin/carrier-verification";
 import NegotiationInbox from "@/pages/admin/negotiation-inbox";
-import AdminOtpQueuePage from "@/pages/admin/otp-queue";
 import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import { AdminDataProvider } from "@/lib/admin-data-store";
@@ -169,7 +168,6 @@ function AppContent() {
               <Route path="/admin/verification" component={AdminCarrierVerificationPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
               <Route path="/admin/invoices" component={AdminInvoicesPage} />
-              <Route path="/admin/otp-queue" component={AdminOtpQueuePage} />
               
               <Route path="/settings" component={SettingsPage} />
               

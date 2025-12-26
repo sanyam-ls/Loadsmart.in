@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, FileCheck, Clock, Loader2 } from "lucide-react";
+import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, FileCheck, Clock, Loader2, Database } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,9 @@ import {
 import { useTheme } from "@/lib/theme-provider";
 import { useLoads, useBids, useUsers, useCarriers, useShipments, useInvoices } from "@/lib/api-hooks";
 import { formatDistanceToNow } from "date-fns";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import type { Load, User } from "@shared/schema";
 
 // Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
@@ -85,6 +87,8 @@ function ClickableStatCard({ title, value, icon: Icon, trend, subtitle, href, te
 export default function AdminOverview() {
   const [, setLocation] = useLocation();
   const { theme } = useTheme();
+  const { toast } = useToast();
+  const [isSeeding, setIsSeeding] = useState(false);
   
   const { data: loads, isLoading: loadsLoading } = useLoads();
   const { data: users, isLoading: usersLoading } = useUsers();
@@ -110,6 +114,30 @@ export default function AdminOverview() {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/verifications'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/queue'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/negotiations'] });
+  };
+
+  const handleSeedDemoData = async () => {
+    setIsSeeding(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/seed-all');
+      const data = await response.json();
+      
+      toast({
+        title: "Demo Data Seeded",
+        description: `Created: ${data.results.users.shippers} shipper, ${data.results.users.carriers} carrier, ${data.results.users.soloCarriers} solo driver, ${data.results.loads} loads, ${data.results.trucks} trucks`,
+      });
+      
+      // Refresh all data
+      handleRefresh();
+    } catch (error) {
+      toast({
+        title: "Seeding Failed",
+        description: "Could not seed demo data. It may already exist.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSeeding(false);
+    }
   };
 
   if (loadsLoading || usersLoading || carriersLoading) {
@@ -200,14 +228,29 @@ export default function AdminOverview() {
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">Platform overview and key metrics. Click any tile to manage.</p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={handleRefresh}
-          data-testid="button-refresh-data"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Sync Data
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSeedDemoData}
+            disabled={isSeeding}
+            data-testid="button-seed-demo-data"
+          >
+            {isSeeding ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Database className="h-4 w-4 mr-2" />
+            )}
+            Seed Demo Data
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            data-testid="button-refresh-data"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sync Data
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

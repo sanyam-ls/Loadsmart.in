@@ -7541,6 +7541,213 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/admin/seed-all - Comprehensive demo data seeding for production
+  app.post("/api/admin/seed-all", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const results = {
+        users: { shippers: 0, carriers: 0, soloCarriers: 0 },
+        loads: 0,
+        trucks: 0,
+        profiles: 0,
+      };
+
+      // Indian cities for realistic routes
+      const indianCities = [
+        "Delhi", "Mumbai", "Chennai", "Bangalore", "Kolkata", "Hyderabad",
+        "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Coimbatore"
+      ];
+      
+      const cargoTypes = ["General Goods", "Electronics", "Textiles", "Auto Parts", "FMCG", "Machinery", "Chemicals", "Pharmaceuticals"];
+
+      // 1. Create demo shipper if not exists
+      let demoShipper = await storage.getUserByEmail("demoshipper@freightflow.in");
+      if (!demoShipper) {
+        demoShipper = await storage.createUser({
+          username: "DemoShipper",
+          email: "demoshipper@freightflow.in",
+          password: await hashPassword("demo123"),
+          role: "shipper",
+          companyName: "Demo Manufacturing Co",
+          phone: "+919876543210",
+          isVerified: true,
+        });
+        results.users.shippers++;
+      }
+
+      // 2. Create demo enterprise carrier if not exists
+      let demoCarrier = await storage.getUserByEmail("democarrier@freightflow.in");
+      if (!demoCarrier) {
+        demoCarrier = await storage.createUser({
+          username: "DemoCarrier",
+          email: "democarrier@freightflow.in",
+          password: await hashPassword("demo123"),
+          role: "carrier",
+          companyName: "Demo Fleet Services",
+          phone: "+919876543211",
+          isVerified: true,
+        });
+        results.users.carriers++;
+
+        // Create carrier profile
+        await storage.createCarrierProfile({
+          userId: demoCarrier.id,
+          carrierType: "enterprise",
+          fleetSize: 5,
+          serviceZones: ["Delhi", "Mumbai", "Pune", "Jaipur"],
+          reliabilityScore: "92.50",
+          communicationScore: "88.00",
+          onTimeScore: "95.00",
+          totalDeliveries: 45,
+          badgeLevel: "silver",
+        });
+        results.profiles++;
+      }
+
+      // 3. Create solo driver demo account if not exists
+      let soloDriver = await storage.getUserByEmail("solodriver@freightflow.in");
+      if (!soloDriver) {
+        soloDriver = await storage.createUser({
+          username: "SoloDriverDemo",
+          email: "solodriver@freightflow.in",
+          password: await hashPassword("demo123"),
+          role: "carrier",
+          companyName: "Solo Transport Services",
+          phone: "+919876543212",
+          isVerified: true,
+        });
+        results.users.soloCarriers++;
+
+        // Create solo carrier profile
+        await storage.createCarrierProfile({
+          userId: soloDriver.id,
+          carrierType: "solo",
+          fleetSize: 1,
+          serviceZones: ["Delhi", "Chandigarh", "Jaipur"],
+          reliabilityScore: "85.00",
+          communicationScore: "90.00",
+          onTimeScore: "88.00",
+          totalDeliveries: 12,
+          badgeLevel: "bronze",
+        });
+        results.profiles++;
+
+        // Create truck for solo driver
+        await storage.createTruck({
+          carrierId: soloDriver.id,
+          licensePlate: "DL-01-SL-1234",
+          truckType: "trailer_20ft",
+          capacity: 15,
+          capacityUnit: "tons",
+          isAvailable: true,
+          currentLocation: "Delhi NCR",
+          make: "Tata Motors",
+          model: "Prima 4028.S",
+          year: 2022,
+          city: "Delhi",
+        });
+        results.trucks++;
+
+        // Create documents for solo driver
+        const docTypes = ["license", "rc", "insurance", "fitness", "permit", "puc"];
+        for (const docType of docTypes) {
+          const expiryDays = docType === "insurance" ? 15 : 180 + Math.floor(Math.random() * 365);
+          await storage.createDocument({
+            userId: soloDriver.id,
+            documentType: docType,
+            fileName: `${docType.toUpperCase()}_SoloDemo.pdf`,
+            fileUrl: `/demo/${docType}.pdf`,
+            fileSize: 150000,
+            expiryDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
+            isVerified: docType !== "insurance",
+          });
+        }
+      }
+
+      // 4. Create demo trucks for enterprise carrier if none exist
+      const existingTrucks = await storage.getTrucksByCarrier(demoCarrier.id);
+      if (existingTrucks.length === 0) {
+        const truckTypes = ["trailer_20ft", "trailer_40ft", "container_20ft", "open_body_14ft"];
+        for (let i = 0; i < 3; i++) {
+          await storage.createTruck({
+            carrierId: demoCarrier.id,
+            licensePlate: `MH-12-DC-${1000 + i}`,
+            truckType: truckTypes[i % truckTypes.length],
+            capacity: 10 + i * 5,
+            capacityUnit: "tons",
+            isAvailable: true,
+            currentLocation: indianCities[i % indianCities.length],
+            make: ["Tata Motors", "Ashok Leyland", "Mahindra"][i % 3],
+            model: "Fleet Model " + (i + 1),
+            year: 2021 + i,
+            city: indianCities[i % indianCities.length],
+          });
+          results.trucks++;
+        }
+      }
+
+      // 5. Create demo loads in various states
+      const loadStatuses = ["posted_to_carriers", "open_for_bid", "in_transit", "delivered"];
+      const existingLoads = await storage.getLoadsByShipper(demoShipper.id);
+      
+      if (existingLoads.length < 5) {
+        for (let i = 0; i < 5; i++) {
+          const originIdx = Math.floor(Math.random() * indianCities.length);
+          let destIdx = Math.floor(Math.random() * indianCities.length);
+          while (destIdx === originIdx) destIdx = (destIdx + 1) % indianCities.length;
+          
+          const weight = 5000 + Math.floor(Math.random() * 15000);
+          const grossPrice = 25000 + Math.floor(Math.random() * 75000);
+          const platformMargin = Math.floor(grossPrice * 0.08);
+          
+          await storage.createLoad({
+            shipperId: demoShipper.id,
+            origin: indianCities[originIdx],
+            destination: indianCities[destIdx],
+            cargoType: cargoTypes[Math.floor(Math.random() * cargoTypes.length)],
+            weight,
+            weightUnit: "kg",
+            dimensions: `${100 + i * 20}x${80 + i * 10}x${60 + i * 5}`,
+            pickupDate: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
+            deliveryDate: new Date(Date.now() + (i + 3) * 24 * 60 * 60 * 1000),
+            specialInstructions: "Handle with care. Demo load for testing.",
+            status: loadStatuses[i % loadStatuses.length],
+            grossPrice: grossPrice.toString(),
+            finalPrice: (grossPrice - platformMargin).toString(),
+            platformMargin: platformMargin.toString(),
+            pricingType: "fixed",
+            loadNumber: 1000 + existingLoads.length + i,
+          });
+          results.loads++;
+        }
+      }
+
+      // Broadcast updates
+      broadcastMarketplaceEvent("demo_data_seeded", {
+        message: "Demo data has been seeded successfully",
+        results,
+      });
+
+      res.json({
+        success: true,
+        message: "Demo data seeded successfully",
+        results,
+        credentials: {
+          shipper: { email: "demoshipper@freightflow.in", password: "demo123" },
+          carrier: { email: "democarrier@freightflow.in", password: "demo123" },
+          soloDriver: { email: "solodriver@freightflow.in", password: "demo123" },
+        },
+      });
+    } catch (error) {
+      console.error("Seed all error:", error);
+      res.status(500).json({ error: "Failed to seed demo data" });
+    }
+  });
+
   // POST /api/admin/seed-pending-verifications - Add pending verification carriers for testing
   app.post("/api/admin/seed-pending-verifications", requireAuth, async (req, res) => {
     try {

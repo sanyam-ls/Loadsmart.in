@@ -569,8 +569,9 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Carrier access required" });
       }
 
-      // Only enterprise carriers can manage drivers
-      if (user.carrierType !== "enterprise") {
+      // Only enterprise carriers can manage drivers - check carrier_profiles table
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      if (!carrierProfile || carrierProfile.carrierType !== "enterprise") {
         return res.status(403).json({ error: "Driver management is only available for enterprise carriers" });
       }
 
@@ -589,7 +590,9 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Carrier access required" });
       }
 
-      if (user.carrierType !== "enterprise") {
+      // Only enterprise carriers can manage drivers - check carrier_profiles table
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      if (!carrierProfile || carrierProfile.carrierType !== "enterprise") {
         return res.status(403).json({ error: "Driver management is only available for enterprise carriers" });
       }
 

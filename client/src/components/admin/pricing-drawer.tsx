@@ -822,14 +822,37 @@ export function PricingDrawer({
                       </CardContent>
                     </Card>
 
-                    {/* Advance Payment Percentage */}
-                    <Card>
-                      <CardContent className="pt-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <IndianRupee className="h-4 w-4 text-green-600" />
-                            <Label className="text-sm font-medium">Advance Payment (%)</Label>
+                    {/* Advance Payment Percentage - Enhanced */}
+                    <Card className="border-2 border-green-200 dark:border-green-900">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <IndianRupee className="h-5 w-5 text-green-600" />
+                          Carrier Advance Payment
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Quick Select Buttons */}
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">Quick Select</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {[0, 50, 75, 90, 100].map((percent) => (
+                              <Button
+                                key={percent}
+                                type="button"
+                                variant={advancePaymentPercent === percent ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setAdvancePaymentPercent(percent)}
+                                data-testid={`button-advance-${percent}`}
+                              >
+                                {percent === 0 ? "No Advance" : `${percent}%`}
+                              </Button>
+                            ))}
                           </div>
+                        </div>
+
+                        {/* Custom Input */}
+                        <div className="flex items-center gap-3">
+                          <Label className="text-sm">Custom:</Label>
                           <div className="flex items-center gap-2">
                             <Input
                               type="number"
@@ -846,16 +869,32 @@ export function PricingDrawer({
                             <span className="text-sm font-medium">%</span>
                           </div>
                         </div>
-                        {advancePaymentPercent > 0 && (
-                          <div className="flex items-center justify-between text-sm bg-green-50 dark:bg-green-950/30 p-2 rounded-md">
-                            <span className="text-muted-foreground">Advance Amount:</span>
+
+                        {/* Payment Breakdown */}
+                        <div className="bg-muted/50 rounded-md p-3 space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Advance (Upfront):</span>
                             <span className="font-semibold text-green-600 dark:text-green-400">
                               {formatRupees(Math.round(finalPrice * (advancePaymentPercent / 100)))}
                             </span>
                           </div>
-                        )}
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Balance (On Delivery):</span>
+                            <span className="font-semibold">
+                              {formatRupees(Math.round(finalPrice * ((100 - advancePaymentPercent) / 100)))}
+                            </span>
+                          </div>
+                          <Separator />
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium">Total Carrier Payout:</span>
+                            <span className="font-bold text-green-600 dark:text-green-400">
+                              {formatRupees(finalPrice)}
+                            </span>
+                          </div>
+                        </div>
+
                         <p className="text-xs text-muted-foreground">
-                          Percentage of final price to be paid as advance before pickup
+                          Advance is paid to carrier before pickup. Balance is paid after successful delivery.
                         </p>
                       </CardContent>
                     </Card>

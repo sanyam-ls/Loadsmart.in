@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   MapPin, Package, Truck, CheckCircle, Clock, FileText, 
-  Navigation, Building, ArrowRight, RefreshCw, Phone, Loader2,
+  Navigation, Building, ArrowRight, RefreshCw, Loader2,
   Eye, X, Download, Calendar
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -390,26 +390,17 @@ export default function TrackingPage() {
                     <h3 className="font-semibold mb-4">Carrier & Truck Details</h3>
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Company</span>
+                        <span className="text-muted-foreground">Carrier</span>
                         <span className="font-medium">{selectedShipment.carrier?.companyName || "N/A"}</span>
                       </div>
-                      {selectedShipment.carrier?.phone && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Contact</span>
-                          <a href={`tel:${selectedShipment.carrier.phone}`} className="flex items-center gap-1 text-primary">
-                            <Phone className="h-3 w-3" />
-                            {selectedShipment.carrier.phone}
-                          </a>
-                        </div>
-                      )}
                       {selectedShipment.truck ? (
                         <>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Vehicle Type</span>
+                            <span className="text-muted-foreground">Vehicle</span>
                             <span className="font-medium">{selectedShipment.truck.truckType}</span>
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Registration</span>
+                            <span className="text-muted-foreground">Truck No.</span>
                             <span className="font-medium">{selectedShipment.truck.registrationNumber}</span>
                           </div>
                           <div className="flex items-center justify-between text-sm">
@@ -418,7 +409,12 @@ export default function TrackingPage() {
                           </div>
                         </>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Truck details pending assignment</p>
+                        <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4" />
+                            <span>Truck details will be available once the carrier assigns a vehicle</span>
+                          </div>
+                        </div>
                       )}
                     </div>
 

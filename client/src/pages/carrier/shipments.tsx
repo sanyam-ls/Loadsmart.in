@@ -10,12 +10,11 @@ import { OtpTripActions } from "@/components/otp-trip-actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useShipments, useLoads, invalidateAllData } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
-import { useCarrierData } from "@/lib/carrier-data-store";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Shipment, Load } from "@shared/schema";
+import type { Shipment, Load, Driver } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 
 function formatLoadId(load?: { adminReferenceNumber?: number | null; shipperLoadNumber?: number | null }): string {
@@ -45,8 +44,12 @@ export default function CarrierShipmentsPage() {
   const { data: shipments, isLoading: shipmentsLoading, refetch } = useShipments();
   const { data: loads } = useLoads();
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
-  const carrierData = useCarrierData();
   const isEnterprise = carrierType === "enterprise";
+
+  const { data: drivers = [] } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers"],
+    enabled: isEnterprise,
+  });
 
   const assignDriverMutation = useMutation({
     mutationFn: async ({ shipmentId, driverId }: { shipmentId: string; driverId: string }) => {
@@ -336,27 +339,37 @@ export default function CarrierShipmentsPage() {
                         <UserCircle className="h-4 w-4 text-muted-foreground" />
                         <p className="font-medium text-sm">Driver Assignment</p>
                       </div>
-                      {selectedShipment.driverId ? (
+                      {drivers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No drivers added yet. Add drivers in the Drivers section to assign them to shipments.
+                        </p>
+                      ) : selectedShipment.driverId ? (
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                            {carrierData.drivers.find(d => d.driverId === selectedShipment.driverId)?.name || "Assigned Driver"}
+                            {drivers.find(d => d.id === selectedShipment.driverId)?.name || "Assigned Driver"}
                           </Badge>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              const availableDrivers = carrierData.drivers.filter(d => d.status === "available");
-                              if (availableDrivers.length > 0) {
-                                assignDriverMutation.mutate({
-                                  shipmentId: selectedShipment.id,
-                                  driverId: availableDrivers[0].driverId,
-                                });
-                              }
+                          <Select
+                            onValueChange={(driverId) => {
+                              assignDriverMutation.mutate({
+                                shipmentId: selectedShipment.id,
+                                driverId,
+                              });
                             }}
-                            data-testid="button-reassign-driver"
+                            disabled={assignDriverMutation.isPending}
                           >
-                            Change
-                          </Button>
+                            <SelectTrigger className="w-[140px]" data-testid="select-reassign-driver">
+                              <SelectValue placeholder="Change driver" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {drivers
+                                .filter(d => d.status === "available" && d.id !== selectedShipment.driverId)
+                                .map(driver => (
+                                  <SelectItem key={driver.id} value={driver.id}>
+                                    {driver.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -373,11 +386,10 @@ export default function CarrierShipmentsPage() {
                               <SelectValue placeholder="Select a driver" />
                             </SelectTrigger>
                             <SelectContent>
-                              {carrierData.drivers
+                              {drivers
                                 .filter(d => d.status === "available")
-                                .slice(0, 20)
                                 .map(driver => (
-                                  <SelectItem key={driver.driverId} value={driver.driverId}>
+                                  <SelectItem key={driver.id} value={driver.id}>
                                     {driver.name} - {driver.phone}
                                   </SelectItem>
                                 ))}

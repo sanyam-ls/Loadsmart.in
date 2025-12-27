@@ -1,15 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { 
-  User, Phone, Shield, AlertTriangle, Star, MapPin, 
-  Truck, Search, Calendar, Award, TrendingUp, Clock, CheckCircle
+  User, Phone, AlertTriangle, Plus, Search, Calendar, 
+  Trash2, Pencil, Loader2, CheckCircle, XCircle, Truck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -23,73 +20,200 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
-import { useCarrierData, type CarrierDriver } from "@/lib/carrier-data-store";
-import { format, differenceInMonths } from "date-fns";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import type { Driver } from "@shared/schema";
+import { format, differenceInDays } from "date-fns";
 
-function formatCurrency(amount: number): string {
-  if (amount >= 100000) {
-    return `Rs. ${(amount / 100000).toFixed(1)}L`;
-  }
-  return `Rs. ${amount.toLocaleString()}`;
-}
+const driverFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  phone: z.string().min(10, "Phone must be at least 10 digits"),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  licenseNumber: z.string().optional(),
+  licenseExpiry: z.string().optional(),
+  status: z.enum(["available", "on_trip", "inactive"]).default("available"),
+});
 
-function getSafetyScoreColor(score: number) {
-  if (score >= 85) return "text-green-600 dark:text-green-400";
-  if (score >= 70) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
-}
+type DriverFormData = z.infer<typeof driverFormSchema>;
 
-function getStatusBadge(status: CarrierDriver["availabilityStatus"]) {
+function getStatusBadge(status: string) {
   switch (status) {
-    case "Available":
+    case "available":
       return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-    case "On Trip":
+    case "on_trip":
       return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
-    case "Off Duty":
+    case "inactive":
       return "bg-muted text-muted-foreground";
-    case "On Leave":
-      return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
     default:
       return "bg-muted text-muted-foreground";
   }
 }
 
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "available":
+      return "Available";
+    case "on_trip":
+      return "On Trip";
+    case "inactive":
+      return "Inactive";
+    default:
+      return status;
+  }
+}
+
 export default function CarrierDriversPage() {
-  const { drivers } = useCarrierData();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedDriver, setSelectedDriver] = useState<CarrierDriver | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
+  const [deletingDriver, setDeletingDriver] = useState<Driver | null>(null);
 
-  const filteredDrivers = useMemo(() => {
-    return drivers.filter((driver) => {
-      const matchesSearch =
-        driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        driver.driverId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        driver.phone.includes(searchQuery);
-      const matchesStatus = statusFilter === "all" || driver.availabilityStatus === statusFilter;
-      return matchesSearch && matchesStatus;
+  const { data: drivers = [], isLoading } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers"],
+  });
+
+  const form = useForm<DriverFormData>({
+    resolver: zodResolver(driverFormSchema),
+    defaultValues: {
+      name: "",
+      phone: "",
+      email: "",
+      licenseNumber: "",
+      licenseExpiry: "",
+      status: "available",
+    },
+  });
+
+  const createDriverMutation = useMutation({
+    mutationFn: async (data: DriverFormData) => {
+      return apiRequest("POST", "/api/drivers", {
+        ...data,
+        licenseExpiry: data.licenseExpiry ? new Date(data.licenseExpiry).toISOString() : null,
+        email: data.email || null,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Driver added successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      setIsAddDialogOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to add driver", variant: "destructive" });
+    },
+  });
+
+  const updateDriverMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<DriverFormData> }) => {
+      return apiRequest("PATCH", `/api/drivers/${id}`, {
+        ...data,
+        licenseExpiry: data.licenseExpiry ? new Date(data.licenseExpiry).toISOString() : undefined,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Driver updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      setEditingDriver(null);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to update driver", variant: "destructive" });
+    },
+  });
+
+  const deleteDriverMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/drivers/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Driver removed successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      setDeletingDriver(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to remove driver", variant: "destructive" });
+    },
+  });
+
+  const filteredDrivers = drivers.filter((driver) => {
+    const matchesSearch =
+      driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      driver.phone.includes(searchQuery) ||
+      (driver.licenseNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+    const matchesStatus = statusFilter === "all" || driver.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const stats = {
+    total: drivers.length,
+    available: drivers.filter(d => d.status === "available").length,
+    onTrip: drivers.filter(d => d.status === "on_trip").length,
+    inactive: drivers.filter(d => d.status === "inactive").length,
+  };
+
+  const expiringLicenses = drivers.filter(d => {
+    if (!d.licenseExpiry) return false;
+    const daysUntilExpiry = differenceInDays(new Date(d.licenseExpiry), new Date());
+    return daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
+  });
+
+  const handleOpenAddDialog = () => {
+    form.reset({
+      name: "",
+      phone: "",
+      email: "",
+      licenseNumber: "",
+      licenseExpiry: "",
+      status: "available",
     });
-  }, [drivers, searchQuery, statusFilter]);
+    setIsAddDialogOpen(true);
+  };
 
-  const stats = useMemo(() => {
-    const total = drivers.length;
-    const available = drivers.filter(d => d.availabilityStatus === "Available").length;
-    const onTrip = drivers.filter(d => d.availabilityStatus === "On Trip").length;
-    const avgSafety = Math.round(drivers.reduce((sum, d) => sum + d.safetyScore, 0) / drivers.length);
-    const totalTrips = drivers.reduce((sum, d) => sum + d.pastTripsCount, 0);
-    
-    return { total, available, onTrip, avgSafety, totalTrips };
-  }, [drivers]);
-
-  const expiringLicenses = useMemo(() => {
-    return drivers.filter(d => {
-      const monthsUntilExpiry = differenceInMonths(new Date(d.licenseExpiry), new Date());
-      return monthsUntilExpiry <= 3 && monthsUntilExpiry >= 0;
+  const handleOpenEditDialog = (driver: Driver) => {
+    form.reset({
+      name: driver.name,
+      phone: driver.phone,
+      email: driver.email || "",
+      licenseNumber: driver.licenseNumber || "",
+      licenseExpiry: driver.licenseExpiry ? format(new Date(driver.licenseExpiry), "yyyy-MM-dd") : "",
+      status: (driver.status as "available" | "on_trip" | "inactive") || "available",
     });
-  }, [drivers]);
+    setEditingDriver(driver);
+  };
+
+  const onSubmit = (data: DriverFormData) => {
+    if (editingDriver) {
+      updateDriverMutation.mutate({ id: editingDriver.id, data });
+    } else {
+      createDriverMutation.mutate(data);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -98,13 +222,13 @@ export default function CarrierDriversPage() {
           <h1 className="text-2xl font-bold" data-testid="text-drivers-title">Driver Management</h1>
           <p className="text-muted-foreground">Manage your team of {drivers.length} drivers</p>
         </div>
-        <Button data-testid="button-add-driver">
-          <User className="h-4 w-4 mr-2" />
+        <Button onClick={handleOpenAddDialog} data-testid="button-add-driver">
+          <Plus className="h-4 w-4 mr-2" />
           Add Driver
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Drivers"
           value={stats.total}
@@ -127,18 +251,11 @@ export default function CarrierDriversPage() {
           testId="stat-on-trip-drivers"
         />
         <StatCard
-          title="Avg Safety"
-          value={stats.avgSafety}
-          icon={Shield}
-          subtitle="Safety score"
-          testId="stat-avg-safety"
-        />
-        <StatCard
-          title="Total Trips"
-          value={stats.totalTrips.toLocaleString()}
-          icon={TrendingUp}
-          subtitle="All time"
-          testId="stat-total-trips"
+          title="Inactive"
+          value={stats.inactive}
+          icon={XCircle}
+          subtitle="Off duty"
+          testId="stat-inactive-drivers"
         />
       </div>
 
@@ -154,11 +271,11 @@ export default function CarrierDriversPage() {
             <div className="flex flex-wrap gap-2">
               {expiringLicenses.map(driver => (
                 <Badge 
-                  key={driver.driverId} 
+                  key={driver.id} 
                   variant="outline" 
                   className="border-amber-500 text-amber-600"
                 >
-                  {driver.name} - Expires {format(new Date(driver.licenseExpiry), "MMM d, yyyy")}
+                  {driver.name} - Expires {format(new Date(driver.licenseExpiry!), "MMM d, yyyy")}
                 </Badge>
               ))}
             </div>
@@ -170,23 +287,22 @@ export default function CarrierDriversPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, ID, or phone..."
+            placeholder="Search by name, phone, or license..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-            data-testid="input-search-drivers"
+            className="pl-10"
+            data-testid="input-driver-search"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-48" data-testid="select-status-filter">
-            <SelectValue placeholder="Status" />
+          <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-status-filter">
+            <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Available">Available</SelectItem>
-            <SelectItem value="On Trip">On Trip</SelectItem>
-            <SelectItem value="Off Duty">Off Duty</SelectItem>
-            <SelectItem value="On Leave">On Leave</SelectItem>
+            <SelectItem value="available">Available</SelectItem>
+            <SelectItem value="on_trip">On Trip</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -194,256 +310,234 @@ export default function CarrierDriversPage() {
       {filteredDrivers.length === 0 ? (
         <EmptyState
           icon={User}
-          title="No drivers found"
-          description="No drivers match your search criteria."
+          title={drivers.length === 0 ? "No drivers yet" : "No drivers found"}
+          description={drivers.length === 0 
+            ? "Add your first driver to start managing your team."
+            : "Try adjusting your search or filter criteria."
+          }
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredDrivers.map((driver) => (
-            <Card 
-              key={driver.driverId} 
-              className="hover-elevate cursor-pointer" 
-              onClick={() => setSelectedDriver(driver)}
-              data-testid={`driver-card-${driver.driverId}`}
-            >
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-start justify-between">
+            <Card key={driver.id} className="hover-elevate" data-testid={`driver-card-${driver.id}`}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-6 w-6 text-primary" />
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">{driver.name}</h3>
-                      <p className="text-xs text-muted-foreground">{driver.driverId}</p>
+                      <CardTitle className="text-base">{driver.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {driver.phone}
+                      </CardDescription>
                     </div>
                   </div>
-                  <Badge className={`${getStatusBadge(driver.availabilityStatus)} no-default-hover-elevate no-default-active-elevate`}>
-                    {driver.availabilityStatus}
+                  <Badge className={`${getStatusBadge(driver.status || "available")} no-default-hover-elevate no-default-active-elevate`}>
+                    {getStatusLabel(driver.status || "available")}
                   </Badge>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Safety Score</p>
-                    <div className="flex items-center gap-2">
-                      <Progress value={driver.safetyScore} className="h-2 flex-1" />
-                      <span className={`font-medium ${getSafetyScoreColor(driver.safetyScore)}`}>
-                        {driver.safetyScore}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Performance</p>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                      <span className="font-medium">{driver.performanceRating.toFixed(1)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Truck className="h-4 w-4" />
-                    <span>{driver.pastTripsCount} trips</span>
-                  </div>
-                  <span className="font-medium">{formatCurrency(driver.totalEarnings)}</span>
-                </div>
-
-                {driver.assignedTruckPlate && (
-                  <div className="p-2 rounded-md bg-muted/50 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-muted-foreground" />
-                      <span>Truck: {driver.assignedTruckPlate}</span>
-                    </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {driver.licenseNumber && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="font-medium">License:</span>
+                    <span>{driver.licenseNumber}</span>
                   </div>
                 )}
+                {driver.licenseExpiry && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>Expires: {format(new Date(driver.licenseExpiry), "MMM d, yyyy")}</span>
+                  </div>
+                )}
+                {driver.email && (
+                  <div className="text-sm text-muted-foreground truncate">
+                    {driver.email}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleOpenEditDialog(driver)}
+                    data-testid={`button-edit-driver-${driver.id}`}
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="text-destructive"
+                    onClick={() => setDeletingDriver(driver)}
+                    data-testid={`button-delete-driver-${driver.id}`}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Remove
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      <Dialog open={!!selectedDriver} onOpenChange={() => setSelectedDriver(null)}>
-        {selectedDriver && (
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <span>{selectedDriver.name}</span>
-                  <p className="text-sm font-normal text-muted-foreground">{selectedDriver.driverId}</p>
-                </div>
-              </DialogTitle>
-              <DialogDescription>
-                Driver profile and performance details
-              </DialogDescription>
-            </DialogHeader>
-
-            <Tabs defaultValue="overview" className="mt-4">
-              <TabsList className="w-full justify-start">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="performance">Performance</TabsTrigger>
-                <TabsTrigger value="documents">Documents</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="pt-4 space-y-3">
-                      <h4 className="font-medium">Contact Information</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span>{selectedDriver.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>{selectedDriver.address}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="pt-4 space-y-3">
-                      <h4 className="font-medium">License Details</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Number</span>
-                          <span className="font-medium">{selectedDriver.licenseNumber}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Expiry</span>
-                          <span className="font-medium">
-                            {format(new Date(selectedDriver.licenseExpiry), "MMM d, yyyy")}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Joined</span>
-                          <span className="font-medium">
-                            {format(new Date(selectedDriver.joinDate), "MMM yyyy")}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {selectedDriver.assignedTruckPlate && (
-                  <Card>
-                    <CardContent className="pt-4">
-                      <h4 className="font-medium mb-2">Assigned Truck</h4>
-                      <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
-                        <Truck className="h-6 w-6 text-primary" />
-                        <span className="font-medium">{selectedDriver.assignedTruckPlate}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+      <Dialog open={isAddDialogOpen || !!editingDriver} onOpenChange={(open) => {
+        if (!open) {
+          setIsAddDialogOpen(false);
+          setEditingDriver(null);
+          form.reset();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingDriver ? "Edit Driver" : "Add New Driver"}</DialogTitle>
+            <DialogDescription>
+              {editingDriver ? "Update driver information" : "Add a new driver to your team"}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Driver name" {...field} data-testid="input-driver-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </TabsContent>
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Phone number" {...field} data-testid="input-driver-phone" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Email address" type="email" {...field} data-testid="input-driver-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="licenseNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>License Number (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="DL-1234567890" {...field} data-testid="input-driver-license" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="licenseExpiry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>License Expiry Date (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} data-testid="input-driver-license-expiry" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-driver-status">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="on_trip">On Trip</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddDialogOpen(false);
+                    setEditingDriver(null);
+                    form.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createDriverMutation.isPending || updateDriverMutation.isPending}
+                  data-testid="button-submit-driver"
+                >
+                  {(createDriverMutation.isPending || updateDriverMutation.isPending) && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  {editingDriver ? "Update Driver" : "Add Driver"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
-              <TabsContent value="performance" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <Card>
-                    <CardContent className="pt-4 text-center">
-                      <Shield className="h-8 w-8 mx-auto text-primary mb-2" />
-                      <p className="text-2xl font-bold">{selectedDriver.safetyScore}</p>
-                      <p className="text-xs text-muted-foreground">Safety Score</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-4 text-center">
-                      <Star className="h-8 w-8 mx-auto text-amber-500 mb-2" />
-                      <p className="text-2xl font-bold">{selectedDriver.performanceRating.toFixed(1)}</p>
-                      <p className="text-xs text-muted-foreground">Performance</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-4 text-center">
-                      <Truck className="h-8 w-8 mx-auto text-green-500 mb-2" />
-                      <p className="text-2xl font-bold">{selectedDriver.pastTripsCount}</p>
-                      <p className="text-xs text-muted-foreground">Trips</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-4 text-center">
-                      <TrendingUp className="h-8 w-8 mx-auto text-blue-500 mb-2" />
-                      <p className="text-2xl font-bold">{formatCurrency(selectedDriver.totalEarnings)}</p>
-                      <p className="text-xs text-muted-foreground">Earnings</p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <Card>
-                  <CardContent className="pt-4">
-                    <h4 className="font-medium mb-4">Performance Metrics</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Safety Score</span>
-                          <span className={`font-medium ${getSafetyScoreColor(selectedDriver.safetyScore)}`}>
-                            {selectedDriver.safetyScore}
-                          </span>
-                        </div>
-                        <Progress value={selectedDriver.safetyScore} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Performance Rating</span>
-                          <span className="font-medium">{selectedDriver.performanceRating.toFixed(1)}/5.0</span>
-                        </div>
-                        <Progress value={selectedDriver.performanceRating * 20} className="h-2" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="documents" className="space-y-4 mt-4">
-                <Card>
-                  <CardContent className="pt-4 space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-md bg-muted/50">
-                      <div className="flex items-center gap-3">
-                        <Award className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="font-medium">Driving License</p>
-                          <p className="text-xs text-muted-foreground">{selectedDriver.licenseNumber}</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">
-                        Expires {format(new Date(selectedDriver.licenseExpiry), "MMM yyyy")}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-md bg-muted/50">
-                      <div className="flex items-center gap-3">
-                        <Shield className="h-5 w-5 text-green-500" />
-                        <div>
-                          <p className="font-medium">Background Check</p>
-                          <p className="text-xs text-muted-foreground">Verified</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        Valid
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-md bg-muted/50">
-                      <div className="flex items-center gap-3">
-                        <Calendar className="h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="font-medium">Medical Certificate</p>
-                          <p className="text-xs text-muted-foreground">Annual checkup</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">Active</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </DialogContent>
-        )}
+      <Dialog open={!!deletingDriver} onOpenChange={(open) => !open && setDeletingDriver(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Driver</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove {deletingDriver?.name} from your team? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingDriver(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingDriver && deleteDriverMutation.mutate(deletingDriver.id)}
+              disabled={deleteDriverMutation.isPending}
+              data-testid="button-confirm-delete-driver"
+            >
+              {deleteDriverMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Remove Driver
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );

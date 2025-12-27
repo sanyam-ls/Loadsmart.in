@@ -7273,8 +7273,9 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Carrier access required" });
       }
 
-      // Only enterprise carriers can assign drivers
-      if (user.carrierType !== "enterprise") {
+      // Only enterprise carriers can assign drivers - check carrier_profiles table
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      if (!carrierProfile || carrierProfile.carrierType !== "enterprise") {
         return res.status(403).json({ error: "Driver assignment is only available for enterprise carriers" });
       }
 

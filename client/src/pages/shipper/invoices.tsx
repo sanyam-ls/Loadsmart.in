@@ -615,7 +615,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
       </Tabs>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -626,7 +626,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             </DialogDescription>
           </DialogHeader>
           {selectedInvoice && (
-            <ScrollArea className="flex-1 min-h-0 pr-4" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+            <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: 'calc(80vh - 140px)' }}>
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -917,9 +917,9 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                   </Collapsible>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           )}
-          <DialogFooter className="border-t pt-4">
+          <DialogFooter className="flex-shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => setDetailsOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>

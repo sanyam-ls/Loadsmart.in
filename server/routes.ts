@@ -3568,7 +3568,7 @@ export async function registerRoutes(
   // INVOICE BUILDER ENDPOINTS
   // =============================================
 
-  // GET /api/admin/invoices - Get all invoices (admin only)
+  // GET /api/admin/invoices - Get all invoices (admin only) with enriched carrier details
   app.get("/api/admin/invoices", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -3577,7 +3577,83 @@ export async function registerRoutes(
       }
 
       const invoices = await storage.getAllInvoices();
-      res.json(invoices);
+      
+      // Enrich each invoice with carrier, driver, truck, and route details
+      const enrichedInvoices = await Promise.all(invoices.map(async (invoice) => {
+        try {
+          // Get load details for route info
+          const load = await storage.getLoad(invoice.loadId);
+          
+          // Get shipment to find carrier and driver
+          const shipment = await storage.getShipmentByLoad(invoice.loadId);
+          
+          let carrier = null;
+          let driver = null;
+          let truck = null;
+          
+          if (shipment?.carrierId) {
+            // Get carrier user info
+            const carrierUser = await storage.getUser(shipment.carrierId);
+            const carrierProfile = await storage.getCarrierProfile(shipment.carrierId);
+            
+            // Count carrier's completed trips
+            const carrierShipments = await storage.getShipmentsByCarrier(shipment.carrierId);
+            const tripsCompleted = carrierShipments.filter(s => s.status === 'delivered').length;
+            
+            if (carrierUser) {
+              carrier = {
+                id: carrierUser.id,
+                name: carrierUser.name || carrierUser.username,
+                companyName: carrierProfile?.companyName || carrierUser.company,
+                phone: carrierUser.phone,
+                carrierType: carrierProfile?.carrierType || 'enterprise',
+                tripsCompleted,
+              };
+            }
+          }
+          
+          // Get driver details (for enterprise carriers)
+          if (shipment?.driverId) {
+            const driverData = await storage.getDriver(shipment.driverId);
+            if (driverData) {
+              driver = {
+                id: driverData.id,
+                name: driverData.name,
+                phone: driverData.phone,
+                licenseNumber: driverData.licenseNumber,
+              };
+            }
+          }
+          
+          // Get truck details
+          if (shipment?.truckId) {
+            const truckData = await storage.getTruck(shipment.truckId);
+            if (truckData) {
+              truck = {
+                id: truckData.id,
+                registrationNumber: truckData.registrationNumber,
+                truckType: truckData.truckType,
+                capacity: truckData.capacity,
+              };
+            }
+          }
+          
+          return {
+            ...invoice,
+            pickupCity: load?.pickupCity,
+            dropoffCity: load?.dropoffCity,
+            loadRoute: load ? `${load.pickupCity} to ${load.dropoffCity}` : invoice.loadRoute,
+            carrier,
+            driver,
+            truck,
+          };
+        } catch (err) {
+          console.error(`Error enriching invoice ${invoice.id}:`, err);
+          return invoice;
+        }
+      }));
+      
+      res.json(enrichedInvoices);
     } catch (error) {
       console.error("Get invoices error:", error);
       res.status(500).json({ error: "Internal server error" });

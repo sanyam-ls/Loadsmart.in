@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   FileText, Send, Check, Clock, AlertCircle, DollarSign,
   Search, Filter, Eye, RefreshCw, MessageSquare, History,
-  CheckCircle, XCircle, ArrowLeftRight, ChevronDown, ChevronUp, Star
+  CheckCircle, XCircle, ArrowLeftRight, ChevronDown, ChevronUp, Star,
+  User, Building2, Phone, Truck, Award, MapPin
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -39,7 +40,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -55,6 +57,29 @@ interface CounterOffer {
   responseNote?: string;
 }
 
+interface CarrierDetails {
+  id: string;
+  name: string;
+  companyName?: string;
+  phone?: string;
+  carrierType: 'solo' | 'enterprise';
+  tripsCompleted: number;
+}
+
+interface DriverDetails {
+  id: string;
+  name: string;
+  phone?: string;
+  licenseNumber?: string;
+}
+
+interface TruckDetails {
+  id: string;
+  registrationNumber: string;
+  truckType?: string;
+  capacity?: number;
+}
+
 interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -64,6 +89,7 @@ interface Invoice {
   load?: { pickupCity: string; dropoffCity: string; status: string };
   subtotal: string;
   taxAmount: string;
+  taxPercent?: number;
   totalAmount: string;
   status: string;
   shipperStatus?: "pending" | "viewed" | "acknowledged" | "countered" | "paid";
@@ -82,6 +108,13 @@ interface Invoice {
   counterReason?: string;
   counteredAt?: string;
   advancePaymentPercent?: number;
+  lineItems?: { description: string; amount: string }[];
+  pickupCity?: string;
+  dropoffCity?: string;
+  loadRoute?: string;
+  carrier?: CarrierDetails;
+  driver?: DriverDetails;
+  truck?: TruckDetails;
 }
 
 const simulatedInvoices: Invoice[] = [
@@ -548,59 +581,222 @@ export default function AdminInvoicesPage() {
       </Card>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Invoice {selectedInvoice?.invoiceNumber}
+              {selectedInvoice?.invoiceNumber}
             </DialogTitle>
             <DialogDescription>
               Invoice details and shipper response history
             </DialogDescription>
           </DialogHeader>
           {selectedInvoice && (
-            <ScrollArea className="flex-1 pr-4">
+            <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: 'calc(80vh - 140px)' }}>
               <div className="space-y-6">
+                {/* Header Info Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm text-muted-foreground">Shipper</span>
-                    <p className="font-medium">{selectedInvoice.shipper?.companyName || selectedInvoice.shipper?.username}</p>
+                    <Label className="text-muted-foreground">Route</Label>
+                    <p className="font-medium">{selectedInvoice.loadRoute || (selectedInvoice.load ? `${selectedInvoice.load.pickupCity} to ${selectedInvoice.load.dropoffCity}` : "N/A")}</p>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Invoice Status</span>
+                    <Label className="text-muted-foreground">Status</Label>
                     <p className="mt-1">{getStatusBadge(selectedInvoice.status)}</p>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Shipper Response</span>
-                    <p className="mt-1">{getShipperStatusBadge(selectedInvoice.shipperStatus)}</p>
+                    <Label className="text-muted-foreground">Created</Label>
+                    <p className="font-medium">{format(new Date(selectedInvoice.createdAt), "d MMM yyyy")}</p>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Due Date</span>
+                    <Label className="text-muted-foreground">Due Date</Label>
                     <p className="font-medium">
-                      {selectedInvoice.dueDate ? format(new Date(selectedInvoice.dueDate), "MMM d, yyyy") : "-"}
+                      {selectedInvoice.dueDate ? format(new Date(selectedInvoice.dueDate), "d MMM yyyy") : "-"}
                     </p>
                   </div>
                 </div>
 
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span>Rs. {parseFloat(selectedInvoice.subtotal || '0').toLocaleString('en-IN')}</span>
+                {/* Shipper Section */}
+                <Card className="border-slate-200 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-900/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-slate-600" />
+                      Shipper
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Company Name</Label>
+                        <p className="font-medium text-sm">{selectedInvoice.shipper?.companyName || selectedInvoice.shipper?.username}</p>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">GST (18%)</span>
-                        <span>Rs. {parseFloat(selectedInvoice.taxAmount || '0').toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2">
-                        <span className="font-semibold">Total Amount</span>
-                        <span className="text-xl font-bold">Rs. {parseFloat(selectedInvoice.totalAmount || '0').toLocaleString('en-IN')}</span>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Response Status</Label>
+                        <p className="mt-1">{getShipperStatusBadge(selectedInvoice.shipperStatus)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
+                {/* Carrier Details Section */}
+                {selectedInvoice.carrier && (
+                  <Card className="border-blue-200 dark:border-blue-700/50 bg-blue-50/30 dark:bg-blue-900/10">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        {selectedInvoice.carrier.carrierType === 'solo' ? (
+                          <User className="h-4 w-4 text-blue-600" />
+                        ) : (
+                          <Building2 className="h-4 w-4 text-blue-600" />
+                        )}
+                        {selectedInvoice.carrier.carrierType === 'solo' ? 'Solo Driver' : 'Enterprise Carrier'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {selectedInvoice.carrier.carrierType === 'solo' ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Driver Name</Label>
+                              <p className="font-medium text-sm" data-testid="text-carrier-name">
+                                {selectedInvoice.carrier.name}
+                              </p>
+                            </div>
+                            {selectedInvoice.carrier.phone && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Phone</Label>
+                                <p className="text-sm flex items-center gap-1">
+                                  <Phone className="h-3 w-3 text-muted-foreground" />
+                                  {selectedInvoice.carrier.phone}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            {selectedInvoice.truck && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Truck Number</Label>
+                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-truck-number">
+                                  <Truck className="h-3 w-3 text-muted-foreground" />
+                                  {selectedInvoice.truck.registrationNumber}
+                                </p>
+                              </div>
+                            )}
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Trips Completed</Label>
+                              <p className="text-sm flex items-center gap-1" data-testid="text-trips-completed">
+                                <Award className="h-3 w-3 text-green-600" />
+                                {selectedInvoice.carrier.tripsCompleted} trips
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Company Name</Label>
+                              <p className="font-medium text-sm" data-testid="text-company-name">
+                                {selectedInvoice.carrier.companyName || selectedInvoice.carrier.name}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Trips Completed</Label>
+                              <p className="text-sm flex items-center gap-1" data-testid="text-trips-completed">
+                                <Award className="h-3 w-3 text-green-600" />
+                                {selectedInvoice.carrier.tripsCompleted} trips
+                              </p>
+                            </div>
+                          </div>
+                          {selectedInvoice.driver && (
+                            <div className="bg-background/50 rounded-md p-2">
+                              <Label className="text-xs text-muted-foreground">Assigned Driver</Label>
+                              <div className="flex items-center gap-3 mt-1">
+                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-driver-name">
+                                  <User className="h-3 w-3 text-muted-foreground" />
+                                  {selectedInvoice.driver.name}
+                                </p>
+                                {selectedInvoice.driver.phone && (
+                                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />
+                                    {selectedInvoice.driver.phone}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-3">
+                            {selectedInvoice.truck && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Truck Number</Label>
+                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-truck-number">
+                                  <Truck className="h-3 w-3 text-muted-foreground" />
+                                  {selectedInvoice.truck.registrationNumber}
+                                </p>
+                              </div>
+                            )}
+                            {selectedInvoice.truck?.truckType && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Truck Type</Label>
+                                <p className="text-sm">{selectedInvoice.truck.truckType}</p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Route Display */}
+                      {(selectedInvoice.pickupCity || selectedInvoice.load?.pickupCity) && (
+                        <div className="pt-2 border-t">
+                          <Label className="text-xs text-muted-foreground">Route</Label>
+                          <p className="text-sm font-medium flex items-center gap-2 mt-1">
+                            <MapPin className="h-3 w-3 text-green-600" />
+                            {selectedInvoice.pickupCity || selectedInvoice.load?.pickupCity}
+                            <span className="text-muted-foreground">to</span>
+                            <MapPin className="h-3 w-3 text-red-600" />
+                            {selectedInvoice.dropoffCity || selectedInvoice.load?.dropoffCity}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Line Items */}
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-sm">Line Items</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-2">
+                    {selectedInvoice.lineItems && selectedInvoice.lineItems.length > 0 ? (
+                      selectedInvoice.lineItems.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">{item.description}</span>
+                          <span>Rs. {parseFloat(item.amount || '0').toLocaleString('en-IN')}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Freight services: {selectedInvoice.loadRoute || (selectedInvoice.load ? `${selectedInvoice.load.pickupCity} to ${selectedInvoice.load.dropoffCity}` : "Load transport")}</span>
+                        <span>Rs. {parseFloat(selectedInvoice.subtotal || '0').toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <Separator />
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>Rs. {parseFloat(selectedInvoice.subtotal || '0').toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">GST ({selectedInvoice.taxPercent || 18}%)</span>
+                      <span>Rs. {parseFloat(selectedInvoice.taxAmount || '0').toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="font-semibold">Total Amount</span>
+                      <span className="text-xl font-bold">Rs. {parseFloat(selectedInvoice.totalAmount || '0').toLocaleString('en-IN')}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Advance Payment Section */}
                 {selectedInvoice.advancePaymentPercent !== undefined && selectedInvoice.advancePaymentPercent !== null && selectedInvoice.advancePaymentPercent > 0 && (
                   <Card className="border-green-200 dark:border-green-700/50 bg-green-50/50 dark:bg-green-900/10">
                     <CardContent className="pt-4 space-y-3">
@@ -624,18 +820,6 @@ export default function AdminInvoicesPage() {
                           Rs. {Math.round(parseFloat(selectedInvoice.subtotal || '0') * (1 - selectedInvoice.advancePaymentPercent / 100)).toLocaleString('en-IN')}
                         </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {selectedInvoice.load && (
-                  <Card>
-                    <CardHeader className="py-3">
-                      <CardTitle className="text-sm">Load Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <p className="font-medium">{selectedInvoice.load.pickupCity} → {selectedInvoice.load.dropoffCity}</p>
-                      <p className="text-sm text-muted-foreground">Load Status: {selectedInvoice.load.status}</p>
                     </CardContent>
                   </Card>
                 )}
@@ -826,9 +1010,9 @@ export default function AdminInvoicesPage() {
                   </Collapsible>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           )}
-          <DialogFooter className="border-t pt-4">
+          <DialogFooter className="flex-shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => setDetailsOpen(false)}>Close</Button>
             {selectedInvoice?.status === "draft" && (
               <Button onClick={() => {

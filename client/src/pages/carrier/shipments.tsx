@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Truck, Package, MapPin, Clock, CheckCircle, RefreshCw, ArrowRight, Calendar, Key } from "lucide-react";
+import { Loader2, Truck, Package, MapPin, Clock, CheckCircle, RefreshCw, ArrowRight, Calendar, Key, UserCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/empty-state";
 import { OtpTripActions } from "@/components/otp-trip-actions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useShipments, useLoads, invalidateAllData } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
+import { useCarrierData } from "@/lib/carrier-data-store";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Shipment, Load } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -36,11 +40,34 @@ interface ShipmentWithLoad extends Shipment {
 }
 
 export default function CarrierShipmentsPage() {
-  const { user } = useAuth();
+  const { user, carrierType } = useAuth();
   const { toast } = useToast();
   const { data: shipments, isLoading: shipmentsLoading, refetch } = useShipments();
   const { data: loads } = useLoads();
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
+  const carrierData = useCarrierData();
+  const isEnterprise = carrierType === "enterprise";
+
+  const assignDriverMutation = useMutation({
+    mutationFn: async ({ shipmentId, driverId }: { shipmentId: string; driverId: string }) => {
+      return apiRequest("PATCH", `/api/shipments/${shipmentId}/assign-driver`, { driverId });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Driver Assigned",
+        description: "Driver has been assigned to this shipment.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+      refetch();
+    },
+    onError: () => {
+      toast({
+        title: "Assignment Failed",
+        description: "Failed to assign driver. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   useEffect(() => {
     const unsubApproved = onMarketplaceEvent("otp_approved", (data) => {
@@ -302,6 +329,67 @@ export default function CarrierShipmentsPage() {
                       </p>
                     </div>
                   </div>
+
+                  {isEnterprise && (
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center gap-2 mb-3">
+                        <UserCircle className="h-4 w-4 text-muted-foreground" />
+                        <p className="font-medium text-sm">Driver Assignment</p>
+                      </div>
+                      {selectedShipment.driverId ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                            {carrierData.drivers.find(d => d.driverId === selectedShipment.driverId)?.name || "Assigned Driver"}
+                          </Badge>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              const availableDrivers = carrierData.drivers.filter(d => d.status === "available");
+                              if (availableDrivers.length > 0) {
+                                assignDriverMutation.mutate({
+                                  shipmentId: selectedShipment.id,
+                                  driverId: availableDrivers[0].driverId,
+                                });
+                              }
+                            }}
+                            data-testid="button-reassign-driver"
+                          >
+                            Change
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Select
+                            onValueChange={(driverId) => {
+                              assignDriverMutation.mutate({
+                                shipmentId: selectedShipment.id,
+                                driverId,
+                              });
+                            }}
+                            disabled={assignDriverMutation.isPending}
+                          >
+                            <SelectTrigger className="w-[200px]" data-testid="select-driver">
+                              <SelectValue placeholder="Select a driver" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {carrierData.drivers
+                                .filter(d => d.status === "available")
+                                .slice(0, 20)
+                                .map(driver => (
+                                  <SelectItem key={driver.driverId} value={driver.driverId}>
+                                    {driver.name} - {driver.phone}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          {assignDriverMutation.isPending && (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

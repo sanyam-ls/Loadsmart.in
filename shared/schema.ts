@@ -774,6 +774,7 @@ export const shipments = pgTable("shipments", {
   carrierId: varchar("carrier_id").notNull().references(() => users.id),
   shipperId: varchar("shipper_id").references(() => users.id),
   truckId: varchar("truck_id").references(() => trucks.id),
+  driverId: varchar("driver_id").references(() => users.id),
   status: text("status").default("pickup_scheduled"),
   currentLat: decimal("current_lat", { precision: 10, scale: 7 }),
   currentLng: decimal("current_lng", { precision: 10, scale: 7 }),

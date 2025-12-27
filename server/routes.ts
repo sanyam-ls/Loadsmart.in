@@ -7165,6 +7165,49 @@ export async function registerRoutes(
     }
   });
 
+  // PATCH /api/shipments/:id/assign-driver - Assign driver to shipment (enterprise carriers)
+  app.patch("/api/shipments/:id/assign-driver", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const shipment = await storage.getShipment(req.params.id);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+
+      // Only the carrier that owns the shipment can assign drivers
+      if (shipment.carrierId !== user.id) {
+        return res.status(403).json({ error: "You can only assign drivers to your own shipments" });
+      }
+
+      const { driverId, truckId } = req.body;
+      
+      if (!driverId) {
+        return res.status(400).json({ error: "Driver ID is required" });
+      }
+
+      // Verify the driver belongs to this carrier (is in their fleet)
+      const driver = await storage.getUser(driverId);
+      if (!driver) {
+        return res.status(404).json({ error: "Driver not found" });
+      }
+
+      // Update the shipment with driver and optionally truck
+      const updatedShipment = await storage.updateShipment(req.params.id, {
+        driverId,
+        ...(truckId && { truckId }),
+      });
+
+      res.json(updatedShipment);
+    } catch (error) {
+      console.error("Assign driver error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // =============================================
   // DOCUMENTS ENDPOINTS
   // =============================================

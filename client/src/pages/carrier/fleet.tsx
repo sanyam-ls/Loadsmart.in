@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { 
   Plus, Search, Truck, MapPin, Package, Edit, Trash2, AlertTriangle, 
   CheckCircle, Clock, Wrench, Filter, ChevronDown, ChevronRight,
-  Fuel, Calendar, Shield, FileText, User, Settings, TrendingUp, Eye
+  Fuel, Calendar, Shield, FileText, User, Settings, TrendingUp, Eye, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/table";
 import { StatCard } from "@/components/stat-card";
 import { useCarrierData, type CarrierTruck } from "@/lib/carrier-data-store";
+import { useQuery } from "@tanstack/react-query";
+import type { Truck as DbTruck } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 import { 
   PieChart, 
@@ -285,14 +287,75 @@ function TruckDetailDialog({ truck }: { truck: CarrierTruck }) {
 
 export default function FleetPage() {
   const [, navigate] = useLocation();
-  const { trucks, getFleetOverview } = useCarrierData();
+  const { trucks: mockTrucks, getFleetOverview } = useCarrierData();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedTruck, setSelectedTruck] = useState<CarrierTruck | null>(null);
   
-  const fleetOverview = useMemo(() => getFleetOverview(), [getFleetOverview]);
+  // Query backend trucks for real-time updates
+  const { data: backendTrucks, isLoading: trucksLoading, isSuccess: trucksLoaded } = useQuery<DbTruck[]>({
+    queryKey: ["/api/trucks"],
+    refetchOnWindowFocus: true,
+  });
+
+  // Use backend trucks when query succeeds (even if empty), otherwise show mock data while loading
+  const trucks: CarrierTruck[] = useMemo(() => {
+    // If query has succeeded, use backend data (even if empty array)
+    if (trucksLoaded && backendTrucks !== undefined) {
+      return backendTrucks.map((t) => ({
+        truckId: t.id,
+        truckType: t.truckType as CarrierTruck["truckType"],
+        licensePlate: t.licensePlate,
+        registrationNumber: t.licensePlate,
+        chassisNumber: `CH-${t.id.slice(0, 8).toUpperCase()}`,
+        manufacturer: t.make || "Unknown",
+        model: t.model || t.truckType,
+        makeYear: t.year || new Date().getFullYear(),
+        loadCapacity: t.capacity,
+        bodyType: t.truckType,
+        currentLocation: t.currentLocation || "Location not set",
+        currentStatus: t.isAvailable ? "Idle" : "On Trip" as CarrierTruck["currentStatus"],
+        fuelLevel: 75,
+        odometerReading: 50000,
+        assignedDriver: null,
+        assignedDriverId: null,
+        insuranceExpiry: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        fitnessExpiry: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
+        lastServiceDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        nextServiceDue: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+      }));
+    }
+    // While loading, show mock data as placeholder
+    return mockTrucks;
+  }, [backendTrucks, trucksLoaded, mockTrucks]);
+  
+  const fleetOverview = useMemo(() => {
+    // Use backend-based metrics when backend data is loaded
+    if (trucksLoaded) {
+      const totalTrucks = trucks.length;
+      const activeTrucks = trucks.filter(t => t.currentStatus === "On Trip" || t.currentStatus === "En Route").length;
+      const availableNow = trucks.filter(t => t.currentStatus === "Idle").length;
+      const underMaintenance = trucks.filter(t => t.currentStatus === "Under Maintenance").length;
+      
+      return {
+        totalTrucks,
+        activeTrucks,
+        availableNow,
+        underMaintenance,
+        fleetUtilization: totalTrucks > 0 ? Math.round((activeTrucks / totalTrucks) * 100) : 0,
+        truckTypeBreakdown: Object.entries(
+          trucks.reduce((acc, t) => {
+            acc[t.truckType] = (acc[t.truckType] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        ).map(([type, count]) => ({ type, count })),
+        documentExpiryAlerts: [],
+      };
+    }
+    return getFleetOverview();
+  }, [trucks, trucksLoaded, getFleetOverview]);
   
   const filteredTrucks = useMemo(() => {
     return trucks.filter((truck) => {

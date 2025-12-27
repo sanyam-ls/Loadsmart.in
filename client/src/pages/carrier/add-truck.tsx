@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Truck, MapPin, Package, FileText, ArrowRight } from "lucide-react";
+import { Truck, MapPin, Package, FileText, ArrowRight, Upload, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 const truckFormSchema = z.object({
   truckType: z.string().min(1, "Truck type is required"),
@@ -58,12 +60,49 @@ const categoryLabels: Record<string, string> = {
   bulker: "Bulker (20-36 Ton)",
 };
 
+interface DocumentFile {
+  file: File;
+  name: string;
+  type: string;
+}
+
 export default function AddTruckPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { carrierType } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [documents, setDocuments] = useState<DocumentFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isSoloCarrier = carrierType === "solo";
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newDocs: DocumentFile[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // Determine document type from file name
+        const name = file.name.toLowerCase();
+        let type = "other";
+        if (name.includes("rc") || name.includes("registration")) type = "rc";
+        else if (name.includes("insurance")) type = "insurance";
+        else if (name.includes("fitness")) type = "fitness";
+        else if (name.includes("puc") || name.includes("pollution")) type = "puc";
+        else if (name.includes("permit")) type = "permit";
+        
+        newDocs.push({ file, name: file.name, type });
+      }
+      setDocuments(prev => [...prev, ...newDocs]);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const removeDocument = (index: number) => {
+    setDocuments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const form = useForm<TruckFormData>({
     resolver: zodResolver(truckFormSchema),
@@ -91,6 +130,43 @@ export default function AddTruckPage() {
       });
 
       if (response.ok) {
+        const truck = await response.json();
+        
+        // Upload documents if any
+        if (documents.length > 0) {
+          for (const doc of documents) {
+            try {
+              const reader = new FileReader();
+              await new Promise<void>((resolve, reject) => {
+                reader.onload = async () => {
+                  const fileUrl = reader.result as string;
+                  await fetch("/api/carrier/documents", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                      documentType: doc.type,
+                      fileName: doc.name,
+                      fileUrl: fileUrl,
+                      fileSize: doc.file.size,
+                      expiryDate: null,
+                      truckId: truck.id,
+                    }),
+                  });
+                  resolve();
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(doc.file);
+              });
+            } catch (docError) {
+              console.error("Failed to upload document:", docError);
+            }
+          }
+        }
+        
+        // Invalidate trucks query for real-time update
+        queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+        
         toast({ title: "Truck added!", description: "Your truck is now listed and ready for loads." });
         navigate(isSoloCarrier ? "/carrier/my-truck" : "/carrier/fleet");
       } else {
@@ -263,12 +339,51 @@ export default function AddTruckPage() {
                 Documents (Optional)
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover-elevate cursor-pointer">
-                <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm font-medium">Upload vehicle documents</p>
-                <p className="text-xs text-muted-foreground">RC, Insurance, Fitness Certificate</p>
+            <CardContent className="space-y-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+                data-testid="input-document-upload"
+              />
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-border rounded-lg p-6 text-center hover-elevate cursor-pointer"
+                data-testid="dropzone-documents"
+              >
+                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm font-medium">Click to upload vehicle documents</p>
+                <p className="text-xs text-muted-foreground">RC, Insurance, Fitness Certificate (PDF, JPG, PNG)</p>
               </div>
+              
+              {documents.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Selected documents:</p>
+                  {documents.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between gap-2 p-2 border rounded-md">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <span className="text-sm truncate">{doc.name}</span>
+                        <Badge variant="outline" className="flex-shrink-0 no-default-hover-elevate no-default-active-elevate">
+                          {doc.type.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeDocument(index)}
+                        data-testid={`button-remove-doc-${index}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

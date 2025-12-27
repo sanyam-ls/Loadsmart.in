@@ -282,6 +282,10 @@ export const trucks = pgTable("trucks", {
   year: integer("year"), // Manufacturing year
   city: text("city"), // Registration city
   registrationDate: timestamp("registration_date"), // Vehicle registration date
+  // Additional specification fields
+  chassisNumber: text("chassis_number"), // Chassis number
+  registrationNumber: text("registration_number"), // Registration certificate number (RC)
+  bodyType: text("body_type"), // Body type (open, closed, container, etc.)
 });
 
 // Drivers table (for enterprise carriers)

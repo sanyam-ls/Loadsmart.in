@@ -37,6 +37,13 @@ const truckFormSchema = z.object({
   capacityUnit: z.string().default("tons"),
   currentLocation: z.string().optional(),
   isAvailable: z.boolean().default(true),
+  // Extended specification fields
+  make: z.string().min(1, "Manufacturer is required"),
+  model: z.string().min(1, "Model is required"),
+  year: z.string().min(1, "Year is required"),
+  registrationNumber: z.string().optional(),
+  chassisNumber: z.string().optional(),
+  bodyType: z.string().optional(),
 });
 
 type TruckFormData = z.infer<typeof truckFormSchema>;
@@ -113,6 +120,12 @@ export default function AddTruckPage() {
       capacityUnit: "tons",
       currentLocation: "",
       isAvailable: true,
+      make: "",
+      model: "",
+      year: "",
+      registrationNumber: "",
+      chassisNumber: "",
+      bodyType: "",
     },
   });
 
@@ -124,8 +137,18 @@ export default function AddTruckPage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          ...data,
+          truckType: data.truckType,
+          licensePlate: data.licensePlate,
           capacity: Number(data.capacity),
+          capacityUnit: data.capacityUnit,
+          currentLocation: data.currentLocation,
+          isAvailable: data.isAvailable,
+          make: data.make,
+          model: data.model,
+          year: data.year ? Number(data.year) : undefined,
+          registrationNumber: data.registrationNumber || undefined,
+          chassisNumber: data.chassisNumber || undefined,
+          bodyType: data.bodyType || undefined,
         }),
       });
 
@@ -196,50 +219,167 @@ export default function AddTruckPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="truckType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Truck Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="make"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Manufacturer</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-manufacturer">
+                            <SelectValue placeholder="Select manufacturer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Tata Motors">Tata Motors</SelectItem>
+                          <SelectItem value="Ashok Leyland">Ashok Leyland</SelectItem>
+                          <SelectItem value="Mahindra">Mahindra</SelectItem>
+                          <SelectItem value="Eicher">Eicher</SelectItem>
+                          <SelectItem value="BharatBenz">BharatBenz</SelectItem>
+                          <SelectItem value="Force Motors">Force Motors</SelectItem>
+                          <SelectItem value="Volvo">Volvo</SelectItem>
+                          <SelectItem value="Scania">Scania</SelectItem>
+                          <SelectItem value="MAN">MAN</SelectItem>
+                          <SelectItem value="Isuzu">Isuzu</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="model"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Model</FormLabel>
                       <FormControl>
-                        <SelectTrigger data-testid="select-truck-type">
-                          <SelectValue placeholder="Select truck type" />
-                        </SelectTrigger>
+                        <Input placeholder="e.g., Prima 4928" {...field} data-testid="input-model" />
                       </FormControl>
-                      <SelectContent className="max-h-[300px]">
-                        {truckCategories.map((category) => (
-                          <SelectGroup key={category}>
-                            <SelectLabel className="text-xs font-semibold text-muted-foreground">
-                              {categoryLabels[category]}
-                            </SelectLabel>
-                            {truckTypesByCategory[category]?.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="licensePlate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>License Plate</FormLabel>
-                    <FormControl>
-                      <Input placeholder="ABC-1234" {...field} data-testid="input-license-plate" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="year"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Year of Manufacture</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="2023" min="1990" max={new Date().getFullYear()} {...field} data-testid="input-year" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="truckType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Truck Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-truck-type">
+                            <SelectValue placeholder="Select truck type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {truckCategories.map((category) => (
+                            <SelectGroup key={category}>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">
+                                {categoryLabels[category]}
+                              </SelectLabel>
+                              {truckTypesByCategory[category]?.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="licensePlate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>License Plate</FormLabel>
+                      <FormControl>
+                        <Input placeholder="MH-01-AB-1234" {...field} data-testid="input-license-plate" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="registrationNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Registration Number (RC)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Same as license plate if not available" {...field} data-testid="input-registration-number" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="chassisNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Chassis Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., MAT123456789012345" {...field} data-testid="input-chassis-number" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="bodyType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Body Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-body-type">
+                            <SelectValue placeholder="Select body type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="open">Open Body</SelectItem>
+                          <SelectItem value="closed">Closed Body</SelectItem>
+                          <SelectItem value="container">Container</SelectItem>
+                          <SelectItem value="flatbed">Flatbed</SelectItem>
+                          <SelectItem value="tanker">Tanker</SelectItem>
+                          <SelectItem value="tipper">Tipper</SelectItem>
+                          <SelectItem value="trailer">Trailer</SelectItem>
+                          <SelectItem value="refrigerated">Refrigerated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 

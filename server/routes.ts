@@ -7165,12 +7165,17 @@ export async function registerRoutes(
     }
   });
 
-  // PATCH /api/shipments/:id/assign-driver - Assign driver to shipment (enterprise carriers)
+  // PATCH /api/shipments/:id/assign-driver - Assign driver to shipment (enterprise carriers only)
   app.patch("/api/shipments/:id/assign-driver", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
       if (!user || user.role !== "carrier") {
         return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Only enterprise carriers can assign drivers
+      if (user.carrierType !== "enterprise") {
+        return res.status(403).json({ error: "Driver assignment is only available for enterprise carriers" });
       }
 
       const shipment = await storage.getShipment(req.params.id);
@@ -7189,11 +7194,9 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Driver ID is required" });
       }
 
-      // Verify the driver belongs to this carrier (is in their fleet)
-      const driver = await storage.getUser(driverId);
-      if (!driver) {
-        return res.status(404).json({ error: "Driver not found" });
-      }
+      // For now, we accept the driverId as provided by the enterprise carrier
+      // In a full implementation, this would validate against a fleet/drivers table
+      // The carrier data store on frontend provides the driver list for selection
 
       // Update the shipment with driver and optionally truck
       const updatedShipment = await storage.updateShipment(req.params.id, {

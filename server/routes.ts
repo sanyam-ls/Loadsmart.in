@@ -3825,6 +3825,14 @@ export async function registerRoutes(
 
       const invoiceNumber = await storage.generateInvoiceNumber();
 
+      // Calculate advance payment from load
+      const advancePercent = load.advancePaymentPercent || 0;
+      // Sanitize totalAmount - remove commas and other formatting
+      const sanitizedTotal = String(totalAmount).replace(/,/g, '').replace(/[^0-9.]/g, '');
+      const totalAmountNum = parseFloat(sanitizedTotal) || parseFloat(load.adminFinalPrice || load.finalPrice || '0');
+      const advanceAmount = advancePercent > 0 && !isNaN(totalAmountNum) ? (totalAmountNum * (advancePercent / 100)).toFixed(2) : null;
+      const balanceOnDelivery = advancePercent > 0 && !isNaN(totalAmountNum) ? (totalAmountNum - parseFloat(advanceAmount || "0")).toFixed(2) : null;
+
       const invoice = await storage.createInvoice({
         invoiceNumber,
         loadId,
@@ -3840,6 +3848,9 @@ export async function registerRoutes(
         taxPercent: taxPercent || "18",
         taxAmount: taxAmount || "0",
         totalAmount,
+        advancePaymentPercent: advancePercent > 0 && !isNaN(totalAmountNum) ? advancePercent : null,
+        advancePaymentAmount: advanceAmount,
+        balanceOnDelivery: balanceOnDelivery,
         paymentTerms: paymentTerms || "Net 30",
         dueDate: dueDate ? new Date(dueDate) : undefined,
         notes,
@@ -4271,6 +4282,14 @@ export async function registerRoutes(
       const invoiceNumber = await storage.generateInvoiceNumber();
       const dueDateValue = dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+      // Calculate advance payment from load
+      const advancePercent = load.advancePaymentPercent || 0;
+      // Sanitize totalAmount - remove commas and other formatting
+      const sanitizedTotal = String(totalAmount).replace(/,/g, '').replace(/[^0-9.]/g, '');
+      const totalAmountNum = parseFloat(sanitizedTotal) || parseFloat(load.adminFinalPrice || load.finalPrice || '0');
+      const advanceAmount = advancePercent > 0 && !isNaN(totalAmountNum) ? (totalAmountNum * (advancePercent / 100)).toFixed(2) : null;
+      const balanceOnDelivery = advancePercent > 0 && !isNaN(totalAmountNum) ? (totalAmountNum - parseFloat(advanceAmount || "0")).toFixed(2) : null;
+
       const invoice = await storage.createInvoice({
         invoiceNumber,
         loadId,
@@ -4282,6 +4301,9 @@ export async function registerRoutes(
         taxPercent: taxPercent || "18",
         taxAmount: taxAmount || "0",
         totalAmount,
+        advancePaymentPercent: advancePercent > 0 && !isNaN(totalAmountNum) ? advancePercent : null,
+        advancePaymentAmount: advanceAmount,
+        balanceOnDelivery: balanceOnDelivery,
         paymentTerms: paymentTerms || "Net 30",
         dueDate: dueDateValue,
         notes,
@@ -5714,6 +5736,11 @@ export async function registerRoutes(
       const taxAmount = finalPrice * taxRate;
       const totalAmount = finalPrice + taxAmount;
 
+      // Calculate advance payment from load
+      const advancePercent = load.advancePaymentPercent || 0;
+      const advanceAmount = advancePercent > 0 ? (totalAmount * (advancePercent / 100)).toFixed(2) : null;
+      const balanceOnDelivery = advancePercent > 0 ? (totalAmount - parseFloat(advanceAmount || "0")).toFixed(2) : null;
+
       const invoiceNumber = await storage.generateInvoiceNumber();
       const invoice = await storage.createInvoice({
         invoiceNumber: provisional ? `PROV-${invoiceNumber}` : invoiceNumber,
@@ -5724,6 +5751,9 @@ export async function registerRoutes(
         taxPercent: '18',
         taxAmount: String(Math.round(taxAmount)),
         totalAmount: String(Math.round(totalAmount)),
+        advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
+        advancePaymentAmount: advanceAmount,
+        balanceOnDelivery: balanceOnDelivery,
         status: 'draft',
         notes: provisional ? `Provisional invoice - ${notes || 'Generated pending platform confirmation'}` : notes,
         paymentTerms: 'Net 30',

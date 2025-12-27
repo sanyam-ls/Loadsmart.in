@@ -60,11 +60,36 @@ interface LineItem {
   amount: number;
 }
 
+interface CarrierDetails {
+  id: string;
+  name: string;
+  companyName?: string;
+  phone?: string;
+  carrierType: "solo" | "enterprise";
+  tripsCompleted: number;
+}
+
+interface DriverDetails {
+  id: string;
+  name: string;
+  phone?: string;
+  licenseNumber?: string;
+}
+
+interface TruckDetails {
+  id: string;
+  registrationNumber: string;
+  truckType?: string;
+  capacity?: string;
+}
+
 interface Invoice {
   id: string;
   invoiceNumber: string;
   loadId: string;
   loadRoute?: string;
+  pickupCity?: string;
+  dropoffCity?: string;
   loadStatus?: string;
   shipperId: string;
   subtotal: string;
@@ -88,6 +113,9 @@ interface Invoice {
   createdAt: string;
   notes?: string;
   advancePaymentPercent?: number;
+  carrier?: CarrierDetails;
+  driver?: DriverDetails;
+  truck?: TruckDetails;
 }
 
 const simulatedInvoices: Invoice[] = [

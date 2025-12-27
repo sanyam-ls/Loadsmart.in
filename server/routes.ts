@@ -8716,9 +8716,10 @@ export async function registerRoutes(
         otpId: otp.id,
         otpCode: otpCode, // Displayed in-app since no SMS service is configured
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Send registration OTP error:", error);
-      res.status(500).json({ error: "Internal server error" });
+      const errorMessage = error?.message || "Database error creating OTP";
+      res.status(500).json({ error: errorMessage });
     }
   });
 

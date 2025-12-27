@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { 
-  insertUserSchema, insertLoadSchema, insertTruckSchema, insertBidSchema,
+  insertUserSchema, insertLoadSchema, insertTruckSchema, insertDriverSchema, insertBidSchema,
   insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema,
   trucks as trucksTable,
   carrierProfiles as carrierProfilesTable
@@ -554,6 +554,99 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error) {
       console.error("Delete truck error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // DRIVERS ENDPOINTS (Enterprise Carriers)
+  // =============================================
+
+  app.get("/api/drivers", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Only enterprise carriers can manage drivers
+      if (user.carrierType !== "enterprise") {
+        return res.status(403).json({ error: "Driver management is only available for enterprise carriers" });
+      }
+
+      const driversList = await storage.getDriversByCarrier(user.id);
+      res.json(driversList);
+    } catch (error) {
+      console.error("Get drivers error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/drivers", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      if (user.carrierType !== "enterprise") {
+        return res.status(403).json({ error: "Driver management is only available for enterprise carriers" });
+      }
+
+      const data = insertDriverSchema.parse({
+        ...req.body,
+        carrierId: user.id,
+      });
+
+      const driver = await storage.createDriver(data);
+      res.json(driver);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Create driver error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/drivers/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Verify driver belongs to this carrier
+      const driver = await storage.getDriver(req.params.id);
+      if (!driver || driver.carrierId !== user.id) {
+        return res.status(404).json({ error: "Driver not found" });
+      }
+
+      const updated = await storage.updateDriver(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update driver error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/drivers/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Verify driver belongs to this carrier
+      const driver = await storage.getDriver(req.params.id);
+      if (!driver || driver.carrierId !== user.id) {
+        return res.status(404).json({ error: "Driver not found" });
+      }
+
+      await storage.deleteDriver(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete driver error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -7194,9 +7287,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Driver ID is required" });
       }
 
-      // For now, we accept the driverId as provided by the enterprise carrier
-      // In a full implementation, this would validate against a fleet/drivers table
-      // The carrier data store on frontend provides the driver list for selection
+      // Validate that the driver belongs to this carrier
+      const driver = await storage.getDriver(driverId);
+      if (!driver || driver.carrierId !== user.id) {
+        return res.status(400).json({ error: "Driver not found or does not belong to your fleet" });
+      }
 
       // Update the shipment with driver and optionally truck
       const updatedShipment = await storage.updateShipment(req.params.id, {

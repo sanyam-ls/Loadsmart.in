@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import {
-  users, trucks, loads, bids, shipments, shipmentEvents,
+  users, trucks, loads, bids, shipments, shipmentEvents, drivers,
   messages, documents, notifications, ratings, carrierProfiles, adminDecisions,
   pricingTemplates, adminPricings, invoices, carrierSettlements,
   adminAuditLogs, apiLogs, adminActionsQueue, featureFlags,
@@ -20,6 +20,7 @@ import {
   type Notification, type InsertNotification,
   type Rating, type InsertRating,
   type CarrierProfile, type InsertCarrierProfile,
+  type Driver, type InsertDriver,
   type AdminDecision, type InsertAdminDecision,
   type PricingTemplate, type InsertPricingTemplate,
   type AdminPricing, type InsertAdminPricing,
@@ -60,6 +61,12 @@ export interface IStorage {
   createTruck(truck: InsertTruck): Promise<Truck>;
   updateTruck(id: string, updates: Partial<Truck>): Promise<Truck | undefined>;
   deleteTruck(id: string): Promise<boolean>;
+
+  getDriver(id: string): Promise<Driver | undefined>;
+  getDriversByCarrier(carrierId: string): Promise<Driver[]>;
+  createDriver(driver: InsertDriver): Promise<Driver>;
+  updateDriver(id: string, updates: Partial<Driver>): Promise<Driver | undefined>;
+  deleteDriver(id: string): Promise<boolean>;
 
   getLoad(id: string): Promise<Load | undefined>;
   getLoadsByShipper(shipperId: string): Promise<Load[]>;
@@ -320,6 +327,30 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTruck(id: string): Promise<boolean> {
     const result = await db.delete(trucks).where(eq(trucks.id, id));
+    return true;
+  }
+
+  async getDriver(id: string): Promise<Driver | undefined> {
+    const [driver] = await db.select().from(drivers).where(eq(drivers.id, id));
+    return driver;
+  }
+
+  async getDriversByCarrier(carrierId: string): Promise<Driver[]> {
+    return db.select().from(drivers).where(eq(drivers.carrierId, carrierId)).orderBy(desc(drivers.createdAt));
+  }
+
+  async createDriver(driver: InsertDriver): Promise<Driver> {
+    const [newDriver] = await db.insert(drivers).values(driver).returning();
+    return newDriver;
+  }
+
+  async updateDriver(id: string, updates: Partial<Driver>): Promise<Driver | undefined> {
+    const [updated] = await db.update(drivers).set(updates).where(eq(drivers.id, id)).returning();
+    return updated;
+  }
+
+  async deleteDriver(id: string): Promise<boolean> {
+    await db.delete(drivers).where(eq(drivers.id, id));
     return true;
   }
 

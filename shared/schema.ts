@@ -284,6 +284,20 @@ export const trucks = pgTable("trucks", {
   registrationDate: timestamp("registration_date"), // Vehicle registration date
 });
 
+// Drivers table (for enterprise carriers)
+export const drivers = pgTable("drivers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  licenseNumber: text("license_number"),
+  licenseExpiry: timestamp("license_expiry"),
+  status: text("status").default("available"), // available, on_trip, inactive
+  assignedTruckId: varchar("assigned_truck_id").references(() => trucks.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Loads table (updated for 12-state canonical lifecycle)
 export const loads = pgTable("loads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1407,6 +1421,7 @@ export const insertCarrierVerificationDocumentSchema = createInsertSchema(carrie
 export const insertBidNegotiationSchema = createInsertSchema(bidNegotiations).omit({ id: true, createdAt: true });
 export const insertCarrierProfileSchema = createInsertSchema(carrierProfiles).omit({ id: true });
 export const insertTruckSchema = createInsertSchema(trucks).omit({ id: true, createdAt: true });
+export const insertDriverSchema = createInsertSchema(drivers).omit({ id: true, createdAt: true });
 export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, createdAt: true }).extend({
   shipperCompanyName: z.string().min(1, "Company name is required"),
   shipperContactName: z.string().min(1, "Contact name is required"),
@@ -1449,6 +1464,8 @@ export type InsertCarrierProfile = z.infer<typeof insertCarrierProfileSchema>;
 export type CarrierProfile = typeof carrierProfiles.$inferSelect;
 export type InsertTruck = z.infer<typeof insertTruckSchema>;
 export type Truck = typeof trucks.$inferSelect;
+export type InsertDriver = z.infer<typeof insertDriverSchema>;
+export type Driver = typeof drivers.$inferSelect;
 export type InsertLoad = z.infer<typeof insertLoadSchema>;
 export type Load = typeof loads.$inferSelect;
 export type InsertBid = z.infer<typeof insertBidSchema>;

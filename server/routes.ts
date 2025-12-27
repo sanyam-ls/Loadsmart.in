@@ -596,10 +596,14 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Driver management is only available for enterprise carriers" });
       }
 
-      const data = insertDriverSchema.parse({
+      // Convert date string to Date object if present
+      const driverData = {
         ...req.body,
         carrierId: user.id,
-      });
+        licenseExpiry: req.body.licenseExpiry ? new Date(req.body.licenseExpiry) : null,
+      };
+
+      const data = insertDriverSchema.parse(driverData);
 
       const driver = await storage.createDriver(data);
       res.json(driver);

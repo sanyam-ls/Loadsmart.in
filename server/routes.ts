@@ -5103,7 +5103,7 @@ export async function registerRoutes(
 
       // Delete existing documents of the same type (replacement behavior)
       // This ensures uploading a new insurance doc replaces the old one
-      const existingDocs = await storage.getDocumentsByUserId(user.id);
+      const existingDocs = await storage.getDocumentsByUser(user.id);
       const docsToReplace = existingDocs.filter(d => d.documentType === documentType);
       for (const oldDoc of docsToReplace) {
         await storage.deleteDocument(oldDoc.id);

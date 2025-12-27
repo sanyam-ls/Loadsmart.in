@@ -7161,15 +7161,61 @@ export async function registerRoutes(
         shipmentsList = await storage.getAllShipments();
       }
 
-      // Enrich each shipment with load, carrier, truck details
+      // Enrich each shipment with load, carrier, truck, driver details
       const enrichedShipments = await Promise.all(
         shipmentsList.map(async (shipment) => {
           const load = await storage.getLoad(shipment.loadId);
           const carrier = await storage.getUser(shipment.carrierId);
           const carrierProfile = carrier ? await storage.getCarrierProfile(carrier.id) : null;
-          const truck = shipment.truckId ? await storage.getTruck(shipment.truckId) : null;
           const events = await storage.getShipmentEvents(shipment.id);
           const documents = await storage.getDocumentsByLoad(shipment.loadId);
+          
+          // Get truck - try shipment first, then load's assigned truck, then bid's truck, then carrier's first truck
+          let truck = null;
+          if (shipment.truckId) {
+            truck = await storage.getTruck(shipment.truckId);
+          } else if (load?.assignedTruckId) {
+            truck = await storage.getTruck(load.assignedTruckId);
+          } else if (load?.awardedBidId) {
+            const bid = await storage.getBid(load.awardedBidId);
+            if (bid?.truckId) {
+              truck = await storage.getTruck(bid.truckId);
+            }
+          }
+          // For solo carriers without truck, get their first truck
+          if (!truck && carrier) {
+            const carrierTrucks = await storage.getTrucksByCarrier(carrier.id);
+            if (carrierTrucks.length > 0) {
+              truck = carrierTrucks[0];
+            }
+          }
+          
+          // Get driver info - for enterprise carriers, get assigned driver; for solo, carrier is the driver
+          const carrierType = carrierProfile?.carrierType || 'solo';
+          let driverInfo: { name: string; phone: string | null } | null = null;
+          
+          if (carrierType === 'solo') {
+            // Solo driver - the carrier IS the driver
+            driverInfo = {
+              name: carrier?.username || 'Unknown',
+              phone: carrier?.phone || null,
+            };
+          } else if (shipment.driverId) {
+            // Enterprise carrier with assigned driver
+            const driver = await storage.getDriver(shipment.driverId);
+            if (driver) {
+              driverInfo = {
+                name: driver.name,
+                phone: driver.phone || null,
+              };
+            }
+          }
+          
+          // Get trips completed for this carrier
+          const allCarrierShipments = await storage.getShipmentsByCarrier(shipment.carrierId);
+          const tripsCompleted = allCarrierShipments.filter(s => 
+            s.endOtpVerified || s.status === 'delivered'
+          ).length;
 
           // Calculate progress based on shipment status and OTP verification
           let progress = 0;
@@ -7261,9 +7307,12 @@ export async function registerRoutes(
             carrier: carrier ? {
               id: carrier.id,
               username: carrier.username,
-              companyName: carrier.companyName || carrier.username,
+              companyName: carrierProfile?.companyName || carrier.companyName || carrier.username,
               phone: carrier.phone,
+              carrierType: carrierType,
+              tripsCompleted: tripsCompleted,
             } : null,
+            driver: driverInfo,
             truck: truck ? {
               id: truck.id,
               registrationNumber: truck.licensePlate,

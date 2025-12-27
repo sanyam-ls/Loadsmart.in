@@ -57,6 +57,12 @@ interface TrackedShipment {
     username: string;
     companyName: string;
     phone: string | null;
+    carrierType: 'solo' | 'enterprise';
+    tripsCompleted: number;
+  } | null;
+  driver: {
+    name: string;
+    phone: string | null;
   } | null;
   truck: {
     id: string;
@@ -389,10 +395,29 @@ export default function TrackingPage() {
 
                     <h3 className="font-semibold mb-4">Carrier & Truck Details</h3>
                     <div className="space-y-3 mb-6">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Carrier</span>
-                        <span className="font-medium">{selectedShipment.carrier?.companyName || "N/A"}</span>
-                      </div>
+                      {selectedShipment.carrier?.carrierType === 'solo' ? (
+                        <>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Driver</span>
+                            <span className="font-medium">{selectedShipment.driver?.name || selectedShipment.carrier?.username || "N/A"}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Trips Done</span>
+                            <span className="font-medium">{selectedShipment.carrier?.tripsCompleted || 0}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Company</span>
+                            <span className="font-medium">{selectedShipment.carrier?.companyName || "N/A"}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Driver</span>
+                            <span className="font-medium">{selectedShipment.driver?.name || "Pending assignment"}</span>
+                          </div>
+                        </>
+                      )}
                       {selectedShipment.truck ? (
                         <>
                           <div className="flex items-center justify-between text-sm">

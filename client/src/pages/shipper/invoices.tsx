@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   FileText, Check, Clock, AlertCircle, Eye, Download, 
   CreditCard, MessageSquare, CheckCircle, XCircle, Loader2,
-  ArrowLeftRight, History, ChevronDown, ChevronUp, DollarSign, Building2, Star
+  ArrowLeftRight, History, ChevronDown, ChevronUp, DollarSign, Building2, Star,
+  Truck, User, MapPin, Phone, Award
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -645,6 +646,131 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                     <p className="font-medium">{formatDate(selectedInvoice.dueDate)}</p>
                   </div>
                 </div>
+
+                {/* Carrier Details Section */}
+                {selectedInvoice.carrier && (
+                  <Card className="border-blue-200 dark:border-blue-700/50 bg-blue-50/30 dark:bg-blue-900/10">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        {selectedInvoice.carrier.carrierType === 'solo' ? (
+                          <User className="h-4 w-4 text-blue-600" />
+                        ) : (
+                          <Building2 className="h-4 w-4 text-blue-600" />
+                        )}
+                        {selectedInvoice.carrier.carrierType === 'solo' ? 'Solo Driver' : 'Enterprise Carrier'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {selectedInvoice.carrier.carrierType === 'solo' ? (
+                        <>
+                          {/* Solo Driver Details */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Driver Name</Label>
+                              <p className="font-medium text-sm" data-testid="text-carrier-name">
+                                {selectedInvoice.carrier.name}
+                              </p>
+                            </div>
+                            {selectedInvoice.carrier.phone && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Phone</Label>
+                                <p className="text-sm flex items-center gap-1">
+                                  <Phone className="h-3 w-3 text-muted-foreground" />
+                                  {selectedInvoice.carrier.phone}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            {selectedInvoice.truck && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Truck Number</Label>
+                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-truck-number">
+                                  <Truck className="h-3 w-3 text-muted-foreground" />
+                                  {selectedInvoice.truck.registrationNumber}
+                                </p>
+                              </div>
+                            )}
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Trips Completed</Label>
+                              <p className="text-sm flex items-center gap-1" data-testid="text-trips-completed">
+                                <Award className="h-3 w-3 text-green-600" />
+                                {selectedInvoice.carrier.tripsCompleted} trips
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Enterprise Carrier Details */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Company Name</Label>
+                              <p className="font-medium text-sm" data-testid="text-company-name">
+                                {selectedInvoice.carrier.companyName || selectedInvoice.carrier.name}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Trips Completed</Label>
+                              <p className="text-sm flex items-center gap-1" data-testid="text-trips-completed">
+                                <Award className="h-3 w-3 text-green-600" />
+                                {selectedInvoice.carrier.tripsCompleted} trips
+                              </p>
+                            </div>
+                          </div>
+                          {selectedInvoice.driver && (
+                            <div className="bg-background/50 rounded-md p-2">
+                              <Label className="text-xs text-muted-foreground">Assigned Driver</Label>
+                              <div className="flex items-center gap-3 mt-1">
+                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-driver-name">
+                                  <User className="h-3 w-3 text-muted-foreground" />
+                                  {selectedInvoice.driver.name}
+                                </p>
+                                {selectedInvoice.driver.phone && (
+                                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />
+                                    {selectedInvoice.driver.phone}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-3">
+                            {selectedInvoice.truck && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Truck Number</Label>
+                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-truck-number">
+                                  <Truck className="h-3 w-3 text-muted-foreground" />
+                                  {selectedInvoice.truck.registrationNumber}
+                                </p>
+                              </div>
+                            )}
+                            {selectedInvoice.truck?.truckType && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Truck Type</Label>
+                                <p className="text-sm">{selectedInvoice.truck.truckType}</p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Route Display */}
+                      {selectedInvoice.pickupCity && selectedInvoice.dropoffCity && (
+                        <div className="pt-2 border-t">
+                          <Label className="text-xs text-muted-foreground">Route</Label>
+                          <p className="text-sm font-medium flex items-center gap-2 mt-1">
+                            <MapPin className="h-3 w-3 text-green-600" />
+                            {selectedInvoice.pickupCity}
+                            <span className="text-muted-foreground">to</span>
+                            <MapPin className="h-3 w-3 text-red-600" />
+                            {selectedInvoice.dropoffCity}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 <Card>
                   <CardHeader className="py-3">

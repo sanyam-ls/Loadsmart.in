@@ -615,8 +615,8 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
       </Tabs>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               {selectedInvoice?.invoiceNumber}
@@ -626,7 +626,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             </DialogDescription>
           </DialogHeader>
           {selectedInvoice && (
-            <ScrollArea className="flex-1 pr-4">
+            <ScrollArea className="flex-1 min-h-0 pr-4" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>

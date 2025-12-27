@@ -70,7 +70,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAdminData, type AdminLoad, type AdminCarrier } from "@/lib/admin-data-store";
 import { format } from "date-fns";
 
-type LoadWithBidCount = Load & { bidCount?: number };
+type LoadWithBidCount = Load & { bidCount?: number; assignedCarrierName?: string | null };
 
 function mapLoadStatus(status: string | null): AdminLoad["status"] {
   switch (status) {
@@ -106,7 +106,7 @@ function transformLoadToAdminLoad(load: LoadWithBidCount): AdminLoad {
     weightUnit: load.weightUnit || "kg",
     type: load.requiredTruckType || "Any",
     status: mapLoadStatus(load.status),
-    assignedCarrier: null,
+    assignedCarrier: load.assignedCarrierName || null,
     carrierId: load.assignedCarrierId,
     createdDate: load.createdAt ? new Date(load.createdAt) : new Date(),
     eta: null,

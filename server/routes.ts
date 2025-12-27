@@ -352,7 +352,25 @@ export async function registerRoutes(
       const loadsWithBids = await Promise.all(
         loadsList.map(async (load) => {
           const loadBids = await storage.getBidsByLoad(load.id);
-          return { ...load, bidCount: loadBids.length };
+          
+          // Fetch assigned carrier info if load has been awarded
+          let assignedCarrierName: string | null = null;
+          if (load.assignedCarrierId) {
+            const carrierUser = await storage.getUser(load.assignedCarrierId);
+            if (carrierUser) {
+              // Get carrier profile to check type and get company name
+              const carrierProfile = await storage.getCarrierByUserId(load.assignedCarrierId);
+              if (carrierProfile?.carrierType === 'solo') {
+                // For solo drivers, use their name
+                assignedCarrierName = carrierUser.username;
+              } else {
+                // For enterprise, use company name
+                assignedCarrierName = carrierProfile?.companyName || carrierUser.companyName || carrierUser.username;
+              }
+            }
+          }
+          
+          return { ...load, bidCount: loadBids.length, assignedCarrierName };
         })
       );
 

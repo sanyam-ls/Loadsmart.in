@@ -359,7 +359,7 @@ export async function registerRoutes(
             const carrierUser = await storage.getUser(load.assignedCarrierId);
             if (carrierUser) {
               // Get carrier profile to check type and get company name
-              const carrierProfile = await storage.getCarrierByUserId(load.assignedCarrierId);
+              const carrierProfile = await storage.getCarrierProfile(load.assignedCarrierId);
               if (carrierProfile?.carrierType === 'solo') {
                 // For solo drivers, use their name
                 assignedCarrierName = carrierUser.username;

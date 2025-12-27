@@ -26,14 +26,15 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
-import { useCarrierData, type CompletedTrip } from "@/lib/carrier-data-store";
+import { type CompletedTrip } from "@/lib/carrier-data-store";
 import { useShipments, useLoads, useTrucks } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, isAfter } from "date-fns";
-import type { Shipment, Load } from "@shared/schema";
+import type { Shipment, Load, Driver, Truck as DbTruck } from "@shared/schema";
 
 function formatCurrency(amount: number): string {
   if (amount >= 100000) {
@@ -42,13 +43,23 @@ function formatCurrency(amount: number): string {
   return `Rs. ${amount.toLocaleString()}`;
 }
 
-function convertShipmentToCompletedTrip(shipment: Shipment, load: Load | undefined): CompletedTrip {
+function convertShipmentToCompletedTrip(
+  shipment: Shipment, 
+  load: Load | undefined, 
+  drivers: Driver[], 
+  trucks: DbTruck[]
+): CompletedTrip {
   const loadId = load?.adminReferenceNumber 
     ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}` 
     : `LD-${shipment.loadId.slice(0, 6)}`;
   
   const rate = load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) : 50000;
   const distance = load?.distance ? parseFloat(load.distance) : 500;
+  
+  const assignedDriver = shipment.driverId ? drivers.find(d => d.id === shipment.driverId) : null;
+  const assignedTruck = shipment.truckId 
+    ? trucks.find(t => t.id === shipment.truckId) 
+    : trucks[0];
   
   return {
     tripId: `real-${shipment.id}`,
@@ -63,19 +74,25 @@ function convertShipmentToCompletedTrip(shipment: Shipment, load: Load | undefin
     truckPerformanceRating: 4.2,
     shipperRating: 4.8,
     completedAt: shipment.completedAt ? new Date(shipment.completedAt) : new Date(),
-    driverName: 'Driver Assigned',
-    truckPlate: 'Truck Assigned',
+    driverName: assignedDriver?.name || 'Unassigned',
+    truckPlate: assignedTruck?.licensePlate || 'Unassigned',
     loadType: load?.requiredTruckType || 'General',
   };
 }
 
 export default function CarrierHistoryPage() {
-  const { completedTrips: mockCompletedTrips } = useCarrierData();
-  const { user } = useAuth();
+  const { user, carrierType } = useAuth();
   const { toast } = useToast();
   const { data: allShipments = [], refetch: refetchShipments } = useShipments();
   const { data: allLoads = [] } = useLoads();
   const { data: allTrucks = [] } = useTrucks();
+  
+  const isEnterprise = carrierType === "enterprise";
+  
+  const { data: drivers = [] } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers"],
+    enabled: isEnterprise,
+  });
   
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState("all");
@@ -103,25 +120,13 @@ export default function CarrierHistoryPage() {
     
     const realTrips: CompletedTrip[] = myShipments.map((shipment: Shipment) => {
       const load = allLoads.find((l: Load) => l.id === shipment.loadId);
-      const truck = allTrucks.find((t: any) => t.id === shipment.truckId);
-      const trip = convertShipmentToCompletedTrip(shipment, load);
-      if (truck) {
-        trip.truckPlate = truck.licensePlate || trip.truckPlate;
-      }
-      return trip;
+      return convertShipmentToCompletedTrip(shipment, load, drivers, allTrucks as DbTruck[]);
     });
     
-    // For solo carriers, only show their actual trips (no mock data)
-    if (isSoloCarrier) {
-      return realTrips;
-    }
-    
-    // For enterprise carriers, merge with mock data for demo purposes
-    const realTripIds = new Set(realTrips.map(t => t.tripId));
-    const filteredMock = mockCompletedTrips.filter(t => !realTripIds.has(t.tripId));
-    
-    return [...realTrips, ...filteredMock];
-  }, [allShipments, allLoads, allTrucks, mockCompletedTrips, user?.id, isSoloCarrier]);
+    // Solo carriers only see their actual trips (no mock data)
+    // Enterprise carriers also see only real trips for consistency
+    return realTrips;
+  }, [allShipments, allLoads, allTrucks, drivers, user?.id]);
 
   const filteredTrips = useMemo(() => {
     return completedTrips.filter((trip) => {

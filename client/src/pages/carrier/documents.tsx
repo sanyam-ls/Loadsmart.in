@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { FileText, Upload, Search, Filter, Download, Eye, Trash2, AlertCircle, CheckCircle, Shield } from "lucide-react";
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { FileText, Upload, Search, Filter, Download, Eye, Trash2, AlertCircle, CheckCircle, Shield, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -20,101 +21,141 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/empty-state";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { format } from "date-fns";
 
-interface Document {
+interface CarrierDocument {
   id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadedAt: Date;
-  expiryDate?: Date;
+  documentType: string;
+  fileName: string;
+  fileUrl: string | null;
+  fileSize: number | null;
+  expiryDate: string | null;
   isVerified: boolean;
+  createdAt: string;
+  truckId: string | null;
 }
-
-const mockDocuments: Document[] = [
-  {
-    id: "d1",
-    name: "Commercial_Drivers_License.pdf",
-    type: "license",
-    size: "156 KB",
-    uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
-    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 180),
-    isVerified: true,
-  },
-  {
-    id: "d2",
-    name: "Fleet_Insurance_2024.pdf",
-    type: "insurance",
-    size: "512 KB",
-    uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60),
-    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15),
-    isVerified: true,
-  },
-  {
-    id: "d3",
-    name: "Vehicle_Registration_ABC1234.pdf",
-    type: "rc",
-    size: "234 KB",
-    uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90),
-    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 275),
-    isVerified: true,
-  },
-  {
-    id: "d4",
-    name: "Fitness_Certificate.pdf",
-    type: "fitness",
-    size: "189 KB",
-    uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 360),
-    isVerified: false,
-  },
-  {
-    id: "d5",
-    name: "POD_Load_1234.pdf",
-    type: "pod",
-    size: "345 KB",
-    uploadedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    isVerified: true,
-  },
-];
 
 const documentTypeLabels: Record<string, string> = {
   license: "Driver's License",
   insurance: "Insurance",
   rc: "Registration",
   fitness: "Fitness Certificate",
+  permit: "Permit",
+  puc: "PUC Certificate",
   pod: "Proof of Delivery",
   invoice: "Invoice",
   other: "Other",
 };
 
-function isExpiringSoon(date?: Date): boolean {
-  if (!date) return false;
+function isExpiringSoon(dateStr?: string | null): boolean {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
   const daysUntilExpiry = (date.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
   return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
 }
 
-function isExpired(date?: Date): boolean {
-  if (!date) return false;
-  return date.getTime() < Date.now();
+function isExpired(dateStr?: string | null): boolean {
+  if (!dateStr) return false;
+  return new Date(dateStr).getTime() < Date.now();
+}
+
+function formatFileSize(bytes: number | null): string {
+  if (!bytes) return "N/A";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function CarrierDocumentsPage() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [expiryDate, setExpiryDate] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredDocuments = mockDocuments.filter((doc) => {
-    const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === "all" || doc.type === typeFilter;
+  const { data: documents = [], isLoading } = useQuery<CarrierDocument[]>({
+    queryKey: ["/api/carrier/documents"],
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (data: { documentType: string; fileName: string; fileUrl: string; fileSize: number; expiryDate: string | null }) => {
+      return apiRequest("POST", "/api/carrier/documents", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Document uploaded successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents"] });
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      setSelectedDocType("");
+      setExpiryDate("");
+    },
+    onError: () => {
+      toast({ title: "Failed to upload document", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (docId: string) => {
+      return apiRequest("DELETE", `/api/carrier/documents/${docId}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Document deleted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete document", variant: "destructive" });
+    },
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !selectedDocType) {
+      toast({ title: "Please select a file and document type", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      uploadMutation.mutate({
+        documentType: selectedDocType,
+        fileName: selectedFile.name,
+        fileUrl: reader.result as string,
+        fileSize: selectedFile.size,
+        expiryDate: expiryDate || null,
+      });
+    };
+    reader.readAsDataURL(selectedFile);
+  };
+
+  const filteredDocuments = documents.filter((doc) => {
+    const matchesSearch = doc.fileName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = typeFilter === "all" || doc.documentType === typeFilter;
     return matchesSearch && matchesType;
   });
 
-  const complianceDocuments = mockDocuments.filter(d => 
-    ["license", "insurance", "rc", "fitness"].includes(d.type)
-  );
+  const complianceDocTypes = ["license", "insurance", "rc", "fitness", "permit", "puc"];
+  const complianceDocuments = documents.filter(d => complianceDocTypes.includes(d.documentType));
   const verifiedCount = complianceDocuments.filter(d => d.isVerified).length;
-  const expiringDocs = mockDocuments.filter((d) => isExpiringSoon(d.expiryDate));
+  const expiringDocs = documents.filter((d) => isExpiringSoon(d.expiryDate));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -137,33 +178,69 @@ export default function CarrierDocumentsPage() {
                 Upload compliance documents to maintain your verified status.
               </DialogDescription>
             </DialogHeader>
-            <div className="py-6">
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover-elevate cursor-pointer">
-                <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
-                <p className="text-xs text-muted-foreground">PDF, JPG, or PNG up to 10MB</p>
+            <div className="py-4 space-y-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <div 
+                className="border-2 border-dashed border-border rounded-lg p-8 text-center hover-elevate cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {selectedFile ? (
+                  <div>
+                    <FileText className="h-10 w-10 mx-auto mb-2 text-primary" />
+                    <p className="text-sm font-medium">{selectedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
+                    <p className="text-xs text-muted-foreground">PDF, JPG, or PNG up to 10MB</p>
+                  </>
+                )}
               </div>
-              <div className="mt-4">
-                <Select>
-                  <SelectTrigger data-testid="select-document-type">
-                    <SelectValue placeholder="Select document type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="license">Driver's License</SelectItem>
-                    <SelectItem value="insurance">Insurance</SelectItem>
-                    <SelectItem value="rc">Registration Certificate</SelectItem>
-                    <SelectItem value="fitness">Fitness Certificate</SelectItem>
-                    <SelectItem value="pod">Proof of Delivery</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                <SelectTrigger data-testid="select-document-type">
+                  <SelectValue placeholder="Select document type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="license">Driver's License</SelectItem>
+                  <SelectItem value="insurance">Insurance</SelectItem>
+                  <SelectItem value="rc">Registration Certificate</SelectItem>
+                  <SelectItem value="fitness">Fitness Certificate</SelectItem>
+                  <SelectItem value="permit">Permit</SelectItem>
+                  <SelectItem value="puc">PUC Certificate</SelectItem>
+                  <SelectItem value="pod">Proof of Delivery</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Expiry Date (optional)</label>
+                <Input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  data-testid="input-expiry-date"
+                />
               </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button data-testid="button-confirm-upload">Upload</Button>
+              <Button 
+                onClick={handleUpload} 
+                disabled={uploadMutation.isPending || !selectedFile || !selectedDocType}
+                data-testid="button-confirm-upload"
+              >
+                {uploadMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Upload
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -176,7 +253,7 @@ export default function CarrierDocumentsPage() {
               <Shield className="h-8 w-8 text-green-600 dark:text-green-400" />
               <div>
                 <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {verifiedCount}/{complianceDocuments.length}
+                  {verifiedCount}/{complianceDocuments.length || 4}
                 </p>
                 <p className="text-sm text-green-600 dark:text-green-400">Verified Documents</p>
               </div>
@@ -225,6 +302,8 @@ export default function CarrierDocumentsPage() {
             <SelectItem value="insurance">Insurance</SelectItem>
             <SelectItem value="rc">Registration</SelectItem>
             <SelectItem value="fitness">Fitness Certificate</SelectItem>
+            <SelectItem value="permit">Permit</SelectItem>
+            <SelectItem value="puc">PUC Certificate</SelectItem>
             <SelectItem value="pod">Proof of Delivery</SelectItem>
           </SelectContent>
         </Select>
@@ -248,8 +327,8 @@ export default function CarrierDocumentsPage() {
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{doc.name}</p>
-                    <p className="text-xs text-muted-foreground">{doc.size}</p>
+                    <p className="font-medium text-sm truncate">{doc.fileName}</p>
+                    <p className="text-xs text-muted-foreground">{formatFileSize(doc.fileSize)}</p>
                   </div>
                   {doc.isVerified ? (
                     <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
@@ -262,12 +341,12 @@ export default function CarrierDocumentsPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Type</span>
                     <Badge variant="secondary">
-                      {documentTypeLabels[doc.type] || doc.type}
+                      {documentTypeLabels[doc.documentType] || doc.documentType}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Uploaded</span>
-                    <span>{doc.uploadedAt.toLocaleDateString()}</span>
+                    <span>{format(new Date(doc.createdAt), "M/d/yyyy")}</span>
                   </div>
                   {doc.expiryDate && (
                     <div className="flex items-center justify-between text-sm">
@@ -279,22 +358,47 @@ export default function CarrierDocumentsPage() {
                           : "no-default-hover-elevate no-default-active-elevate"
                         }
                       >
-                        {isExpired(doc.expiryDate) ? "Expired" : doc.expiryDate.toLocaleDateString()}
+                        {isExpired(doc.expiryDate) ? "Expired" : format(new Date(doc.expiryDate), "M/d/yyyy")}
                       </Badge>
                     </div>
                   )}
                 </div>
 
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" data-testid={`button-view-${doc.id}`}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1" 
+                    onClick={() => doc.fileUrl && window.open(doc.fileUrl, "_blank")}
+                    data-testid={`button-view-${doc.id}`}
+                  >
                     <Eye className="h-4 w-4 mr-1" />
                     View
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1" data-testid={`button-download-${doc.id}`}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      if (doc.fileUrl) {
+                        const link = document.createElement("a");
+                        link.href = doc.fileUrl;
+                        link.download = doc.fileName;
+                        link.click();
+                      }
+                    }}
+                    data-testid={`button-download-${doc.id}`}
+                  >
                     <Download className="h-4 w-4 mr-1" />
                     Download
                   </Button>
-                  <Button variant="ghost" size="icon" data-testid={`button-delete-${doc.id}`}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => deleteMutation.mutate(doc.id)}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-${doc.id}`}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

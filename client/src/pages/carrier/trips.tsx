@@ -16,13 +16,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { useToast } from "@/hooks/use-toast";
-import { useCarrierData, type CarrierTrip } from "@/lib/carrier-data-store";
+import { type CarrierTrip } from "@/lib/carrier-data-store";
 import { format, addHours } from "date-fns";
 import { OtpTripActions } from "@/components/otp-trip-actions";
 import { useAuth } from "@/lib/auth-context";
 import { useShipments, useLoads } from "@/lib/api-hooks";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
-import type { Shipment, Load } from "@shared/schema";
+import type { Shipment, Load, Driver, Truck as DbTruck } from "@shared/schema";
 
 import lrConsignmentNote from "@assets/generated_images/lr_consignment_note_document.png";
 import ewayBill from "@assets/generated_images/e-way_bill_document.png";
@@ -68,7 +68,12 @@ const statusConfig: Record<CarrierTrip["status"], { label: string; color: string
   delivered: { label: "Delivered", color: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400" },
 };
 
-function convertShipmentToTrip(shipment: Shipment, load: Load | undefined): CarrierTrip {
+function convertShipmentToTrip(
+  shipment: Shipment, 
+  load: Load | undefined, 
+  drivers: Driver[], 
+  trucks: DbTruck[]
+): CarrierTrip {
   const loadId = load?.adminReferenceNumber 
     ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}` 
     : `LD-${shipment.loadId.slice(0, 6)}`;
@@ -95,6 +100,19 @@ function convertShipmentToTrip(shipment: Shipment, load: Load | undefined): Carr
   const now = new Date();
   const createdAt = shipment.createdAt instanceof Date ? shipment.createdAt : new Date(shipment.createdAt || now);
 
+  const assignedDriver = shipment.driverId ? drivers.find(d => d.id === shipment.driverId) : null;
+  const assignedTruck = shipment.truckId 
+    ? trucks.find(t => t.id === shipment.truckId) 
+    : (load as any)?.assignedTruckId 
+      ? trucks.find(t => t.id === (load as any).assignedTruckId)
+      : trucks[0];
+
+  const driverName = assignedDriver?.name || "Unassigned";
+  const driverLicense = assignedDriver?.licenseNumber || "—";
+  const truckName = assignedTruck 
+    ? `${assignedTruck.make || ""} ${assignedTruck.model || ""} (${assignedTruck.licensePlate || ""})`.trim()
+    : "Unassigned";
+
   return {
     tripId: `real-${shipment.id}`,
     loadId,
@@ -109,15 +127,15 @@ function convertShipmentToTrip(shipment: Shipment, load: Load | undefined): Carr
     rate,
     profitabilityEstimate: Math.round(rate * 0.25),
     currentLocation: load?.pickupCity || "En route",
-    driverAssigned: "Driver",
-    driverAssignedId: "driver-1",
-    truckAssigned: "Truck",
-    truckAssignedId: "truck-1",
+    driverAssigned: driverName,
+    driverAssignedId: shipment.driverId || "unassigned",
+    truckAssigned: truckName,
+    truckAssignedId: assignedTruck?.id || "unassigned",
     loadType: (load as any)?.cargoType || "General",
     weight: typeof load?.weight === 'number' ? load.weight : 10,
     startDate: createdAt,
     fuel: { fuelConsumed: 0, costPerLiter: 95, totalFuelCost: 0, fuelEfficiency: 4, costOverrun: 0, refuelAlerts: [] },
-    driverInsights: { driverName: "Driver", driverLicense: "DL-000000", drivingHoursToday: 0, breaksTaken: 0, speedingAlerts: 0, harshBrakingEvents: 0, safetyScore: 85, idleTime: 0 },
+    driverInsights: { driverName, driverLicense, drivingHoursToday: 0, breaksTaken: 0, speedingAlerts: 0, harshBrakingEvents: 0, safetyScore: 85, idleTime: 0 },
     allStops: [
       { stopId: "s1", location: load?.pickupCity || "Origin", type: "pickup", status: shipment.startOtpVerified ? "completed" : "pending", scheduledTime: createdAt, actualTime: shipment.startOtpVerified ? createdAt : null },
       { stopId: "s2", location: load?.dropoffCity || "Destination", type: "delivery", status: shipment.endOtpVerified ? "completed" : "pending", scheduledTime: addHours(createdAt, 12), actualTime: shipment.endOtpVerified ? now : null },
@@ -131,8 +149,7 @@ function convertShipmentToTrip(shipment: Shipment, load: Load | undefined): Carr
 
 export default function TripsPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { activeTrips: simulatedTrips, updateTripStatus } = useCarrierData();
+  const { user, carrierType } = useAuth();
   const { data: shipments = [], refetch: refetchShipments } = useShipments();
   const { data: loads = [] } = useLoads();
   const [selectedTrip, setSelectedTrip] = useState<CarrierTrip | null>(null);
@@ -140,19 +157,24 @@ export default function TripsPage() {
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
 
-  const realTrips = useMemo(() => {
+  const isEnterprise = carrierType === "enterprise";
+
+  const { data: drivers = [] } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers"],
+    enabled: isEnterprise,
+  });
+
+  const { data: trucks = [] } = useQuery<DbTruck[]>({
+    queryKey: ["/api/trucks"],
+  });
+
+  const activeTrips = useMemo(() => {
     const carrierShipments = shipments.filter(s => s.carrierId === user?.id && s.status !== "delivered" && s.status !== "cancelled");
     return carrierShipments.map(shipment => {
       const load = loads.find(l => l.id === shipment.loadId);
-      return convertShipmentToTrip(shipment, load);
+      return convertShipmentToTrip(shipment, load, drivers, trucks);
     });
-  }, [shipments, loads, user?.id]);
-
-  const activeTrips = useMemo(() => {
-    const realTripIds = new Set(realTrips.map(t => t.loadId));
-    const filteredSimulated = simulatedTrips.filter(t => !realTripIds.has(t.loadId));
-    return [...realTrips, ...filteredSimulated];
-  }, [realTrips, simulatedTrips]);
+  }, [shipments, loads, user?.id, drivers, trucks]);
 
   useEffect(() => {
     if (!selectedTrip && activeTrips.length > 0) {
@@ -206,10 +228,9 @@ export default function TripsPage() {
 
   const handleStatusUpdate = (newStatus: CarrierTrip["status"]) => {
     if (!selectedTrip) return;
-    updateTripStatus(selectedTrip.tripId, newStatus);
     toast({
-      title: "Status Updated",
-      description: `Trip status updated to "${statusConfig[newStatus].label}"`,
+      title: "Status Update",
+      description: `Use the OTP workflow below to update trip status. Request Start/End OTP and have shipper verify.`,
     });
   };
 

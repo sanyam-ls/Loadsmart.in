@@ -106,6 +106,8 @@ export default function MyDocumentsPage() {
   const { data, isLoading, error, refetch } = useQuery<ExpiryData>({
     queryKey: ["/api/carrier/documents/expiring"],
     enabled: !!user && user.role === "carrier",
+    staleTime: 5000,
+    refetchOnWindowFocus: true,
   });
 
   const uploadMutation = useMutation({

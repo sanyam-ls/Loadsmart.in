@@ -8299,8 +8299,6 @@ export async function registerRoutes(
         const shipment = await storage.getShipment(request.shipmentId);
         const approvedByUser = request.processedBy ? await storage.getUser(request.processedBy) : null;
         const carrierProfile = carrierUser ? await storage.getCarrierProfile(carrierUser.id) : null;
-        const trucks = carrierUser ? await storage.getTrucksByCarrier(carrierUser.id) : [];
-        const assignedTruck = trucks.length > 0 ? trucks[0] : null;
         
         // Determine if solo driver: fleetSize explicitly 0, or carrierType is 'solo'
         const isSoloDriver = carrierProfile && (
@@ -8309,12 +8307,32 @@ export async function registerRoutes(
           carrierProfile.carrierType === 'solo'
         );
         
+        // Get driver name - for enterprise, get assigned driver from shipment; for solo, use carrier name
+        let driverName = carrierUser?.fullName || carrierUser?.username;
+        if (!isSoloDriver && shipment?.driverId) {
+          const driver = await storage.getDriver(shipment.driverId);
+          if (driver) {
+            driverName = driver.name;
+          }
+        }
+        
+        // Get truck - try shipment's truck, then load's assigned truck, then carrier's first truck
+        let assignedTruck = null;
+        if (shipment?.truckId) {
+          assignedTruck = await storage.getTruck(shipment.truckId);
+        } else if (load?.assignedTruckId) {
+          assignedTruck = await storage.getTruck(load.assignedTruckId);
+        } else if (carrierUser) {
+          const trucks = await storage.getTrucksByCarrier(carrierUser.id);
+          assignedTruck = trucks.length > 0 ? trucks[0] : null;
+        }
+        
         return {
           ...request,
           carrier: carrierUser ? {
             id: carrierUser.id,
-            companyName: isSoloDriver ? undefined : carrierUser.companyName,
-            driverName: carrierUser.fullName || carrierUser.username,
+            companyName: isSoloDriver ? undefined : (carrierProfile?.companyName || carrierUser.companyName),
+            driverName: driverName,
             username: carrierUser.username,
             isSoloDriver,
             rating: carrierProfile?.rating || "4.5",

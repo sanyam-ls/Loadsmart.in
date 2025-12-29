@@ -247,6 +247,8 @@ export default function AdminInvoicesPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [markPaidConfirmOpen, setMarkPaidConfirmOpen] = useState(false);
+  const [invoiceToMarkPaid, setInvoiceToMarkPaid] = useState<string | null>(null);
 
   const { data: apiInvoices = [], isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/admin/invoices"],
@@ -562,7 +564,10 @@ export default function AdminInvoicesPage() {
                         {(invoice.shipperStatus === "acknowledged" || invoice.acknowledgedAt) && invoice.status !== "paid" && (
                           <Button
                             size="sm"
-                            onClick={() => markPaidMutation.mutate(invoice.id)}
+                            onClick={() => {
+                              setInvoiceToMarkPaid(invoice.id);
+                              setMarkPaidConfirmOpen(true);
+                            }}
                             disabled={markPaidMutation.isPending}
                             data-testid={`button-mark-paid-${invoice.id}`}
                           >
@@ -1023,6 +1028,51 @@ export default function AdminInvoicesPage() {
                 Send to Shipper
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark Paid Confirmation Dialog - Restricted to Authorized Personnel */}
+      <Dialog open={markPaidConfirmOpen} onOpenChange={setMarkPaidConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Confirm Payment Recording
+            </DialogTitle>
+            <DialogDescription>
+              This action is restricted to authorized accounts personnel only.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-4">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                By proceeding, you confirm that:
+              </p>
+              <ul className="list-disc list-inside text-sm text-amber-700 dark:text-amber-300 mt-2 space-y-1">
+                <li>You are authorized to record payments</li>
+                <li>Payment has been verified in the bank account</li>
+                <li>The full invoice amount has been received</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMarkPaidConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (invoiceToMarkPaid) {
+                  markPaidMutation.mutate(invoiceToMarkPaid);
+                }
+                setMarkPaidConfirmOpen(false);
+                setInvoiceToMarkPaid(null);
+              }}
+              disabled={markPaidMutation.isPending}
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Confirm Payment Received
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

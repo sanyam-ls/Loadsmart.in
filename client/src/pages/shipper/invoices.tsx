@@ -774,18 +774,11 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
 
                 <Card>
                   <CardHeader className="py-3">
-                    <CardTitle className="text-sm">Line Items</CardTitle>
+                    <CardTitle className="text-sm">Invoice Summary</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 space-y-2">
-                    {selectedInvoice.lineItems?.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{item.description}</span>
-                        <span>{formatCurrency(item.amount)}</span>
-                      </div>
-                    ))}
-                    <Separator />
+                  <CardContent className="pt-0 space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="text-muted-foreground">Freight Services</span>
                       <span>{formatCurrency(selectedInvoice.subtotal)}</span>
                     </div>
                     <div className="flex justify-between">
@@ -794,38 +787,65 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                     </div>
                     <Separator />
                     <div className="flex justify-between text-lg font-bold">
-                      <span>Total</span>
+                      <span>Total Amount</span>
                       <span>{formatCurrency(selectedInvoice.totalAmount)}</span>
                     </div>
+                    {selectedInvoice.advancePaymentPercent !== undefined && selectedInvoice.advancePaymentPercent !== null && selectedInvoice.advancePaymentPercent > 0 && (
+                      <>
+                        <Separator />
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Advance Payment ({selectedInvoice.advancePaymentPercent}%)</span>
+                          <span className="font-semibold text-green-600 dark:text-green-400">
+                            {formatCurrency(Math.round(parseFloat(selectedInvoice.subtotal || '0') * (selectedInvoice.advancePaymentPercent / 100)))}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Balance on Delivery</span>
+                          <span className="font-medium">
+                            {formatCurrency(Math.round(parseFloat(selectedInvoice.subtotal || '0') * (1 - selectedInvoice.advancePaymentPercent / 100)))}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
-
-                {selectedInvoice.advancePaymentPercent !== undefined && selectedInvoice.advancePaymentPercent !== null && selectedInvoice.advancePaymentPercent > 0 && (
-                  <Card className="border-green-200 dark:border-green-700/50 bg-green-50/50 dark:bg-green-900/10">
-                    <CardContent className="pt-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-green-600" />
-                        <span className="font-medium text-green-700 dark:text-green-400">Carrier Advance Payment</span>
+                
+                {/* Payment Instructions */}
+                <Card className="border-blue-200 dark:border-blue-700/50 bg-blue-50/50 dark:bg-blue-900/10">
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                      Payment Instructions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-3 text-sm">
+                    <div className="grid gap-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Bank Name:</span>
+                        <span className="font-medium">HDFC Bank</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Advance Percentage:</span>
-                        <span className="font-semibold">{selectedInvoice.advancePaymentPercent}%</span>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account Name:</span>
+                        <span className="font-medium">FreightFlow Logistics Pvt Ltd</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Advance Amount (Upfront):</span>
-                        <span className="font-bold text-green-600 dark:text-green-400">
-                          {formatCurrency(Math.round(parseFloat(selectedInvoice.subtotal || '0') * (selectedInvoice.advancePaymentPercent / 100)))}
-                        </span>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account Number:</span>
+                        <span className="font-mono font-medium">XXXX XXXX XXXX 1234</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Balance Due on Delivery:</span>
-                        <span className="font-medium">
-                          {formatCurrency(Math.round(parseFloat(selectedInvoice.subtotal || '0') * (1 - selectedInvoice.advancePaymentPercent / 100)))}
-                        </span>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IFSC Code:</span>
+                        <span className="font-mono font-medium">HDFC0001234</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">UPI ID:</span>
+                        <span className="font-mono font-medium">freightflow@hdfcbank</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground pt-2 border-t">
+                      Please include your Invoice Number ({selectedInvoice.invoiceNumber}) as payment reference.
+                    </p>
+                  </CardContent>
+                </Card>
 
                 {selectedInvoice.acknowledgedAt && (
                   <Card>

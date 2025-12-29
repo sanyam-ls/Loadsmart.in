@@ -29,16 +29,18 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { indianTruckManufacturers, getModelsByManufacturer } from "@shared/indian-truck-data";
+import { sortedIndianStates, getCitiesByState } from "@shared/indian-locations";
 
 const truckFormSchema = z.object({
   truckType: z.string().min(1, "Truck type is required"),
   licensePlate: z.string().min(1, "License plate is required"),
   capacity: z.string().min(1, "Capacity is required"),
   capacityUnit: z.string().default("tons"),
-  currentLocation: z.string().optional(),
+  currentLocationState: z.string().min(1, "State is required"),
+  currentLocationCity: z.string().min(1, "City is required"),
   isAvailable: z.boolean().default(true),
-  // Extended specification fields
-  make: z.string().min(1, "Manufacturer is required"),
+  manufacturerId: z.string().min(1, "Manufacturer is required"),
   model: z.string().min(1, "Model is required"),
   year: z.string().min(1, "Year is required"),
   registrationNumber: z.string().optional(),
@@ -118,9 +120,10 @@ export default function AddTruckPage() {
       licensePlate: "",
       capacity: "",
       capacityUnit: "tons",
-      currentLocation: "",
+      currentLocationState: "",
+      currentLocationCity: "",
       isAvailable: true,
-      make: "",
+      manufacturerId: "",
       model: "",
       year: "",
       registrationNumber: "",
@@ -129,8 +132,17 @@ export default function AddTruckPage() {
     },
   });
 
+  // Watch the form values for cascading dropdowns
+  const manufacturerId = form.watch("manufacturerId");
+  const currentLocationState = form.watch("currentLocationState");
+  const availableModels = manufacturerId ? getModelsByManufacturer(manufacturerId) : [];
+  const availableCities = currentLocationState ? getCitiesByState(currentLocationState) : [];
+
   const handleSubmit = async (data: TruckFormData) => {
     setIsLoading(true);
+    const stateName = sortedIndianStates.find(s => s.code === data.currentLocationState)?.name || data.currentLocationState;
+    const currentLocation = `${data.currentLocationCity}, ${stateName}`;
+    const manufacturer = indianTruckManufacturers.find(m => m.id === data.manufacturerId);
     try {
       const response = await fetch("/api/trucks", {
         method: "POST",
@@ -141,9 +153,10 @@ export default function AddTruckPage() {
           licensePlate: data.licensePlate,
           capacity: Number(data.capacity),
           capacityUnit: data.capacityUnit,
-          currentLocation: data.currentLocation,
+          currentLocation: currentLocation,
+          city: data.currentLocationCity,
           isAvailable: data.isAvailable,
-          make: data.make,
+          make: manufacturer?.name || data.manufacturerId,
           model: data.model,
           year: data.year ? Number(data.year) : undefined,
           registrationNumber: data.registrationNumber || undefined,
@@ -222,28 +235,28 @@ export default function AddTruckPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="make"
+                  name="manufacturerId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Manufacturer</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          form.setValue("model", "");
+                        }} 
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger data-testid="select-manufacturer">
                             <SelectValue placeholder="Select manufacturer" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Tata Motors">Tata Motors</SelectItem>
-                          <SelectItem value="Ashok Leyland">Ashok Leyland</SelectItem>
-                          <SelectItem value="Mahindra">Mahindra</SelectItem>
-                          <SelectItem value="Eicher">Eicher</SelectItem>
-                          <SelectItem value="BharatBenz">BharatBenz</SelectItem>
-                          <SelectItem value="Force Motors">Force Motors</SelectItem>
-                          <SelectItem value="Volvo">Volvo</SelectItem>
-                          <SelectItem value="Scania">Scania</SelectItem>
-                          <SelectItem value="MAN">MAN</SelectItem>
-                          <SelectItem value="Isuzu">Isuzu</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                        <SelectContent className="max-h-[300px]">
+                          {indianTruckManufacturers.map((manufacturer) => (
+                            <SelectItem key={manufacturer.id} value={manufacturer.id}>
+                              {manufacturer.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -256,9 +269,24 @@ export default function AddTruckPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Model</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Prima 4928" {...field} data-testid="input-model" />
-                      </FormControl>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                        disabled={!manufacturerId}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-model">
+                            <SelectValue placeholder={manufacturerId ? "Select model" : "Select manufacturer first"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {availableModels.map((model) => (
+                            <SelectItem key={model.name} value={model.name}>
+                              {model.name} ({model.capacityRange})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -435,19 +463,66 @@ export default function AddTruckPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="currentLocation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Mumbai, Maharashtra" {...field} data-testid="input-location" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="currentLocationState"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          form.setValue("currentLocationCity", "");
+                        }} 
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-state">
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {sortedIndianStates.map((state) => (
+                            <SelectItem key={state.code} value={state.code}>
+                              {state.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currentLocationCity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                        disabled={!currentLocationState}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-city">
+                            <SelectValue placeholder={currentLocationState ? "Select city" : "Select state first"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {availableCities.map((city) => (
+                            <SelectItem key={city.name} value={city.name}>
+                              {city.name} {city.isMetro && "(Metro)"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="isAvailable"

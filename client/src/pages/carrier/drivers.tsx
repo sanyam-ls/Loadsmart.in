@@ -169,11 +169,28 @@ export default function CarrierDriversPage() {
     inactive: drivers.filter(d => d.status === "inactive").length,
   };
 
+  const expiredLicenses = drivers.filter(d => {
+    if (!d.licenseExpiry) return false;
+    const daysUntilExpiry = differenceInDays(new Date(d.licenseExpiry), new Date());
+    return daysUntilExpiry < 0;
+  });
+
   const expiringLicenses = drivers.filter(d => {
     if (!d.licenseExpiry) return false;
     const daysUntilExpiry = differenceInDays(new Date(d.licenseExpiry), new Date());
     return daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
   });
+
+  const getDaysUntilExpiry = (expiryDate: string | Date) => {
+    return differenceInDays(new Date(expiryDate), new Date());
+  };
+
+  const getExpiryUrgency = (daysRemaining: number) => {
+    if (daysRemaining < 0) return { color: "text-red-600", bgColor: "bg-red-50 dark:bg-red-900/20", borderColor: "border-red-500", label: "Expired" };
+    if (daysRemaining <= 7) return { color: "text-red-600", bgColor: "bg-red-50 dark:bg-red-900/20", borderColor: "border-red-500", label: "Critical" };
+    if (daysRemaining <= 15) return { color: "text-amber-600", bgColor: "bg-amber-50 dark:bg-amber-900/20", borderColor: "border-amber-500", label: "Warning" };
+    return { color: "text-amber-600", bgColor: "bg-amber-50 dark:bg-amber-900/20", borderColor: "border-amber-500", label: "Expiring Soon" };
+  };
 
   const handleOpenAddDialog = () => {
     form.reset({
@@ -259,26 +276,66 @@ export default function CarrierDriversPage() {
         />
       </div>
 
-      {expiringLicenses.length > 0 && (
-        <Card className="border-amber-500">
+      {(expiredLicenses.length > 0 || expiringLicenses.length > 0) && (
+        <Card className={expiredLicenses.length > 0 ? "border-red-500" : "border-amber-500"}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2 text-amber-600">
+            <CardTitle className={`text-base flex items-center gap-2 ${expiredLicenses.length > 0 ? "text-red-600" : "text-amber-600"}`}>
               <AlertTriangle className="h-5 w-5" />
-              License Expiry Alerts ({expiringLicenses.length})
+              License Expiry Alerts ({expiredLicenses.length + expiringLicenses.length})
             </CardTitle>
+            <CardDescription>
+              {expiredLicenses.length > 0 
+                ? `${expiredLicenses.length} driver(s) have expired licenses requiring immediate attention`
+                : "Please review and renew licenses before they expire"
+              }
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {expiringLicenses.map(driver => (
-                <Badge 
-                  key={driver.id} 
-                  variant="outline" 
-                  className="border-amber-500 text-amber-600"
-                >
-                  {driver.name} - Expires {format(new Date(driver.licenseExpiry!), "MMM d, yyyy")}
-                </Badge>
-              ))}
-            </div>
+          <CardContent className="space-y-4">
+            {expiredLicenses.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-red-600 flex items-center gap-1">
+                  <XCircle className="h-4 w-4" />
+                  Expired Licenses ({expiredLicenses.length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {expiredLicenses.map(driver => {
+                    const daysExpired = Math.abs(getDaysUntilExpiry(driver.licenseExpiry!));
+                    return (
+                      <Badge 
+                        key={driver.id} 
+                        variant="destructive"
+                        className="no-default-hover-elevate no-default-active-elevate"
+                      >
+                        {driver.name} - Expired {daysExpired} {daysExpired === 1 ? "day" : "days"} ago
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {expiringLicenses.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-amber-600 flex items-center gap-1">
+                  <AlertTriangle className="h-4 w-4" />
+                  Expiring Soon ({expiringLicenses.length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {expiringLicenses.map(driver => {
+                    const daysRemaining = getDaysUntilExpiry(driver.licenseExpiry!);
+                    const urgency = getExpiryUrgency(daysRemaining);
+                    return (
+                      <Badge 
+                        key={driver.id} 
+                        variant="outline" 
+                        className={`${urgency.borderColor} ${urgency.color} no-default-hover-elevate no-default-active-elevate`}
+                      >
+                        {driver.name} - {daysRemaining === 0 ? "Expires today" : `${daysRemaining} ${daysRemaining === 1 ? "day" : "days"} left`}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

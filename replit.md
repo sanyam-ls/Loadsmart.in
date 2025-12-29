@@ -135,3 +135,22 @@ Express routes must be ordered from specific to generic to prevent greedy matchi
 ### Database
 
 -   **PostgreSQL**: Accessed via `DATABASE_URL` environment variable, with `pg.Pool` for connection pooling and `Drizzle Kit` for migrations.
+
+### Shared Data Files
+
+-   **shared/indian-truck-data.ts**: Contains Indian truck manufacturers (Tata, Ashok Leyland, Mahindra, Eicher, BharatBenz, Force Motors, Volvo, Scania, MAN, Isuzu) with their models organized by capacity category (LCV, ICV, MCV, HCV, MHCV, Tractor). Used for cascading manufacturer → model dropdowns in the Add Truck form.
+-   **shared/indian-locations.ts**: Contains all Indian states and their major cities for cascading State → City location selection. Metro cities are marked with `isMetro: true` flag.
+
+### Truck & Driver Management (Carrier Portal)
+
+**Add Truck Form Features:**
+- Cascading Manufacturer → Model dropdown (selecting manufacturer filters available models)
+- Each model displays its capacity range (e.g., "Prima 4928 (45-49 Ton)")
+- Cascading State → City location selection
+- Metro cities marked with "(Metro)" indicator
+
+**Driver License Expiry Alerts:**
+- Automatic detection of expired and expiring licenses
+- Urgency levels: Critical (≤7 days), Warning (≤15 days), Expiring Soon (≤30 days)
+- Separate sections for expired (red) and expiring (amber) licenses
+- Days remaining/expired display for quick reference

@@ -214,6 +214,7 @@ export default function AdminLoadsPage() {
       const query = searchQuery.toLowerCase();
       result = result.filter(load => 
         load.loadId?.toLowerCase().includes(query) ||
+        load.pickupId?.toLowerCase().includes(query) ||
         load.pickup?.toLowerCase().includes(query) ||
         load.drop?.toLowerCase().includes(query) ||
         load.shipperName?.toLowerCase().includes(query) ||
@@ -524,7 +525,7 @@ export default function AdminLoadsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by Load ID, route, shipper, or carrier..."
+                placeholder="Search by Load ID, Pickup ID, route, shipper, or carrier..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"

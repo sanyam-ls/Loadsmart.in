@@ -348,6 +348,7 @@ export default function ShipperLoadsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Load ID</TableHead>
+                <TableHead>Your Ref</TableHead>
                 <TableHead>Route</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Weight</TableHead>
@@ -355,7 +356,6 @@ export default function ShipperLoadsPage() {
                 <TableHead>Bids</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Pickup Date</TableHead>
-                <TableHead>Created</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
@@ -368,6 +368,9 @@ export default function ShipperLoadsPage() {
                   data-testid={`row-load-${load.id}`}
                 >
                   <TableCell className="font-mono text-sm">{formatLoadId(load)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {(load as any).shipperReferenceNumber || '-'}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-3 w-3 text-green-500" />
@@ -401,9 +404,6 @@ export default function ShipperLoadsPage() {
                     Rs. {parseFloat(load.finalPrice || load.adminPrice || '0').toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell>{formatDate(load.pickupDate)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {formatTimeAgo(load.createdAt)}
-                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>

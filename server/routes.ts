@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 import { storage } from "./storage";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -77,8 +79,16 @@ export async function registerRoutes(
   
   const isProduction = process.env.NODE_ENV === "production";
   
+  // Use PostgreSQL session store for production persistence
+  const PgSession = connectPgSimple(session);
+  
   app.use(
     session({
+      store: new PgSession({
+        pool: pool,
+        tableName: "session",
+        createTableIfMissing: true,
+      }),
       secret: process.env.SESSION_SECRET || "freightflow-secret-key-change-in-production",
       resave: false,
       saveUninitialized: false,

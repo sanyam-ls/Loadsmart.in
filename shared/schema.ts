@@ -312,6 +312,7 @@ export const loads = pgTable("loads", {
   // Sequential load numbers (global - same across all portals)
   shipperLoadNumber: integer("shipper_load_number"), // Assigned at creation: LD-001, LD-002, etc. (global sequential)
   adminReferenceNumber: integer("admin_reference_number"), // Legacy - now using shipperLoadNumber
+  shipperReferenceNumber: text("shipper_reference_number"), // Shipper's own custom reference/pickup number for their tracking
   pickupId: varchar("pickup_id", { length: 4 }), // Unique 4-digit code given to carrier for pickup verification
   
   // Shipper contact details

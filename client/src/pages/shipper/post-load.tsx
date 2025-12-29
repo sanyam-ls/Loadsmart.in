@@ -40,7 +40,6 @@ import { AddressAutocomplete, getRouteInfo } from "@/components/address-autocomp
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const loadFormSchema = z.object({
-  shipperReferenceNumber: z.string().optional(), // Shipper's own reference/pickup number
   shipperCompanyName: z.string().min(2, "Company name is required"),
   shipperContactName: z.string().min(2, "Contact name is required"),
   shipperCompanyAddress: z.string().min(5, "Company address is required"),
@@ -284,7 +283,6 @@ export default function PostLoadPage() {
   const form = useForm<LoadFormData>({
     resolver: zodResolver(loadFormSchema),
     defaultValues: {
-      shipperReferenceNumber: "",
       shipperCompanyName: "",
       shipperContactName: "",
       shipperCompanyAddress: "",
@@ -338,7 +336,6 @@ export default function PostLoadPage() {
       const truckType = data.requiredTruckType || estimation?.suggestedTruck || "Dry Van";
       
       const response = await apiRequest("POST", "/api/loads/submit", {
-        shipperReferenceNumber: data.shipperReferenceNumber || undefined,
         shipperCompanyName: data.shipperCompanyName,
         shipperContactName: data.shipperContactName,
         shipperCompanyAddress: data.shipperCompanyAddress,
@@ -503,22 +500,6 @@ export default function PostLoadPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="shipperReferenceNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Your Reference Number (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., PO-2025-001, INV-12345, or your internal tracking number" {...field} data-testid="input-shipper-reference-number" />
-                        </FormControl>
-                        <FormDescription>
-                          Enter your own reference or pickup number to track this shipment in your system
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField
                       control={form.control}

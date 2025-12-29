@@ -348,7 +348,7 @@ export default function ShipperLoadsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Load ID</TableHead>
-                <TableHead>Your Ref</TableHead>
+                <TableHead>Pickup ID</TableHead>
                 <TableHead>Route</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Weight</TableHead>
@@ -368,8 +368,10 @@ export default function ShipperLoadsPage() {
                   data-testid={`row-load-${load.id}`}
                 >
                   <TableCell className="font-mono text-sm">{formatLoadId(load)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {load.shipperReferenceNumber || '-'}
+                  <TableCell className="text-sm">
+                    {load.pickupId ? (
+                      <Badge variant="outline" className="font-mono">{load.pickupId}</Badge>
+                    ) : '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

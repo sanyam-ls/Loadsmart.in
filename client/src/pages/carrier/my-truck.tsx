@@ -32,6 +32,7 @@ import { format, differenceInDays } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { indianTruckTypes } from "@shared/schema";
+import { indianTruckManufacturers, getModelsByManufacturer, TruckManufacturer } from "@shared/indian-truck-data";
 
 interface DocumentAlert {
   documentId: string;
@@ -92,22 +93,14 @@ const getExpiryBadge = (expiryDate: string | null) => {
   }
 };
 
-// Indian truck manufacturers
-const truckMakes = [
-  "Tata Motors",
-  "Ashok Leyland",
-  "Mahindra",
-  "Eicher",
-  "BharatBenz",
-  "Volvo",
-  "Scania",
-  "Isuzu",
-  "Force Motors",
-  "SML Isuzu",
-  "Other"
-];
+// Sorted manufacturers for dropdown
+const sortedManufacturers = [...indianTruckManufacturers].sort((a, b) => a.name.localeCompare(b.name));
 
-// Common Indian cities
+// Generate year options from 2000 to current year
+const currentYear = new Date().getFullYear();
+const yearOptions = Array.from({ length: currentYear - 1999 }, (_, i) => currentYear - i);
+
+// Common Indian cities for registration
 const indianCities = [
   "Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", 
   "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Ludhiana",
@@ -126,12 +119,17 @@ export default function MyTruckPage() {
     capacity: "",
     capacityUnit: "tons",
     currentLocation: "",
-    make: "",
+    manufacturerId: "",
     model: "",
     year: "",
     city: "",
     registrationDate: ""
   });
+
+  // Get available models based on selected manufacturer
+  const availableModels = editForm.manufacturerId 
+    ? getModelsByManufacturer(editForm.manufacturerId) 
+    : [];
 
   const { data, isLoading, error, refetch } = useQuery<{
     truck: TruckData | null;
@@ -159,13 +157,15 @@ export default function MyTruckPage() {
   });
 
   const openEditDialog = (truck: TruckData) => {
+    // Find manufacturer ID from saved make name
+    const manufacturer = indianTruckManufacturers.find((m: TruckManufacturer) => m.name === truck.make);
     setEditForm({
       licensePlate: truck.licensePlate || "",
       truckType: truck.truckType || "",
       capacity: String(truck.capacity || ""),
       capacityUnit: truck.capacityUnit || "tons",
       currentLocation: truck.currentLocation || "",
-      make: truck.make || "",
+      manufacturerId: manufacturer?.id || "",
       model: truck.model || "",
       year: truck.year ? String(truck.year) : "",
       city: truck.city || "",
@@ -178,6 +178,9 @@ export default function MyTruckPage() {
     const { truck } = data || {};
     if (!truck) return;
     
+    // Convert manufacturerId to make name for backend
+    const manufacturer = indianTruckManufacturers.find((m: TruckManufacturer) => m.id === editForm.manufacturerId);
+    
     updateTruckMutation.mutate({
       truckId: truck.id,
       licensePlate: editForm.licensePlate,
@@ -185,7 +188,7 @@ export default function MyTruckPage() {
       capacity: parseInt(editForm.capacity) || 0,
       capacityUnit: editForm.capacityUnit,
       currentLocation: editForm.currentLocation || null,
-      make: editForm.make || null,
+      make: manufacturer?.name || null,
       model: editForm.model || null,
       year: editForm.year ? parseInt(editForm.year) : null,
       city: editForm.city || null,
@@ -586,44 +589,56 @@ export default function MyTruckPage() {
               <div className="space-y-2">
                 <Label htmlFor="make">Make / Manufacturer</Label>
                 <Select 
-                  value={editForm.make} 
-                  onValueChange={(val) => setEditForm({...editForm, make: val})}
+                  value={editForm.manufacturerId} 
+                  onValueChange={(val) => setEditForm({...editForm, manufacturerId: val, model: ""})}
                 >
                   <SelectTrigger data-testid="select-make">
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
                   <SelectContent>
-                    {truckMakes.map((make) => (
-                      <SelectItem key={make} value={make}>{make}</SelectItem>
+                    {sortedManufacturers.map((mfr) => (
+                      <SelectItem key={mfr.id} value={mfr.id}>{mfr.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="model">Model</Label>
-                <Input 
-                  id="model"
-                  value={editForm.model}
-                  onChange={(e) => setEditForm({...editForm, model: e.target.value})}
-                  placeholder="e.g. 1109"
-                  data-testid="input-model"
-                />
+                <Select 
+                  value={editForm.model} 
+                  onValueChange={(val) => setEditForm({...editForm, model: val})}
+                  disabled={!editForm.manufacturerId}
+                >
+                  <SelectTrigger data-testid="select-model">
+                    <SelectValue placeholder={editForm.manufacturerId ? "Select model" : "Select make first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModels.map((model) => (
+                      <SelectItem key={model.name} value={model.name}>
+                        {model.name} ({model.capacityRange})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="year">Year of Manufacture</Label>
-                <Input 
-                  id="year"
-                  type="number"
-                  value={editForm.year}
-                  onChange={(e) => setEditForm({...editForm, year: e.target.value})}
-                  placeholder="e.g. 2020"
-                  min={2000}
-                  max={new Date().getFullYear()}
-                  data-testid="input-year"
-                />
+                <Select 
+                  value={editForm.year} 
+                  onValueChange={(val) => setEditForm({...editForm, year: val})}
+                >
+                  <SelectTrigger data-testid="select-year">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="capacity">Capacity (tons)</Label>

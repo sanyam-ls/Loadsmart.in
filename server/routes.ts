@@ -271,19 +271,23 @@ export async function registerRoutes(
       
       const { password: _, ...userWithoutPassword } = user;
       
-      // Include carrierType for carrier users - auto-detect solo based on fleetSize
+      // Include carrierType for carrier users - prioritize explicit type over fleet size
       let carrierType: string | undefined;
       if (user.role === "carrier") {
         const carrierProfile = await storage.getCarrierProfile(user.id);
-        // Auto-detect solo driver: if carrierType is "solo" OR fleetSize is 0 or 1
+        const dbCarrierType = carrierProfile?.carrierType;
         const fleetSize = carrierProfile?.fleetSize;
-        const isSoloByType = carrierProfile?.carrierType === "solo";
-        const isSoloByFleetSize = typeof fleetSize === "number" && fleetSize <= 1;
         
-        if (isSoloByType || isSoloByFleetSize) {
+        // Prioritize explicit carrier_type from database
+        if (dbCarrierType === "solo") {
           carrierType = "solo";
+        } else if (dbCarrierType === "enterprise" || dbCarrierType === "fleet") {
+          carrierType = "enterprise"; // Both "enterprise" and "fleet" show enterprise portal
         } else {
-          carrierType = carrierProfile?.carrierType || "enterprise";
+          // Only auto-detect if carrier_type is not explicitly set
+          // fleetSize of 0 or 1 defaults to solo for new registrations without explicit type
+          const isSoloByFleetSize = typeof fleetSize === "number" && fleetSize <= 1;
+          carrierType = isSoloByFleetSize ? "solo" : "enterprise";
         }
       }
       
@@ -308,19 +312,23 @@ export async function registerRoutes(
 
       const { password: _, ...userWithoutPassword } = user;
       
-      // Include carrierType for carrier users - auto-detect solo based on fleetSize
+      // Include carrierType for carrier users - prioritize explicit type over fleet size
       let carrierType: string | undefined;
       if (user.role === "carrier") {
         const carrierProfile = await storage.getCarrierProfile(user.id);
-        // Auto-detect solo driver: if carrierType is "solo" OR fleetSize is 0 or 1
+        const dbCarrierType = carrierProfile?.carrierType;
         const fleetSize = carrierProfile?.fleetSize;
-        const isSoloByType = carrierProfile?.carrierType === "solo";
-        const isSoloByFleetSize = typeof fleetSize === "number" && fleetSize <= 1;
         
-        if (isSoloByType || isSoloByFleetSize) {
+        // Prioritize explicit carrier_type from database
+        if (dbCarrierType === "solo") {
           carrierType = "solo";
+        } else if (dbCarrierType === "enterprise" || dbCarrierType === "fleet") {
+          carrierType = "enterprise"; // Both "enterprise" and "fleet" show enterprise portal
         } else {
-          carrierType = carrierProfile?.carrierType || "enterprise";
+          // Only auto-detect if carrier_type is not explicitly set
+          // fleetSize of 0 or 1 defaults to solo for new registrations without explicit type
+          const isSoloByFleetSize = typeof fleetSize === "number" && fleetSize <= 1;
+          carrierType = isSoloByFleetSize ? "solo" : "enterprise";
         }
       }
       

@@ -369,7 +369,7 @@ export default function ShipperLoadsPage() {
                 >
                   <TableCell className="font-mono text-sm">{formatLoadId(load)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {(load as any).shipperReferenceNumber || '-'}
+                    {load.shipperReferenceNumber || '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

@@ -77,6 +77,41 @@ Specialized portal for owner-operators with single-truck operations:
 - Solo Driver badges on carrier cards in /admin/carriers
 - Carrier type filter (All/Solo/Enterprise) for filtering carriers
 
+### Dual Marketplace Bidding System
+
+Both Solo Drivers and Enterprise Carriers can bid on the same loads simultaneously, with separate but comparable bid marketplaces:
+
+**API Response Structure (GET /api/loads/:id/bids):**
+```json
+{
+  "soloBids": [],        // Bids from solo carriers
+  "enterpriseBids": [],  // Bids from enterprise carriers
+  "allBids": [],         // Combined bids for backward compatibility
+  "summary": {
+    "totalBids": 0,
+    "soloBidCount": 0,
+    "enterpriseBidCount": 0,
+    "lowestSoloBid": null,
+    "lowestEnterpriseBid": null
+  }
+}
+```
+
+**Admin Load Details - Dual Marketplace View:**
+- Summary cards showing total bids, solo bid count, and enterprise bid count with lowest bids
+- Side-by-side marketplace cards for Solo Driver and Enterprise bids
+- Combined view table showing all bids with carrier type badges
+- Orange theme for Solo Driver section, blue theme for Enterprise section
+
+**Bid Acceptance Cross-Type Closure:**
+- When a bid is accepted (from either carrier type), all other pending and countered bids are auto-rejected
+- Rejection notes include carrier type for audit trail
+- Works for bids in both "pending" and "countered" status
+
+**Carrier Type Detection:**
+- Bid carrierType is set from carrier profile at bid creation time
+- Explicit carrierType from database takes precedence over fleet size detection
+
 ### Real-time Marketplace Updates
 
 The platform uses WebSockets for real-time updates between portals:

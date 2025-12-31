@@ -6,6 +6,20 @@ type LoadWithBids = Load & { bids?: Bid[]; bidCount?: number };
 type BidWithDetails = Bid & { carrier?: Partial<User>; load?: Load };
 type CarrierWithProfile = Omit<User, 'password'> & { carrierProfile?: CarrierProfile };
 
+// Grouped bids response from /api/loads/:id/bids endpoint
+export type GroupedBidsResponse = {
+  soloBids: BidWithDetails[];
+  enterpriseBids: BidWithDetails[];
+  allBids: BidWithDetails[];
+  summary: {
+    totalBids: number;
+    soloBidCount: number;
+    enterpriseBidCount: number;
+    lowestSoloBid: number | null;
+    lowestEnterpriseBid: number | null;
+  };
+};
+
 export function useLoads() {
   return useQuery<LoadWithBids[]>({
     queryKey: ['/api/loads'],
@@ -79,11 +93,20 @@ export function useBids() {
 }
 
 export function useBidsByLoad(loadId: string | undefined) {
-  return useQuery<BidWithDetails[]>({
+  return useQuery<GroupedBidsResponse>({
     queryKey: ['/api/loads', loadId, 'bids'],
     enabled: !!loadId,
     staleTime: 10000,
   });
+}
+
+// Legacy hook that returns flat array for backwards compatibility
+export function useBidsByLoadFlat(loadId: string | undefined) {
+  const { data, ...rest } = useBidsByLoad(loadId);
+  return {
+    ...rest,
+    data: data?.allBids || [],
+  };
 }
 
 export function useCreateBid() {

@@ -988,21 +988,83 @@ export async function registerRoutes(
       if (user.role === "shipper") {
         const load = await storage.getLoad(req.params.loadId);
         if (load && !["assigned", "in_transit", "delivered"].includes(load.status || "")) {
-          return res.json([]); // Return empty array for non-finalized loads
+          return res.json({ 
+            soloBids: [], 
+            enterpriseBids: [], 
+            allBids: [],
+            summary: {
+              totalBids: 0,
+              soloBidCount: 0,
+              enterpriseBidCount: 0,
+              lowestSoloBid: null,
+              lowestEnterpriseBid: null,
+            }
+          });
         }
       }
 
       const bidsList = await storage.getBidsByLoad(req.params.loadId);
       
+      // Enrich bids with carrier details including profile and truck info
       const bidsWithCarriers = await Promise.all(
         bidsList.map(async (bid) => {
           const carrier = await storage.getUser(bid.carrierId);
+          const carrierProfile = await storage.getCarrierProfile(bid.carrierId);
+          const truck = bid.truckId ? await storage.getTruck(bid.truckId) : null;
           const { password: _, ...carrierWithoutPassword } = carrier || {};
-          return { ...bid, carrier: carrierWithoutPassword };
+          
+          // Determine carrier type from bid or profile
+          const carrierType = bid.carrierType || carrierProfile?.carrierType || "enterprise";
+          
+          return { 
+            ...bid, 
+            carrierType,
+            carrier: carrierWithoutPassword,
+            carrierProfile: carrierProfile ? {
+              fleetSize: carrierProfile.fleetSize,
+              carrierType: carrierProfile.carrierType,
+              operatingRegions: carrierProfile.operatingRegions,
+              verificationStatus: carrierProfile.verificationStatus,
+            } : null,
+            truck: truck ? {
+              id: truck.id,
+              registrationNumber: truck.registrationNumber,
+              manufacturer: truck.manufacturer,
+              model: truck.model,
+              capacity: truck.capacity,
+              truckType: truck.truckType,
+            } : null,
+          };
         })
       );
 
-      res.json(bidsWithCarriers);
+      // Group bids by carrier type for admin dual marketplace view
+      const soloBids = bidsWithCarriers.filter(b => b.carrierType === "solo");
+      const enterpriseBids = bidsWithCarriers.filter(b => b.carrierType === "enterprise");
+
+      // Safely calculate lowest bids - handle numeric or string amounts
+      const getLowestBid = (bids: typeof bidsWithCarriers) => {
+        if (bids.length === 0) return null;
+        const amounts = bids.map(b => {
+          const amt = b.amount;
+          if (amt === null || amt === undefined) return Infinity;
+          return typeof amt === 'number' ? amt : parseFloat(String(amt));
+        }).filter(a => !isNaN(a) && a !== Infinity);
+        return amounts.length > 0 ? Math.min(...amounts) : null;
+      };
+
+      res.json({
+        soloBids,
+        enterpriseBids,
+        allBids: bidsWithCarriers,
+        summary: {
+          totalBids: bidsWithCarriers.length,
+          soloBidCount: soloBids.length,
+          enterpriseBidCount: enterpriseBids.length,
+          lowestSoloBid: getLowestBid(soloBids),
+          lowestEnterpriseBid: getLowestBid(enterpriseBids),
+        }
+      });
     } catch (error) {
       console.error("Get load bids error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -1027,9 +1089,14 @@ export async function registerRoutes(
         });
       }
 
+      // Determine carrier type from profile
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      const carrierType = carrierProfile?.carrierType || "enterprise";
+
       const data = insertBidSchema.parse({
         ...req.body,
         carrierId: user.id,
+        carrierType: carrierType, // Set carrier type on bid
       });
 
       const bid = await storage.createBid(data);

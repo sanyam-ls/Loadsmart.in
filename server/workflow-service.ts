@@ -263,13 +263,13 @@ export async function acceptBid(
     notes: `Accepted by ${acceptedBy} at ${new Date().toISOString()} for Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`
   });
 
-  // Auto-close all other bids for this load
+  // Auto-close all other bids for this load (both pending and countered, from any carrier type)
   const otherBids = await storage.getBidsByLoad(bid.loadId);
   for (const otherBid of otherBids) {
-    if (otherBid.id !== bidId && otherBid.status === "pending") {
+    if (otherBid.id !== bidId && (otherBid.status === "pending" || otherBid.status === "countered")) {
       await storage.updateBid(otherBid.id, { 
         status: "rejected",
-        notes: "Auto-rejected: Another bid was accepted"
+        notes: `Auto-rejected: Another bid was accepted (${otherBid.carrierType || "enterprise"} carrier bid closed)`
       });
     }
   }

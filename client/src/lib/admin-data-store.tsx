@@ -1295,10 +1295,13 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     for (let i = 0; i < bidCount; i++) {
       const bidCarrier = randomFrom(carriersRef.current);
       const isAccepted = carrier && bidCarrier.carrierId === carrier.carrierId;
+      // Assign carrier type based on fleet size - fleetSize <= 1 is solo
+      const bidCarrierType: "solo" | "enterprise" = bidCarrier.fleetSize <= 1 ? "solo" : "enterprise";
       bids.push({
         bidId: `BID-${loadId}-${i + 1}`,
         carrierId: bidCarrier.carrierId,
         carrierName: bidCarrier.companyName,
+        carrierType: bidCarrierType,
         amount: Math.round(load.spending * (0.85 + Math.random() * 0.3)),
         status: isAccepted ? "Accepted" : (Math.random() < 0.2 ? "Rejected" : "Pending"),
         submittedAt: new Date(load.createdDate.getTime() + randomBetween(1, 48) * 60 * 60 * 1000),

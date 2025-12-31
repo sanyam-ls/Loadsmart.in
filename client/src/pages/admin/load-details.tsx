@@ -72,7 +72,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { useAdminData, type DetailedLoad, type AdminLoad, type AdminCarrier } from "@/lib/admin-data-store";
+import { useAdminData, type DetailedLoad, type AdminLoad, type AdminCarrier, type LoadBidRecord } from "@/lib/admin-data-store";
+import { useBidsByLoad, type GroupedBidsResponse } from "@/lib/api-hooks";
 import { format } from "date-fns";
 import type { Load } from "@shared/schema";
 
@@ -118,6 +119,29 @@ export default function AdminLoadDetailsPage() {
     queryKey: ["/api/loads", loadId],
     enabled: !!loadId,
   });
+
+  // Fetch real bids from API for dual marketplace view
+  const { data: apiBids } = useBidsByLoad(loadId);
+
+  // Convert API bids to the LoadBidRecord format expected by the UI
+  const apiBidsAsRecords = useMemo((): LoadBidRecord[] => {
+    if (apiBids && apiBids.allBids && apiBids.allBids.length > 0) {
+      return apiBids.allBids.map((bid: any) => ({
+        bidId: bid.id,
+        carrierId: bid.carrierId,
+        carrierName: bid.carrier?.companyName || bid.carrier?.username || "Unknown Carrier",
+        carrierType: (bid.carrierType || "enterprise") as "solo" | "enterprise",
+        amount: parseFloat(bid.amount || "0"),
+        status: (bid.status === "accepted" ? "Accepted" : 
+                bid.status === "rejected" ? "Rejected" : 
+                bid.status === "countered" ? "Countered" : "Pending") as LoadBidRecord["status"],
+        submittedAt: bid.createdAt ? new Date(bid.createdAt) : new Date(),
+        counterOffer: bid.counterAmount ? parseFloat(bid.counterAmount) : undefined,
+        notes: bid.notes || undefined,
+      }));
+    }
+    return [];
+  }, [apiBids]);
   
   const detailedLoad = useMemo(() => {
     if (apiLoad) {
@@ -127,6 +151,16 @@ export default function AdminLoadDetailsPage() {
     }
     return getDetailedLoad(loadId);
   }, [loadId, getDetailedLoad, apiLoad]);
+
+  // Final bids array: prefer API bids, fallback to mock data
+  const allBids = useMemo(() => {
+    if (apiBidsAsRecords.length > 0) return apiBidsAsRecords;
+    return detailedLoad?.bids || [];
+  }, [apiBidsAsRecords, detailedLoad?.bids]);
+
+  // Pre-computed filtered bid arrays for dual marketplace view
+  const soloBidsFiltered = useMemo(() => allBids.filter(b => b.carrierType === "solo"), [allBids]);
+  const enterpriseBidsFiltered = useMemo(() => allBids.filter(b => b.carrierType === "enterprise" || !b.carrierType), [allBids]);
   
   function createDetailedLoadFromApi(load: LoadWithRelations, displayId: string): DetailedLoad {
     const mapLoadStatus = (status: string | null): AdminLoad["status"] => {
@@ -759,12 +793,171 @@ export default function AdminLoadDetailsPage() {
         </TabsContent>
 
         <TabsContent value="bids" className="space-y-4">
+          {/* Dual Marketplace Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Bids</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-total-bids">{allBids.length}</div>
+                <p className="text-xs text-muted-foreground">From all carriers</p>
+              </CardContent>
+            </Card>
+            <Card className="border-orange-200 dark:border-orange-800">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-sm font-medium">Solo Driver Bids</CardTitle>
+                  <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700">Solo</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-solo-bids">{soloBidsFiltered.length}</div>
+                {soloBidsFiltered.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Lowest: {formatCurrency(Math.min(...soloBidsFiltered.map(b => b.amount)))}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-sm font-medium">Enterprise Bids</CardTitle>
+                  <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">Enterprise</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-enterprise-bids">{enterpriseBidsFiltered.length}</div>
+                {enterpriseBidsFiltered.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Lowest: {formatCurrency(Math.min(...enterpriseBidsFiltered.map(b => b.amount)))}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Dual Marketplace Comparison View */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Solo Driver Marketplace */}
+            <Card className="border-orange-200 dark:border-orange-800">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-orange-600" />
+                    <CardTitle>Solo Driver Marketplace</CardTitle>
+                  </div>
+                  <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700">
+                    {soloBidsFiltered.length} bids
+                  </Badge>
+                </div>
+                <CardDescription>Owner-operators with single trucks</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {soloBidsFiltered.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No solo driver bids yet</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Submitted</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {soloBidsFiltered
+                        .sort((a, b) => a.amount - b.amount)
+                        .map((bid) => (
+                          <TableRow key={bid.bidId} data-testid={`row-solo-bid-${bid.bidId}`}>
+                            <TableCell className="font-medium">{bid.carrierName}</TableCell>
+                            <TableCell className="font-semibold">{formatCurrency(bid.amount)}</TableCell>
+                            <TableCell>
+                              <Badge variant={
+                                bid.status === "Accepted" ? "default" :
+                                bid.status === "Rejected" ? "destructive" :
+                                "outline"
+                              }>
+                                {bid.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{format(bid.submittedAt, "dd MMM, HH:mm")}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Enterprise Carrier Marketplace */}
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-blue-600" />
+                    <CardTitle>Enterprise Marketplace</CardTitle>
+                  </div>
+                  <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
+                    {enterpriseBidsFiltered.length} bids
+                  </Badge>
+                </div>
+                <CardDescription>Fleet operators with multiple trucks</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {enterpriseBidsFiltered.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No enterprise bids yet</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Submitted</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {enterpriseBidsFiltered
+                        .sort((a, b) => a.amount - b.amount)
+                        .map((bid) => (
+                          <TableRow key={bid.bidId} data-testid={`row-enterprise-bid-${bid.bidId}`}>
+                            <TableCell className="font-medium">{bid.carrierName}</TableCell>
+                            <TableCell className="font-semibold">{formatCurrency(bid.amount)}</TableCell>
+                            <TableCell>
+                              <Badge variant={
+                                bid.status === "Accepted" ? "default" :
+                                bid.status === "Rejected" ? "destructive" :
+                                "outline"
+                              }>
+                                {bid.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{format(bid.submittedAt, "dd MMM, HH:mm")}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Combined Bid History Table */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Bid History</CardTitle>
-                  <CardDescription>{detailedLoad.bids.length} bids received</CardDescription>
+                  <CardTitle>All Bids - Combined View</CardTitle>
+                  <CardDescription>Complete bid history from both marketplaces</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -781,8 +974,8 @@ export default function AdminLoadDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {detailedLoad.bids.map((bid) => (
-                    <TableRow key={bid.bidId}>
+                  {allBids.map((bid) => (
+                    <TableRow key={bid.bidId} data-testid={`row-bid-${bid.bidId}`}>
                       <TableCell className="font-medium">{bid.carrierName}</TableCell>
                       <TableCell>
                         <Badge 

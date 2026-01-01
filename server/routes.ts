@@ -4420,7 +4420,7 @@ export async function registerRoutes(
       await storage.createNotification({
         userId: load.shipperId,
         title: "Invoice Received",
-        message: `Invoice for Rs. ${totalAmount.toLocaleString('en-IN')} (incl. GST) has been generated for your load from ${load.pickupCity} to ${load.dropoffCity}.`,
+        message: `Invoice for Rs. ${totalAmount.toLocaleString('en-IN')} has been generated for your load from ${load.pickupCity} to ${load.dropoffCity}.`,
         type: "invoice",
         relatedLoadId: load_id,
       });

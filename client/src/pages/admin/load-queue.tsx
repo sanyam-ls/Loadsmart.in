@@ -543,8 +543,6 @@ export default function LoadQueuePage() {
                 {invoiceLoads.map((load) => {
                   const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
                   const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
-                  const gstAmount = Math.round(priceNum * 0.18);
-                  const totalWithGst = priceNum + gstAmount;
                   
                   return (
                     <div 
@@ -577,9 +575,9 @@ export default function LoadQueuePage() {
                       
                       <div className="border-t pt-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total (incl. GST)</span>
+                          <span className="text-xs text-muted-foreground">Total</span>
                           <span className="font-bold text-green-600 dark:text-green-400">
-                            Rs. {totalWithGst.toLocaleString('en-IN')}
+                            Rs. {priceNum.toLocaleString('en-IN')}
                           </span>
                         </div>
                       </div>
@@ -640,8 +638,6 @@ export default function LoadQueuePage() {
                 {sentLoads.map((load) => {
                   const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
                   const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
-                  const gstAmount = Math.round(priceNum * 0.18);
-                  const totalWithGst = priceNum + gstAmount;
                   
                   return (
                     <div 
@@ -681,9 +677,9 @@ export default function LoadQueuePage() {
                       
                       <div className="border-t pt-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total (incl. GST)</span>
+                          <span className="text-xs text-muted-foreground">Total</span>
                           <span className="font-bold text-blue-600 dark:text-blue-400">
-                            Rs. {totalWithGst.toLocaleString('en-IN')}
+                            Rs. {priceNum.toLocaleString('en-IN')}
                           </span>
                         </div>
                       </div>

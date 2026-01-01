@@ -65,6 +65,153 @@ type LoadFormData = z.infer<typeof loadFormSchema>;
 
 import { indianTruckTypes, truckBodyCategories } from "@shared/schema";
 
+// Comprehensive commodity categories for Indian freight logistics
+const commodityCategories = [
+  {
+    category: "Agricultural & Food Products",
+    items: [
+      { value: "rice", label: "Rice / Paddy" },
+      { value: "wheat", label: "Wheat" },
+      { value: "pulses", label: "Pulses / Daal" },
+      { value: "sugar", label: "Sugar" },
+      { value: "jaggery", label: "Jaggery (Gud)" },
+      { value: "tea", label: "Tea" },
+      { value: "coffee", label: "Coffee" },
+      { value: "spices", label: "Spices" },
+      { value: "edible_oil", label: "Edible Oil" },
+      { value: "fruits", label: "Fresh Fruits" },
+      { value: "vegetables", label: "Fresh Vegetables" },
+      { value: "onions_potatoes", label: "Onions / Potatoes" },
+      { value: "cotton", label: "Cotton" },
+      { value: "tobacco", label: "Tobacco" },
+      { value: "jute", label: "Jute" },
+      { value: "animal_feed", label: "Animal Feed / Fodder" },
+      { value: "seeds", label: "Seeds" },
+      { value: "fertilizer", label: "Fertilizer" },
+      { value: "pesticides", label: "Pesticides / Insecticides" },
+    ],
+  },
+  {
+    category: "Construction Materials",
+    items: [
+      { value: "cement", label: "Cement Bags" },
+      { value: "cement_bulk", label: "Cement (Bulk)" },
+      { value: "sand", label: "Sand" },
+      { value: "gravel", label: "Gravel / Stone Chips" },
+      { value: "bricks", label: "Bricks" },
+      { value: "tiles", label: "Tiles / Ceramics" },
+      { value: "marble", label: "Marble / Granite" },
+      { value: "steel_rods", label: "Steel Rods / TMT Bars" },
+      { value: "steel_coils", label: "Steel Coils" },
+      { value: "steel_plates", label: "Steel Plates / Sheets" },
+      { value: "pipes", label: "Pipes (Steel/PVC)" },
+      { value: "plywood", label: "Plywood / Timber" },
+      { value: "glass", label: "Glass" },
+      { value: "paint", label: "Paint / Coatings" },
+      { value: "concrete_blocks", label: "Concrete Blocks" },
+      { value: "gypsum", label: "Gypsum" },
+    ],
+  },
+  {
+    category: "Metals & Minerals",
+    items: [
+      { value: "iron_ore", label: "Iron Ore" },
+      { value: "coal", label: "Coal" },
+      { value: "limestone", label: "Limestone" },
+      { value: "bauxite", label: "Bauxite" },
+      { value: "copper", label: "Copper" },
+      { value: "aluminium", label: "Aluminium" },
+      { value: "zinc", label: "Zinc" },
+      { value: "scrap_metal", label: "Scrap Metal" },
+      { value: "manganese", label: "Manganese" },
+      { value: "silica_sand", label: "Silica Sand" },
+    ],
+  },
+  {
+    category: "Petroleum & Chemicals",
+    items: [
+      { value: "petroleum_products", label: "Petroleum Products" },
+      { value: "lng_lpg", label: "LNG / LPG" },
+      { value: "bitumen", label: "Bitumen" },
+      { value: "lubricants", label: "Lubricants / Oils" },
+      { value: "chemicals_general", label: "Chemicals (General)" },
+      { value: "acids", label: "Acids" },
+      { value: "solvents", label: "Solvents" },
+      { value: "resins", label: "Resins / Polymers" },
+      { value: "plastics_raw", label: "Plastics (Raw Material)" },
+      { value: "rubber", label: "Rubber" },
+    ],
+  },
+  {
+    category: "Industrial & Manufacturing",
+    items: [
+      { value: "machinery", label: "Machinery / Equipment" },
+      { value: "auto_parts", label: "Auto Parts / Components" },
+      { value: "automobiles", label: "Automobiles / Vehicles" },
+      { value: "textiles", label: "Textiles / Fabrics" },
+      { value: "garments", label: "Garments / Apparel" },
+      { value: "yarn", label: "Yarn / Thread" },
+      { value: "leather", label: "Leather / Leather Goods" },
+      { value: "paper", label: "Paper / Cardboard" },
+      { value: "packaging", label: "Packaging Materials" },
+      { value: "electrical", label: "Electrical Equipment" },
+      { value: "electronics", label: "Electronics" },
+      { value: "cables_wires", label: "Cables / Wires" },
+      { value: "batteries", label: "Batteries" },
+      { value: "solar_panels", label: "Solar Panels" },
+    ],
+  },
+  {
+    category: "Consumer Goods",
+    items: [
+      { value: "fmcg", label: "FMCG Products" },
+      { value: "beverages", label: "Beverages" },
+      { value: "dairy", label: "Dairy Products" },
+      { value: "frozen_foods", label: "Frozen Foods" },
+      { value: "packaged_foods", label: "Packaged Foods" },
+      { value: "medicines", label: "Medicines / Pharmaceuticals" },
+      { value: "cosmetics", label: "Cosmetics / Personal Care" },
+      { value: "furniture", label: "Furniture" },
+      { value: "appliances", label: "Home Appliances" },
+      { value: "household", label: "Household Goods" },
+    ],
+  },
+  {
+    category: "Containers & Special Cargo",
+    items: [
+      { value: "container_20ft", label: "Container (20ft)" },
+      { value: "container_40ft", label: "Container (40ft)" },
+      { value: "odc_cargo", label: "ODC (Over Dimensional Cargo)" },
+      { value: "project_cargo", label: "Project Cargo" },
+      { value: "hazardous", label: "Hazardous Materials" },
+      { value: "perishables", label: "Perishables (Temperature Controlled)" },
+      { value: "livestock", label: "Livestock" },
+      { value: "empty_containers", label: "Empty Containers" },
+    ],
+  },
+  {
+    category: "Others",
+    items: [
+      { value: "e_commerce", label: "E-commerce Parcels" },
+      { value: "courier", label: "Courier / Packages" },
+      { value: "exhibition", label: "Exhibition Materials" },
+      { value: "shifting", label: "Household Shifting" },
+      { value: "waste", label: "Industrial Waste" },
+      { value: "recyclables", label: "Recyclables" },
+      { value: "other", label: "Other / Custom" },
+    ],
+  },
+];
+
+// Get commodity label from value
+function getCommodityLabel(value: string): string {
+  for (const category of commodityCategories) {
+    const item = category.items.find(i => i.value === value);
+    if (item) return item.label;
+  }
+  return value;
+}
+
 const truckTypesByCategory = truckBodyCategories.reduce((acc, category) => {
   acc[category.id] = indianTruckTypes.filter(t => t.category === category.id);
   return acc;
@@ -713,16 +860,32 @@ export default function PostLoadPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Goods to be Carried</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., Steel Coils, Cement Bags, Rice, Machinery..."
-                            {...field}
-                            onBlur={(e) => { field.onBlur(); updateEstimation(); }}
-                            data-testid="input-goods-to-be-carried"
-                          />
-                        </FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => { field.onChange(value); updateEstimation(); }}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-goods-to-be-carried">
+                              <SelectValue placeholder="Select commodity type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-80">
+                            {commodityCategories.map((category) => (
+                              <SelectGroup key={category.category}>
+                                <SelectLabel className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">
+                                  {category.category}
+                                </SelectLabel>
+                                {category.items.map((item) => (
+                                  <SelectItem key={item.value} value={item.value}>
+                                    {item.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormDescription className="text-xs">
-                          Specify the type of goods you need to transport
+                          Select the type of goods you need to transport
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

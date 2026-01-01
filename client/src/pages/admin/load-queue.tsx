@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Clock, 
   MapPin, 
@@ -19,7 +20,8 @@ import {
   Users,
   Receipt,
   Gavel,
-  Eye
+  Eye,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -319,11 +321,43 @@ export default function LoadQueuePage() {
   const [detailsLoad, setDetailsLoad] = useState<RealLoad | null>(null);
 
   const { user } = useAuth();
+  const [resendingLoadId, setResendingLoadId] = useState<string | null>(null);
   
   const openLoadDetails = (load: RealLoad) => {
     setDetailsLoad(load);
     setDetailsDialogOpen(true);
   };
+
+  // Mutation to resend invoice for a load
+  const resendInvoiceMutation = useMutation({
+    mutationFn: async (loadId: string) => {
+      setResendingLoadId(loadId);
+      // First get the invoice for this load
+      const invoiceRes = await apiRequest("GET", `/api/admin/invoices/load/${loadId}`);
+      const invoiceData = await invoiceRes.json();
+      if (!invoiceData || !invoiceData.id) {
+        throw new Error("Invoice not found for this load");
+      }
+      // Resend the invoice
+      return apiRequest("POST", `/api/admin/invoices/${invoiceData.id}/send`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invoice Resent",
+        description: "The invoice has been resent to the shipper.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
+      setResendingLoadId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Resend Failed",
+        description: error.message || "Failed to resend invoice",
+        variant: "destructive",
+      });
+      setResendingLoadId(null);
+    },
+  });
 
   const { data: realLoads = [], isLoading: isLoadingReal } = useQuery<RealLoad[]>({
     queryKey: ["/api/admin/queue"],
@@ -684,16 +718,29 @@ export default function LoadQueuePage() {
                         </div>
                       </div>
                       
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => openLoadDetails(load)}
-                        data-testid={`button-view-sent-details-${load.id.slice(0, 8)}`}
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View Details
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => openLoadDetails(load)}
+                          data-testid={`button-view-sent-details-${load.id.slice(0, 8)}`}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => resendInvoiceMutation.mutate(load.id)}
+                          disabled={resendingLoadId === load.id || resendInvoiceMutation.isPending}
+                          data-testid={`button-resend-invoice-${load.id.slice(0, 8)}`}
+                        >
+                          <RefreshCw className={`h-3 w-3 mr-1 ${resendingLoadId === load.id ? 'animate-spin' : ''}`} />
+                          Resend
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}

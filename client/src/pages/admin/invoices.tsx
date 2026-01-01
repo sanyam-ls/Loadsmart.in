@@ -810,20 +810,12 @@ export default function AdminInvoicesPage() {
                         <span className="font-medium text-green-700 dark:text-green-400">Carrier Advance Payment</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Advance Percentage:</span>
-                        <span className="font-semibold">{selectedInvoice.advancePaymentPercent}%</span>
+                        <span className="text-sm text-muted-foreground">Advance Payment:</span>
+                        <span className="font-bold text-green-600 dark:text-green-400">{selectedInvoice.advancePaymentPercent}%</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Advance Amount (Upfront):</span>
-                        <span className="font-bold text-green-600 dark:text-green-400">
-                          Rs. {Math.round(parseFloat(selectedInvoice.subtotal || '0') * (selectedInvoice.advancePaymentPercent / 100)).toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Balance Due on Delivery:</span>
-                        <span className="font-medium">
-                          Rs. {Math.round(parseFloat(selectedInvoice.subtotal || '0') * (1 - selectedInvoice.advancePaymentPercent / 100)).toLocaleString('en-IN')}
-                        </span>
+                        <span className="text-sm text-muted-foreground">Balance on Delivery:</span>
+                        <span className="font-medium">{100 - selectedInvoice.advancePaymentPercent}%</span>
                       </div>
                     </CardContent>
                   </Card>

@@ -794,15 +794,15 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                       <>
                         <Separator />
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Advance Payment ({selectedInvoice.advancePaymentPercent}%)</span>
+                          <span className="text-muted-foreground">Advance Payment</span>
                           <span className="font-semibold text-green-600 dark:text-green-400">
-                            {formatCurrency(Math.round(parseFloat(selectedInvoice.subtotal || '0') * (selectedInvoice.advancePaymentPercent / 100)))}
+                            {selectedInvoice.advancePaymentPercent}%
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Balance on Delivery</span>
                           <span className="font-medium">
-                            {formatCurrency(Math.round(parseFloat(selectedInvoice.subtotal || '0') * (1 - selectedInvoice.advancePaymentPercent / 100)))}
+                            {100 - selectedInvoice.advancePaymentPercent}%
                           </span>
                         </div>
                       </>

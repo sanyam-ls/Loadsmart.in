@@ -270,7 +270,7 @@ function CommodityCombobox({
                 {category.items.map((item) => (
                   <CommandItem
                     key={item.value}
-                    value={`${item.label} ${category.category}`}
+                    value={item.label}
                     onSelect={() => {
                       onChange(item.value);
                       setOpen(false);

@@ -239,11 +239,14 @@ export function broadcastInvoiceEvent(shipperId: string, invoiceId: string, even
     timestamp: new Date().toISOString(),
   };
 
+  let sentToShipper = false;
   clients.forEach((client, ws) => {
     if (ws.readyState === WebSocket.OPEN) {
       // Send invoice_sent to shipper
       if (event === "invoice_sent" && client.role === "shipper" && client.userId === shipperId) {
+        console.log(`[WS] Sending invoice_sent to shipper ${shipperId} (connected as ${client.userId})`);
         sendToClient(ws, message);
+        sentToShipper = true;
       }
       // Send all shipper activity events to admin for real-time tracking
       if (["invoice_viewed", "invoice_opened", "invoice_acknowledged", "invoice_paid", "invoice_countered"].includes(event) && client.role === "admin") {
@@ -251,6 +254,9 @@ export function broadcastInvoiceEvent(shipperId: string, invoiceId: string, even
       }
     }
   });
+  if (event === "invoice_sent" && !sentToShipper) {
+    console.log(`[WS] Shipper ${shipperId} not connected - invoice_sent event will be seen on page refresh`);
+  }
   console.log(`Broadcasted invoice_${event} event for invoice ${invoiceId}`);
 }
 

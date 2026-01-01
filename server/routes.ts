@@ -4256,7 +4256,7 @@ export async function registerRoutes(
     }
   });
 
-  // POST /api/admin/invoices/:id/send - Send invoice to shipper
+  // POST /api/admin/invoices/:id/send - Send invoice to shipper (supports initial send and resend)
   app.post("/api/admin/invoices/:id/send", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -4269,6 +4269,9 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Invoice not found" });
       }
 
+      const isResend = invoice.status === 'sent';
+      console.log(`[Invoice] ${isResend ? 'Resending' : 'Sending'} invoice ${invoice.invoiceNumber} to shipper ${invoice.shipperId}`);
+
       const updated = await storage.sendInvoice(req.params.id);
       
       // Transition load state to invoice_sent using centralized validation
@@ -4278,22 +4281,23 @@ export async function registerRoutes(
           load.id,
           'invoice_sent',
           user.id,
-          'Invoice sent to shipper'
+          isResend ? 'Invoice resent to shipper' : 'Invoice sent to shipper'
         );
         if (!transitionResult.success) {
           console.warn(`Load state transition warning: ${transitionResult.error}`);
         }
       }
       
-      // Create notification for shipper
+      // Create notification for shipper (different message for resend)
       await storage.createNotification({
         userId: invoice.shipperId,
-        title: "New Invoice Received",
-        message: `Invoice ${invoice.invoiceNumber} for load ${load?.pickupCity} to ${load?.dropoffCity} has been sent to you.`,
+        title: isResend ? "Invoice Resent" : "New Invoice Received",
+        message: `Invoice ${invoice.invoiceNumber} for load ${load?.pickupCity} to ${load?.dropoffCity} has been ${isResend ? 'resent' : 'sent'} to you.`,
         type: "invoice",
         relatedLoadId: invoice.loadId,
       });
 
+      console.log(`[Invoice] Broadcasting invoice_sent event to shipper ${invoice.shipperId}`);
       broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_sent", updated);
 
       res.json(updated);

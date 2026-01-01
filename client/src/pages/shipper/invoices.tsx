@@ -232,12 +232,14 @@ export default function ShipperInvoicesPage() {
   useEffect(() => {
     if (user?.id && user?.role === "shipper") {
       connectMarketplace("shipper", user.id);
+      console.log("[Shipper Invoices] Connected to marketplace WebSocket");
       
       const unsubInvoice = onMarketplaceEvent("invoice_update", (data) => {
+        console.log("[Shipper Invoices] Received invoice_update event:", data);
         if (data.event === "invoice_sent") {
           toast({
-            title: "New Invoice Received",
-            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been sent to you.`,
+            title: "Invoice Update",
+            description: `Invoice ${data.invoice?.invoiceNumber || data.invoiceId} has been sent to you. Please review and acknowledge.`,
           });
           refetch();
         }

@@ -786,14 +786,6 @@ export default function AdminInvoicesPage() {
                       </div>
                     )}
                     <Separator />
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>Rs. {parseFloat(selectedInvoice.subtotal || '0').toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">GST ({selectedInvoice.taxPercent || 18}%)</span>
-                      <span>Rs. {parseFloat(selectedInvoice.taxAmount || '0').toLocaleString('en-IN')}</span>
-                    </div>
                     <div className="flex justify-between border-t pt-2">
                       <span className="font-semibold">Total Amount</span>
                       <span className="text-xl font-bold">Rs. {parseFloat(selectedInvoice.totalAmount || '0').toLocaleString('en-IN')}</span>

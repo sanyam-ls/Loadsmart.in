@@ -363,9 +363,6 @@ LINE ITEMS:
 ${invoice.lineItems?.map(item => `- ${item.description}: ${formatCurrency(item.amount)}`).join('\n') || 'No line items'}
 
 ----------------------------------------
-Subtotal: ${formatCurrency(invoice.subtotal)}
-GST (${invoice.taxPercent}%): ${formatCurrency(invoice.taxAmount)}
-----------------------------------------
 TOTAL: ${formatCurrency(invoice.totalAmount)}
 ========================================
 ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
@@ -451,7 +448,6 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
               <p className="text-xl font-bold" data-testid={`text-invoice-total-${invoice.id}`}>
                 {formatCurrency(invoice.totalAmount)}
               </p>
-              <p className="text-xs text-muted-foreground">(incl. {invoice.taxPercent}% GST)</p>
             </div>
             {showActions && (
               <div className="flex gap-2 flex-wrap justify-end">
@@ -777,15 +773,6 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                     <CardTitle className="text-sm">Invoice Summary</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Freight Services</span>
-                      <span>{formatCurrency(selectedInvoice.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">GST ({selectedInvoice.taxPercent}%)</span>
-                      <span>{formatCurrency(selectedInvoice.taxAmount)}</span>
-                    </div>
-                    <Separator />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total Amount</span>
                       <span>{formatCurrency(selectedInvoice.totalAmount)}</span>

@@ -90,13 +90,7 @@ const paymentTermsOptions = [
   { value: "Net 30", label: "Net 30 Days" },
 ];
 
-const taxOptions = [
-  { value: "0", label: "No Tax (0%)" },
-  { value: "5", label: "GST 5%" },
-  { value: "12", label: "GST 12%" },
-  { value: "18", label: "GST 18%" },
-  { value: "28", label: "GST 28%" },
-];
+// GST removed from workflow - invoice shows final load price only
 
 export function InvoiceBuilder({
   open,
@@ -111,7 +105,6 @@ export function InvoiceBuilder({
   const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
   const [discountValue, setDiscountValue] = useState(0);
   const [discountReason, setDiscountReason] = useState("");
-  const [taxPercent, setTaxPercent] = useState("18");
   const [paymentTerms, setPaymentTerms] = useState("Net 30");
   const [notes, setNotes] = useState("");
   const [marginPercent, setMarginPercent] = useState(15);
@@ -214,13 +207,10 @@ export function InvoiceBuilder({
     return subtotal - discountAmount;
   }, [subtotal, discountAmount]);
 
-  const taxAmount = useMemo(() => {
-    return (afterDiscount * parseFloat(taxPercent)) / 100;
-  }, [afterDiscount, taxPercent]);
-
+  // GST removed - total is just the after-discount amount
   const totalAmount = useMemo(() => {
-    return afterDiscount + taxAmount;
-  }, [afterDiscount, taxAmount]);
+    return afterDiscount;
+  }, [afterDiscount]);
 
   const platformMargin = useMemo(() => {
     return (afterDiscount * marginPercent) / 100;
@@ -270,8 +260,8 @@ export function InvoiceBuilder({
         subtotal: subtotal.toString(),
         discountAmount: discountAmount.toString(),
         discountReason,
-        taxPercent,
-        taxAmount: taxAmount.toString(),
+        taxPercent: "0",
+        taxAmount: "0",
         totalAmount: totalAmount.toString(),
         paymentTerms,
         dueDate: dueDate.toISOString(),
@@ -340,9 +330,7 @@ ${lineItems.map(item => `${item.code} - ${item.description}: Rs. ${item.amount.t
 
 ----------------------------------------
 Subtotal: Rs. ${subtotal.toLocaleString('en-IN')}
-Discount: Rs. ${discountAmount.toLocaleString('en-IN')}
-GST (${taxPercent}%): Rs. ${taxAmount.toLocaleString('en-IN')}
-----------------------------------------
+${discountAmount > 0 ? `Discount: Rs. ${discountAmount.toLocaleString('en-IN')}\n` : ''}----------------------------------------
 TOTAL: Rs. ${totalAmount.toLocaleString('en-IN')}
 ========================================
 
@@ -385,8 +373,8 @@ Thank you for your business!
         subtotal: subtotal.toString(),
         discountAmount: discountAmount.toString(),
         discountReason,
-        taxPercent,
-        taxAmount: taxAmount.toString(),
+        taxPercent: "0",
+        taxAmount: "0",
         totalAmount: totalAmount.toString(),
         paymentTerms,
         dueDate: dueDate.toISOString(),
@@ -584,21 +572,6 @@ Thank you for your business!
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Tax (GST)</Label>
-                  <Select value={taxPercent} onValueChange={setTaxPercent}>
-                    <SelectTrigger data-testid="select-tax">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {taxOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="space-y-2">
                   <Label>Payment Terms</Label>
@@ -648,14 +621,12 @@ Thank you for your business!
                         <span>- {formatRupees(discountAmount)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">After Discount</span>
-                      <span>{formatRupees(afterDiscount)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">GST ({taxPercent}%)</span>
-                      <span>{formatRupees(taxAmount)}</span>
-                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">After Discount</span>
+                        <span>{formatRupees(afterDiscount)}</span>
+                      </div>
+                    )}
                     <Separator />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total</span>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
-import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet } from "lucide-react";
+import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,6 +35,19 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { AddressAutocomplete, getRouteInfo } from "@/components/address-autocomplete";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -210,6 +223,74 @@ function getCommodityLabel(value: string): string {
     if (item) return item.label;
   }
   return value;
+}
+
+// Flatten all commodities for searching
+const allCommodities = commodityCategories.flatMap(cat => 
+  cat.items.map(item => ({ ...item, category: cat.category }))
+);
+
+// Searchable Commodity Combobox Component
+function CommodityCombobox({ 
+  value, 
+  onChange 
+}: { 
+  value?: string; 
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  
+  const selectedCommodity = value ? allCommodities.find(c => c.value === value) : null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+          data-testid="select-goods-to-be-carried"
+        >
+          {selectedCommodity ? (
+            <span className="truncate">{selectedCommodity.label}</span>
+          ) : (
+            <span className="text-muted-foreground">Select commodity type...</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[400px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Type to search commodities..." />
+          <CommandList>
+            <CommandEmpty>No commodity found.</CommandEmpty>
+            {commodityCategories.map((category) => (
+              <CommandGroup key={category.category} heading={category.category}>
+                {category.items.map((item) => (
+                  <CommandItem
+                    key={item.value}
+                    value={`${item.label} ${category.category}`}
+                    onSelect={() => {
+                      onChange(item.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={`mr-2 h-4 w-4 ${
+                        value === item.value ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    {item.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 const truckTypesByCategory = truckBodyCategories.reduce((acc, category) => {
@@ -858,34 +939,14 @@ export default function PostLoadPage() {
                     control={form.control}
                     name="goodsToBeCarried"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabel>Goods to be Carried</FormLabel>
-                        <Select
+                        <CommodityCombobox 
                           value={field.value}
-                          onValueChange={(value) => { field.onChange(value); updateEstimation(); }}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-goods-to-be-carried">
-                              <SelectValue placeholder="Select commodity type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="max-h-80">
-                            {commodityCategories.map((category) => (
-                              <SelectGroup key={category.category}>
-                                <SelectLabel className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">
-                                  {category.category}
-                                </SelectLabel>
-                                {category.items.map((item) => (
-                                  <SelectItem key={item.value} value={item.value}>
-                                    {item.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          onChange={(value) => { field.onChange(value); updateEstimation(); }}
+                        />
                         <FormDescription className="text-xs">
-                          Select the type of goods you need to transport
+                          Type to search or select the type of goods you need to transport
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

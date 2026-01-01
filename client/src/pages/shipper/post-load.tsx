@@ -141,18 +141,32 @@ const commodityCategories = [
     ],
   },
   {
-    category: "Petroleum & Chemicals",
+    category: "Chemicals & Petroleum",
     items: [
-      { value: "petroleum_products", label: "Petroleum Products" },
-      { value: "lng_lpg", label: "LNG / LPG" },
-      { value: "bitumen", label: "Bitumen" },
-      { value: "lubricants", label: "Lubricants / Oils" },
       { value: "chemicals_general", label: "Chemicals (General)" },
+      { value: "chemicals_industrial", label: "Chemicals (Industrial)" },
+      { value: "chemicals_hazardous", label: "Chemicals (Hazardous)" },
+      { value: "caustic_soda", label: "Caustic Soda" },
+      { value: "chlorine", label: "Chlorine" },
+      { value: "calcium_carbonate", label: "Calcium Carbonate" },
       { value: "acids", label: "Acids" },
+      { value: "sulphuric_acid", label: "Sulphuric Acid" },
+      { value: "hydrochloric_acid", label: "Hydrochloric Acid" },
+      { value: "nitric_acid", label: "Nitric Acid" },
       { value: "solvents", label: "Solvents" },
       { value: "resins", label: "Resins / Polymers" },
       { value: "plastics_raw", label: "Plastics (Raw Material)" },
       { value: "rubber", label: "Rubber" },
+      { value: "petroleum_products", label: "Petroleum Products" },
+      { value: "lng_lpg", label: "LNG / LPG" },
+      { value: "bitumen", label: "Bitumen" },
+      { value: "lubricants", label: "Lubricants / Oils" },
+      { value: "crude_oil", label: "Crude Oil" },
+      { value: "diesel", label: "Diesel" },
+      { value: "petrol", label: "Petrol / Gasoline" },
+      { value: "kerosene", label: "Kerosene" },
+      { value: "furnace_oil", label: "Furnace Oil" },
+      { value: "naphtha", label: "Naphtha" },
     ],
   },
   {
@@ -268,7 +282,7 @@ function CommodityCombobox({
           }}
         >
           <CommandInput placeholder="Type to search commodities..." />
-          <CommandList>
+          <CommandList className="max-h-[400px]">
             <CommandEmpty>No commodity found.</CommandEmpty>
             {commodityCategories.map((category) => (
               <CommandGroup key={category.category} heading={category.category}>

@@ -261,7 +261,12 @@ function CommodityCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="start">
-        <Command>
+        <Command
+          filter={(value, search) => {
+            if (value.toLowerCase().startsWith(search.toLowerCase())) return 1;
+            return 0;
+          }}
+        >
           <CommandInput placeholder="Type to search commodities..." />
           <CommandList>
             <CommandEmpty>No commodity found.</CommandEmpty>

@@ -4,7 +4,8 @@ import {
   FileText, Send, Check, Clock, AlertCircle, DollarSign,
   Search, Filter, Eye, RefreshCw, MessageSquare, History,
   CheckCircle, XCircle, ArrowLeftRight, ChevronDown, ChevronUp, Star,
-  User, Building2, Phone, Truck, Award, MapPin
+  User, Building2, Phone, Truck, Award, MapPin, Calculator, Percent,
+  Wallet, TrendingUp, Receipt, Banknote
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -42,6 +43,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -86,7 +88,14 @@ interface Invoice {
   loadId: string;
   shipperId: string;
   shipper?: { companyName?: string; username: string };
-  load?: { pickupCity: string; dropoffCity: string; status: string };
+  load?: { 
+    pickupCity: string; 
+    dropoffCity: string; 
+    status: string;
+    adminFinalPrice?: string;
+    finalPrice?: string;
+    weight?: string;
+  };
   subtotal: string;
   taxAmount: string;
   taxPercent?: number;
@@ -108,6 +117,8 @@ interface Invoice {
   counterReason?: string;
   counteredAt?: string;
   advancePaymentPercent?: number;
+  advancePaymentAmount?: string;
+  balanceOnDelivery?: string;
   lineItems?: { description: string; amount: string }[];
   pickupCity?: string;
   dropoffCity?: string;
@@ -115,6 +126,11 @@ interface Invoice {
   carrier?: CarrierDetails;
   driver?: DriverDetails;
   truck?: TruckDetails;
+  // Admin financial breakdown fields
+  platformMargin?: string;
+  estimatedCarrierPayout?: string;
+  winningBidAmount?: string;
+  adminPostedPrice?: string;
 }
 
 const simulatedInvoices: Invoice[] = [
@@ -249,6 +265,7 @@ export default function AdminInvoicesPage() {
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [markPaidConfirmOpen, setMarkPaidConfirmOpen] = useState(false);
   const [invoiceToMarkPaid, setInvoiceToMarkPaid] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"shipper" | "admin">("shipper");
 
   const { data: apiInvoices = [], isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/admin/invoices"],
@@ -490,98 +507,301 @@ export default function AdminInvoicesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredInvoices.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground" data-testid="text-empty-state">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No invoices found</p>
-              <p className="text-sm">Invoices are created when carriers are finalized for loads</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Shipper</TableHead>
-                  <TableHead>Route</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Shipper Response</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
-                    <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                    <TableCell>{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
-                    <TableCell className="text-sm">
-                      {invoice.load ? `${invoice.load.pickupCity} → ${invoice.load.dropoffCity}` : '-'}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      Rs. {parseFloat(invoice.totalAmount || '0').toLocaleString('en-IN')}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {getShipperStatusBadge(invoice.shipperStatus)}
-                        {invoice.counterOffers?.some(c => c.status === "pending") && (
-                          <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900/20">
-                            <ArrowLeftRight className="h-3 w-3 mr-1" />
-                            Counter Pending
-                          </Badge>
-                        )}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "shipper" | "admin")} className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="shipper" className="gap-2" data-testid="tab-shipper-view">
+                <Eye className="h-4 w-4" />
+                Shipper View
+              </TabsTrigger>
+              <TabsTrigger value="admin" className="gap-2" data-testid="tab-admin-view">
+                <Calculator className="h-4 w-4" />
+                Admin View (Financial)
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="shipper">
+              {filteredInvoices.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground" data-testid="text-empty-state">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No invoices found</p>
+                  <p className="text-sm">Invoices are created when carriers are finalized for loads</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Shipper</TableHead>
+                      <TableHead>Route</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Shipper Response</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredInvoices.map((invoice) => (
+                      <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
+                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                        <TableCell>{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
+                        <TableCell className="text-sm">
+                          {invoice.load ? `${invoice.load.pickupCity} → ${invoice.load.dropoffCity}` : '-'}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          Rs. {parseFloat(invoice.totalAmount || '0').toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {getShipperStatusBadge(invoice.shipperStatus)}
+                            {invoice.counterOffers?.some(c => c.status === "pending") && (
+                              <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900/20">
+                                <ArrowLeftRight className="h-3 w-3 mr-1" />
+                                Counter Pending
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {invoice.dueDate ? format(new Date(invoice.dueDate), "MMM d, yyyy") : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setSelectedInvoice(invoice);
+                                setDetailsOpen(true);
+                              }}
+                              data-testid={`button-view-${invoice.id}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {invoice.status === "draft" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => sendMutation.mutate(invoice.id)}
+                                disabled={sendMutation.isPending}
+                                data-testid={`button-send-${invoice.id}`}
+                              >
+                                <Send className="h-4 w-4 mr-1" />
+                                Send
+                              </Button>
+                            )}
+                            {(invoice.shipperStatus === "acknowledged" || invoice.acknowledgedAt) && invoice.status !== "paid" && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setInvoiceToMarkPaid(invoice.id);
+                                  setMarkPaidConfirmOpen(true);
+                                }}
+                                disabled={markPaidMutation.isPending}
+                                data-testid={`button-mark-paid-${invoice.id}`}
+                              >
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                Mark Paid
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="admin">
+              {filteredInvoices.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground" data-testid="text-empty-state-admin">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No invoices found</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-sm text-amber-700 dark:text-amber-300">
+                      Admin View - For internal use only. Not sent to shippers.
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">Invoice #</TableHead>
+                          <TableHead className="whitespace-nowrap">Shipper</TableHead>
+                          <TableHead className="whitespace-nowrap">Route</TableHead>
+                          <TableHead className="whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Receipt className="h-3 w-3" />
+                              Admin Posted
+                            </div>
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Truck className="h-3 w-3" />
+                              Carrier Bid
+                            </div>
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <TrendingUp className="h-3 w-3" />
+                              Margin
+                            </div>
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Wallet className="h-3 w-3" />
+                              Carrier Payout
+                            </div>
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Percent className="h-3 w-3" />
+                              Adv %
+                            </div>
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Banknote className="h-3 w-3" />
+                              Advance Paid
+                            </div>
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <DollarSign className="h-3 w-3" />
+                              Balance Due
+                            </div>
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap text-right">
+                            <div className="flex items-center gap-1 justify-end font-semibold">
+                              Shipper Total
+                            </div>
+                          </TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredInvoices.map((invoice) => {
+                          // Calculate financial breakdown
+                          const totalAmount = parseFloat(invoice.totalAmount || '0');
+                          const subtotal = parseFloat(invoice.subtotal || '0');
+                          const adminPostedPrice = parseFloat(invoice.adminPostedPrice || invoice.load?.adminFinalPrice || invoice.subtotal || '0');
+                          const winningBid = parseFloat(invoice.winningBidAmount || invoice.estimatedCarrierPayout || '0');
+                          const platformMargin = parseFloat(invoice.platformMargin || '0') || (adminPostedPrice - winningBid);
+                          const carrierPayout = parseFloat(invoice.estimatedCarrierPayout || '0') || winningBid;
+                          const advancePercent = invoice.advancePaymentPercent || 0;
+                          const advanceAmount = parseFloat(invoice.advancePaymentAmount || '0') || (totalAmount * advancePercent / 100);
+                          const balanceDue = parseFloat(invoice.balanceOnDelivery || '0') || (totalAmount - advanceAmount);
+                          
+                          return (
+                            <TableRow key={invoice.id} data-testid={`row-admin-invoice-${invoice.id}`}>
+                              <TableCell className="font-medium whitespace-nowrap">{invoice.invoiceNumber}</TableCell>
+                              <TableCell className="whitespace-nowrap">{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
+                              <TableCell className="text-sm whitespace-nowrap">
+                                {invoice.load ? `${invoice.load.pickupCity} → ${invoice.load.dropoffCity}` : '-'}
+                              </TableCell>
+                              <TableCell className="text-right font-medium whitespace-nowrap">
+                                Rs. {adminPostedPrice.toLocaleString('en-IN')}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap text-orange-600 dark:text-orange-400">
+                                {winningBid > 0 ? `Rs. ${winningBid.toLocaleString('en-IN')}` : '-'}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap">
+                                <span className={platformMargin > 0 ? "text-green-600 dark:text-green-400 font-medium" : "text-muted-foreground"}>
+                                  {platformMargin > 0 ? `Rs. ${platformMargin.toLocaleString('en-IN')}` : '-'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap text-blue-600 dark:text-blue-400">
+                                {carrierPayout > 0 ? `Rs. ${carrierPayout.toLocaleString('en-IN')}` : '-'}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap">
+                                {advancePercent > 0 ? (
+                                  <Badge variant="outline" className="font-medium">
+                                    {advancePercent}%
+                                  </Badge>
+                                ) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap text-purple-600 dark:text-purple-400">
+                                {advanceAmount > 0 ? `Rs. ${advanceAmount.toLocaleString('en-IN')}` : '-'}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap font-medium">
+                                {balanceDue > 0 ? `Rs. ${balanceDue.toLocaleString('en-IN')}` : '-'}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap font-bold">
+                                Rs. {totalAmount.toLocaleString('en-IN')}
+                              </TableCell>
+                              <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {/* Admin View Summary */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
+                        <TrendingUp className="h-4 w-4" />
+                        <span className="text-sm font-medium">Total Platform Margin</span>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {invoice.dueDate ? format(new Date(invoice.dueDate), "MMM d, yyyy") : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setSelectedInvoice(invoice);
-                            setDetailsOpen(true);
-                          }}
-                          data-testid={`button-view-${invoice.id}`}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {invoice.status === "draft" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => sendMutation.mutate(invoice.id)}
-                            disabled={sendMutation.isPending}
-                            data-testid={`button-send-${invoice.id}`}
-                          >
-                            <Send className="h-4 w-4 mr-1" />
-                            Send
-                          </Button>
-                        )}
-                        {(invoice.shipperStatus === "acknowledged" || invoice.acknowledgedAt) && invoice.status !== "paid" && (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setInvoiceToMarkPaid(invoice.id);
-                              setMarkPaidConfirmOpen(true);
-                            }}
-                            disabled={markPaidMutation.isPending}
-                            data-testid={`button-mark-paid-${invoice.id}`}
-                          >
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            Mark Paid
-                          </Button>
-                        )}
+                      <p className="text-xl font-bold text-green-700 dark:text-green-300">
+                        Rs. {filteredInvoices.reduce((sum, inv) => {
+                          const adminPrice = parseFloat(inv.adminPostedPrice || inv.load?.adminFinalPrice || inv.subtotal || '0');
+                          const carrierPay = parseFloat(inv.estimatedCarrierPayout || inv.winningBidAmount || '0');
+                          return sum + (adminPrice - carrierPay);
+                        }, 0).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+                        <Truck className="h-4 w-4" />
+                        <span className="text-sm font-medium">Total Carrier Payouts</span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                      <p className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                        Rs. {filteredInvoices.reduce((sum, inv) => 
+                          sum + parseFloat(inv.estimatedCarrierPayout || inv.winningBidAmount || '0'), 0
+                        ).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-1">
+                        <Banknote className="h-4 w-4" />
+                        <span className="text-sm font-medium">Advances Collected</span>
+                      </div>
+                      <p className="text-xl font-bold text-purple-700 dark:text-purple-300">
+                        Rs. {filteredInvoices.reduce((sum, inv) => {
+                          const total = parseFloat(inv.totalAmount || '0');
+                          const advPct = inv.advancePaymentPercent || 0;
+                          return sum + parseFloat(inv.advancePaymentAmount || '0') || (total * advPct / 100);
+                        }, 0).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
+                        <DollarSign className="h-4 w-4" />
+                        <span className="text-sm font-medium">Balance Pending</span>
+                      </div>
+                      <p className="text-xl font-bold text-amber-700 dark:text-amber-300">
+                        Rs. {filteredInvoices.reduce((sum, inv) => {
+                          if (inv.status === 'paid') return sum;
+                          const total = parseFloat(inv.totalAmount || '0');
+                          const advPct = inv.advancePaymentPercent || 0;
+                          const advAmt = parseFloat(inv.advancePaymentAmount || '0') || (total * advPct / 100);
+                          return sum + (total - advAmt);
+                        }, 0).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 

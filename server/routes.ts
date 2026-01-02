@@ -3741,6 +3741,15 @@ export async function registerRoutes(
             }
           }
           
+          // Get winning bid amount for financial breakdown
+          let winningBidAmount = null;
+          if (load?.awardedBidId) {
+            const winningBid = await storage.getBid(load.awardedBidId);
+            if (winningBid) {
+              winningBidAmount = winningBid.amount;
+            }
+          }
+          
           return {
             ...invoice,
             pickupCity: load?.pickupCity,
@@ -3749,6 +3758,17 @@ export async function registerRoutes(
             carrier,
             driver,
             truck,
+            // Financial breakdown fields for admin view
+            adminPostedPrice: load?.adminFinalPrice || load?.finalPrice,
+            winningBidAmount,
+            load: load ? {
+              pickupCity: load.pickupCity,
+              dropoffCity: load.dropoffCity,
+              status: load.status,
+              adminFinalPrice: load.adminFinalPrice,
+              finalPrice: load.finalPrice,
+              weight: load.weight,
+            } : null,
           };
         } catch (err) {
           console.error(`Error enriching invoice ${invoice.id}:`, err);

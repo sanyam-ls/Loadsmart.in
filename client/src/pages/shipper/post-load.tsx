@@ -244,71 +244,103 @@ const allCommodities = commodityCategories.flatMap(cat =>
   cat.items.map(item => ({ ...item, category: cat.category }))
 );
 
-// Searchable Commodity Combobox Component
+// Searchable Commodity Combobox Component with custom input support
 function CommodityCombobox({ 
   value, 
-  onChange 
+  onChange,
+  customValue,
+  onCustomChange
 }: { 
   value?: string; 
   onChange: (value: string) => void;
+  customValue?: string;
+  onCustomChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   
   const selectedCommodity = value ? allCommodities.find(c => c.value === value) : null;
+  const isCustomSelected = value === "other";
+
+  // Get display text for the button
+  const getDisplayText = () => {
+    if (isCustomSelected && customValue) {
+      return customValue;
+    }
+    if (selectedCommodity) {
+      return selectedCommodity.label;
+    }
+    return null;
+  };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between font-normal"
-          data-testid="select-goods-to-be-carried"
-        >
-          {selectedCommodity ? (
-            <span className="truncate">{selectedCommodity.label}</span>
-          ) : (
-            <span className="text-muted-foreground">Select commodity type...</span>
-          )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0" align="start">
-        <Command
-          filter={(value, search) => {
-            if (value.toLowerCase().startsWith(search.toLowerCase())) return 1;
-            return 0;
-          }}
-        >
-          <CommandInput placeholder="Type to search commodities..." />
-          <CommandList className="max-h-[400px]">
-            <CommandEmpty>No commodity found.</CommandEmpty>
-            {commodityCategories.map((category) => (
-              <CommandGroup key={category.category} heading={category.category}>
-                {category.items.map((item) => (
-                  <CommandItem
-                    key={item.value}
-                    value={item.label}
-                    onSelect={() => {
-                      onChange(item.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={`mr-2 h-4 w-4 ${
-                        value === item.value ? "opacity-100" : "opacity-0"
-                      }`}
-                    />
-                    {item.label}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ))}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+            data-testid="select-goods-to-be-carried"
+          >
+            {getDisplayText() ? (
+              <span className="truncate">{getDisplayText()}</span>
+            ) : (
+              <span className="text-muted-foreground">Select commodity type...</span>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[400px] p-0" align="start">
+          <Command
+            filter={(value, search) => {
+              if (value.toLowerCase().startsWith(search.toLowerCase())) return 1;
+              return 0;
+            }}
+          >
+            <CommandInput placeholder="Type to search commodities..." />
+            <CommandList className="max-h-[400px]">
+              <CommandEmpty>No commodity found.</CommandEmpty>
+              {commodityCategories.map((category) => (
+                <CommandGroup key={category.category} heading={category.category}>
+                  {category.items.map((item) => (
+                    <CommandItem
+                      key={item.value}
+                      value={item.label}
+                      onSelect={() => {
+                        onChange(item.value);
+                        if (item.value !== "other") {
+                          onCustomChange("");
+                        }
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={`mr-2 h-4 w-4 ${
+                          value === item.value ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
+                      {item.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      
+      {/* Custom commodity input when "Other / Custom" is selected */}
+      {isCustomSelected && (
+        <Input
+          placeholder="Enter your commodity type..."
+          value={customValue || ""}
+          onChange={(e) => onCustomChange(e.target.value)}
+          className="mt-2"
+          data-testid="input-custom-commodity"
+        />
+      )}
+    </div>
   );
 }
 
@@ -521,6 +553,7 @@ export default function PostLoadPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submittedLoadId, setSubmittedLoadId] = useState<string | null>(null);
+  const [customCommodity, setCustomCommodity] = useState("");
   const [estimation, setEstimation] = useState<{
     distance: number;
     suggestedTruck: string;
@@ -582,6 +615,11 @@ export default function PostLoadPage() {
     try {
       const truckType = data.requiredTruckType || estimation?.suggestedTruck || "Dry Van";
       
+      // Use custom commodity value when "other" is selected
+      const finalGoodsDescription = data.goodsToBeCarried === "other" && customCommodity
+        ? customCommodity
+        : data.goodsToBeCarried || "";
+      
       const response = await apiRequest("POST", "/api/loads/submit", {
         shipperCompanyName: data.shipperCompanyName,
         shipperContactName: data.shipperContactName,
@@ -592,7 +630,7 @@ export default function PostLoadPage() {
         dropoffAddress: data.dropoffAddress,
         dropoffCity: data.dropoffCity,
         weight: data.weight,
-        goodsToBeCarried: data.goodsToBeCarried || "",
+        goodsToBeCarried: finalGoodsDescription,
         specialNotes: data.specialNotes || "",
         shipperPricePerTon: data.shipperPricePerTon || null,
         requiredTruckType: truckType,
@@ -963,6 +1001,8 @@ export default function PostLoadPage() {
                         <CommodityCombobox 
                           value={field.value}
                           onChange={(value) => { field.onChange(value); updateEstimation(); }}
+                          customValue={customCommodity}
+                          onCustomChange={setCustomCommodity}
                         />
                         <FormDescription className="text-xs">
                           Type to search or select the type of goods you need to transport

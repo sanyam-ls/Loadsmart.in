@@ -266,6 +266,8 @@ export default function AdminInvoicesPage() {
   const [markPaidConfirmOpen, setMarkPaidConfirmOpen] = useState(false);
   const [invoiceToMarkPaid, setInvoiceToMarkPaid] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"shipper" | "admin">("shipper");
+  const [costBreakdownOpen, setCostBreakdownOpen] = useState(false);
+  const [costBreakdownInvoice, setCostBreakdownInvoice] = useState<Invoice | null>(null);
 
   const { data: apiInvoices = [], isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/admin/invoices"],
@@ -699,7 +701,15 @@ export default function AdminInvoicesPage() {
                           const balanceDue = parseFloat(invoice.balanceOnDelivery || '0') || (totalAmount - advanceAmount);
                           
                           return (
-                            <TableRow key={invoice.id} data-testid={`row-admin-invoice-${invoice.id}`}>
+                            <TableRow 
+                              key={invoice.id} 
+                              data-testid={`row-admin-invoice-${invoice.id}`}
+                              className="cursor-pointer hover-elevate"
+                              onClick={() => {
+                                setCostBreakdownInvoice(invoice);
+                                setCostBreakdownOpen(true);
+                              }}
+                            >
                               <TableCell className="font-medium whitespace-nowrap">{invoice.invoiceNumber}</TableCell>
                               <TableCell className="whitespace-nowrap">{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
                               <TableCell className="text-sm whitespace-nowrap">
@@ -1276,6 +1286,168 @@ export default function AdminInvoicesPage() {
             >
               <DollarSign className="h-4 w-4 mr-2" />
               Confirm Payment Received
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cost Breakdown Dialog for Admin View */}
+      <Dialog open={costBreakdownOpen} onOpenChange={setCostBreakdownOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-primary" />
+              Cost Breakdown
+            </DialogTitle>
+            <DialogDescription>
+              {costBreakdownInvoice?.invoiceNumber} - Internal financial details
+            </DialogDescription>
+          </DialogHeader>
+          {costBreakdownInvoice && (() => {
+            const totalAmount = parseFloat(costBreakdownInvoice.totalAmount || '0');
+            const adminPostedPrice = parseFloat(costBreakdownInvoice.adminPostedPrice || costBreakdownInvoice.load?.adminFinalPrice || costBreakdownInvoice.subtotal || '0');
+            const winningBid = parseFloat(costBreakdownInvoice.winningBidAmount || costBreakdownInvoice.estimatedCarrierPayout || '0');
+            const platformMargin = parseFloat(costBreakdownInvoice.platformMargin || '0') || (adminPostedPrice - winningBid);
+            const carrierPayout = parseFloat(costBreakdownInvoice.estimatedCarrierPayout || '0') || winningBid;
+            const advancePercent = costBreakdownInvoice.advancePaymentPercent || 0;
+            const advanceAmount = parseFloat(costBreakdownInvoice.advancePaymentAmount || '0') || (totalAmount * advancePercent / 100);
+            const balanceDue = parseFloat(costBreakdownInvoice.balanceOnDelivery || '0') || (totalAmount - advanceAmount);
+            
+            return (
+              <div className="space-y-4">
+                {/* Route Info */}
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <MapPin className="h-3 w-3" />
+                    Route
+                  </div>
+                  <p className="font-medium">
+                    {costBreakdownInvoice.load 
+                      ? `${costBreakdownInvoice.load.pickupCity} → ${costBreakdownInvoice.load.dropoffCity}` 
+                      : '-'}
+                  </p>
+                </div>
+
+                {/* Shipper & Carrier Info */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                      <Building2 className="h-3 w-3" />
+                      Shipper
+                    </div>
+                    <p className="font-medium text-sm">
+                      {costBreakdownInvoice.shipper?.companyName || costBreakdownInvoice.shipper?.username || '-'}
+                    </p>
+                  </div>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mb-1">
+                      <Truck className="h-3 w-3" />
+                      Carrier
+                    </div>
+                    <p className="font-medium text-sm">
+                      {costBreakdownInvoice.carrier?.companyName || costBreakdownInvoice.carrier?.name || '-'}
+                    </p>
+                    {costBreakdownInvoice.carrier && (
+                      <Badge variant="outline" className="text-xs mt-1">
+                        {costBreakdownInvoice.carrier.carrierType === 'solo' ? 'Solo Driver' : 'Enterprise'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Price Breakdown */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                    <Receipt className="h-4 w-4" />
+                    Price Breakdown
+                  </h4>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-sm text-muted-foreground">Admin Posted Price</span>
+                      <span className="font-medium">Rs. {adminPostedPrice.toLocaleString('en-IN')}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-sm text-orange-600 dark:text-orange-400">Winning Carrier Bid</span>
+                      <span className="font-medium text-orange-600 dark:text-orange-400">
+                        {winningBid > 0 ? `Rs. ${winningBid.toLocaleString('en-IN')}` : '-'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center py-2 border-b bg-green-50 dark:bg-green-900/20 -mx-3 px-3">
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        Platform Margin
+                      </span>
+                      <span className="font-bold text-green-600 dark:text-green-400">
+                        {platformMargin > 0 ? `Rs. ${platformMargin.toLocaleString('en-IN')}` : '-'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                        <Wallet className="h-3 w-3" />
+                        Carrier Payout
+                      </span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400">
+                        {carrierPayout > 0 ? `Rs. ${carrierPayout.toLocaleString('en-IN')}` : '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Payment Schedule */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                    <Banknote className="h-4 w-4" />
+                    Payment Schedule
+                  </h4>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-sm text-muted-foreground">Shipper Total (Invoice)</span>
+                      <span className="font-bold">Rs. {totalAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    
+                    {advancePercent > 0 && (
+                      <>
+                        <div className="flex justify-between items-center py-2 border-b">
+                          <span className="text-sm text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                            <Percent className="h-3 w-3" />
+                            Advance Payment ({advancePercent}%)
+                          </span>
+                          <span className="font-medium text-purple-600 dark:text-purple-400">
+                            Rs. {advanceAmount.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        
+                        <div className="flex justify-between items-center py-2 bg-amber-50 dark:bg-amber-900/20 -mx-3 px-3 rounded">
+                          <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Balance on Delivery</span>
+                          <span className="font-bold text-amber-600 dark:text-amber-400">
+                            Rs. {balanceDue.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">Invoice Status</span>
+                  {getStatusBadge(costBreakdownInvoice.status)}
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCostBreakdownOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

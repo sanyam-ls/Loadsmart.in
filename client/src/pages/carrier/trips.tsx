@@ -13,7 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { useToast } from "@/hooks/use-toast";
@@ -186,6 +189,9 @@ export default function TripsPage() {
   const [detailTab, setDetailTab] = useState("overview");
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState<string>("lr_consignment");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const isEnterprise = carrierType === "enterprise";
 
@@ -247,12 +253,15 @@ export default function TripsPage() {
   const [uploadingDocType, setUploadingDocType] = useState<string | null>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ documentType, notes }: { documentType: string; notes?: string }) => {
+    mutationFn: async ({ documentType, fileName, fileSize }: { documentType: string; fileName: string; fileSize: number }) => {
       if (!shipmentId) throw new Error("No shipment selected");
+      const timestamp = Date.now();
+      const fileExt = fileName.split('.').pop() || 'pdf';
       return apiRequest("POST", `/api/shipments/${shipmentId}/documents`, {
         documentType,
-        documentUrl: `https://freightflow.example.com/documents/${shipmentId}/${documentType}-${Date.now()}.pdf`,
-        notes: notes || `${documentTypeToLabel[documentType] || documentType} uploaded`,
+        fileName,
+        fileUrl: `/documents/${shipmentId}/${documentType}-${timestamp}.${fileExt}`,
+        fileSize,
       });
     },
     onSuccess: () => {
@@ -266,11 +275,13 @@ export default function TripsPage() {
     },
   });
 
-  function handleDocumentUpload(docLabel: string) {
+  function handleDocumentUpload(docLabel: string, file?: File) {
     const docType = labelToDocumentType[docLabel];
     if (!docType || !shipmentId) return;
     setUploadingDocType(docType);
-    uploadMutation.mutate({ documentType: docType });
+    const fileName = file?.name || `${docType}-${Date.now()}.pdf`;
+    const fileSize = file?.size || 0;
+    uploadMutation.mutate({ documentType: docType, fileName, fileSize });
   }
 
   function getUploadedDocument(docLabel: string): ShipmentDocument | undefined {
@@ -880,10 +891,12 @@ export default function TripsPage() {
                     </Button>
                     <Button 
                       variant="outline"
-                      data-testid="button-upload-pod"
+                      onClick={() => setUploadDialogOpen(true)}
+                      disabled={!matchedShipment}
+                      data-testid="button-upload-documents"
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      Upload POD
+                      Upload Documents
                     </Button>
                   </div>
                 </div>
@@ -933,6 +946,94 @@ export default function TripsPage() {
               Download Document
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+        setUploadDialogOpen(open);
+        if (!open) {
+          setSelectedFile(null);
+          setSelectedDocType("lr_consignment");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Upload Document
+            </DialogTitle>
+            <DialogDescription>
+              Upload images (JPG, PNG) or PDF documents to share with the shipper
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="doc-type">Document Type</Label>
+              <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                <SelectTrigger id="doc-type" data-testid="select-document-type">
+                  <SelectValue placeholder="Select document type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lr_consignment">LR / Consignment Note</SelectItem>
+                  <SelectItem value="eway_bill">E-way Bill</SelectItem>
+                  <SelectItem value="loading_photos">Loading Photos</SelectItem>
+                  <SelectItem value="pod">Proof of Delivery (POD)</SelectItem>
+                  <SelectItem value="invoice">Invoice</SelectItem>
+                  <SelectItem value="other">Other Document</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="doc-file">Select File</Label>
+              <Input 
+                id="doc-file"
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                data-testid="input-document-file"
+              />
+              {selectedFile && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setUploadDialogOpen(false)}
+              data-testid="button-cancel-upload"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (!shipmentId || !selectedDocType || !selectedFile) return;
+                uploadMutation.mutate({ 
+                  documentType: selectedDocType,
+                  fileName: selectedFile.name,
+                  fileSize: selectedFile.size,
+                });
+                setUploadDialogOpen(false);
+                setSelectedFile(null);
+              }}
+              disabled={uploadMutation.isPending || !selectedDocType || !selectedFile}
+              data-testid="button-confirm-upload"
+            >
+              {uploadMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

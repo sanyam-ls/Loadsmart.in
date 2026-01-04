@@ -543,13 +543,13 @@ export default function TrackingPage() {
               <div className="border rounded-lg overflow-hidden bg-white dark:bg-slate-900">
                 {selectedDocument.image.toLowerCase().endsWith('.pdf') ? (
                   <iframe 
-                    src={`/objects/${selectedDocument.image}`}
+                    src={selectedDocument.image.startsWith('/objects/') ? selectedDocument.image : `/objects/${selectedDocument.image}`}
                     className="w-full h-[60vh]"
                     title={selectedDocument.type}
                   />
                 ) : (
                   <img 
-                    src={`/objects/${selectedDocument.image}`}
+                    src={selectedDocument.image.startsWith('/objects/') ? selectedDocument.image : `/objects/${selectedDocument.image}`}
                     alt={selectedDocument.type}
                     className="w-full h-auto object-contain"
                     data-testid="img-document-viewer"
@@ -562,7 +562,7 @@ export default function TrackingPage() {
                   size="sm"
                   onClick={() => {
                     const link = document.createElement('a');
-                    link.href = `/objects/${selectedDocument.image}`;
+                    link.href = selectedDocument.image.startsWith('/objects/') ? selectedDocument.image : `/objects/${selectedDocument.image}`;
                     const ext = selectedDocument.image.split('.').pop() || 'file';
                     link.download = `${selectedDocument.type.replace(/[^a-z0-9]/gi, '_')}.${ext}`;
                     link.click();

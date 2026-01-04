@@ -945,14 +945,14 @@ export default function TripsPage() {
               selectedDocument.image.toLowerCase().endsWith('.pdf') ? (
                 <div className="w-full h-[60vh] border rounded-lg overflow-hidden">
                   <iframe 
-                    src={`/objects/${selectedDocument.image}`}
+                    src={selectedDocument.image.startsWith('/objects/') ? selectedDocument.image : `/objects/${selectedDocument.image}`}
                     className="w-full h-full"
                     title={selectedDocument.type}
                   />
                 </div>
               ) : (
                 <img 
-                  src={`/objects/${selectedDocument.image}`}
+                  src={selectedDocument.image.startsWith('/objects/') ? selectedDocument.image : `/objects/${selectedDocument.image}`}
                   alt={selectedDocument.type}
                   className="max-w-full max-h-[60vh] object-contain rounded-lg border"
                   data-testid="document-image"
@@ -964,7 +964,7 @@ export default function TripsPage() {
               onClick={() => {
                 if (selectedDocument?.image) {
                   const link = document.createElement('a');
-                  link.href = `/objects/${selectedDocument.image}`;
+                  link.href = selectedDocument.image.startsWith('/objects/') ? selectedDocument.image : `/objects/${selectedDocument.image}`;
                   const ext = selectedDocument.image.split('.').pop() || 'file';
                   link.download = `${selectedDocument.type.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${ext}`;
                   link.click();

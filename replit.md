@@ -12,7 +12,47 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Architecture
 
-The frontend is built with React 18+ and TypeScript, using Vite for development. It employs `shadcn/ui` (New York style) components, `Radix UI` primitives, and `Tailwind CSS` for styling, adhering to a blue and white enterprise theme. State management combines `React Context` for global state, `TanStack Query` for server state, and `React Hook Form` with `Zod` for form handling. Core features include role-based authentication, a global theme toggle, an AI Concierge chat widget, and responsive navigation.
+The frontend is built with React 18+ and TypeScript, using Vite for development. It employs `shadcn/ui` (New York style) components, `Radix UI` primitives, and `Tailwind CSS` for styling, adhering to a blue and white enterprise theme. State management combines `React Context` for global state, `TanStack Query` for server state, and `React Hook Form` with `Zod` for form handling. Core features include role-based authentication, a global theme toggle, multi-language support, an AI Concierge chat widget, and responsive navigation.
+
+### Multi-Language Internationalization (i18n)
+
+The platform supports 5 languages using react-i18next:
+
+**Supported Languages:**
+- English (en) - Default
+- Hindi (hi) - हिंदी
+- Punjabi (pa) - ਪੰਜਾਬੀ
+- Marathi (mr) - मराठी
+- Tamil (ta) - தமிழ்
+
+**Implementation:**
+- Config: `client/src/i18n/index.ts` - i18next configuration with language detection
+- Translations: `client/src/i18n/locales/{en,hi,pa,mr,ta}.json`
+- LocalStorage key: `freightflow.lang` - persists user language preference
+- Language Switcher: Globe icon dropdown in header (next to ThemeToggle)
+
+**Translation Key Structure:**
+- `common.*` - Common UI elements (save, cancel, loading, etc.)
+- `nav.*` - Navigation labels (dashboard, myLoads, tracking, etc.)
+- `roles.*` - Role badges (shipperPortal, carrierPortal, adminConsole, soloDriver)
+- `sections.*` - Section headers (navigation, account)
+- `loads.*`, `bids.*`, `fleet.*`, `shipments.*` - Domain-specific translations
+
+**Usage in Components:**
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+  return <span>{t("nav.dashboard")}</span>;
+}
+```
+
+**Current Translation Coverage:**
+- Sidebar navigation: Fully translated
+- Role badges: Fully translated  
+- Section headers: Fully translated
+- Page content: Staged for future extraction
 
 ### Backend Architecture
 

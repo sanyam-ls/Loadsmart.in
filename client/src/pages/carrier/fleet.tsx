@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { 
   Plus, Search, Truck, MapPin, Package, Edit, Trash2, AlertTriangle, 
   CheckCircle, Clock, Wrench, Filter, ChevronDown, ChevronRight,
-  Fuel, Calendar, Shield, FileText, User, Settings, TrendingUp, Eye, Loader2
+  Fuel, Calendar, Shield, FileText, User, Settings, TrendingUp, Eye, Loader2, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,11 @@ import {
 } from "@/components/ui/table";
 import { StatCard } from "@/components/stat-card";
 import { useCarrierData, type CarrierTruck } from "@/lib/carrier-data-store";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { DialogFooter } from "@/components/ui/dialog";
 import type { Truck as DbTruck } from "@shared/schema";
 import { format, differenceInDays } from "date-fns";
 import { 
@@ -285,20 +289,78 @@ function TruckDetailDialog({ truck }: { truck: CarrierTruck }) {
   );
 }
 
+// Common Indian cities for location selection
+const indianCities = [
+  "Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", 
+  "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Ludhiana",
+  "Coimbatore", "Nagpur", "Indore", "Bhopal", "Surat", "Vadodara",
+  "Other"
+];
+
 export default function FleetPage() {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   const { trucks: mockTrucks, getFleetOverview } = useCarrierData();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedTruck, setSelectedTruck] = useState<CarrierTruck | null>(null);
+  const [editLocationOpen, setEditLocationOpen] = useState(false);
+  const [editingTruckId, setEditingTruckId] = useState<string | null>(null);
+  const [editLocation, setEditLocation] = useState("");
+  const [customLocation, setCustomLocation] = useState("");
   
   // Query backend trucks for real-time updates
-  const { data: backendTrucks, isLoading: trucksLoading, isSuccess: trucksLoaded } = useQuery<DbTruck[]>({
+  const { data: backendTrucks, isLoading: trucksLoading, isSuccess: trucksLoaded, refetch } = useQuery<DbTruck[]>({
     queryKey: ["/api/trucks"],
     refetchOnWindowFocus: true,
   });
+
+  // Mutation to update truck location
+  const updateLocationMutation = useMutation({
+    mutationFn: async ({ truckId, currentLocation }: { truckId: string; currentLocation: string }) => {
+      return apiRequest("PATCH", `/api/trucks/${truckId}`, { currentLocation });
+    },
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+      setEditLocationOpen(false);
+      setEditingTruckId(null);
+      setEditLocation("");
+      setCustomLocation("");
+      toast({ title: "Location Updated", description: "Truck location has been updated successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update truck location.", variant: "destructive" });
+    }
+  });
+
+  const openEditLocation = (truck: CarrierTruck) => {
+    setEditingTruckId(truck.truckId);
+    const currentLoc = truck.currentLocation || "";
+    if (indianCities.includes(currentLoc)) {
+      setEditLocation(currentLoc);
+      setCustomLocation("");
+    } else if (currentLoc) {
+      setEditLocation("Other");
+      setCustomLocation(currentLoc);
+    } else {
+      setEditLocation("");
+      setCustomLocation("");
+    }
+    setEditLocationOpen(true);
+  };
+
+  const handleSaveLocation = () => {
+    if (!editingTruckId) return;
+    const finalLocation = editLocation === "Other" ? customLocation : editLocation;
+    if (!finalLocation) {
+      toast({ title: "Error", description: "Please select or enter a location.", variant: "destructive" });
+      return;
+    }
+    updateLocationMutation.mutate({ truckId: editingTruckId, currentLocation: finalLocation });
+  };
 
   // Use backend trucks when query succeeds (even if empty), otherwise show mock data while loading
   const trucks: CarrierTruck[] = useMemo(() => {
@@ -613,14 +675,25 @@ export default function FleetPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => setSelectedTruck(truck)} data-testid={`button-view-${truck.truckId}`}>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <TruckDetailDialog truck={truck} />
-                            </Dialog>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => openEditLocation(truck)} 
+                                data-testid={`button-edit-location-${truck.truckId}`}
+                                title="Edit Location"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" onClick={() => setSelectedTruck(truck)} data-testid={`button-view-${truck.truckId}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <TruckDetailDialog truck={truck} />
+                              </Dialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -742,6 +815,65 @@ export default function FleetPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Location Dialog */}
+      <Dialog open={editLocationOpen} onOpenChange={setEditLocationOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Edit Truck Location
+            </DialogTitle>
+            <DialogDescription>
+              Update the current location for this truck
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="location">Current Location</Label>
+              <Select value={editLocation} onValueChange={setEditLocation}>
+                <SelectTrigger data-testid="select-edit-location">
+                  <SelectValue placeholder="Select city" />
+                </SelectTrigger>
+                <SelectContent>
+                  {indianCities.map((city) => (
+                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {editLocation === "Other" && (
+              <div className="space-y-2">
+                <Label htmlFor="customLocation">Custom Location</Label>
+                <Input
+                  id="customLocation"
+                  placeholder="Enter location name"
+                  value={customLocation}
+                  onChange={(e) => setCustomLocation(e.target.value)}
+                  data-testid="input-custom-location"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditLocationOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveLocation}
+              disabled={updateLocationMutation.isPending}
+              data-testid="button-save-location"
+            >
+              {updateLocationMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <MapPin className="h-4 w-4 mr-2" />
+              )}
+              Save Location
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

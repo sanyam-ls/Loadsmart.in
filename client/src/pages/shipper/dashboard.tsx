@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Package, DollarSign, Truck, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, FileText, Receipt, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceN
 }
 
 export default function ShipperDashboard() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { data: loads, isLoading: loadsLoading } = useLoads();
@@ -121,19 +123,19 @@ export default function ShipperDashboard() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-welcome">
-            Welcome back, {user?.companyName || user?.username}
+            {t("dashboard.welcomeBack")}, {user?.companyName || user?.username}
           </h1>
-          <p className="text-muted-foreground">Here's what's happening with your shipments today.</p>
+          <p className="text-muted-foreground">{t("shipper.loadOverview")}</p>
         </div>
         <Button onClick={() => navigate("/shipper/post-load")} data-testid="button-post-load">
           <Plus className="h-4 w-4 mr-2" />
-          Post New Load
+          {t("shipper.postNewLoad")}
         </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Active Loads"
+          title={t("dashboard.activeLoads")}
           value={activeLoads.length}
           icon={Package}
           trend={{ value: 12, isPositive: true }}
@@ -141,7 +143,7 @@ export default function ShipperDashboard() {
           testId="stat-active-loads"
         />
         <StatCard
-          title="In Transit"
+          title={t("dashboard.inTransit")}
           value={inTransitLoads.length}
           icon={Truck}
           trend={{ value: 8, isPositive: true }}
@@ -149,7 +151,7 @@ export default function ShipperDashboard() {
           testId="stat-in-transit"
         />
         <StatCard
-          title="Monthly Spend"
+          title={t("shipper.totalSpent")}
           value={`Rs. ${totalSpend.toLocaleString('en-IN')}`}
           icon={DollarSign}
           trend={{ value: Math.abs(spendChange), isPositive: spendChange > 0 }}
@@ -157,10 +159,10 @@ export default function ShipperDashboard() {
           testId="stat-monthly-spend"
         />
         <StatCard
-          title="Documents"
+          title={t("documents.title")}
           value={expiringDocs.length + expiredDocs.length}
           icon={FileText}
-          subtitle="Need attention"
+          subtitle={t("common.required")}
           onClick={() => navigate("/shipper/documents")}
           testId="stat-documents"
         />
@@ -169,14 +171,14 @@ export default function ShipperDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Monthly Spend</CardTitle>
+            <CardTitle className="text-lg">{t("shipper.totalSpent")}</CardTitle>
             <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
               {spendChange >= 0 ? (
                 <TrendingUp className="h-3 w-3 mr-1" />
               ) : (
                 <TrendingDown className="h-3 w-3 mr-1" />
               )}
-              {spendChange >= 0 ? "+" : ""}{spendChange}% vs last month
+              {spendChange >= 0 ? "+" : ""}{spendChange}% {t("dashboard.vsLastWeek")}
             </Badge>
           </CardHeader>
           <CardContent>
@@ -216,7 +218,7 @@ export default function ShipperDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Alerts</CardTitle>
+            <CardTitle className="text-lg">{t("common.notifications")}</CardTitle>
             <Badge variant="destructive" className="no-default-hover-elevate no-default-active-elevate">
               {dashboardAlerts.length}
             </Badge>
@@ -225,7 +227,7 @@ export default function ShipperDashboard() {
             <ScrollArea className="h-64">
               <div className="space-y-3">
                 {dashboardAlerts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No alerts</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">{t("messages.noDataFound")}</p>
                 ) : (
                   dashboardAlerts.map((alert) => (
                     <div
@@ -257,9 +259,9 @@ export default function ShipperDashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Active Loads</CardTitle>
+            <CardTitle className="text-lg">{t("dashboard.activeLoads")}</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/loads")} data-testid="link-view-all-loads">
-              View All
+              {t("dashboard.viewAll")}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </CardHeader>
@@ -267,9 +269,9 @@ export default function ShipperDashboard() {
             {recentLoads.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">No active loads yet</p>
+                <p className="text-sm text-muted-foreground">{t("shipper.noLoadsPosted")}</p>
                 <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/shipper/post-load")}>
-                  Post Your First Load
+                  {t("shipper.postFirstLoad")}
                 </Button>
               </div>
             ) : (
@@ -310,9 +312,9 @@ export default function ShipperDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Recent Invoices</CardTitle>
+            <CardTitle className="text-lg">{t("invoices.title")}</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/invoices")} data-testid="link-view-invoices">
-              View All
+              {t("dashboard.viewAll")}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </CardHeader>
@@ -320,7 +322,7 @@ export default function ShipperDashboard() {
             {userInvoices.length === 0 ? (
               <div className="text-center py-8">
                 <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">No invoices yet</p>
+                <p className="text-sm text-muted-foreground">{t("invoices.noInvoicesFound")}</p>
               </div>
             ) : (
               <div className="space-y-3">

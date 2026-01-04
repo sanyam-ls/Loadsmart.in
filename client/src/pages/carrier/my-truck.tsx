@@ -33,6 +33,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { indianTruckTypes } from "@shared/schema";
 import { indianTruckManufacturers, getModelsByManufacturer, TruckManufacturer } from "@shared/indian-truck-data";
+import { indianStates } from "@shared/indian-locations";
 
 interface DocumentAlert {
   documentId: string;
@@ -100,13 +101,8 @@ const sortedManufacturers = [...indianTruckManufacturers].sort((a, b) => a.name.
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: currentYear - 1999 }, (_, i) => currentYear - i);
 
-// Common Indian cities for registration
-const indianCities = [
-  "Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", 
-  "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Ludhiana",
-  "Coimbatore", "Nagpur", "Indore", "Bhopal", "Surat", "Vadodara",
-  "Other"
-];
+// Sorted states for dropdown
+const sortedStates = [...indianStates].sort((a, b) => a.name.localeCompare(b.name));
 
 export default function MyTruckPage() {
   const { user, carrierType } = useAuth();
@@ -118,13 +114,19 @@ export default function MyTruckPage() {
     truckType: "",
     capacity: "",
     capacityUnit: "tons",
-    currentLocation: "",
+    locationState: "",
+    locationCity: "",
     manufacturerId: "",
     model: "",
     year: "",
     city: "",
     registrationDate: ""
   });
+
+  // Get cities for selected location state
+  const availableLocationCities = editForm.locationState 
+    ? sortedStates.find(s => s.code === editForm.locationState)?.cities || []
+    : [];
 
   // Get available models based on selected manufacturer
   const availableModels = editForm.manufacturerId 
@@ -159,12 +161,27 @@ export default function MyTruckPage() {
   const openEditDialog = (truck: TruckData) => {
     // Find manufacturer ID from saved make name
     const manufacturer = indianTruckManufacturers.find((m: TruckManufacturer) => m.name === truck.make);
+    
+    // Parse location from "City, State" format
+    let locationState = "";
+    let locationCity = "";
+    const currentLoc = truck.currentLocation || "";
+    if (currentLoc.includes(",")) {
+      const [city, stateName] = currentLoc.split(",").map(s => s.trim());
+      const foundState = sortedStates.find(s => s.name === stateName);
+      if (foundState) {
+        locationState = foundState.code;
+        locationCity = city;
+      }
+    }
+    
     setEditForm({
       licensePlate: truck.licensePlate || "",
       truckType: truck.truckType || "",
       capacity: String(truck.capacity || ""),
       capacityUnit: truck.capacityUnit || "tons",
-      currentLocation: truck.currentLocation || "",
+      locationState,
+      locationCity,
       manufacturerId: manufacturer?.id || "",
       model: truck.model || "",
       year: truck.year ? String(truck.year) : "",
@@ -181,13 +198,20 @@ export default function MyTruckPage() {
     // Convert manufacturerId to make name for backend
     const manufacturer = indianTruckManufacturers.find((m: TruckManufacturer) => m.id === editForm.manufacturerId);
     
+    // Build current location from state and city
+    let currentLocation: string | null = null;
+    if (editForm.locationState && editForm.locationCity) {
+      const stateName = sortedStates.find(s => s.code === editForm.locationState)?.name || "";
+      currentLocation = `${editForm.locationCity}, ${stateName}`;
+    }
+    
     updateTruckMutation.mutate({
       truckId: truck.id,
       licensePlate: editForm.licensePlate,
       truckType: editForm.truckType,
       capacity: parseInt(editForm.capacity) || 0,
       capacityUnit: editForm.capacityUnit,
-      currentLocation: editForm.currentLocation || null,
+      currentLocation,
       make: manufacturer?.name || null,
       model: editForm.model || null,
       year: editForm.year ? parseInt(editForm.year) : null,
@@ -656,19 +680,13 @@ export default function MyTruckPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">Registration City</Label>
-                <Select 
-                  value={editForm.city} 
-                  onValueChange={(val) => setEditForm({...editForm, city: val})}
-                >
-                  <SelectTrigger data-testid="select-city">
-                    <SelectValue placeholder="Select city" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {indianCities.map((city) => (
-                      <SelectItem key={city} value={city}>{city}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input 
+                  id="city"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm({...editForm, city: e.target.value})}
+                  placeholder="e.g. Ludhiana"
+                  data-testid="input-city"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="registrationDate">Registration Date</Label>
@@ -683,14 +701,38 @@ export default function MyTruckPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="currentLocation">Current Location</Label>
-              <Input 
-                id="currentLocation"
-                value={editForm.currentLocation}
-                onChange={(e) => setEditForm({...editForm, currentLocation: e.target.value})}
-                placeholder="e.g. Ludhiana, Punjab"
-                data-testid="input-current-location"
-              />
+              <Label>Current Location</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <Select 
+                  value={editForm.locationState} 
+                  onValueChange={(val) => setEditForm({...editForm, locationState: val, locationCity: ""})}
+                >
+                  <SelectTrigger data-testid="select-location-state">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortedStates.map((state) => (
+                      <SelectItem key={state.code} value={state.code}>{state.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select 
+                  value={editForm.locationCity} 
+                  onValueChange={(val) => setEditForm({...editForm, locationCity: val})}
+                  disabled={!editForm.locationState}
+                >
+                  <SelectTrigger data-testid="select-location-city">
+                    <SelectValue placeholder={editForm.locationState ? "Select city" : "Select state first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLocationCities.map((city) => (
+                      <SelectItem key={city.name} value={city.name}>
+                        {city.name}{city.isMetro && " (Metro)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>

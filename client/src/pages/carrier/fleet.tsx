@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { DialogFooter } from "@/components/ui/dialog";
 import type { Truck as DbTruck } from "@shared/schema";
+import { indianStates } from "@shared/indian-locations";
 import { format, differenceInDays } from "date-fns";
 import { 
   PieChart, 
@@ -289,13 +290,8 @@ function TruckDetailDialog({ truck }: { truck: CarrierTruck }) {
   );
 }
 
-// Common Indian cities for location selection
-const indianCities = [
-  "Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", 
-  "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Ludhiana",
-  "Coimbatore", "Nagpur", "Indore", "Bhopal", "Surat", "Vadodara",
-  "Other"
-];
+// Sorted states for dropdown
+const sortedStates = [...indianStates].sort((a, b) => a.name.localeCompare(b.name));
 
 export default function FleetPage() {
   const [, navigate] = useLocation();
@@ -308,8 +304,13 @@ export default function FleetPage() {
   const [selectedTruck, setSelectedTruck] = useState<CarrierTruck | null>(null);
   const [editLocationOpen, setEditLocationOpen] = useState(false);
   const [editingTruckId, setEditingTruckId] = useState<string | null>(null);
-  const [editLocation, setEditLocation] = useState("");
-  const [customLocation, setCustomLocation] = useState("");
+  const [editState, setEditState] = useState("");
+  const [editCity, setEditCity] = useState("");
+
+  // Get cities for selected state
+  const availableCities = editState 
+    ? sortedStates.find(s => s.code === editState)?.cities || []
+    : [];
   
   // Query backend trucks for real-time updates
   const { data: backendTrucks, isLoading: trucksLoading, isSuccess: trucksLoaded, refetch } = useQuery<DbTruck[]>({
@@ -327,8 +328,8 @@ export default function FleetPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
       setEditLocationOpen(false);
       setEditingTruckId(null);
-      setEditLocation("");
-      setCustomLocation("");
+      setEditState("");
+      setEditCity("");
       toast({ title: "Location Updated", description: "Truck location has been updated successfully." });
     },
     onError: () => {
@@ -339,26 +340,32 @@ export default function FleetPage() {
   const openEditLocation = (truck: CarrierTruck) => {
     setEditingTruckId(truck.truckId);
     const currentLoc = truck.currentLocation || "";
-    if (indianCities.includes(currentLoc)) {
-      setEditLocation(currentLoc);
-      setCustomLocation("");
-    } else if (currentLoc) {
-      setEditLocation("Other");
-      setCustomLocation(currentLoc);
+    // Try to parse existing location in "City, State" format
+    if (currentLoc.includes(",")) {
+      const [city, stateName] = currentLoc.split(",").map(s => s.trim());
+      const foundState = sortedStates.find(s => s.name === stateName);
+      if (foundState) {
+        setEditState(foundState.code);
+        setEditCity(city);
+      } else {
+        setEditState("");
+        setEditCity("");
+      }
     } else {
-      setEditLocation("");
-      setCustomLocation("");
+      setEditState("");
+      setEditCity("");
     }
     setEditLocationOpen(true);
   };
 
   const handleSaveLocation = () => {
     if (!editingTruckId) return;
-    const finalLocation = editLocation === "Other" ? customLocation : editLocation;
-    if (!finalLocation) {
-      toast({ title: "Error", description: "Please select or enter a location.", variant: "destructive" });
+    if (!editState || !editCity) {
+      toast({ title: "Error", description: "Please select both state and city.", variant: "destructive" });
       return;
     }
+    const stateName = sortedStates.find(s => s.code === editState)?.name || "";
+    const finalLocation = `${editCity}, ${stateName}`;
     updateLocationMutation.mutate({ truckId: editingTruckId, currentLocation: finalLocation });
   };
 
@@ -830,30 +837,43 @@ export default function FleetPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="location">Current Location</Label>
-              <Select value={editLocation} onValueChange={setEditLocation}>
-                <SelectTrigger data-testid="select-edit-location">
-                  <SelectValue placeholder="Select city" />
+              <Label htmlFor="state">State</Label>
+              <Select 
+                value={editState} 
+                onValueChange={(val) => {
+                  setEditState(val);
+                  setEditCity(""); // Reset city when state changes
+                }}
+              >
+                <SelectTrigger data-testid="select-edit-state">
+                  <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
-                  {indianCities.map((city) => (
-                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  {sortedStates.map((state) => (
+                    <SelectItem key={state.code} value={state.code}>{state.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            {editLocation === "Other" && (
-              <div className="space-y-2">
-                <Label htmlFor="customLocation">Custom Location</Label>
-                <Input
-                  id="customLocation"
-                  placeholder="Enter location name"
-                  value={customLocation}
-                  onChange={(e) => setCustomLocation(e.target.value)}
-                  data-testid="input-custom-location"
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Select 
+                value={editCity} 
+                onValueChange={setEditCity}
+                disabled={!editState}
+              >
+                <SelectTrigger data-testid="select-edit-city">
+                  <SelectValue placeholder={editState ? "Select city" : "Select state first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCities.map((city) => (
+                    <SelectItem key={city.name} value={city.name}>
+                      {city.name}{city.isMetro && " (Metro)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditLocationOpen(false)}>
@@ -861,7 +881,7 @@ export default function FleetPage() {
             </Button>
             <Button 
               onClick={handleSaveLocation}
-              disabled={updateLocationMutation.isPending}
+              disabled={updateLocationMutation.isPending || !editState || !editCity}
               data-testid="button-save-location"
             >
               {updateLocationMutation.isPending ? (

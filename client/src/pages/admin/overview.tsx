@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, FileCheck, Clock, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +86,7 @@ function ClickableStatCard({ title, value, icon: Icon, trend, subtitle, href, te
 export default function AdminOverview() {
   const [, setLocation] = useLocation();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   
   const { data: loads, isLoading: loadsLoading } = useLoads();
   const { data: users, isLoading: usersLoading } = useUsers();
@@ -151,9 +153,9 @@ export default function AdminOverview() {
   const pendingVerifications = allCarriers.filter(c => (c.carrierProfile as any)?.verificationStatus === 'pending').length;
 
   const loadDistribution = [
-    { name: "Completed", value: completedLoads.length, color: "hsl(142, 76%, 36%)" },
-    { name: "In Transit", value: inTransitLoads.length, color: "hsl(217, 91%, 48%)" },
-    { name: "Pending", value: pendingLoads.length, color: "hsl(48, 96%, 53%)" },
+    { name: t('common.completed'), value: completedLoads.length, color: "hsl(142, 76%, 36%)" },
+    { name: t('loads.inTransit'), value: inTransitLoads.length, color: "hsl(217, 91%, 48%)" },
+    { name: t('common.pending'), value: pendingLoads.length, color: "hsl(48, 96%, 53%)" },
   ];
 
   const userGrowthData = [
@@ -197,8 +199,8 @@ export default function AdminOverview() {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Platform overview and key metrics. Click any tile to manage.</p>
+          <h1 className="text-2xl font-bold">{t('admin.dashboard')}</h1>
+          <p className="text-muted-foreground">{t('admin.dashboardDescription')}</p>
         </div>
         <Button 
           variant="outline" 
@@ -206,13 +208,13 @@ export default function AdminOverview() {
           data-testid="button-refresh-data"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
-          Sync Data
+          {t('admin.syncData')}
         </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ClickableStatCard
-          title="Total Users"
+          title={t('admin.totalUsers')}
           value={stats.totalUsers.toLocaleString()}
           icon={Users}
           trend={{ value: 12, isPositive: true }}
@@ -220,7 +222,7 @@ export default function AdminOverview() {
           testId="card-total-users"
         />
         <ClickableStatCard
-          title="Active Loads"
+          title={t('admin.activeLoads')}
           value={stats.activeLoads}
           icon={Package}
           trend={{ value: 8, isPositive: true }}
@@ -228,15 +230,15 @@ export default function AdminOverview() {
           testId="card-active-loads"
         />
         <ClickableStatCard
-          title="Verified Carriers"
+          title={t('admin.verifiedCarriers')}
           value={stats.verifiedCarriers}
           icon={Truck}
-          subtitle={allCarriers.length > 0 ? `${Math.round((stats.verifiedCarriers / allCarriers.length) * 100)}% verification rate` : '0% verification rate'}
+          subtitle={allCarriers.length > 0 ? `${Math.round((stats.verifiedCarriers / allCarriers.length) * 100)}% ${t('admin.verificationRate')}` : `0% ${t('admin.verificationRate')}`}
           href="/admin/carriers"
           testId="card-verified-carriers"
         />
         <ClickableStatCard
-          title="Monthly Volume"
+          title={t('admin.monthlyVolume')}
           value={`Rs. ${(stats.monthlyVolume / 100000).toFixed(1)}L`}
           icon={DollarSign}
           trend={{ value: stats.monthlyChange, isPositive: stats.monthlyChange > 0 }}
@@ -258,12 +260,12 @@ export default function AdminOverview() {
                   <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <p className="font-medium">Pending Verifications</p>
-                  <p className="text-sm text-muted-foreground">{pendingVerifications} items require your attention</p>
+                  <p className="font-medium">{t('admin.pendingVerifications')}</p>
+                  <p className="text-sm text-muted-foreground">{t('admin.itemsRequireAttention', { count: pendingVerifications })}</p>
                 </div>
               </div>
               <Button variant="outline" size="sm">
-                Review Now
+                {t('admin.reviewNow')}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -281,7 +283,7 @@ export default function AdminOverview() {
         >
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Load Status Distribution</CardTitle>
+              <CardTitle className="text-lg">{t('dashboard.loadStatusDistribution')}</CardTitle>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
           </CardHeader>
@@ -335,7 +337,7 @@ export default function AdminOverview() {
         >
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">User Growth</CardTitle>
+              <CardTitle className="text-lg">{t('dashboard.userGrowth')}</CardTitle>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
           </CardHeader>
@@ -373,16 +375,16 @@ export default function AdminOverview() {
         <Card data-testid="card-recent-activity">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Recent Activity</CardTitle>
+              <CardTitle className="text-lg">{t('dashboard.recentActivity')}</CardTitle>
               <Badge variant="secondary" className="text-xs">
-                Live
+                {t('dashboard.live')}
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 max-h-72 overflow-y-auto">
               {recentActivity.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t('dashboard.noRecentActivity')}</p>
               ) : (
                 recentActivity.map((activity) => (
                   <div 
@@ -421,29 +423,29 @@ export default function AdminOverview() {
           data-testid="card-user-breakdown"
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">User Breakdown</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.userBreakdown')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Shippers</span>
+                <span className="text-sm text-muted-foreground">{t('roles.shipper')}</span>
                 <span className="font-medium">{allUsers.filter((u: any) => u.role === "shipper").length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Carriers</span>
+                <span className="text-sm text-muted-foreground">{t('roles.carrier')}</span>
                 <span className="font-medium">{allUsers.filter((u: any) => u.role === "carrier").length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Dispatchers</span>
+                <span className="text-sm text-muted-foreground">{t('admin.dispatchers')}</span>
                 <span className="font-medium">{allUsers.filter((u: any) => u.role === "dispatcher").length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Admins</span>
+                <span className="text-sm text-muted-foreground">{t('roles.admin')}</span>
                 <span className="font-medium">{allUsers.filter((u: any) => u.role === "admin").length}</span>
               </div>
               <div className="border-t pt-2 mt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Active Users</span>
+                  <span className="text-sm font-medium">{t('admin.activeUsers')}</span>
                   <Badge variant="secondary">{allUsers.filter((u: any) => u.isActive).length}</Badge>
                 </div>
               </div>
@@ -457,25 +459,25 @@ export default function AdminOverview() {
           data-testid="card-carrier-status"
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Carrier Status</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.carrierStatus')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Verified</span>
+                <span className="text-sm text-muted-foreground">{t('admin.verified')}</span>
                 <Badge className="bg-green-600">{verifiedCarriers.length}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Pending</span>
+                <span className="text-sm text-muted-foreground">{t('common.pending')}</span>
                 <Badge variant="secondary">{pendingVerifications}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total Carriers</span>
+                <span className="text-sm text-muted-foreground">{t('admin.totalCarriers')}</span>
                 <span className="font-medium">{allCarriers.length}</span>
               </div>
               <div className="border-t pt-2 mt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Avg. Rating</span>
+                  <span className="text-sm font-medium">{t('admin.avgRating')}</span>
                   <Badge variant="secondary">
                     {allCarriers.length > 0 
                       ? (allCarriers.reduce((sum: number, c: any) => sum + (c.carrierProfile?.rating || 0), 0) / allCarriers.length).toFixed(1)
@@ -494,25 +496,25 @@ export default function AdminOverview() {
           data-testid="card-load-summary"
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Load Summary</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.loadSummary')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total Loads</span>
+                <span className="text-sm text-muted-foreground">{t('admin.totalLoads')}</span>
                 <span className="font-medium">{allLoads.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Active Bids</span>
+                <span className="text-sm text-muted-foreground">{t('admin.activeBids')}</span>
                 <span className="font-medium">{allBids.filter((b: any) => b.status === 'pending').length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">In Transit</span>
+                <span className="text-sm text-muted-foreground">{t('loads.inTransit')}</span>
                 <Badge className="bg-blue-600">{inTransitLoads.length}</Badge>
               </div>
               <div className="border-t pt-2 mt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Total Volume</span>
+                  <span className="text-sm font-medium">{t('admin.totalVolume')}</span>
                   <Badge variant="secondary">
                     Rs. {(allLoads.reduce((sum: number, l: Load) => sum + parseFloat(l.grossPrice || '0'), 0) / 100000).toFixed(1)}L
                   </Badge>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { 
   Truck, 
   Search, 
@@ -87,6 +88,7 @@ interface ApiCarrier {
 export default function AdminCarriersPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useTranslation();
   
   // Fetch carriers from real API
   const { data: apiCarriers = [], isLoading, refetch } = useQuery<ApiCarrier[]>({
@@ -305,15 +307,15 @@ export default function AdminCarriersPage() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold">Carrier Directory</h1>
+            <h1 className="text-2xl font-bold">{t('admin.carrierDirectory')}</h1>
           </div>
-          <p className="text-muted-foreground ml-10">Verified carriers only ({verifiedCarriers.length} total)</p>
+          <p className="text-muted-foreground ml-10">{t('admin.verifiedCarriersOnly', { count: verifiedCarriers.length })}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {pendingCount > 0 && (
             <Button onClick={() => setLocation("/admin/verification")} data-testid="button-view-pending">
               <ShieldAlert className="h-4 w-4 mr-2" />
-              {pendingCount} Pending Verification
+              {pendingCount} {t('admin.pendingVerification')}
             </Button>
           )}
           <Button 
@@ -347,11 +349,11 @@ export default function AdminCarriersPage() {
             data-testid="button-seed-data"
           >
             <Database className="h-4 w-4 mr-2" />
-            Seed Data
+            {t('admin.seedData')}
           </Button>
           <Button variant="outline" onClick={() => refetch()} data-testid="button-sync-carriers">
             <RefreshCw className="h-4 w-4 mr-2" />
-            Sync
+            {t('admin.sync')}
           </Button>
         </div>
       </div>
@@ -364,7 +366,7 @@ export default function AdminCarriersPage() {
                 <ShieldCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Verified Carriers</p>
+                <p className="text-sm text-muted-foreground">{t('admin.verifiedCarriers')}</p>
                 <p className="text-xl font-bold">{verifiedCarriers.length}</p>
               </div>
             </div>
@@ -377,7 +379,7 @@ export default function AdminCarriersPage() {
                 <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Fleet</p>
+                <p className="text-sm text-muted-foreground">{t('admin.totalFleet')}</p>
                 <p className="text-xl font-bold">{verifiedCarriers.reduce((sum, c) => sum + (c.profile?.fleetSize || 0), 0)}</p>
               </div>
             </div>
@@ -390,7 +392,7 @@ export default function AdminCarriersPage() {
                 <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">High Activity</p>
+                <p className="text-sm text-muted-foreground">{t('admin.highActivity')}</p>
                 <p className="text-xl font-bold">{verifiedCarriers.filter(c => (c.bidCount || 0) > 5).length}</p>
               </div>
             </div>
@@ -403,7 +405,7 @@ export default function AdminCarriersPage() {
                 <Star className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Avg Rating</p>
+                <p className="text-sm text-muted-foreground">{t('admin.avgRating')}</p>
                 <p className="text-xl font-bold">{(verifiedCarriers.reduce((sum, c) => sum + parseFloat(String(c.profile?.rating || 4.5)), 0) / Math.max(1, verifiedCarriers.length)).toFixed(1)}</p>
               </div>
             </div>
@@ -417,14 +419,14 @@ export default function AdminCarriersPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <ShieldAlert className="h-5 w-5 text-amber-600" />
-                <span>{pendingVerifications} carrier(s) awaiting verification</span>
+                <span>{t('admin.carriersAwaitingVerification', { count: pendingVerifications })}</span>
               </div>
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => setStatusFilter("pending")}
               >
-                View Pending
+                {t('admin.viewPending')}
               </Button>
             </div>
           </CardContent>
@@ -437,7 +439,7 @@ export default function AdminCarriersPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search carriers by name, email, or service zone..."
+                placeholder={t('admin.searchCarriersPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -451,10 +453,10 @@ export default function AdminCarriersPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="all">{t('admin.allStatus')}</SelectItem>
+                  <SelectItem value="verified">{t('admin.verified')}</SelectItem>
+                  <SelectItem value="pending">{t('common.pending')}</SelectItem>
+                  <SelectItem value="rejected">{t('common.rejected')}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={activityFilter} onValueChange={setActivityFilter}>
@@ -462,10 +464,10 @@ export default function AdminCarriersPage() {
                   <SelectValue placeholder="Activity" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Activity</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="all">{t('admin.allActivity')}</SelectItem>
+                  <SelectItem value="high">{t('admin.high')}</SelectItem>
+                  <SelectItem value="medium">{t('admin.medium')}</SelectItem>
+                  <SelectItem value="low">{t('admin.low')}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={carrierTypeFilter} onValueChange={setCarrierTypeFilter}>
@@ -473,9 +475,9 @@ export default function AdminCarriersPage() {
                   <SelectValue placeholder="Carrier Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="solo">Solo Drivers</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                  <SelectItem value="all">{t('admin.allTypes')}</SelectItem>
+                  <SelectItem value="solo">{t('admin.soloDrivers')}</SelectItem>
+                  <SelectItem value="enterprise">{t('roles.enterprise')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -494,11 +496,11 @@ export default function AdminCarriersPage() {
                       onClick={() => handleSort("companyName")}
                       data-testid="button-sort-name"
                     >
-                      Carrier
+                      {t('roles.carrier')}
                       <ArrowUpDown className="ml-2 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
                   <TableHead>
                     <Button 
                       variant="ghost" 
@@ -507,11 +509,11 @@ export default function AdminCarriersPage() {
                       onClick={() => handleSort("fleetSize")}
                       data-testid="button-sort-fleet"
                     >
-                      Fleet
+                      {t('admin.fleet')}
                       <ArrowUpDown className="ml-2 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead>Service Zones</TableHead>
+                  <TableHead>{t('admin.serviceZones')}</TableHead>
                   <TableHead>
                     <Button 
                       variant="ghost" 
@@ -520,11 +522,11 @@ export default function AdminCarriersPage() {
                       onClick={() => handleSort("rating")}
                       data-testid="button-sort-rating"
                     >
-                      Rating
+                      {t('admin.rating')}
                       <ArrowUpDown className="ml-2 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead>Activity</TableHead>
+                  <TableHead>{t('admin.activity')}</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -532,7 +534,7 @@ export default function AdminCarriersPage() {
                 {paginatedCarriers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No carriers found
+                      {t('admin.noCarriersFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -556,7 +558,7 @@ export default function AdminCarriersPage() {
                               )}
                               {carrier.profile?.carrierType === "solo" && (
                                 <Badge variant="outline" className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700" data-testid={`badge-solo-${carrier.id}`}>
-                                  Solo Driver
+                                  {t('roles.soloDriver')}
                                 </Badge>
                               )}
                             </div>
@@ -569,8 +571,8 @@ export default function AdminCarriersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium">{carrier.profile?.fleetSize || 0} trucks</div>
-                          <div className="text-muted-foreground">{carrier.bidCount || 0} bids</div>
+                          <div className="font-medium">{carrier.profile?.fleetSize || 0} {t('admin.trucks')}</div>
+                          <div className="text-muted-foreground">{carrier.bidCount || 0} {t('bids.title').toLowerCase()}</div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -587,7 +589,7 @@ export default function AdminCarriersPage() {
                             </Badge>
                           )}
                           {(!carrier.profile?.serviceZones || carrier.profile.serviceZones.length === 0) && (
-                            <span className="text-muted-foreground text-xs">Not specified</span>
+                            <span className="text-muted-foreground text-xs">{t('admin.notSpecified')}</span>
                           )}
                         </div>
                       </TableCell>
@@ -613,7 +615,7 @@ export default function AdminCarriersPage() {
                               openEditModal(carrier);
                             }} data-testid={`menu-edit-${carrier.id}`}>
                               <Edit className="h-4 w-4 mr-2" />
-                              Edit Carrier
+                              {t('admin.editCarrier')}
                             </DropdownMenuItem>
                             {carrier.isVerified && (
                               <DropdownMenuItem onClick={(e) => {
@@ -622,7 +624,7 @@ export default function AdminCarriersPage() {
                                 setIsRejectModalOpen(true);
                               }}>
                                 <ShieldX className="h-4 w-4 mr-2" />
-                                Revoke Verification
+                                {t('admin.revokeVerification')}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -638,7 +640,7 @@ export default function AdminCarriersPage() {
           {filteredCarriers.length > 0 && (
             <div className="flex items-center justify-between px-6 py-4 border-t">
               <p className="text-sm text-muted-foreground" data-testid="text-pagination-info">
-                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCarriers.length)} of {filteredCarriers.length} carriers
+                {t('common.showing')} {((currentPage - 1) * itemsPerPage) + 1} {t('common.to')} {Math.min(currentPage * itemsPerPage, filteredCarriers.length)} {t('common.of')} {filteredCarriers.length} {t('nav.carriers').toLowerCase()}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -651,7 +653,7 @@ export default function AdminCarriersPage() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm px-2">
-                  Page {currentPage} of {totalPages || 1}
+                  {t('admin.page')} {currentPage} {t('common.of')} {totalPages || 1}
                 </span>
                 <Button
                   variant="outline"
@@ -671,12 +673,12 @@ export default function AdminCarriersPage() {
       <Dialog open={isEditModalOpen} onOpenChange={(open) => { if (!open) { setIsEditModalOpen(false); setSelectedCarrier(null); } }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Edit Carrier</DialogTitle>
-            <DialogDescription>Update carrier profile information</DialogDescription>
+            <DialogTitle>{t('admin.editCarrier')}</DialogTitle>
+            <DialogDescription>{t('admin.updateCarrierProfile')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label>Company Name</Label>
+              <Label>{t('admin.companyName')}</Label>
               <Input 
                 value={formData.companyName}
                 onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
@@ -685,7 +687,7 @@ export default function AdminCarriersPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Email</Label>
+                <Label>{t('common.email')}</Label>
                 <Input 
                   type="email"
                   value={formData.email}
@@ -694,7 +696,7 @@ export default function AdminCarriersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Phone</Label>
+                <Label>{t('common.phone')}</Label>
                 <Input 
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
@@ -703,7 +705,7 @@ export default function AdminCarriersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Fleet Size</Label>
+              <Label>{t('admin.fleetSize')}</Label>
               <Input 
                 type="number"
                 value={formData.fleetSize}
@@ -712,7 +714,7 @@ export default function AdminCarriersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Service Zones (comma-separated)</Label>
+              <Label>{t('admin.serviceZonesLabel')}</Label>
               <Textarea 
                 value={formData.serviceZones}
                 onChange={(e) => setFormData(prev => ({ ...prev, serviceZones: e.target.value }))}
@@ -723,10 +725,10 @@ export default function AdminCarriersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsEditModalOpen(false); setSelectedCarrier(null); }}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleUpdateCarrier} data-testid="button-save-carrier">
-              Save Changes
+              {t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -735,18 +737,18 @@ export default function AdminCarriersPage() {
       <Dialog open={isVerifyModalOpen} onOpenChange={(open) => { if (!open) { setIsVerifyModalOpen(false); setSelectedCarrier(null); } }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Verify Carrier</DialogTitle>
+            <DialogTitle>{t('admin.verifyCarrier')}</DialogTitle>
             <DialogDescription>
-              Approve {selectedCarrier?.companyName} as a verified carrier? They will be able to bid on loads and receive assignments.
+              {t('admin.approveCarrierDescription', { name: selectedCarrier?.companyName })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsVerifyModalOpen(false); setSelectedCarrier(null); }}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleVerifyCarrier} className="bg-green-600 hover:bg-green-700" data-testid="button-confirm-verify">
               <CheckCircle className="h-4 w-4 mr-2" />
-              Approve
+              {t('common.approved')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -755,13 +757,13 @@ export default function AdminCarriersPage() {
       <Dialog open={isRejectModalOpen} onOpenChange={(open) => { if (!open) { setIsRejectModalOpen(false); setSelectedCarrier(null); setRejectReason(""); } }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Reject Verification</DialogTitle>
+            <DialogTitle>{t('admin.rejectVerification')}</DialogTitle>
             <DialogDescription>
-              Reject verification for {selectedCarrier?.companyName}? Please provide a reason.
+              {t('admin.rejectVerificationDescription', { name: selectedCarrier?.companyName })}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Label>Reason for Rejection</Label>
+            <Label>{t('admin.reasonForRejection')}</Label>
             <Textarea 
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -772,11 +774,11 @@ export default function AdminCarriersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsRejectModalOpen(false); setSelectedCarrier(null); setRejectReason(""); }}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleRejectCarrier} data-testid="button-confirm-reject">
               <XCircle className="h-4 w-4 mr-2" />
-              Reject
+              {t('bids.rejectBid')}
             </Button>
           </DialogFooter>
         </DialogContent>

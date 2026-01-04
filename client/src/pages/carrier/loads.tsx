@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
+import { useTranslation } from "react-i18next";
 import { 
   Search, MapPin, LayoutGrid, List, Package, Star, 
   Truck, TrendingUp, ArrowRight, Building2, Calendar,
@@ -250,6 +251,7 @@ function calculateMatchScore(load: CarrierLoad): number {
 }
 
 export default function CarrierLoadsPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
   const searchString = useSearch();
@@ -274,8 +276,8 @@ export default function CarrierLoadsPage() {
       
       const unsubscribe = onMarketplaceEvent("load_posted", (loadData) => {
         toast({
-          title: "New Load Available",
-          description: `Load from ${loadData.pickupCity} to ${loadData.dropoffCity} - Rs. ${parseFloat(loadData.adminFinalPrice || "0").toLocaleString("en-IN")}`,
+          title: t("carrier.newLoadAvailable"),
+          description: `${loadData.pickupCity} ${t("common.to")} ${loadData.dropoffCity} - Rs. ${parseFloat(loadData.adminFinalPrice || "0").toLocaleString("en-IN")}`,
         });
       });
 
@@ -448,8 +450,8 @@ export default function CarrierLoadsPage() {
       }
     }));
     toast({
-      title: "Load Accepted",
-      description: `You've accepted the fixed price of ${formatCurrency(price)} for this load. Admin has been notified.`,
+      title: t("carrier.loadAccepted"),
+      description: t("carrier.loadAcceptedDesc", { price: formatCurrency(price) }),
     });
     setBidDialogOpen(false);
     setBidAmount("");
@@ -465,10 +467,10 @@ export default function CarrierLoadsPage() {
       }
     }));
     toast({
-      title: isCounter ? "Counter-Bid Submitted" : "Bid Placed Successfully",
+      title: isCounter ? t("bids.counterSubmitted") : t("bids.bidPlacedSuccessfully"),
       description: isCounter
-        ? `Your counter-bid of ${formatCurrency(amount)} has been submitted. Pending admin decision.`
-        : `Your bid of ${formatCurrency(amount)} has been submitted.`,
+        ? t("bids.counterSubmittedDesc", { amount: formatCurrency(amount) })
+        : t("bids.bidSubmittedDesc", { amount: formatCurrency(amount) }),
     });
     setBidDialogOpen(false);
     setBidAmount("");
@@ -492,16 +494,16 @@ export default function CarrierLoadsPage() {
       });
       
       toast({
-        title: "Load Accepted",
-        description: `You've accepted the fixed price of ${formatCurrency(price)} for this load. Admin has been notified.`,
+        title: t("carrier.loadAccepted"),
+        description: t("carrier.loadAcceptedDesc", { price: formatCurrency(price) }),
       });
       setBidDialogOpen(false);
       setBidAmount("");
       setSelectedLoad(null);
     } catch (err: any) {
       toast({
-        title: "Failed to Accept",
-        description: err.message || "Could not accept the load. Please try again.",
+        title: t("carrier.failedToAccept"),
+        description: err.message || t("carrier.couldNotAcceptLoad"),
         variant: "destructive",
       });
     }
@@ -527,18 +529,18 @@ export default function CarrierLoadsPage() {
       });
       
       toast({
-        title: isCounterBid ? "Counter-Bid Submitted" : "Bid Placed Successfully",
+        title: isCounterBid ? t("bids.counterSubmitted") : t("bids.bidPlacedSuccessfully"),
         description: isCounterBid
-          ? `Your counter-bid of ${formatCurrency(amount)} has been submitted for review.`
-          : `Your bid of ${formatCurrency(amount)} has been submitted.`,
+          ? t("bids.counterSubmittedDesc", { amount: formatCurrency(amount) })
+          : t("bids.bidSubmittedDesc", { amount: formatCurrency(amount) }),
       });
       setBidDialogOpen(false);
       setBidAmount("");
       setSelectedLoad(null);
     } catch (err: any) {
       toast({
-        title: "Failed to Submit Bid",
-        description: err.message || "Could not submit your bid. Please try again.",
+        title: t("bids.failedToSubmitBid"),
+        description: err.message || t("bids.couldNotSubmitBid"),
         variant: "destructive",
       });
     }
@@ -553,8 +555,8 @@ export default function CarrierLoadsPage() {
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Smart Load Matching</h1>
-            <p className="text-muted-foreground">Loading available loads...</p>
+            <h1 className="text-2xl font-bold">{t("carrier.smartLoadMatching")}</h1>
+            <p className="text-muted-foreground">{t("common.loading")}</p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -584,8 +586,8 @@ export default function CarrierLoadsPage() {
       <div className="p-6 max-w-7xl mx-auto">
         <EmptyState
           icon={Package}
-          title="Failed to load available loads"
-          description="There was an error loading the loads. Please try refreshing the page."
+          title={t("carrier.failedToLoadLoads")}
+          description={t("carrier.errorLoadingLoads")}
         />
       </div>
     );
@@ -595,38 +597,38 @@ export default function CarrierLoadsPage() {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-loads-title">Smart Load Matching</h1>
-          <p className="text-muted-foreground">Find and bid on {loads.length} loads optimized for your fleet</p>
+          <h1 className="text-2xl font-bold" data-testid="text-loads-title">{t("carrier.smartLoadMatching")}</h1>
+          <p className="text-muted-foreground">{t("carrier.findAndBidLoads", { count: loads.length })}</p>
         </div>
       </div>
       
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Available Loads"
+          title={t("carrier.availableLoads")}
           value={stats.total}
           icon={Package}
-          subtitle="Currently posted"
+          subtitle={t("carrier.currentlyPosted")}
           testId="stat-total-loads"
         />
         <StatCard
-          title="High Match"
+          title={t("carrier.highMatch")}
           value={stats.highMatch}
           icon={Target}
-          subtitle="85%+ compatibility"
+          subtitle={t("carrier.compatibility85")}
           testId="stat-high-match"
         />
         <StatCard
-          title="Avg. Rate"
+          title={t("carrier.avgRate")}
           value={formatCurrency(stats.avgRate)}
           icon={TrendingUp}
-          subtitle="Per load"
+          subtitle={t("carrier.perLoad")}
           testId="stat-avg-rate"
         />
         <StatCard
-          title="Fixed Price"
+          title={t("carrier.fixedPrice")}
           value={stats.fixedPriceLoads}
           icon={Lock}
-          subtitle="Accept instantly"
+          subtitle={t("carrier.acceptInstantly")}
           testId="stat-fixed"
         />
       </div>
@@ -636,9 +638,9 @@ export default function CarrierLoadsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Recommended for Your Fleet
+              {t("carrier.recommendedForFleet")}
             </CardTitle>
-            <CardDescription>Top matches based on your trucks, locations, and history</CardDescription>
+            <CardDescription>{t("carrier.topMatchesDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -649,7 +651,7 @@ export default function CarrierLoadsPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge className={`${getMatchScoreBadge(load.matchScore)} no-default-hover-elevate no-default-active-elevate`}>
                           <Target className="h-3 w-3 mr-1" />
-                          {load.matchScore}% Match
+                          {load.matchScore}% {t("carrier.match")}
                         </Badge>
                         {load.isSimulated && (
                           <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 no-default-hover-elevate no-default-active-elevate">
@@ -694,7 +696,7 @@ export default function CarrierLoadsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by city, shipper, or load ID..."
+            placeholder={t("carrier.searchLoadsPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -703,21 +705,21 @@ export default function CarrierLoadsPage() {
         </div>
         <Select value={distanceFilter} onValueChange={setDistanceFilter}>
           <SelectTrigger className="w-full sm:w-36" data-testid="select-distance-filter">
-            <SelectValue placeholder="Distance" />
+            <SelectValue placeholder={t("loads.distance")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Distances</SelectItem>
-            <SelectItem value="short">Under 500 km</SelectItem>
-            <SelectItem value="medium">500-1000 km</SelectItem>
-            <SelectItem value="long">Over 1000 km</SelectItem>
+            <SelectItem value="all">{t("carrier.allDistances")}</SelectItem>
+            <SelectItem value="short">{t("carrier.under500km")}</SelectItem>
+            <SelectItem value="medium">{t("carrier.500to1000km")}</SelectItem>
+            <SelectItem value="long">{t("carrier.over1000km")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={loadTypeFilter} onValueChange={setLoadTypeFilter}>
           <SelectTrigger className="w-full sm:w-36" data-testid="select-type-filter">
-            <SelectValue placeholder="Load Type" />
+            <SelectValue placeholder={t("loads.loadType")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="all">{t("carrier.allTypes")}</SelectItem>
             {loadTypes.map(type => (
               <SelectItem key={type} value={type}>{type}</SelectItem>
             ))}
@@ -725,13 +727,13 @@ export default function CarrierLoadsPage() {
         </Select>
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-full sm:w-36" data-testid="select-sort">
-            <SelectValue placeholder="Sort By" />
+            <SelectValue placeholder={t("common.sortBy")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="match">Best Match</SelectItem>
-            <SelectItem value="rate">Highest Rate</SelectItem>
-            <SelectItem value="distance">Shortest</SelectItem>
-            <SelectItem value="newest">Newest</SelectItem>
+            <SelectItem value="match">{t("carrier.bestMatch")}</SelectItem>
+            <SelectItem value="rate">{t("carrier.highestRate")}</SelectItem>
+            <SelectItem value="distance">{t("carrier.shortest")}</SelectItem>
+            <SelectItem value="newest">{t("carrier.newest")}</SelectItem>
           </SelectContent>
         </Select>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
@@ -749,10 +751,10 @@ export default function CarrierLoadsPage() {
       {filteredAndSortedLoads.length === 0 ? (
         <EmptyState
           icon={Package}
-          title="No loads found"
+          title={t("loads.noLoadsFound")}
           description={loads.length === 0 
-            ? "No loads have been posted to carriers yet. Check back soon!"
-            : "No loads match your current filters. Try adjusting your search criteria."
+            ? t("carrier.noLoadsPostedYet")
+            : t("carrier.noLoadsMatchFilters")
           }
         />
       ) : viewMode === "grid" ? (
@@ -772,7 +774,7 @@ export default function CarrierLoadsPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge className={`${getMatchScoreBadge(load.matchScore)} no-default-hover-elevate no-default-active-elevate`}>
                       <Target className="h-3 w-3 mr-1" />
-                      {load.matchScore}% Match
+                      {load.matchScore}% {t("carrier.match")}
                     </Badge>
                     {load.isSimulated && (
                       <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 no-default-hover-elevate no-default-active-elevate">
@@ -985,28 +987,28 @@ export default function CarrierLoadsPage() {
                     {detailLoad.shipperName && (
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Shipper:</span>
+                        <span className="text-muted-foreground">{t("loads.shipper")}:</span>
                         <span className="font-medium">{detailLoad.shipperName}</span>
                       </div>
                     )}
                     {detailLoad.loadType && (
                       <div className="flex items-center gap-2">
                         <Truck className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Type:</span>
+                        <span className="text-muted-foreground">{t("common.type")}:</span>
                         <span className="font-medium">{detailLoad.loadType}</span>
                       </div>
                     )}
                     {detailLoad.weight && (
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Weight:</span>
+                        <span className="text-muted-foreground">{t("loads.weight")}:</span>
                         <span className="font-medium">{detailLoad.weight} Tons</span>
                       </div>
                     )}
                     {detailLoad.estimatedDistance && (
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Distance:</span>
+                        <span className="text-muted-foreground">{t("loads.distance")}:</span>
                         <span className="font-medium">{detailLoad.estimatedDistance} km</span>
                       </div>
                     )}
@@ -1120,7 +1122,7 @@ export default function CarrierLoadsPage() {
                   <div className="flex items-center justify-between">
                     <Badge className={`${getMatchScoreBadge((selectedLoad as any).matchScore || 80)} no-default-hover-elevate no-default-active-elevate`}>
                       <Target className="h-3 w-3 mr-1" />
-                      {(selectedLoad as any).matchScore || 80}% Match
+                      {(selectedLoad as any).matchScore || 80}% {t("carrier.match")}
                     </Badge>
                     <span className="text-sm text-muted-foreground">{formatLoadId(selectedLoad)}</span>
                   </div>
@@ -1135,25 +1137,25 @@ export default function CarrierLoadsPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     {selectedLoad.shipperName && (
                       <div>
-                        <span className="text-muted-foreground">Shipper:</span>
+                        <span className="text-muted-foreground">{t("loads.shipper")}:</span>
                         <span className="ml-2 font-medium">{selectedLoad.shipperName}</span>
                       </div>
                     )}
                     {selectedLoad.loadType && (
                       <div>
-                        <span className="text-muted-foreground">Load Type:</span>
+                        <span className="text-muted-foreground">Load {t("common.type")}:</span>
                         <span className="ml-2 font-medium">{selectedLoad.loadType}</span>
                       </div>
                     )}
                     {selectedLoad.weight && (
                       <div>
-                        <span className="text-muted-foreground">Weight:</span>
+                        <span className="text-muted-foreground">{t("loads.weight")}:</span>
                         <span className="ml-2 font-medium">{selectedLoad.weight} Tons</span>
                       </div>
                     )}
                     {selectedLoad.estimatedDistance && (
                       <div>
-                        <span className="text-muted-foreground">Distance:</span>
+                        <span className="text-muted-foreground">{t("loads.distance")}:</span>
                         <span className="ml-2 font-medium">{selectedLoad.estimatedDistance} km</span>
                       </div>
                     )}
@@ -1177,7 +1179,7 @@ export default function CarrierLoadsPage() {
                   <label className="text-sm font-medium">Your Bid Amount (Rs.)</label>
                   <Input
                     type="number"
-                    placeholder="Enter your bid amount"
+                    placeholder={t("bids.enterBidAmount")}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
                     data-testid="input-bid-amount"

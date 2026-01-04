@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { 
   FileText, Check, Clock, AlertCircle, Eye, Download, 
   CreditCard, MessageSquare, CheckCircle, XCircle, Loader2,
@@ -219,6 +220,7 @@ const simulatedInvoices: Invoice[] = [
 ];
 
 export default function ShipperInvoicesPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -389,7 +391,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
   if (isLoading) {
     return (
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold">Invoices</h1>
+        <h1 className="text-2xl font-bold">{t('invoices.title')}</h1>
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
             <Card key={i} className="animate-pulse">
@@ -460,7 +462,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                   data-testid={`button-view-invoice-${invoice.id}`}
                 >
                   <Eye className="h-4 w-4 mr-1" />
-                  Details
+                  {t('common.details')}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -479,7 +481,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                     data-testid={`button-acknowledge-invoice-${invoice.id}`}
                   >
                     <Check className="h-4 w-4 mr-1" />
-                    Acknowledge
+                    {t('invoices.acknowledge')}
                   </Button>
                 )}
               </div>
@@ -493,8 +495,8 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold" data-testid="text-invoices-title">Invoices</h1>
-        <p className="text-muted-foreground">Manage invoices for your awarded loads</p>
+        <h1 className="text-2xl font-bold" data-testid="text-invoices-title">{t('invoices.title')}</h1>
+        <p className="text-muted-foreground">{t('shipper.viewInvoices')}</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -505,7 +507,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                 <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Invoices</p>
+                <p className="text-sm text-muted-foreground">{t('common.total')} {t('invoices.title')}</p>
                 <p className="text-xl font-bold">{invoices.length}</p>
               </div>
             </div>
@@ -518,7 +520,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                 <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-sm text-muted-foreground">{t('common.pending')}</p>
                 <p className="text-xl font-bold">{formatCurrency(totalPending)}</p>
               </div>
             </div>
@@ -531,7 +533,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                 <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Paid</p>
+                <p className="text-sm text-muted-foreground">{t('invoices.paid')}</p>
                 <p className="text-xl font-bold">{formatCurrency(totalPaid)}</p>
               </div>
             </div>
@@ -544,7 +546,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                 <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Acknowledged</p>
+                <p className="text-sm text-muted-foreground">{t('invoices.acknowledged')}</p>
                 <p className="text-xl font-bold">{activeInvoices.length}</p>
               </div>
             </div>
@@ -555,13 +557,13 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
       <Tabs defaultValue="pending" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="pending" data-testid="tab-pending">
-            To Acknowledge ({pendingConfirmation.length})
+            {t('invoices.pendingPayment')} ({pendingConfirmation.length})
           </TabsTrigger>
           <TabsTrigger value="active" data-testid="tab-active">
-            Acknowledged ({activeInvoices.length})
+            {t('invoices.acknowledged')} ({activeInvoices.length})
           </TabsTrigger>
           <TabsTrigger value="paid" data-testid="tab-paid">
-            Paid ({paidInvoices.length})
+            {t('invoices.paid')} ({paidInvoices.length})
           </TabsTrigger>
         </TabsList>
         
@@ -570,15 +572,15 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             <Card>
               <CardContent className="py-8 text-center">
                 <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-4" />
-                <h3 className="text-lg font-semibold">All Caught Up!</h3>
-                <p className="text-muted-foreground">No invoices pending your review</p>
+                <h3 className="text-lg font-semibold">{t('messages.success')}</h3>
+                <p className="text-muted-foreground">{t('invoices.noInvoicesFound')}</p>
               </CardContent>
             </Card>
           ) : (
             <>
               <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
                 <AlertCircle className="h-4 w-4" />
-                <span>Please review and acknowledge these invoices.</span>
+                <span>{t('invoices.pendingPayment')}</span>
               </div>
               {pendingConfirmation.map(invoice => renderInvoiceCard(invoice))}
             </>
@@ -590,7 +592,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             <Card>
               <CardContent className="py-8 text-center">
                 <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No active invoices awaiting payment</p>
+                <p className="text-muted-foreground">{t('invoices.noInvoicesFound')}</p>
               </CardContent>
             </Card>
           ) : (
@@ -603,7 +605,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             <Card>
               <CardContent className="py-8 text-center">
                 <DollarSign className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No paid invoices yet</p>
+                <p className="text-muted-foreground">{t('invoices.noInvoicesFound')}</p>
               </CardContent>
             </Card>
           ) : (
@@ -620,7 +622,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
               {selectedInvoice?.invoiceNumber}
             </DialogTitle>
             <DialogDescription>
-              Invoice details and counter offer history
+              {t('invoices.invoiceDetails')}
             </DialogDescription>
           </DialogHeader>
           {selectedInvoice && (
@@ -628,19 +630,19 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-muted-foreground">Route</Label>
+                    <Label className="text-muted-foreground">{t('invoices.route')}</Label>
                     <p className="font-medium">{selectedInvoice.loadRoute || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Status</Label>
+                    <Label className="text-muted-foreground">{t('common.status')}</Label>
                     <p className="mt-1">{getStatusBadge(selectedInvoice)}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Created</Label>
+                    <Label className="text-muted-foreground">{t('invoices.invoiceDate')}</Label>
                     <p className="font-medium">{formatDate(selectedInvoice.createdAt)}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Due Date</Label>
+                    <Label className="text-muted-foreground">{t('invoices.dueDate')}</Label>
                     <p className="font-medium">{formatDate(selectedInvoice.dueDate)}</p>
                   </div>
                 </div>
@@ -772,24 +774,24 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
 
                 <Card>
                   <CardHeader className="py-3">
-                    <CardTitle className="text-sm">Invoice Summary</CardTitle>
+                    <CardTitle className="text-sm">{t('invoices.invoiceDetails')}</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 space-y-3">
                     <div className="flex justify-between text-lg font-bold">
-                      <span>Total Amount</span>
+                      <span>{t('invoices.grandTotal')}</span>
                       <span>{formatCurrency(selectedInvoice.totalAmount)}</span>
                     </div>
                     {selectedInvoice.advancePaymentPercent !== undefined && selectedInvoice.advancePaymentPercent !== null && selectedInvoice.advancePaymentPercent > 0 && (
                       <>
                         <Separator />
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Advance Payment</span>
+                          <span className="text-muted-foreground">{t('invoices.advance')}</span>
                           <span className="font-semibold text-green-600 dark:text-green-400">
                             {selectedInvoice.advancePaymentPercent}%
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Balance on Delivery</span>
+                          <span className="text-muted-foreground">{t('invoices.balance')}</span>
                           <span className="font-medium">
                             {100 - selectedInvoice.advancePaymentPercent}%
                           </span>
@@ -804,7 +806,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                   <CardHeader className="py-3">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <CreditCard className="h-4 w-4 text-blue-600" />
-                      Payment Instructions
+                      {t('invoices.bankDetails')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 space-y-3 text-sm">
@@ -929,7 +931,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             </div>
           )}
           <DialogFooter className="flex-shrink-0 border-t pt-4">
-            <Button variant="outline" onClick={() => setDetailsOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setDetailsOpen(false)}>{t('common.close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -299,6 +300,7 @@ export default function LoadQueuePage() {
   const [, navigate] = useLocation();
   const searchString = useSearch();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const { loads, updateLoad } = useMockData();
   const [searchQuery, setSearchQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState("All Regions");
@@ -541,12 +543,12 @@ export default function LoadQueuePage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Load Queue</h1>
-          <p className="text-muted-foreground">Review, price, and post loads submitted by shippers</p>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">{t('admin.loadQueue')}</h1>
+          <p className="text-muted-foreground">{t('admin.loadQueueDescription')}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="text-lg px-3 py-1">
-            {pendingLoads.length + realLoads.length} Pending
+            {pendingLoads.length + realLoads.length} {t('common.pending')}
           </Badge>
         </div>
       </div>
@@ -566,10 +568,10 @@ export default function LoadQueuePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Send className="h-5 w-5 text-emerald-500" />
-                Invoice Sending ({invoiceLoads.length})
+                {t('admin.invoiceSending')} ({invoiceLoads.length})
               </CardTitle>
               <CardDescription>
-                Send invoices to shippers for finalized loads
+                {t('admin.invoiceSendingDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
@@ -587,7 +589,7 @@ export default function LoadQueuePage() {
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <span className="font-mono text-sm font-medium">{formatLoadId(load)}</span>
                         <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs">
-                          Ready
+                          {t('admin.ready')}
                         </Badge>
                       </div>
                       
@@ -603,13 +605,13 @@ export default function LoadQueuePage() {
                       </div>
                       
                       <div className="flex items-center justify-between text-sm mb-3">
-                        <span className="text-muted-foreground">{load.shipperName || "Shipper"}</span>
+                        <span className="text-muted-foreground">{load.shipperName || t('loads.shipper')}</span>
                         <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
                       </div>
                       
                       <div className="border-t pt-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total</span>
+                          <span className="text-xs text-muted-foreground">{t('common.total')}</span>
                           <span className="font-bold text-green-600 dark:text-green-400">
                             Rs. {priceNum.toLocaleString('en-IN')}
                           </span>
@@ -625,7 +627,7 @@ export default function LoadQueuePage() {
                           data-testid={`button-view-invoice-details-${load.id.slice(0, 8)}`}
                         >
                           <Eye className="h-3 w-3 mr-1" />
-                          View
+                          {t('common.view')}
                         </Button>
                         <Button 
                           size="sm"
@@ -634,7 +636,7 @@ export default function LoadQueuePage() {
                           data-testid={`button-send-invoice-${load.id.slice(0, 8)}`}
                         >
                           <Send className="h-3 w-3 mr-1" />
-                          Send
+                          {t('invoices.send')}
                         </Button>
                       </div>
                     </div>
@@ -661,10 +663,10 @@ export default function LoadQueuePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Receipt className="h-5 w-5 text-blue-500" />
-                Invoice Tracking ({sentLoads.length})
+                {t('admin.invoiceTracking')} ({sentLoads.length})
               </CardTitle>
               <CardDescription>
-                Invoices sent to shippers awaiting acknowledgment
+                {t('admin.invoiceTrackingDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
@@ -689,7 +691,7 @@ export default function LoadQueuePage() {
                               : 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
                           }`}
                         >
-                          {load.status === 'invoice_acknowledged' ? 'Acknowledged' : 'Sent'}
+                          {load.status === 'invoice_acknowledged' ? t('invoices.acknowledged') : t('invoices.sent')}
                         </Badge>
                       </div>
                       
@@ -705,13 +707,13 @@ export default function LoadQueuePage() {
                       </div>
                       
                       <div className="flex items-center justify-between text-sm mb-3">
-                        <span className="text-muted-foreground">{load.shipperName || "Shipper"}</span>
+                        <span className="text-muted-foreground">{load.shipperName || t('loads.shipper')}</span>
                         <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
                       </div>
                       
                       <div className="border-t pt-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total</span>
+                          <span className="text-xs text-muted-foreground">{t('common.total')}</span>
                           <span className="font-bold text-blue-600 dark:text-blue-400">
                             Rs. {priceNum.toLocaleString('en-IN')}
                           </span>
@@ -727,7 +729,7 @@ export default function LoadQueuePage() {
                           data-testid={`button-view-sent-details-${load.id.slice(0, 8)}`}
                         >
                           <Eye className="h-3 w-3 mr-1" />
-                          View
+                          {t('common.view')}
                         </Button>
                         <Button 
                           size="sm" 
@@ -738,7 +740,7 @@ export default function LoadQueuePage() {
                           data-testid={`button-resend-invoice-${load.id.slice(0, 8)}`}
                         >
                           <RefreshCw className={`h-3 w-3 mr-1 ${resendingLoadId === load.id ? 'animate-spin' : ''}`} />
-                          Resend
+                          {t('invoices.resend')}
                         </Button>
                       </div>
                     </div>
@@ -759,10 +761,10 @@ export default function LoadQueuePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Calculator className="h-5 w-5 text-amber-500" />
-                Pricing & Posting ({pricingLoads.length})
+                {t('admin.pricingAndPosting')} ({pricingLoads.length})
               </CardTitle>
               <CardDescription>
-                New shipper submissions awaiting pricing and posting to carriers
+                {t('admin.pricingAndPostingDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -770,13 +772,13 @@ export default function LoadQueuePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Load ID</TableHead>
-                      <TableHead>Route</TableHead>
-                      <TableHead>Shipper</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Total Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('loads.loadId')}</TableHead>
+                      <TableHead>{t('loads.route')}</TableHead>
+                      <TableHead>{t('loads.shipper')}</TableHead>
+                      <TableHead>{t('loads.cargo')}</TableHead>
+                      <TableHead>{t('admin.totalPrice')}</TableHead>
+                      <TableHead>{t('common.status')}</TableHead>
+                      <TableHead className="text-right">{t('common.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -800,7 +802,7 @@ export default function LoadQueuePage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm">{load.shipperName || "Unknown"}</span>
+                            <span className="text-sm">{load.shipperName || t('common.unknown')}</span>
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
@@ -818,7 +820,7 @@ export default function LoadQueuePage() {
                                 Rs. {priceNum.toLocaleString('en-IN')}
                               </span>
                             ) : (
-                              <span className="text-muted-foreground text-sm">Not priced</span>
+                              <span className="text-muted-foreground text-sm">{t('admin.notPriced')}</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -850,7 +852,7 @@ export default function LoadQueuePage() {
                                 data-testid={`button-price-load-${load.id.slice(0, 8)}`}
                               >
                                 <Calculator className="h-4 w-4 mr-1" />
-                                Price Load
+                                {t('admin.priceLoad')}
                               </Button>
                             </div>
                           </TableCell>

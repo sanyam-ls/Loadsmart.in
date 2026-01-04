@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
+import { useTranslation } from "react-i18next";
 import { 
   Plus, Search, Filter, Package, LayoutGrid, List, MapPin, ArrowRight, 
   Clock, DollarSign, Truck, MoreHorizontal, Edit, Copy, X, Eye, Loader2
@@ -108,6 +109,7 @@ function formatLoadId(load: { shipperLoadNumber?: number | null; id: string }): 
 }
 
 export default function ShipperLoadsPage() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const searchParams = useSearch();
   const { toast } = useToast();
@@ -254,12 +256,12 @@ export default function ShipperLoadsPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Active Loads</h1>
-          <p className="text-muted-foreground">Manage all your posted loads, track status, and view bids.</p>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">{t('dashboard.activeLoads')}</h1>
+          <p className="text-muted-foreground">{t('shipper.loadOverview')}</p>
         </div>
         <Button onClick={() => navigate("/shipper/post-load")} data-testid="button-post-new-load">
           <Plus className="h-4 w-4 mr-2" />
-          Post New Load
+          {t('loads.postNewLoad')}
         </Button>
       </div>
 
@@ -267,7 +269,7 @@ export default function ShipperLoadsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by city or load ID..."
+            placeholder={t('common.search') + '...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -280,13 +282,13 @@ export default function ShipperLoadsPage() {
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Loads ({statusCounts.all})</SelectItem>
-            <SelectItem value="active">Active ({statusCounts.active})</SelectItem>
-            <SelectItem value="bidding">Bidding ({statusCounts.bidding})</SelectItem>
-            <SelectItem value="assigned">Assigned ({statusCounts.assigned})</SelectItem>
-            <SelectItem value="in_transit">In Transit ({statusCounts.in_transit})</SelectItem>
-            <SelectItem value="delivered">Delivered ({statusCounts.delivered})</SelectItem>
-            <SelectItem value="cancelled">Cancelled ({statusCounts.cancelled})</SelectItem>
+            <SelectItem value="all">{t('common.all')} ({statusCounts.all})</SelectItem>
+            <SelectItem value="active">{t('common.active')} ({statusCounts.active})</SelectItem>
+            <SelectItem value="bidding">{t('bids.title')} ({statusCounts.bidding})</SelectItem>
+            <SelectItem value="assigned">{t('loads.awarded')} ({statusCounts.assigned})</SelectItem>
+            <SelectItem value="in_transit">{t('loads.inTransit')} ({statusCounts.in_transit})</SelectItem>
+            <SelectItem value="delivered">{t('loads.delivered')} ({statusCounts.delivered})</SelectItem>
+            <SelectItem value="cancelled">{t('loads.cancelled')} ({statusCounts.cancelled})</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex">
@@ -313,19 +315,19 @@ export default function ShipperLoadsPage() {
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="all" className="gap-2">
-            All <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge>
+            {t('common.all')} <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge>
           </TabsTrigger>
           <TabsTrigger value="active" className="gap-2">
-            Active <Badge variant="secondary" className="ml-1">{statusCounts.active}</Badge>
+            {t('common.active')} <Badge variant="secondary" className="ml-1">{statusCounts.active}</Badge>
           </TabsTrigger>
           <TabsTrigger value="bidding" className="gap-2">
-            Bidding <Badge variant="secondary" className="ml-1">{statusCounts.bidding}</Badge>
+            {t('bids.title')} <Badge variant="secondary" className="ml-1">{statusCounts.bidding}</Badge>
           </TabsTrigger>
           <TabsTrigger value="in_transit" className="gap-2">
-            In Transit <Badge variant="secondary" className="ml-1">{statusCounts.in_transit}</Badge>
+            {t('loads.inTransit')} <Badge variant="secondary" className="ml-1">{statusCounts.in_transit}</Badge>
           </TabsTrigger>
           <TabsTrigger value="delivered" className="gap-2">
-            Delivered <Badge variant="secondary" className="ml-1">{statusCounts.delivered}</Badge>
+            {t('loads.delivered')} <Badge variant="secondary" className="ml-1">{statusCounts.delivered}</Badge>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -333,13 +335,13 @@ export default function ShipperLoadsPage() {
       {filteredLoads.length === 0 ? (
         <EmptyState
           icon={Package}
-          title="No loads found"
+          title={t('loads.noLoadsFound')}
           description={
             statusFilter === "all"
-              ? "You haven't posted any loads yet. Start by posting your first load to connect with carriers."
-              : `No loads with "${formatStatus(statusFilter)}" status.`
+              ? t('shipper.noLoadsPosted')
+              : `${t('loads.noLoadsFound')} - ${formatStatus(statusFilter)}`
           }
-          actionLabel="Post Your First Load"
+          actionLabel={t('shipper.postFirstLoad')}
           onAction={() => navigate("/shipper/post-load")}
         />
       ) : viewMode === "table" ? (
@@ -347,15 +349,15 @@ export default function ShipperLoadsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Load ID</TableHead>
+                <TableHead>{t('loads.loadId')}</TableHead>
                 <TableHead>Pickup ID</TableHead>
-                <TableHead>Route</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Weight</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Bids</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Pickup Date</TableHead>
+                <TableHead>{t('invoices.route')}</TableHead>
+                <TableHead>{t('common.type')}</TableHead>
+                <TableHead>{t('loads.weight')}</TableHead>
+                <TableHead>{t('common.status')}</TableHead>
+                <TableHead>{t('bids.title')}</TableHead>
+                <TableHead>{t('common.price')}</TableHead>
+                <TableHead>{t('loads.pickupDate')}</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
@@ -415,10 +417,10 @@ export default function ShipperLoadsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/shipper/loads/${load.id}`); }}>
-                          <Eye className="h-4 w-4 mr-2" /> View Details
+                          <Eye className="h-4 w-4 mr-2" /> {t('common.details')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(load.id); }}>
-                          <Copy className="h-4 w-4 mr-2" /> Duplicate
+                          <Copy className="h-4 w-4 mr-2" /> {t('common.duplicate') || 'Duplicate'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
@@ -426,7 +428,7 @@ export default function ShipperLoadsPage() {
                           onClick={(e) => { e.stopPropagation(); setCancelDialog({ open: true, loadId: load.id }); }}
                           disabled={load.status === "cancelled" || load.status === "delivered"}
                         >
-                          <X className="h-4 w-4 mr-2" /> Cancel Load
+                          <X className="h-4 w-4 mr-2" /> {t('loads.cancelLoad')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -464,13 +466,13 @@ export default function ShipperLoadsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(load.id); }}>
-                          <Copy className="h-4 w-4 mr-2" /> Duplicate
+                          <Copy className="h-4 w-4 mr-2" /> {t('common.duplicate') || 'Duplicate'}
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive"
                           onClick={(e) => { e.stopPropagation(); setCancelDialog({ open: true, loadId: load.id }); }}
                         >
-                          <X className="h-4 w-4 mr-2" /> Cancel
+                          <X className="h-4 w-4 mr-2" /> {t('common.cancel')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -525,14 +527,14 @@ export default function ShipperLoadsPage() {
       <Dialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, loadId: null })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Load</DialogTitle>
+            <DialogTitle>{t('loads.cancelLoad')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this load? This action cannot be undone.
+              {t('messages.confirmDelete')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCancelDialog({ open: false, loadId: null })}>
-              Keep Load
+              {t('common.cancel')}
             </Button>
             <Button 
               variant="destructive" 
@@ -542,7 +544,7 @@ export default function ShipperLoadsPage() {
               {transitionLoad.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
-              Cancel Load
+              {t('loads.cancelLoad')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { 
   FileText, Upload, Search, Filter, Download, Eye, Trash2, AlertCircle, 
   CheckCircle, X, Tag, Calendar, Link2, Plus, RotateCw, ZoomIn, ZoomOut,
@@ -51,6 +52,7 @@ import {
 type SortOption = "newest" | "oldest" | "expiring" | "largest";
 
 export default function DocumentsPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { getActiveLoads } = useMockData();
   const {
@@ -238,12 +240,12 @@ export default function DocumentsPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Document Vault</h1>
-          <p className="text-muted-foreground">Manage shipment documents, compliance files, and certificates.</p>
+          <h1 className="text-2xl font-bold">{t('documents.title')}</h1>
+          <p className="text-muted-foreground">{t('shipper.documentsTitle')}</p>
         </div>
         <Button onClick={() => setUploadDialogOpen(true)} data-testid="button-upload-document">
           <Upload className="h-4 w-4 mr-2" />
-          Upload Document
+          {t('documents.uploadDocument')}
         </Button>
       </div>
 
@@ -254,12 +256,12 @@ export default function DocumentsPage() {
               <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
               <div className="flex-1">
                 <p className="font-medium text-amber-800 dark:text-amber-200">
-                  {expiredDocs.length > 0 && `${expiredDocs.length} expired`}
-                  {expiredDocs.length > 0 && expiringDocs.length > 0 && " and "}
-                  {expiringDocs.length > 0 && `${expiringDocs.length} expiring soon`}
+                  {expiredDocs.length > 0 && `${expiredDocs.length} ${t('documents.expired')}`}
+                  {expiredDocs.length > 0 && expiringDocs.length > 0 && " & "}
+                  {expiringDocs.length > 0 && `${expiringDocs.length} ${t('documents.expiringSoon')}`}
                 </p>
                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Review and renew your documents to avoid service interruptions.
+                  {t('documents.expiringDocuments')}
                 </p>
               </div>
               <Button 
@@ -268,7 +270,7 @@ export default function DocumentsPage() {
                 onClick={() => setStatusFilter("expiring_soon")}
                 data-testid="button-view-expiring"
               >
-                View Documents
+                {t('documents.viewDocument')}
               </Button>
             </div>
           </CardContent>
@@ -280,7 +282,7 @@ export default function DocumentsPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name, load, or tags..."
+              placeholder={t('common.search') + '...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -293,7 +295,7 @@ export default function DocumentsPage() {
               <SelectValue placeholder="Document type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="all">{t('common.all')} {t('common.type')}</SelectItem>
               {Object.entries(documentCategoryLabels).map(([key, label]) => (
                 <SelectItem key={key} value={key}>{label}</SelectItem>
               ))}
@@ -301,13 +303,13 @@ export default function DocumentsPage() {
           </Select>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | "all")}>
             <SelectTrigger className="w-full sm:w-40" data-testid="select-status-filter">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t('common.status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
-              <SelectItem value="expired">Expired</SelectItem>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
+              <SelectItem value="active">{t('common.active')}</SelectItem>
+              <SelectItem value="expiring_soon">{t('documents.expiringSoon')}</SelectItem>
+              <SelectItem value="expired">{t('documents.expired')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -316,28 +318,28 @@ export default function DocumentsPage() {
             <Select value={loadFilter} onValueChange={setLoadFilter}>
               <SelectTrigger className="w-40" data-testid="select-load-filter">
                 <Link2 className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Load" />
+                <SelectValue placeholder={t('loads.title')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Loads</SelectItem>
+                <SelectItem value="all">{t('common.all')} {t('loads.title')}</SelectItem>
                 {linkedLoads.map(loadId => (
                   <SelectItem key={loadId} value={loadId}>{loadId}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Showing {filteredAndSortedDocs.length} of {documents.length} documents
+              {t('common.showing')} {filteredAndSortedDocs.length} {t('common.of')} {documents.length} {t('documents.title').toLowerCase()}
             </p>
           </div>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
             <SelectTrigger className="w-40" data-testid="select-sort">
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder={t('common.sortBy')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="newest">Newest First</SelectItem>
-              <SelectItem value="oldest">Oldest First</SelectItem>
-              <SelectItem value="expiring">Soonest Expiring</SelectItem>
-              <SelectItem value="largest">Largest Size</SelectItem>
+              <SelectItem value="newest">{t('common.descending')}</SelectItem>
+              <SelectItem value="oldest">{t('common.ascending')}</SelectItem>
+              <SelectItem value="expiring">{t('documents.expiringSoon')}</SelectItem>
+              <SelectItem value="largest">{t('common.more')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -346,9 +348,9 @@ export default function DocumentsPage() {
       {filteredAndSortedDocs.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="No documents found"
-          description="Upload your first document to get started. You can store PODs, invoices, insurance certificates, and more."
-          actionLabel="Upload Document"
+          title={t('documents.noDocumentsFound')}
+          description={t('documents.uploadFirstDocument')}
+          actionLabel={t('documents.uploadDocument')}
           onAction={() => setUploadDialogOpen(true)}
         />
       ) : (
@@ -391,17 +393,17 @@ export default function DocumentsPage() {
                   </div>
                   {doc.loadId && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Load</span>
+                      <span className="text-muted-foreground">{t('loads.title')}</span>
                       <span className="font-medium">{doc.loadId}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Uploaded</span>
+                    <span className="text-muted-foreground">{t('documents.uploadedOn')}</span>
                     <span>{formatDate(doc.uploadedDate)}</span>
                   </div>
                   {doc.expiryDate && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Expires</span>
+                      <span className="text-muted-foreground">{t('documents.expiryDate')}</span>
                       <span className={doc.status === "expired" ? "text-destructive" : doc.status === "expiring_soon" ? "text-amber-600 dark:text-amber-400" : ""}>
                         {formatDate(doc.expiryDate)}
                         {doc.status !== "active" && ` (${getDaysUntilExpiry(doc.expiryDate)}d)`}
@@ -419,7 +421,7 @@ export default function DocumentsPage() {
                     data-testid={`button-view-${doc.documentId}`}
                   >
                     <Eye className="h-4 w-4 mr-1" />
-                    View
+                    {t('common.view')}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -429,7 +431,7 @@ export default function DocumentsPage() {
                     data-testid={`button-download-${doc.documentId}`}
                   >
                     <Download className="h-4 w-4 mr-1" />
-                    Download
+                    {t('common.download')}
                   </Button>
                   <Button 
                     variant="ghost" 
@@ -449,15 +451,15 @@ export default function DocumentsPage() {
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Upload Document</DialogTitle>
+            <DialogTitle>{t('documents.uploadDocument')}</DialogTitle>
             <DialogDescription>
-              Add a new document to your vault. Select a template for quick setup.
+              {t('documents.dragAndDrop')}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Quick Templates</Label>
+              <Label>{t('documents.documentType')}</Label>
               <div className="grid grid-cols-3 gap-2">
                 {templates.slice(0, 6).map(template => (
                   <Button
@@ -476,23 +478,23 @@ export default function DocumentsPage() {
 
             <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover-elevate cursor-pointer">
               <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
-              <p className="text-xs text-muted-foreground">PDF, JPG, or PNG up to 10MB</p>
+              <p className="text-sm font-medium mb-1">{t('documents.dragAndDrop')}</p>
+              <p className="text-xs text-muted-foreground">{t('documents.supportedFormats')}: PDF, JPG, PNG</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="fileName">File Name</Label>
+                <Label htmlFor="fileName">{t('documents.documentName')}</Label>
                 <Input
                   id="fileName"
-                  placeholder="Enter file name..."
+                  placeholder={t('common.name') + '...'}
                   value={uploadForm.fileName}
                   onChange={(e) => setUploadForm(prev => ({ ...prev, fileName: e.target.value }))}
                   data-testid="input-file-name"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fileType">File Type</Label>
+                <Label htmlFor="fileType">{t('common.type')}</Label>
                 <Select 
                   value={uploadForm.fileType} 
                   onValueChange={(v) => setUploadForm(prev => ({ ...prev, fileType: v as "pdf" | "image" }))}
@@ -510,13 +512,13 @@ export default function DocumentsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category">Document Type</Label>
+                <Label htmlFor="category">{t('documents.documentType')}</Label>
                 <Select 
                   value={uploadForm.category} 
                   onValueChange={(v) => setUploadForm(prev => ({ ...prev, category: v as DocumentCategory }))}
                 >
                   <SelectTrigger data-testid="select-category">
-                    <SelectValue placeholder="Select type..." />
+                    <SelectValue placeholder={t('documents.selectDocumentType')} />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(documentCategoryLabels).map(([key, label]) => (
@@ -526,16 +528,16 @@ export default function DocumentsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="loadId">Link to Load (Optional)</Label>
+                <Label htmlFor="loadId">{t('loads.title')} ({t('common.optional')})</Label>
                 <Select 
                   value={uploadForm.loadId} 
                   onValueChange={(v) => setUploadForm(prev => ({ ...prev, loadId: v }))}
                 >
                   <SelectTrigger data-testid="select-load-link">
-                    <SelectValue placeholder="Select load..." />
+                    <SelectValue placeholder={t('common.select') + '...'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No Load</SelectItem>
+                    <SelectItem value="none">{t('common.none')}</SelectItem>
                     {activeLoads.map(load => (
                       <SelectItem key={load.loadId} value={load.loadId}>
                         {load.loadId} - {load.pickup} to {load.drop}
@@ -547,7 +549,7 @@ export default function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="expiryDate">Expiry Date (Optional)</Label>
+              <Label htmlFor="expiryDate">{t('documents.expiryDate')} ({t('common.optional')})</Label>
               <Input
                 id="expiryDate"
                 type="date"
@@ -558,12 +560,12 @@ export default function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tags">Tags</Label>
+              <Label htmlFor="tags">{t('documents.tags')}</Label>
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground" />
                 <Input
                   id="tags"
-                  placeholder="Add tags separated by commas..."
+                  placeholder={t('documents.addTag') + '...'}
                   value={uploadForm.tags}
                   onChange={(e) => setUploadForm(prev => ({ ...prev, tags: e.target.value }))}
                   data-testid="input-tags"
@@ -572,10 +574,10 @@ export default function DocumentsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t('common.notes')}</Label>
               <Textarea
                 id="notes"
-                placeholder="Add any notes about this document..."
+                placeholder={t('common.notes') + '...'}
                 value={uploadForm.notes}
                 onChange={(e) => setUploadForm(prev => ({ ...prev, notes: e.target.value }))}
                 rows={2}
@@ -586,11 +588,11 @@ export default function DocumentsPage() {
 
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleUpload} data-testid="button-confirm-upload">
               <Upload className="h-4 w-4 mr-2" />
-              Upload Document
+              {t('documents.uploadDocument')}
             </Button>
           </div>
         </DialogContent>
@@ -628,7 +630,7 @@ export default function DocumentsPage() {
             <Separator orientation="vertical" className="h-6" />
             <Button variant="outline" size="sm" onClick={() => selectedDocument && handleDownload(selectedDocument)}>
               <Download className="h-4 w-4 mr-2" />
-              Download
+              {t('common.download')}
             </Button>
           </div>
           
@@ -682,10 +684,10 @@ export default function DocumentsPage() {
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   {selectedDocument.fileType === "pdf" ? <FileText className="h-5 w-5" /> : <FileImage className="h-5 w-5" />}
-                  Document Details
+                  {t('documents.documentDetails')}
                 </SheetTitle>
                 <SheetDescription>
-                  View and manage document information
+                  {t('documents.viewDocument')}
                 </SheetDescription>
               </SheetHeader>
 
@@ -693,15 +695,15 @@ export default function DocumentsPage() {
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="overview" data-testid="tab-overview">
                     <Info className="h-4 w-4 mr-1" />
-                    Overview
+                    {t('common.overview')}
                   </TabsTrigger>
                   <TabsTrigger value="preview" data-testid="tab-preview">
                     <Eye className="h-4 w-4 mr-1" />
-                    Preview
+                    {t('common.preview')}
                   </TabsTrigger>
                   <TabsTrigger value="history" data-testid="tab-history">
                     <History className="h-4 w-4 mr-1" />
-                    History
+                    {t('common.history')}
                   </TabsTrigger>
                 </TabsList>
 
@@ -709,62 +711,62 @@ export default function DocumentsPage() {
                   <Card>
                     <CardContent className="pt-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">File Name</span>
+                        <span className="text-muted-foreground">{t('documents.documentName')}</span>
                         <span className="font-medium text-right max-w-48 truncate">{selectedDocument.fileName}</span>
                       </div>
                       <Separator />
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Type</span>
+                        <span className="text-muted-foreground">{t('common.type')}</span>
                         <Badge variant="secondary">{documentCategoryLabels[selectedDocument.category]}</Badge>
                       </div>
                       <Separator />
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">File Size</span>
+                        <span className="text-muted-foreground">{t('documents.fileSize')}</span>
                         <span>{formatFileSize(selectedDocument.fileSize)}</span>
                       </div>
                       <Separator />
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Version</span>
+                        <span className="text-muted-foreground">{t('documents.version')}</span>
                         <span>v{selectedDocument.version}</span>
                       </div>
                       <Separator />
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Status</span>
+                        <span className="text-muted-foreground">{t('common.status')}</span>
                         {getStatusBadge(selectedDocument.status)}
                       </div>
                       <Separator />
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Verified</span>
+                        <span className="text-muted-foreground">{t('documents.verified')}</span>
                         {selectedDocument.isVerified ? (
-                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate">Verified</Badge>
+                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate">{t('documents.verified')}</Badge>
                         ) : (
-                          <Badge variant="outline">Pending</Badge>
+                          <Badge variant="outline">{t('common.pending')}</Badge>
                         )}
                       </div>
                       {selectedDocument.loadId && (
                         <>
                           <Separator />
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Linked Load</span>
+                            <span className="text-muted-foreground">{t('loads.title')}</span>
                             <span className="font-medium">{selectedDocument.loadId}</span>
                           </div>
                         </>
                       )}
                       <Separator />
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Uploaded By</span>
+                        <span className="text-muted-foreground">{t('documents.uploadedBy')}</span>
                         <span>{selectedDocument.uploadedBy}</span>
                       </div>
                       <Separator />
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Uploaded Date</span>
+                        <span className="text-muted-foreground">{t('documents.uploadedOn')}</span>
                         <span>{formatDate(selectedDocument.uploadedDate)}</span>
                       </div>
                       {selectedDocument.expiryDate && (
                         <>
                           <Separator />
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Expiry Date</span>
+                            <span className="text-muted-foreground">{t('documents.expiryDate')}</span>
                             <span className={selectedDocument.status !== "active" ? "text-destructive" : ""}>
                               {formatDate(selectedDocument.expiryDate)}
                             </span>
@@ -776,7 +778,7 @@ export default function DocumentsPage() {
 
                   {selectedDocument.tags.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Tags</Label>
+                      <Label>{t('documents.tags')}</Label>
                       <div className="flex flex-wrap gap-2">
                         {selectedDocument.tags.map(tag => (
                           <Badge key={tag} variant="outline">{tag}</Badge>
@@ -787,7 +789,7 @@ export default function DocumentsPage() {
 
                   {selectedDocument.notes && (
                     <div className="space-y-2">
-                      <Label>Notes</Label>
+                      <Label>{t('common.notes')}</Label>
                       <p className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                         {selectedDocument.notes}
                       </p>
@@ -797,11 +799,11 @@ export default function DocumentsPage() {
                   <div className="grid grid-cols-2 gap-2 pt-4">
                     <Button onClick={() => handleView(selectedDocument)} data-testid="button-panel-view">
                       <Eye className="h-4 w-4 mr-2" />
-                      View
+                      {t('common.view')}
                     </Button>
                     <Button variant="outline" onClick={() => handleDownload(selectedDocument)} data-testid="button-panel-download">
                       <Download className="h-4 w-4 mr-2" />
-                      Download
+                      {t('common.download')}
                     </Button>
                     {!selectedDocument.isVerified && (
                       <Button 
@@ -811,7 +813,7 @@ export default function DocumentsPage() {
                         data-testid="button-verify"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Mark as Verified
+                        {t('documents.markVerified')}
                       </Button>
                     )}
                     <Button 
@@ -821,7 +823,7 @@ export default function DocumentsPage() {
                       data-testid="button-panel-delete"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Document
+                      {t('documents.deleteDocument')}
                     </Button>
                   </div>
                 </TabsContent>
@@ -835,7 +837,7 @@ export default function DocumentsPage() {
                         <p className="text-sm text-muted-foreground mb-4">{formatFileSize(selectedDocument.fileSize)}</p>
                         <Button onClick={() => handleView(selectedDocument)}>
                           <Eye className="h-4 w-4 mr-2" />
-                          Open Full Viewer
+                          {t('documents.viewDocument')}
                         </Button>
                       </div>
                     ) : (
@@ -845,7 +847,7 @@ export default function DocumentsPage() {
                         <p className="text-sm text-muted-foreground mb-4">{formatFileSize(selectedDocument.fileSize)}</p>
                         <Button onClick={() => handleView(selectedDocument)}>
                           <Eye className="h-4 w-4 mr-2" />
-                          Open Full Viewer
+                          {t('documents.viewDocument')}
                         </Button>
                       </div>
                     )}
@@ -859,9 +861,9 @@ export default function DocumentsPage() {
                         <Clock className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium text-sm">Version {selectedDocument.version} (Current)</p>
+                        <p className="font-medium text-sm">{t('documents.version')} {selectedDocument.version} ({t('common.current')})</p>
                         <p className="text-xs text-muted-foreground">
-                          Uploaded by {selectedDocument.uploadedBy} on {formatDate(selectedDocument.uploadedDate)}
+                          {t('documents.uploadedBy')} {selectedDocument.uploadedBy} {t('common.on')} {formatDate(selectedDocument.uploadedDate)}
                         </p>
                       </div>
                     </div>
@@ -872,7 +874,7 @@ export default function DocumentsPage() {
                           <History className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="font-medium text-sm">Version {version.version}</p>
+                          <p className="font-medium text-sm">{t('documents.version')} {version.version}</p>
                           <p className="text-xs text-muted-foreground">
                             {version.fileName} - {formatDate(version.uploadedDate)}
                           </p>
@@ -882,7 +884,7 @@ export default function DocumentsPage() {
 
                     {!selectedDocument.previousVersions?.length && selectedDocument.version === 1 && (
                       <p className="text-sm text-muted-foreground text-center py-4">
-                        This is the original version of this document.
+                        {t('documents.originalVersion')}
                       </p>
                     )}
                   </div>

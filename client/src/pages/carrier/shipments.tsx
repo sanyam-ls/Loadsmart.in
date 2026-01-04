@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Loader2, Truck as TruckIcon, Package, MapPin, Clock, CheckCircle, RefreshCw, ArrowRight, Calendar, Key, UserCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ interface ShipmentWithLoad extends Shipment {
 }
 
 export default function CarrierShipmentsPage() {
+  const { t } = useTranslation();
   const { user, carrierType } = useAuth();
   const { toast } = useToast();
   const { data: shipments, isLoading: shipmentsLoading, refetch } = useShipments();
@@ -157,11 +159,11 @@ export default function CarrierShipmentsPage() {
   if (carrierShipments.length === 0) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">My Shipments</h1>
+        <h1 className="text-2xl font-bold mb-6">{t("carrier.myShipments")}</h1>
         <EmptyState
           icon={Package}
-          title="No shipments yet"
-          description="When your bids are accepted, your shipments will appear here. You can then use OTP to start and complete trips."
+          title={t("carrier.noShipmentsYet")}
+          description={t("carrier.shipmentsWillAppear")}
         />
       </div>
     );
@@ -171,30 +173,30 @@ export default function CarrierShipmentsPage() {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-shipments-title">My Shipments</h1>
+          <h1 className="text-2xl font-bold" data-testid="text-shipments-title">{t("carrier.myShipments")}</h1>
           <p className="text-muted-foreground">
-            {activeShipments.length} active, {completedShipments.length} completed
+            {t("carrier.activeCount", { count: activeShipments.length })}, {t("carrier.completedCount", { count: completedShipments.length })}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={handleRefresh} data-testid="button-refresh-shipments">
           <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
+          {t("common.refresh")}
         </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Shipments</CardTitle>
+            <CardTitle className="text-base">{t("shipments.title")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Tabs defaultValue="active">
               <TabsList className="mx-3 mb-2">
                 <TabsTrigger value="active" data-testid="tab-active-shipments">
-                  Active ({activeShipments.length})
+                  {t("common.active")} ({activeShipments.length})
                 </TabsTrigger>
                 <TabsTrigger value="completed" data-testid="tab-completed-shipments">
-                  Completed ({completedShipments.length})
+                  {t("common.completed")} ({completedShipments.length})
                 </TabsTrigger>
               </TabsList>
               <ScrollArea className="h-[calc(100vh-350px)]">
@@ -202,7 +204,7 @@ export default function CarrierShipmentsPage() {
                   {activeShipments.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <TruckIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No active shipments</p>
+                      <p className="text-sm">{t("carrier.noActiveShipments")}</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -232,17 +234,17 @@ export default function CarrierShipmentsPage() {
                             {shipment.startOtpVerified ? (
                               <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                                 <CheckCircle className="h-3 w-3" />
-                                Started
+                                {t("carrier.started")}
                               </span>
                             ) : shipment.startOtpRequested ? (
                               <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
                                 <Clock className="h-3 w-3" />
-                                OTP Pending
+                                {t("carrier.otpPending")}
                               </span>
                             ) : (
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                Awaiting Start
+                                {t("carrier.awaitingStart")}
                               </span>
                             )}
                           </div>
@@ -255,7 +257,7 @@ export default function CarrierShipmentsPage() {
                   {completedShipments.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No completed shipments</p>
+                      <p className="text-sm">{t("carrier.noCompletedShipments")}</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -319,7 +321,7 @@ export default function CarrierShipmentsPage() {
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Pickup</p>
+                      <p className="text-xs text-muted-foreground">{t("shipments.pickupLocation")}</p>
                       <p className="font-medium flex items-center gap-1">
                         <MapPin className="h-4 w-4 text-green-600" />
                         {selectedShipment.load?.pickupCity || "—"}
@@ -329,7 +331,7 @@ export default function CarrierShipmentsPage() {
                       )}
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Delivery</p>
+                      <p className="text-xs text-muted-foreground">{t("shipments.deliveryLocation")}</p>
                       <p className="font-medium flex items-center gap-1">
                         <MapPin className="h-4 w-4 text-red-600" />
                         {selectedShipment.load?.dropoffCity || "—"}
@@ -342,15 +344,15 @@ export default function CarrierShipmentsPage() {
 
                   <div className="grid gap-4 sm:grid-cols-3 pt-2 border-t">
                     <div>
-                      <p className="text-xs text-muted-foreground">Cargo</p>
+                      <p className="text-xs text-muted-foreground">{t("loads.cargo")}</p>
                       <p className="font-medium">{selectedShipment.load?.materialType || selectedShipment.load?.goodsToBeCarried || "General"}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Weight</p>
+                      <p className="text-xs text-muted-foreground">{t("loads.weight")}</p>
                       <p className="font-medium">{selectedShipment.load?.weight || "—"} tonnes</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Created</p>
+                      <p className="text-xs text-muted-foreground">{t("common.date")}</p>
                       <p className="font-medium">
                         {selectedShipment.createdAt 
                           ? formatDistanceToNow(new Date(selectedShipment.createdAt), { addSuffix: true })
@@ -364,11 +366,11 @@ export default function CarrierShipmentsPage() {
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <UserCircle className="h-4 w-4 text-muted-foreground" />
-                          <p className="font-medium text-sm">Driver Assignment</p>
+                          <p className="font-medium text-sm">{t("carrier.driverAssignment")}</p>
                         </div>
                         {drivers.length === 0 ? (
                           <p className="text-sm text-muted-foreground">
-                            No drivers added yet. Add drivers in the Drivers section to assign them to shipments.
+                            {t("carrier.noDriversYet")}
                           </p>
                         ) : selectedShipment.driverId ? (
                           <div className="flex items-center gap-2">
@@ -385,7 +387,7 @@ export default function CarrierShipmentsPage() {
                               disabled={assignDriverMutation.isPending}
                             >
                               <SelectTrigger className="w-[140px]" data-testid="select-reassign-driver">
-                                <SelectValue placeholder="Change driver" />
+                                <SelectValue placeholder={t("carrier.changeDriver")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {drivers
@@ -410,7 +412,7 @@ export default function CarrierShipmentsPage() {
                               disabled={assignDriverMutation.isPending}
                             >
                               <SelectTrigger className="w-[200px]" data-testid="select-driver">
-                                <SelectValue placeholder="Select a driver" />
+                                <SelectValue placeholder={t("carrier.selectADriver")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {drivers

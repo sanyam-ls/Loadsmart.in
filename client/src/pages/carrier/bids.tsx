@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
+import { useTranslation } from "react-i18next";
 import { 
   Search, Filter, Gavel, Clock, CheckCircle, XCircle, RefreshCw, 
   MapPin, Truck, Package, Building2, Star, MessageSquare, Send,
@@ -419,6 +420,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
 }
 
 export default function CarrierBidsPage() {
+  const { t } = useTranslation();
   const { bids: mockBids, updateBid, updateBidStatus } = useCarrierData();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -618,38 +620,38 @@ export default function CarrierBidsPage() {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-bids-title">Negotiation Center</h1>
-          <p className="text-muted-foreground">Manage your {bids.length} bids and negotiations</p>
+          <h1 className="text-2xl font-bold" data-testid="text-bids-title">{t("carrier.bidTracking")}</h1>
+          <p className="text-muted-foreground">{t("carrier.bidTrackingDesc")}</p>
         </div>
       </div>
       
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Bids"
+          title={t("carrier.totalBids")}
           value={stats.total}
           icon={Gavel}
-          subtitle="All time"
+          subtitle={t("carrier.submitted")}
           testId="stat-total-bids"
         />
         <StatCard
-          title="Active Negotiations"
+          title={t("carrier.underNegotiation")}
           value={stats.pending}
           icon={MessageSquare}
-          subtitle="Pending response"
+          subtitle={t("carrier.requireAttention")}
           testId="stat-pending-bids"
         />
         <StatCard
-          title="Win Rate"
+          title={t("dashboard.performanceScore")}
           value={`${stats.winRate}%`}
           icon={TrendingUp}
-          subtitle={`${stats.won} won`}
+          subtitle={`${stats.won} ${t("bids.accepted")}`}
           testId="stat-win-rate"
         />
         <StatCard
-          title="Total Value Won"
+          title={t("carrier.acceptedBids")}
           value={formatCurrency(stats.totalValue)}
           icon={Package}
-          subtitle="Accepted bids"
+          subtitle={t("bids.accepted")}
           testId="stat-total-value"
         />
       </div>
@@ -658,7 +660,7 @@ export default function CarrierBidsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by route, shipper, or load ID..."
+            placeholder={t("carrier.searchBids")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -667,10 +669,10 @@ export default function CarrierBidsPage() {
         </div>
         <Select value={loadTypeFilter} onValueChange={setLoadTypeFilter}>
           <SelectTrigger className="w-[180px]" data-testid="select-load-type">
-            <SelectValue placeholder="Load Type" />
+            <SelectValue placeholder={t("loads.loadType")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="all">{t("carrier.allTypes")}</SelectItem>
             {loadTypes.map(type => (
               <SelectItem key={type} value={type}>{type}</SelectItem>
             ))}
@@ -681,23 +683,23 @@ export default function CarrierBidsPage() {
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="all" className="gap-2" data-testid="tab-all">
-            All
+            {t("common.all")}
             <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge>
           </TabsTrigger>
           <TabsTrigger value="pending" className="gap-2" data-testid="tab-pending">
-            Pending
+            {t("bids.pending")}
             <Badge variant="secondary" className="ml-1">{statusCounts.pending}</Badge>
           </TabsTrigger>
           <TabsTrigger value="countered" className="gap-2" data-testid="tab-countered">
-            Countered
+            {t("bids.countered")}
             <Badge variant="secondary" className="ml-1">{statusCounts.countered}</Badge>
           </TabsTrigger>
           <TabsTrigger value="accepted" className="gap-2" data-testid="tab-accepted">
-            Accepted
+            {t("bids.accepted")}
             <Badge variant="secondary" className="ml-1">{statusCounts.accepted}</Badge>
           </TabsTrigger>
           <TabsTrigger value="rejected" className="gap-2" data-testid="tab-rejected">
-            Rejected
+            {t("bids.rejected")}
             <Badge variant="secondary" className="ml-1">{statusCounts.rejected}</Badge>
           </TabsTrigger>
         </TabsList>
@@ -706,11 +708,11 @@ export default function CarrierBidsPage() {
       {filteredBids.length === 0 ? (
         <EmptyState
           icon={Gavel}
-          title="No bids found"
+          title={t("bids.noBidsYet")}
           description={
             bids.length === 0
-              ? "You haven't placed any bids yet. Browse available loads to start bidding."
-              : `No bids match your current filters.`
+              ? t("carrier.browseLoads")
+              : t("carrier.noLoadsMatchFilters")
           }
         />
       ) : (
@@ -773,7 +775,7 @@ export default function CarrierBidsPage() {
                     
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                       <div className="text-right space-y-1">
-                        <div className="text-sm text-muted-foreground">Your Bid</div>
+                        <div className="text-sm text-muted-foreground">{t("bids.yourBid")}</div>
                         <div className="text-xl font-bold">{formatCurrency(bid.carrierOffer)}</div>
                         {bid.shipperCounterRate && bid.bidStatus === "countered" && (
                           <div className="text-sm text-amber-600 dark:text-amber-400">
@@ -795,7 +797,7 @@ export default function CarrierBidsPage() {
                             data-testid={`button-view-${bid.bidId}`}
                           >
                             <MessageSquare className="h-4 w-4 mr-2" />
-                            {bid.bidStatus === "countered" ? "Respond" : "View Details"}
+                            {bid.bidStatus === "countered" ? t("bids.counterOffer") : t("common.details")}
                           </Button>
                         </DialogTrigger>
                         <NegotiationDialog 
@@ -828,7 +830,7 @@ export default function CarrierBidsPage() {
       )}
       
       <p className="text-sm text-muted-foreground">
-        Showing {Math.min(filteredBids.length, 50)} of {filteredBids.length} bids
+        {t("common.showing")} {Math.min(filteredBids.length, 50)} {t("common.of")} {filteredBids.length} {t("bids.title").toLowerCase()}
       </p>
     </div>
   );

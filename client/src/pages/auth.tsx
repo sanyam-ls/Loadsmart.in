@@ -184,6 +184,7 @@ export default function AuthPage() {
   });
 
   const selectedRole = registerForm.watch("role");
+  const selectedCarrierType = registerForm.watch("carrierType");
   const watchedPhone = registerForm.watch("phone");
 
   // Reset OTP verification state when phone number changes
@@ -440,9 +441,21 @@ export default function AuthPage() {
                           name="companyName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Company Name</FormLabel>
+                              <FormLabel>
+                                {selectedRole === "carrier" && selectedCarrierType === "solo" 
+                                  ? "Driver Name" 
+                                  : "Company Name"}
+                              </FormLabel>
                               <FormControl>
-                                <Input placeholder="Company" {...field} data-testid="input-register-company" />
+                                <Input 
+                                  placeholder={
+                                    selectedRole === "carrier" && selectedCarrierType === "solo" 
+                                      ? "Your full name" 
+                                      : "Company"
+                                  } 
+                                  {...field} 
+                                  data-testid="input-register-company" 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

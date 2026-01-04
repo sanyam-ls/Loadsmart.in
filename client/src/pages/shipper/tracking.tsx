@@ -208,22 +208,20 @@ export default function TrackingPage() {
   const estimatedArrival = selectedShipment ? calculateETA(selectedShipment) : null;
 
   useEffect(() => {
-    const unsubDocumentUploaded = onMarketplaceEvent("document_uploaded", (data: any) => {
-      const docLabel = documentTypeToLabel[data?.documentType] || data?.documentType;
+    const unsubDocumentUploaded = onMarketplaceEvent("shipment_document_uploaded", (data: any) => {
+      const docType = data?.document?.documentType || data?.documentType;
+      const docLabel = documentTypeToLabel[docType] || docType || "Document";
       toast({
         title: "New Document Received",
         description: `Carrier uploaded: ${docLabel}`,
       });
-      refetch();
-      if (data?.shipmentId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/shipments", data.shipmentId, "documents"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["/api/shipments/tracking"] });
     });
     
     return () => {
       unsubDocumentUploaded();
     };
-  }, [toast, refetch]);
+  }, [toast]);
 
   function openDocumentViewer(docType: string) {
     const image = documentImages[docType];
@@ -476,20 +474,25 @@ export default function TrackingPage() {
 
                     <h3 className="font-semibold mb-4">Documents</h3>
                     <div className="space-y-2">
-                      {["LR / Consignment Note", "E-way Bill", "Loading Photos", "Proof of Delivery (POD)"].map((docType, index) => {
+                      {[
+                        { key: "lr_consignment", label: "LR / Consignment Note" },
+                        { key: "eway_bill", label: "E-way Bill" },
+                        { key: "loading_photos", label: "Loading Photos" },
+                        { key: "pod", label: "Proof of Delivery (POD)" },
+                      ].map((docItem) => {
                         const doc = selectedShipment.documents.find(d => 
-                          d.documentType.toLowerCase().includes(docType.toLowerCase().split(" ")[0])
+                          d.documentType === docItem.key
                         );
                         return (
                           <div 
-                            key={index} 
+                            key={docItem.key} 
                             className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer"
-                            onClick={() => openDocumentViewer(docType)}
-                            data-testid={`document-${docType.toLowerCase().replace(/[^a-z]/g, '-')}`}
+                            onClick={() => openDocumentViewer(docItem.label)}
+                            data-testid={`document-${docItem.key}`}
                           >
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{docType}</span>
+                              <span className="text-sm">{docItem.label}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               {doc?.status === "verified" ? (
@@ -504,7 +507,7 @@ export default function TrackingPage() {
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="text-muted-foreground">
-                                  Sample
+                                  Pending
                                 </Badge>
                               )}
                               <Eye className="h-4 w-4 text-muted-foreground" />

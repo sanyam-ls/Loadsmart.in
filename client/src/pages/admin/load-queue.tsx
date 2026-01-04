@@ -122,6 +122,9 @@ interface RealLoad {
   goodsToBeCarried?: string;
   specialNotes?: string;
   shipperPricePerTon?: string | number;
+  shipperFixedPrice?: string | number;
+  rateType?: string;
+  advancePaymentPercent?: number;
   requiredTruckType?: string;
   pickupDate?: string;
   deliveryDate?: string;
@@ -133,6 +136,9 @@ interface RealLoad {
   shipperContactName?: string;
   shipperCompanyAddress?: string;
   shipperPhone?: string;
+  receiverName?: string;
+  receiverPhone?: string;
+  receiverEmail?: string;
   distance?: number;
   priority?: string;
   adminPrice?: number;
@@ -1185,6 +1191,35 @@ export default function LoadQueuePage() {
                 </CardContent>
               </Card>
 
+              {(detailsLoad.receiverName || detailsLoad.receiverPhone) && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Receiver Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Receiver Name</Label>
+                        <p className="font-medium">{detailsLoad.receiverName || "N/A"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Receiver Phone</Label>
+                        <p className="font-medium">{detailsLoad.receiverPhone || "N/A"}</p>
+                      </div>
+                      {detailsLoad.receiverEmail && (
+                        <div className="col-span-2">
+                          <Label className="text-muted-foreground text-xs">Receiver Email</Label>
+                          <p className="font-medium">{detailsLoad.receiverEmail}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -1300,44 +1335,72 @@ export default function LoadQueuePage() {
                 </CardContent>
               </Card>
 
-              {(detailsLoad.shipperPricePerTon || detailsLoad.adminPrice || detailsLoad.finalPrice) && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Pricing Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid gap-3 text-sm">
-                    <div className="grid grid-cols-2 gap-4">
-                      {detailsLoad.shipperPricePerTon && (
-                        <div>
-                          <Label className="text-muted-foreground text-xs">Shipper's Preferred Rate (Per Ton)</Label>
-                          <p className="font-medium text-blue-600 dark:text-blue-400">
-                            Rs. {Number(detailsLoad.shipperPricePerTon).toLocaleString('en-IN')} / ton
-                          </p>
-                        </div>
-                      )}
-                      {detailsLoad.adminPrice && (
-                        <div>
-                          <Label className="text-muted-foreground text-xs">Total Price</Label>
-                          <p className="font-medium text-green-600 dark:text-green-400">
-                            Rs. {Number(detailsLoad.adminPrice).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
-                      {detailsLoad.finalPrice && (
-                        <div>
-                          <Label className="text-muted-foreground text-xs">Final Negotiated Price</Label>
-                          <p className="font-medium text-emerald-600 dark:text-emerald-400">
-                            Rs. {Number(detailsLoad.finalPrice).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Shipper's Pricing Preference
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Rate Type</Label>
+                      <p className="font-medium">
+                        {detailsLoad.rateType === "fixed_price" ? "Fixed Price" : "Per Tonne Rate"}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                    {detailsLoad.rateType === "fixed_price" && detailsLoad.shipperFixedPrice && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Shipper's Fixed Price</Label>
+                        <p className="font-medium text-blue-600 dark:text-blue-400">
+                          Rs. {Number(detailsLoad.shipperFixedPrice).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    )}
+                    {detailsLoad.rateType !== "fixed_price" && detailsLoad.shipperPricePerTon && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Shipper's Rate (Per Tonne)</Label>
+                        <p className="font-medium text-blue-600 dark:text-blue-400">
+                          Rs. {Number(detailsLoad.shipperPricePerTon).toLocaleString('en-IN')} / tonne
+                        </p>
+                      </div>
+                    )}
+                    {detailsLoad.advancePaymentPercent !== undefined && detailsLoad.advancePaymentPercent !== null && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Preferred Advance Payment</Label>
+                        <p className="font-medium text-amber-600 dark:text-amber-400">
+                          {detailsLoad.advancePaymentPercent}%
+                        </p>
+                      </div>
+                    )}
+                    {detailsLoad.adminPrice && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Admin Priced Amount</Label>
+                        <p className="font-medium text-green-600 dark:text-green-400">
+                          Rs. {Number(detailsLoad.adminPrice).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    )}
+                    {detailsLoad.finalPrice && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Final Negotiated Price</Label>
+                        <p className="font-medium text-emerald-600 dark:text-emerald-400">
+                          Rs. {Number(detailsLoad.finalPrice).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    )}
+                    {detailsLoad.adminFinalPrice && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Invoice Total (incl. GST)</Label>
+                        <p className="font-medium text-primary">
+                          Rs. {Number(detailsLoad.adminFinalPrice).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">

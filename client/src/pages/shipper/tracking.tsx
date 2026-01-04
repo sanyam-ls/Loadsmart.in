@@ -17,10 +17,6 @@ import { EmptyState } from "@/components/empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, addHours, differenceInHours } from "date-fns";
 
-import lrConsignmentNote from "@assets/generated_images/lr_consignment_note_document.png";
-import ewayBill from "@assets/generated_images/e-way_bill_document.png";
-import podDocument from "@assets/generated_images/proof_of_delivery_document.png";
-import loadingPhotos from "@assets/generated_images/loading_photos_cargo_truck.png";
 
 type ShipmentStage = "load_created" | "carrier_assigned" | "reached_pickup" | "loaded" | "in_transit" | "arrived_at_drop" | "delivered";
 
@@ -78,6 +74,7 @@ interface TrackedShipment {
     documentType: string;
     status: string;
     fileName: string;
+    fileUrl: string | null;
   }>;
   timeline: TimelineEvent[];
 }
@@ -100,13 +97,6 @@ const stageIcons: Record<ShipmentStage, typeof MapPin> = {
   in_transit: Navigation,
   arrived_at_drop: MapPin,
   delivered: CheckCircle,
-};
-
-const documentImages: Record<string, string> = {
-  "LR / Consignment Note": lrConsignmentNote,
-  "E-way Bill": ewayBill,
-  "Loading Photos": loadingPhotos,
-  "Proof of Delivery (POD)": podDocument,
 };
 
 function calculateETA(shipment: TrackedShipment): { date: string; time: string } | null {
@@ -223,11 +213,16 @@ export default function TrackingPage() {
     };
   }, [toast]);
 
-  function openDocumentViewer(docType: string) {
-    const image = documentImages[docType];
-    if (image) {
-      setSelectedDocument({ type: docType, image });
+  function openDocumentViewer(docLabel: string, docKey: string) {
+    const doc = selectedShipment?.documents.find(d => d.documentType === docKey);
+    if (doc && doc.fileUrl) {
+      setSelectedDocument({ type: docLabel, image: doc.fileUrl });
       setDocumentViewerOpen(true);
+    } else {
+      toast({ 
+        title: "Document Not Available", 
+        description: doc ? "Document file is being processed" : "This document hasn't been uploaded yet"
+      });
     }
   }
 
@@ -487,7 +482,7 @@ export default function TrackingPage() {
                           <div 
                             key={docItem.key} 
                             className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer"
-                            onClick={() => openDocumentViewer(docItem.label)}
+                            onClick={() => openDocumentViewer(docItem.label, docItem.key)}
                             data-testid={`document-${docItem.key}`}
                           >
                             <div className="flex items-center gap-2">
@@ -545,13 +540,21 @@ export default function TrackingPage() {
           </DialogHeader>
           {selectedDocument && (
             <div className="mt-4">
-              <div className="border rounded-lg overflow-hidden bg-white">
-                <img 
-                  src={selectedDocument.image} 
-                  alt={selectedDocument.type}
-                  className="w-full h-auto object-contain"
-                  data-testid="img-document-viewer"
-                />
+              <div className="border rounded-lg overflow-hidden bg-white dark:bg-slate-900">
+                {selectedDocument.image.toLowerCase().endsWith('.pdf') ? (
+                  <iframe 
+                    src={`/objects/${selectedDocument.image}`}
+                    className="w-full h-[60vh]"
+                    title={selectedDocument.type}
+                  />
+                ) : (
+                  <img 
+                    src={`/objects/${selectedDocument.image}`}
+                    alt={selectedDocument.type}
+                    className="w-full h-auto object-contain"
+                    data-testid="img-document-viewer"
+                  />
+                )}
               </div>
               <div className="mt-4 flex items-center justify-end gap-2">
                 <Button 
@@ -559,8 +562,9 @@ export default function TrackingPage() {
                   size="sm"
                   onClick={() => {
                     const link = document.createElement('a');
-                    link.href = selectedDocument.image;
-                    link.download = `${selectedDocument.type.replace(/[^a-z0-9]/gi, '_')}.png`;
+                    link.href = `/objects/${selectedDocument.image}`;
+                    const ext = selectedDocument.image.split('.').pop() || 'file';
+                    link.download = `${selectedDocument.type.replace(/[^a-z0-9]/gi, '_')}.${ext}`;
                     link.click();
                   }}
                   data-testid="button-download-document"

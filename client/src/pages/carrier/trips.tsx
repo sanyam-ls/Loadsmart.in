@@ -28,18 +28,6 @@ import { useShipments, useLoads } from "@/lib/api-hooks";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import type { Shipment, Load, Driver, Truck as DbTruck } from "@shared/schema";
 
-import lrConsignmentNote from "@assets/generated_images/lr_consignment_note_document.png";
-import ewayBill from "@assets/generated_images/e-way_bill_document.png";
-import podDocument from "@assets/generated_images/proof_of_delivery_document.png";
-import loadingPhotos from "@assets/generated_images/loading_photos_cargo_truck.png";
-
-const documentImages: Record<string, string> = {
-  "LR / Consignment Note": lrConsignmentNote,
-  "E-way Bill": ewayBill,
-  "Loading Photos": loadingPhotos,
-  "Proof of Delivery (POD)": podDocument,
-};
-
 const documentTypeToLabel: Record<string, string> = {
   lr_consignment: "LR / Consignment Note",
   eway_bill: "E-way Bill",
@@ -62,7 +50,7 @@ interface ShipmentDocument {
   id: string;
   shipmentId: string;
   documentType: string;
-  documentUrl: string | null;
+  fileUrl: string | null;
   notes: string | null;
   uploadedBy: string;
   status: string | null;
@@ -315,11 +303,13 @@ export default function TripsPage() {
     return shipmentDocuments.find(d => d.documentType === docType);
   }
 
-  function openDocumentViewer(docType: string) {
-    const image = documentImages[docType];
-    if (image) {
-      setSelectedDocument({ type: docType, image });
+  function openDocumentViewer(docLabel: string) {
+    const uploadedDoc = getUploadedDocument(docLabel);
+    if (uploadedDoc && uploadedDoc.fileUrl) {
+      setSelectedDocument({ type: docLabel, image: uploadedDoc.fileUrl });
       setDocumentViewerOpen(true);
+    } else {
+      toast({ title: "No Document", description: "This document hasn't been uploaded yet" });
     }
   }
 
@@ -952,20 +942,31 @@ export default function TripsPage() {
           </DialogHeader>
           <div className="flex flex-col items-center gap-4">
             {selectedDocument?.image && (
-              <img 
-                src={selectedDocument.image} 
-                alt={selectedDocument.type}
-                className="max-w-full max-h-[60vh] object-contain rounded-lg border"
-                data-testid="document-image"
-              />
+              selectedDocument.image.toLowerCase().endsWith('.pdf') ? (
+                <div className="w-full h-[60vh] border rounded-lg overflow-hidden">
+                  <iframe 
+                    src={`/objects/${selectedDocument.image}`}
+                    className="w-full h-full"
+                    title={selectedDocument.type}
+                  />
+                </div>
+              ) : (
+                <img 
+                  src={`/objects/${selectedDocument.image}`}
+                  alt={selectedDocument.type}
+                  className="max-w-full max-h-[60vh] object-contain rounded-lg border"
+                  data-testid="document-image"
+                />
+              )
             )}
             <Button 
               variant="outline"
               onClick={() => {
                 if (selectedDocument?.image) {
                   const link = document.createElement('a');
-                  link.href = selectedDocument.image;
-                  link.download = `${selectedDocument.type.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+                  link.href = `/objects/${selectedDocument.image}`;
+                  const ext = selectedDocument.image.split('.').pop() || 'file';
+                  link.download = `${selectedDocument.type.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${ext}`;
                   link.click();
                 }
               }}

@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { 
   BarChart, 
   Bar, 
@@ -74,6 +75,7 @@ export default function CarrierDashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
   const [hasNewVerificationUpdate, setHasNewVerificationUpdate] = useState(false);
   
@@ -230,13 +232,13 @@ export default function CarrierDashboard() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-welcome">
-            Welcome back, {user?.companyName || user?.username}
+            {t("dashboard.welcomeBack")}, {user?.companyName || user?.username}
           </h1>
-          <p className="text-muted-foreground">Here's your fleet overview for today.</p>
+          <p className="text-muted-foreground">{t("dashboard.fleetOverview")}</p>
         </div>
         <Button onClick={() => navigate("/carrier/add-truck")} data-testid="button-add-truck">
           <Plus className="h-4 w-4 mr-2" />
-          Add Truck
+          {t("fleet.addTruck")}
         </Button>
       </div>
 
@@ -312,10 +314,10 @@ export default function CarrierDashboard() {
           data-testid="tile-active-trucks"
         >
           <StatCard
-            title="Active Trucks"
+            title={t("dashboard.activeTrucks")}
             value={`${activeTruckCount} / ${totalTruckCount}`}
             icon={Truck}
-            subtitle={`${availableTruckCount} available now`}
+            subtitle={`${availableTruckCount} ${t("dashboard.availableNow")}`}
           />
         </div>
         <div 
@@ -324,11 +326,11 @@ export default function CarrierDashboard() {
           data-testid="tile-pending-bids"
         >
           <StatCard
-            title="Pending Bids"
+            title={t("dashboard.pendingBids")}
             value={pendingBidsCount}
             icon={Clock}
             trend={{ value: 15, isPositive: true }}
-            subtitle="vs last week"
+            subtitle={t("dashboard.vsLastWeek")}
           />
         </div>
         <div 
@@ -337,10 +339,10 @@ export default function CarrierDashboard() {
           data-testid="tile-active-trips"
         >
           <StatCard
-            title="Active Trips"
+            title={t("dashboard.activeTrips")}
             value={activeTripsCount}
             icon={Route}
-            subtitle={`${driversEnRoute} drivers en route`}
+            subtitle={`${driversEnRoute} ${t("dashboard.driversEnRoute")}`}
           />
         </div>
         <div 
@@ -349,10 +351,10 @@ export default function CarrierDashboard() {
           data-testid="tile-monthly-revenue"
         >
           <StatCard
-            title="Monthly Revenue"
-            value={currentMonthRevenue > 0 ? formatCurrency(currentMonthRevenue) : "No data"}
+            title={t("dashboard.monthlyRevenue")}
+            value={currentMonthRevenue > 0 ? formatCurrency(currentMonthRevenue) : t("dashboard.noData")}
             icon={DollarSign}
-            subtitle={hasRevenueData ? `${dashboardStats?.completedTripsThisMonth || 0} trips completed` : "Complete trips to earn"}
+            subtitle={hasRevenueData ? `${dashboardStats?.completedTripsThisMonth || 0} ${t("dashboard.tripsCompleted")}` : t("dashboard.completeTripsToEarn")}
           />
         </div>
       </div>
@@ -360,10 +362,10 @@ export default function CarrierDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Revenue Summary</CardTitle>
+            <CardTitle className="text-lg">{t("dashboard.revenueSummary")}</CardTitle>
             {hasRevenueData && (
               <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                {formatCurrency(currentMonthRevenue)} total
+                {formatCurrency(currentMonthRevenue)} {t("dashboard.total")}
               </Badge>
             )}
           </CardHeader>
@@ -372,8 +374,8 @@ export default function CarrierDashboard() {
               <div className="h-64 flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
                   <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="font-medium">No revenue data yet</p>
-                  <p className="text-sm">Complete trips to start earning revenue</p>
+                  <p className="font-medium">{t("dashboard.noRevenueDataYet")}</p>
+                  <p className="text-sm">{t("dashboard.completeTripsToStartEarning")}</p>
                 </div>
               </div>
             ) : (
@@ -420,7 +422,7 @@ export default function CarrierDashboard() {
 
         <Card>
           <CardHeader className="pb-4 flex flex-row items-center justify-between gap-2">
-            <CardTitle className="text-lg">Performance Score</CardTitle>
+            <CardTitle className="text-lg">{t("dashboard.performanceScore")}</CardTitle>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Info className="h-4 w-4 text-muted-foreground cursor-help" />
@@ -433,9 +435,9 @@ export default function CarrierDashboard() {
           <CardContent>
             <div className="flex flex-col items-center justify-center h-64">
               <Star className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="font-medium text-muted-foreground">Performance data unavailable</p>
+              <p className="font-medium text-muted-foreground">{t("dashboard.performanceDataUnavailable")}</p>
               <p className="text-sm text-muted-foreground text-center mt-1">
-                Complete more trips to build your performance score
+                {t("dashboard.completeMoreTrips")}
               </p>
             </div>
           </CardContent>
@@ -445,15 +447,15 @@ export default function CarrierDashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Recommended Loads</CardTitle>
+            <CardTitle className="text-lg">{t("dashboard.recommendedLoads")}</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate("/carrier/loads")} data-testid="link-view-all-loads">
-              View All ({availableLoads.length})
+              {t("dashboard.viewAll")} ({availableLoads.length})
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </CardHeader>
           <CardContent>
             {topRecommendedLoads.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No recommended loads available</p>
+              <p className="text-center text-muted-foreground py-8">{t("dashboard.noRecommendedLoads")}</p>
             ) : (
               <div className="space-y-3">
                 {topRecommendedLoads.map((load) => (
@@ -472,7 +474,7 @@ export default function CarrierDashboard() {
                     <div className="flex items-center justify-between text-sm text-muted-foreground gap-2 flex-wrap">
                       {load.distance && <span>{load.distance} km</span>}
                       {load.budget && <span className="font-semibold text-foreground">{formatCurrency(load.budget)}</span>}
-                      {!load.distance && !load.budget && <span>Details pending</span>}
+                      {!load.distance && !load.budget && <span>{t("dashboard.detailsPending")}</span>}
                     </div>
                   </div>
                 ))}
@@ -483,16 +485,16 @@ export default function CarrierDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">Active Trips</CardTitle>
+            <CardTitle className="text-lg">{t("dashboard.activeTrips")}</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate("/carrier/trips")} data-testid="link-view-all-trips">
-              View All ({activeTripsCount})
+              {t("dashboard.viewAll")} ({activeTripsCount})
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {displayTrips.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No active trips at the moment</p>
+                <p className="text-center text-muted-foreground py-8">{t("dashboard.noActiveTrips")}</p>
               ) : (
                 displayTrips.map((trip) => (
                   <div
@@ -533,7 +535,7 @@ export default function CarrierDashboard() {
                       <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
                         {trip.loadType}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">In Transit</span>
+                      <span className="text-xs text-muted-foreground">{t("dashboard.inTransit")}</span>
                     </div>
                   </div>
                 ))

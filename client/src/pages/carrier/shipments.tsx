@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Truck, Package, MapPin, Clock, CheckCircle, RefreshCw, ArrowRight, Calendar, Key, UserCircle } from "lucide-react";
+import { Loader2, Truck as TruckIcon, Package, MapPin, Clock, CheckCircle, RefreshCw, ArrowRight, Calendar, Key, UserCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Shipment, Load, Driver } from "@shared/schema";
+import type { Shipment, Load, Driver, Truck } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 
 function formatLoadId(load?: { adminReferenceNumber?: number | null; shipperLoadNumber?: number | null }): string {
@@ -51,14 +51,19 @@ export default function CarrierShipmentsPage() {
     enabled: isEnterprise,
   });
 
+  const { data: trucks = [] } = useQuery<Truck[]>({
+    queryKey: ["/api/trucks"],
+    enabled: isEnterprise,
+  });
+
   const assignDriverMutation = useMutation({
-    mutationFn: async ({ shipmentId, driverId }: { shipmentId: string; driverId: string }) => {
-      return apiRequest("PATCH", `/api/shipments/${shipmentId}/assign-driver`, { driverId });
+    mutationFn: async ({ shipmentId, driverId, truckId }: { shipmentId: string; driverId?: string; truckId?: string }) => {
+      return apiRequest("PATCH", `/api/shipments/${shipmentId}/assign-driver`, { driverId, truckId });
     },
     onSuccess: () => {
       toast({
-        title: "Driver Assigned",
-        description: "Driver has been assigned to this shipment.",
+        title: "Assignment Updated",
+        description: "Driver/vehicle assignment has been updated.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
       refetch();
@@ -66,7 +71,28 @@ export default function CarrierShipmentsPage() {
     onError: () => {
       toast({
         title: "Assignment Failed",
-        description: "Failed to assign driver. Please try again.",
+        description: "Failed to update assignment. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const assignTruckMutation = useMutation({
+    mutationFn: async ({ shipmentId, truckId }: { shipmentId: string; truckId: string }) => {
+      return apiRequest("PATCH", `/api/shipments/${shipmentId}/assign-truck`, { truckId });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Vehicle Assigned",
+        description: "Vehicle has been assigned to this shipment.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+      refetch();
+    },
+    onError: () => {
+      toast({
+        title: "Assignment Failed",
+        description: "Failed to assign vehicle. Please try again.",
         variant: "destructive",
       });
     },
@@ -175,7 +201,7 @@ export default function CarrierShipmentsPage() {
                 <TabsContent value="active" className="m-0 px-3 pb-3">
                   {activeShipments.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <TruckIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p className="text-sm">No active shipments</p>
                     </div>
                   ) : (
@@ -334,72 +360,142 @@ export default function CarrierShipmentsPage() {
                   </div>
 
                   {isEnterprise && (
-                    <div className="pt-4 border-t">
-                      <div className="flex items-center gap-2 mb-3">
-                        <UserCircle className="h-4 w-4 text-muted-foreground" />
-                        <p className="font-medium text-sm">Driver Assignment</p>
+                    <div className="pt-4 border-t space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <UserCircle className="h-4 w-4 text-muted-foreground" />
+                          <p className="font-medium text-sm">Driver Assignment</p>
+                        </div>
+                        {drivers.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            No drivers added yet. Add drivers in the Drivers section to assign them to shipments.
+                          </p>
+                        ) : selectedShipment.driverId ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                              {drivers.find(d => d.id === selectedShipment.driverId)?.name || "Assigned Driver"}
+                            </Badge>
+                            <Select
+                              onValueChange={(driverId) => {
+                                assignDriverMutation.mutate({
+                                  shipmentId: selectedShipment.id,
+                                  driverId,
+                                });
+                              }}
+                              disabled={assignDriverMutation.isPending}
+                            >
+                              <SelectTrigger className="w-[140px]" data-testid="select-reassign-driver">
+                                <SelectValue placeholder="Change driver" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {drivers
+                                  .filter(d => d.status === "available" && d.id !== selectedShipment.driverId)
+                                  .map(driver => (
+                                    <SelectItem key={driver.id} value={driver.id}>
+                                      {driver.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Select
+                              onValueChange={(driverId) => {
+                                assignDriverMutation.mutate({
+                                  shipmentId: selectedShipment.id,
+                                  driverId,
+                                });
+                              }}
+                              disabled={assignDriverMutation.isPending}
+                            >
+                              <SelectTrigger className="w-[200px]" data-testid="select-driver">
+                                <SelectValue placeholder="Select a driver" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {drivers
+                                  .filter(d => d.status === "available")
+                                  .map(driver => (
+                                    <SelectItem key={driver.id} value={driver.id}>
+                                      {driver.name} - {driver.phone}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            {assignDriverMutation.isPending && (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            )}
+                          </div>
+                        )}
                       </div>
-                      {drivers.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No drivers added yet. Add drivers in the Drivers section to assign them to shipments.
-                        </p>
-                      ) : selectedShipment.driverId ? (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                            {drivers.find(d => d.id === selectedShipment.driverId)?.name || "Assigned Driver"}
-                          </Badge>
-                          <Select
-                            onValueChange={(driverId) => {
-                              assignDriverMutation.mutate({
-                                shipmentId: selectedShipment.id,
-                                driverId,
-                              });
-                            }}
-                            disabled={assignDriverMutation.isPending}
-                          >
-                            <SelectTrigger className="w-[140px]" data-testid="select-reassign-driver">
-                              <SelectValue placeholder="Change driver" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {drivers
-                                .filter(d => d.status === "available" && d.id !== selectedShipment.driverId)
-                                .map(driver => (
-                                  <SelectItem key={driver.id} value={driver.id}>
-                                    {driver.name}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <TruckIcon className="h-4 w-4 text-muted-foreground" />
+                          <p className="font-medium text-sm">Vehicle Assignment</p>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Select
-                            onValueChange={(driverId) => {
-                              assignDriverMutation.mutate({
-                                shipmentId: selectedShipment.id,
-                                driverId,
-                              });
-                            }}
-                            disabled={assignDriverMutation.isPending}
-                          >
-                            <SelectTrigger className="w-[200px]" data-testid="select-driver">
-                              <SelectValue placeholder="Select a driver" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {drivers
-                                .filter(d => d.status === "available")
-                                .map(driver => (
-                                  <SelectItem key={driver.id} value={driver.id}>
-                                    {driver.name} - {driver.phone}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                          {assignDriverMutation.isPending && (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          )}
-                        </div>
-                      )}
+                        {trucks.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            No vehicles added yet. Add vehicles in the My Fleet section to assign them to shipments.
+                          </p>
+                        ) : selectedShipment.truckId ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                              {trucks.find(t => t.id === selectedShipment.truckId)?.licensePlate || "Assigned Vehicle"}
+                            </Badge>
+                            <Select
+                              onValueChange={(truckId) => {
+                                assignTruckMutation.mutate({
+                                  shipmentId: selectedShipment.id,
+                                  truckId,
+                                });
+                              }}
+                              disabled={assignTruckMutation.isPending}
+                            >
+                              <SelectTrigger className="w-[140px]" data-testid="select-reassign-truck">
+                                <SelectValue placeholder="Change vehicle" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {trucks
+                                  .filter(t => t.isAvailable && t.id !== selectedShipment.truckId)
+                                  .map(truck => (
+                                    <SelectItem key={truck.id} value={truck.id}>
+                                      {truck.licensePlate}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Select
+                              onValueChange={(truckId) => {
+                                assignTruckMutation.mutate({
+                                  shipmentId: selectedShipment.id,
+                                  truckId,
+                                });
+                              }}
+                              disabled={assignTruckMutation.isPending}
+                            >
+                              <SelectTrigger className="w-[200px]" data-testid="select-truck">
+                                <SelectValue placeholder="Select a vehicle" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {trucks
+                                  .filter(t => t.isAvailable !== false)
+                                  .map(truck => (
+                                    <SelectItem key={truck.id} value={truck.id}>
+                                      {truck.licensePlate} - {truck.truckType}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            {assignTruckMutation.isPending && (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </CardContent>

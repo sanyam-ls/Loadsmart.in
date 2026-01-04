@@ -7642,6 +7642,54 @@ export async function registerRoutes(
     }
   });
 
+  // PATCH /api/shipments/:id/assign-truck - Assign truck/vehicle to shipment (enterprise carriers only)
+  app.patch("/api/shipments/:id/assign-truck", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Only enterprise carriers can assign trucks
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      if (!carrierProfile || carrierProfile.carrierType !== "enterprise") {
+        return res.status(403).json({ error: "Vehicle assignment is only available for enterprise carriers" });
+      }
+
+      const shipment = await storage.getShipment(req.params.id);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+
+      // Only the carrier that owns the shipment can assign trucks
+      if (shipment.carrierId !== user.id) {
+        return res.status(403).json({ error: "You can only assign vehicles to your own shipments" });
+      }
+
+      const { truckId } = req.body;
+      
+      if (!truckId) {
+        return res.status(400).json({ error: "Vehicle ID is required" });
+      }
+
+      // Validate that the truck belongs to this carrier
+      const truck = await storage.getTruck(truckId);
+      if (!truck || truck.carrierId !== user.id) {
+        return res.status(400).json({ error: "Vehicle not found or does not belong to your fleet" });
+      }
+
+      // Update the shipment with truck
+      const updatedShipment = await storage.updateShipment(req.params.id, {
+        truckId,
+      });
+
+      res.json(updatedShipment);
+    } catch (error) {
+      console.error("Assign truck error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // =============================================
   // DOCUMENTS ENDPOINTS
   // =============================================

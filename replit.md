@@ -189,3 +189,19 @@ Express routes must be ordered from specific to generic to prevent greedy matchi
 - Urgency levels: Critical (≤7 days), Warning (≤15 days), Expiring Soon (≤30 days)
 - Separate sections for expired (red) and expiring (amber) licenses
 - Days remaining/expired display for quick reference
+
+### Enterprise Carrier Shipment Management
+
+**Driver & Vehicle Assignment (My Shipments page):**
+- Enterprise carriers can assign both drivers and vehicles to each shipment
+- Driver Assignment: Select from available drivers with "Change driver" option for reassignment
+- Vehicle Assignment: Select from available trucks with "Change vehicle" option for reassignment
+- Assignments support the Indian market where drivers frequently change between trips
+- API Endpoints:
+  - `PATCH /api/shipments/:id/assign-driver` - Assign driver (and optionally truck)
+  - `PATCH /api/shipments/:id/assign-truck` - Assign vehicle only
+
+**Location Management:**
+- Cascading State → City dropdowns for truck location selection
+- Location stored in "City, State" format (e.g., "Ludhiana, Punjab")
+- Edit truck location via pencil icon button in fleet table

@@ -168,7 +168,36 @@ The platform uses WebSockets for real-time updates between portals:
 **Implementation:**
 - Server: `server/websocket-marketplace.ts` - WebSocket server with broadcast functions
 - Client: `client/src/lib/marketplace-socket.ts` - Connection management and event handlers
-- Events: `load_posted`, `load_updated`, `bid_received`
+- Events: `load_posted`, `load_updated`, `bid_received`, `shipment_document_uploaded`
+
+### Real-time Shipment Document Sharing
+
+Carriers can upload shipment documents that are immediately visible to shippers with real-time WebSocket notifications:
+
+**Supported Document Types:**
+- `lr_consignment` - LR / Consignment Note
+- `eway_bill` - E-way Bill
+- `loading_photos` - Loading Photos
+- `pod` - Proof of Delivery (POD)
+- `invoice` - Invoice
+- `other` - Other Document
+
+**API Endpoints:**
+- `POST /api/shipments/:id/documents` - Carrier uploads a document for a shipment
+- `GET /api/shipments/:id/documents` - Get all documents for a shipment
+
+**Real-time Flow:**
+1. Carrier uploads document via Active Trips page (client/src/pages/carrier/trips.tsx)
+2. Server saves document with shipmentId and loadId references
+3. Server broadcasts `shipment_document_uploaded` event to shipper via WebSocket
+4. Shipper's Track Shipments page (client/src/pages/shipper/tracking.tsx) receives event
+5. Toast notification shows "New Document Received: [Document Type]"
+6. Query cache invalidated to refresh document status immediately
+
+**Implementation:**
+- Server: `broadcastToUser(userId, data)` function for targeted user notifications
+- Storage: Documents stored in existing `documents` table with `shipmentId` field
+- Tracking: `/api/shipments/tracking` merges both load and shipment documents
 
 ### Vehicle Telematics System (Shipper Portal Exclusive)
 

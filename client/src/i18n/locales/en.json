@@ -461,12 +461,21 @@
     "signOut": "Sign Out",
     "companyName": "Company Name",
     "role": "Role",
-    "selectRole": "Select Role",
+    "selectRole": "Select your role",
     "termsAndConditions": "Terms and Conditions",
     "privacyPolicy": "Privacy Policy",
     "agreeToTerms": "I agree to the terms and conditions",
     "loginError": "Login failed. Please check your credentials.",
-    "registerError": "Registration failed. Please try again."
+    "registerError": "Registration failed. Please try again.",
+    "digitalFreightMarketplace": "Digital Freight Marketplace",
+    "welcomeToFreightFlow": "Welcome to FreightFlow",
+    "signInOrCreateAccount": "Sign in to your account or create a new one",
+    "iAmA": "I am a",
+    "features": {
+      "realTimeTracking": "Real-time shipment tracking",
+      "competitiveBidding": "Competitive bidding marketplace",
+      "secureDocuments": "Secure document management"
+    }
   },
   "messages": {
     "success": "Success",

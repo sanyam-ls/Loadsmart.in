@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Truck, Eye, EyeOff, ArrowRight, Phone, Shield, CheckCircle, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +27,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import type { UserRole } from "@shared/schema";
 
 const loginSchema = z.object({
@@ -81,6 +83,7 @@ export default function AuthPage() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [verifiedPhone, setVerifiedPhone] = useState("");
+  const { t } = useTranslation();
   const { login, register } = useAuth();
   const { toast } = useToast();
 
@@ -272,7 +275,7 @@ export default function AuthPage() {
             <span className="text-2xl font-bold">FreightFlow</span>
           </div>
           <h1 className="text-4xl font-bold mb-4">
-            Digital Freight Marketplace
+            {t("auth.digitalFreightMarketplace")}
           </h1>
           <p className="text-lg text-white/80 mb-8 max-w-md">
             Connect with trusted carriers, post loads, track shipments, and manage your logistics operations all in one platform.
@@ -282,26 +285,27 @@ export default function AuthPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
                 <ArrowRight className="h-4 w-4" />
               </div>
-              <span>Real-time shipment tracking</span>
+              <span>{t("auth.features.realTimeTracking")}</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
                 <ArrowRight className="h-4 w-4" />
               </div>
-              <span>Competitive bidding marketplace</span>
+              <span>{t("auth.features.competitiveBidding")}</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
                 <ArrowRight className="h-4 w-4" />
               </div>
-              <span>Secure document management</span>
+              <span>{t("auth.features.secureDocuments")}</span>
             </div>
           </div>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col">
-        <div className="flex justify-end p-4">
+        <div className="flex justify-end gap-2 p-4">
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
         <div className="flex-1 flex items-center justify-center p-8">
@@ -312,14 +316,14 @@ export default function AuthPage() {
                   <Truck className="h-6 w-6" />
                 </div>
               </div>
-              <CardTitle className="text-2xl">Welcome to FreightFlow</CardTitle>
-              <CardDescription>Sign in to your account or create a new one</CardDescription>
+              <CardTitle className="text-2xl">{t("auth.welcomeToFreightFlow")}</CardTitle>
+              <CardDescription>{t("auth.signInOrCreateAccount")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="login">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login" data-testid="tab-login">Sign In</TabsTrigger>
-                  <TabsTrigger value="register" data-testid="tab-register">Register</TabsTrigger>
+                  <TabsTrigger value="login" data-testid="tab-login">{t("auth.signIn")}</TabsTrigger>
+                  <TabsTrigger value="register" data-testid="tab-register">{t("auth.register")}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="login">
@@ -330,7 +334,7 @@ export default function AuthPage() {
                         name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Username</FormLabel>
+                            <FormLabel>{t("auth.username")}</FormLabel>
                             <FormControl>
                               <Input placeholder="Enter your username" {...field} data-testid="input-login-username" />
                             </FormControl>
@@ -343,7 +347,7 @@ export default function AuthPage() {
                         name="password"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Password</FormLabel>
+                            <FormLabel>{t("auth.password")}</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Input
@@ -368,7 +372,7 @@ export default function AuthPage() {
                         )}
                       />
                       <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
-                        {isLoading ? "Signing in..." : "Sign In"}
+                        {isLoading ? t("common.loading") : t("auth.signIn")}
                       </Button>
                     </form>
                   </Form>
@@ -382,17 +386,17 @@ export default function AuthPage() {
                         name="role"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>I am a</FormLabel>
+                            <FormLabel>{t("auth.iAmA")}</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-role">
-                                  <SelectValue placeholder="Select your role" />
+                                  <SelectValue placeholder={t("auth.selectRole")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="shipper">Shipper</SelectItem>
-                                <SelectItem value="carrier">Carrier</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="shipper">{t("roles.shipper")}</SelectItem>
+                                <SelectItem value="carrier">{t("roles.carrier")}</SelectItem>
+                                <SelectItem value="admin">{t("roles.admin")}</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />

@@ -33,7 +33,8 @@ import {
   broadcastInvoiceEvent,
   broadcastNegotiationMessage,
   broadcastVerificationStatus,
-  broadcastMarketplaceEvent
+  broadcastMarketplaceEvent,
+  broadcastToUser
 } from "./websocket-marketplace";
 import {
   getAllVehiclesTelemetry,
@@ -7712,6 +7713,95 @@ export async function registerRoutes(
       res.json(documents);
     } catch (error) {
       console.error("Get load documents error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/shipments/:id/documents - Get documents for a shipment
+  app.get("/api/shipments/:id/documents", requireAuth, async (req, res) => {
+    try {
+      const shipment = await storage.getShipment(req.params.id);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+      
+      // Get documents linked to this shipment
+      const shipmentDocs = await storage.getDocumentsByShipment(req.params.id);
+      // Also get documents linked to the load
+      const loadDocs = await storage.getDocumentsByLoad(shipment.loadId);
+      
+      // Combine and deduplicate by ID
+      const allDocs = [...shipmentDocs];
+      loadDocs.forEach(doc => {
+        if (!allDocs.find(d => d.id === doc.id)) {
+          allDocs.push(doc);
+        }
+      });
+      
+      res.json(allDocs);
+    } catch (error) {
+      console.error("Get shipment documents error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/shipments/:id/documents - Carrier uploads document to a shipment
+  app.post("/api/shipments/:id/documents", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const shipment = await storage.getShipment(req.params.id);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+
+      // Only the carrier that owns the shipment can upload documents
+      if (shipment.carrierId !== user.id) {
+        return res.status(403).json({ error: "You can only upload documents to your own shipments" });
+      }
+
+      const { documentType, fileName, fileUrl, fileSize } = req.body;
+
+      // Validate required fields
+      if (!documentType || !fileName || !fileUrl) {
+        return res.status(400).json({ error: "Document type, file name, and file URL are required" });
+      }
+
+      // Validate document type
+      const validDocTypes = ["lr_consignment", "eway_bill", "loading_photos", "pod", "invoice", "other"];
+      if (!validDocTypes.includes(documentType)) {
+        return res.status(400).json({ error: "Invalid document type" });
+      }
+
+      // Create the document linked to shipment and load
+      const doc = await storage.createDocument({
+        userId: user.id,
+        shipmentId: req.params.id,
+        loadId: shipment.loadId,
+        documentType,
+        fileName,
+        fileUrl,
+        fileSize: fileSize || null,
+        isVerified: false,
+      });
+
+      // Broadcast document upload event to shipper via WebSocket
+      const load = await storage.getLoad(shipment.loadId);
+      if (load?.shipperId) {
+        broadcastToUser(load.shipperId, {
+          type: "shipment_document_uploaded",
+          shipmentId: req.params.id,
+          loadId: shipment.loadId,
+          document: doc,
+        });
+      }
+
+      res.status(201).json(doc);
+    } catch (error) {
+      console.error("Upload shipment document error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

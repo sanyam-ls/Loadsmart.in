@@ -314,3 +314,20 @@ export function broadcastMarketplaceEvent(eventType: string, data: any): void {
   });
   console.log(`Broadcasted ${eventType} event to admin clients`);
 }
+
+// Broadcast event to a specific user by userId
+export function broadcastToUser(userId: string, data: any): void {
+  const message = {
+    ...data,
+    timestamp: new Date().toISOString(),
+  };
+
+  let sentCount = 0;
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.userId === userId) {
+      sendToClient(ws, message);
+      sentCount++;
+    }
+  });
+  console.log(`Broadcasted ${data.type || 'event'} to user ${userId} (${sentCount} connections)`);
+}

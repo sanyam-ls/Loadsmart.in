@@ -103,6 +103,7 @@ export interface IStorage {
 
   getDocumentsByUser(userId: string): Promise<Document[]>;
   getDocumentsByLoad(loadId: string): Promise<Document[]>;
+  getDocumentsByShipment(shipmentId: string): Promise<Document[]>;
   getDocument(id: string): Promise<Document | undefined>;
   createDocument(doc: InsertDocument): Promise<Document>;
   updateDocument(id: string, updates: Partial<Document>): Promise<Document | undefined>;
@@ -519,6 +520,10 @@ export class DatabaseStorage implements IStorage {
 
   async getDocumentsByLoad(loadId: string): Promise<Document[]> {
     return db.select().from(documents).where(eq(documents.loadId, loadId)).orderBy(desc(documents.createdAt));
+  }
+
+  async getDocumentsByShipment(shipmentId: string): Promise<Document[]> {
+    return db.select().from(documents).where(eq(documents.shipmentId, shipmentId)).orderBy(desc(documents.createdAt));
   }
 
   async getDocument(id: string): Promise<Document | undefined> {

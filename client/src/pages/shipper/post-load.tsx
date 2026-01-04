@@ -1143,7 +1143,7 @@ export default function PostLoadPage() {
                           <FormLabel>Price per Tonne (Optional)</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rs.</span>
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
                                 type="number"
                                 placeholder="Enter your preferred rate per tonne"
@@ -1169,7 +1169,7 @@ export default function PostLoadPage() {
                           <FormLabel>Fixed Price (Optional)</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rs.</span>
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
                                 type="text"
                                 inputMode="numeric"
@@ -1209,7 +1209,7 @@ export default function PostLoadPage() {
                               {...field}
                               data-testid="input-advance-percent"
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">%</span>
                           </div>
                         </FormControl>
                         <FormDescription className="text-xs">

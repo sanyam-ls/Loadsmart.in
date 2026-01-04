@@ -1175,6 +1175,9 @@ export default function PostLoadPage() {
                                 inputMode="numeric"
                                 placeholder="Enter your preferred fixed price"
                                 className="pl-10"
+                                name={field.name}
+                                ref={field.ref}
+                                onBlur={field.onBlur}
                                 value={field.value || ""}
                                 onChange={(e) => {
                                   const value = e.target.value.replace(/[^0-9.]/g, '');

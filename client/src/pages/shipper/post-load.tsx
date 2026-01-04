@@ -1171,10 +1171,15 @@ export default function PostLoadPage() {
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rs.</span>
                               <Input
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
                                 placeholder="Enter your preferred fixed price"
                                 className="pl-10"
-                                {...field}
+                                value={field.value || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^0-9.]/g, '');
+                                  field.onChange(value);
+                                }}
                                 data-testid="input-fixed-price"
                               />
                             </div>

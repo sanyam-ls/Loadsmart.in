@@ -7437,6 +7437,7 @@ export async function registerRoutes(
               documentType: d.documentType,
               status: d.isVerified ? "verified" : "pending",
               fileName: d.fileName,
+              fileUrl: d.fileUrl,
             })),
             timeline,
             progress,

@@ -1134,7 +1134,7 @@ export default function PostLoadPage() {
                     )}
                   />
                   
-                  {form.watch("rateType") === "per_ton" ? (
+                  <div className={form.watch("rateType") === "per_ton" ? "" : "hidden"}>
                     <FormField
                       control={form.control}
                       name="shipperPricePerTon"
@@ -1160,7 +1160,8 @@ export default function PostLoadPage() {
                         </FormItem>
                       )}
                     />
-                  ) : (
+                  </div>
+                  <div className={form.watch("rateType") === "fixed_price" ? "" : "hidden"}>
                     <FormField
                       control={form.control}
                       name="shipperFixedPrice"
@@ -1171,18 +1172,10 @@ export default function PostLoadPage() {
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
-                                type="text"
-                                inputMode="numeric"
+                                type="number"
                                 placeholder="Enter your preferred fixed price"
                                 className="pl-10"
-                                name={field.name}
-                                ref={field.ref}
-                                onBlur={field.onBlur}
-                                value={field.value || ""}
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(/[^0-9.]/g, '');
-                                  field.onChange(value);
-                                }}
+                                {...field}
                                 data-testid="input-fixed-price"
                               />
                             </div>
@@ -1194,7 +1187,7 @@ export default function PostLoadPage() {
                         </FormItem>
                       )}
                     />
-                  )}
+                  </div>
                   
                   <FormField
                     control={form.control}

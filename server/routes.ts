@@ -7278,7 +7278,9 @@ export async function registerRoutes(
           const carrier = await storage.getUser(shipment.carrierId);
           const carrierProfile = carrier ? await storage.getCarrierProfile(carrier.id) : null;
           const events = await storage.getShipmentEvents(shipment.id);
-          const documents = await storage.getDocumentsByLoad(shipment.loadId);
+          const loadDocuments = await storage.getDocumentsByLoad(shipment.loadId);
+          const shipmentDocuments = await storage.getDocumentsByShipment(shipment.id);
+          const documents = [...loadDocuments, ...shipmentDocuments.filter(d => !loadDocuments.find(ld => ld.id === d.id))];
           
           // Get truck - try shipment first, then load's assigned truck, then bid's truck, then carrier's first truck
           let truck = null;
@@ -7463,7 +7465,9 @@ export async function registerRoutes(
       const carrierProfile = carrier ? await storage.getCarrierProfile(carrier.id) : null;
       const truck = shipment.truckId ? await storage.getTruck(shipment.truckId) : null;
       const events = await storage.getShipmentEvents(shipment.id);
-      const documents = await storage.getDocumentsByLoad(shipment.loadId);
+      const loadDocuments = await storage.getDocumentsByLoad(shipment.loadId);
+      const shipmentDocuments = await storage.getDocumentsByShipment(shipment.id);
+      const documents = [...loadDocuments, ...shipmentDocuments.filter(d => !loadDocuments.find(ld => ld.id === d.id))];
 
       // Calculate progress
       let progress = 0;

@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { onMarketplaceEvent } from "@/lib/marketplace-socket";
+import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin, Package, Truck, CheckCircle, Clock, FileText, 
   Navigation, Building, ArrowRight, RefreshCw, Loader2,
-  Eye, X, Download, Calendar
+  Eye, X, Download, Calendar, Bell
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -180,7 +183,17 @@ function formatLoadId(adminReferenceNumber: number | null | undefined): string {
   return "LD-XXXX";
 }
 
+const documentTypeToLabel: Record<string, string> = {
+  lr_consignment: "LR / Consignment Note",
+  eway_bill: "E-way Bill",
+  loading_photos: "Loading Photos",
+  pod: "Proof of Delivery (POD)",
+  invoice: "Invoice",
+  other: "Other Document",
+};
+
 export default function TrackingPage() {
+  const { toast } = useToast();
   const { data: shipments = [], isLoading, refetch, isFetching } = useQuery<TrackedShipment[]>({
     queryKey: ['/api/shipments/tracking'],
     refetchInterval: 30000,
@@ -193,6 +206,24 @@ export default function TrackingPage() {
   const activeShipments = shipments.filter(s => s.currentStage !== "delivered");
   const selectedShipment = shipments.find(s => s.id === selectedShipmentId) || activeShipments[0] || null;
   const estimatedArrival = selectedShipment ? calculateETA(selectedShipment) : null;
+
+  useEffect(() => {
+    const unsubDocumentUploaded = onMarketplaceEvent("document_uploaded", (data: any) => {
+      const docLabel = documentTypeToLabel[data?.documentType] || data?.documentType;
+      toast({
+        title: "New Document Received",
+        description: `Carrier uploaded: ${docLabel}`,
+      });
+      refetch();
+      if (data?.shipmentId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/shipments", data.shipmentId, "documents"] });
+      }
+    });
+    
+    return () => {
+      unsubDocumentUploaded();
+    };
+  }, [toast, refetch]);
 
   function openDocumentViewer(docType: string) {
     const image = documentImages[docType];

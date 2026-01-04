@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   MapPin, Truck, Clock, CheckCircle, Upload, Navigation, Fuel, User, 
   AlertTriangle, TrendingUp, Route, Calendar, Timer, Shield, Gauge,
   ArrowRight, Package, Building2, PlayCircle, PauseCircle, Coffee,
-  FileText, Eye, Download, Key, Lock, Unlock, RefreshCw
+  FileText, Eye, Download, Key, Lock, Unlock, RefreshCw, Plus, Check, X, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -35,6 +36,35 @@ const documentImages: Record<string, string> = {
   "Loading Photos": loadingPhotos,
   "Proof of Delivery (POD)": podDocument,
 };
+
+const documentTypeToLabel: Record<string, string> = {
+  lr_consignment: "LR / Consignment Note",
+  eway_bill: "E-way Bill",
+  loading_photos: "Loading Photos",
+  pod: "Proof of Delivery (POD)",
+  invoice: "Invoice",
+  other: "Other Document",
+};
+
+const labelToDocumentType: Record<string, string> = {
+  "LR / Consignment Note": "lr_consignment",
+  "E-way Bill": "eway_bill",
+  "Loading Photos": "loading_photos",
+  "Proof of Delivery (POD)": "pod",
+  "Invoice": "invoice",
+  "Other Document": "other",
+};
+
+interface ShipmentDocument {
+  id: string;
+  shipmentId: string;
+  documentType: string;
+  documentUrl: string | null;
+  notes: string | null;
+  uploadedBy: string;
+  status: string | null;
+  createdAt: Date | null;
+}
 
 interface RealShipment {
   id: string;
@@ -205,6 +235,48 @@ export default function TripsPage() {
       return load?.adminReferenceNumber?.toString() === loadNum || s.id === selectedTrip.tripId.replace('real-', '');
     });
   }, [selectedTrip, shipments, loads]);
+
+  const shipmentId = matchedShipment?.id;
+  
+  const { data: shipmentDocuments = [], refetch: refetchDocuments } = useQuery<ShipmentDocument[]>({
+    queryKey: ["/api/shipments", shipmentId, "documents"],
+    enabled: !!shipmentId,
+  });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingDocType, setUploadingDocType] = useState<string | null>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: async ({ documentType, notes }: { documentType: string; notes?: string }) => {
+      if (!shipmentId) throw new Error("No shipment selected");
+      return apiRequest("POST", `/api/shipments/${shipmentId}/documents`, {
+        documentType,
+        documentUrl: `https://freightflow.example.com/documents/${shipmentId}/${documentType}-${Date.now()}.pdf`,
+        notes: notes || `${documentTypeToLabel[documentType] || documentType} uploaded`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/shipments", shipmentId, "documents"] });
+      toast({ title: "Document Uploaded", description: "Document has been shared with the shipper" });
+      setUploadingDocType(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+      setUploadingDocType(null);
+    },
+  });
+
+  function handleDocumentUpload(docLabel: string) {
+    const docType = labelToDocumentType[docLabel];
+    if (!docType || !shipmentId) return;
+    setUploadingDocType(docType);
+    uploadMutation.mutate({ documentType: docType });
+  }
+
+  function getUploadedDocument(docLabel: string): ShipmentDocument | undefined {
+    const docType = labelToDocumentType[docLabel];
+    return shipmentDocuments.find(d => d.documentType === docType);
+  }
 
   function openDocumentViewer(docType: string) {
     const image = documentImages[docType];
@@ -521,34 +593,83 @@ export default function TripsPage() {
                             Trip Documents
                           </CardTitle>
                           <CardDescription>
-                            View and manage shipment documents
+                            Upload documents to share with shipper in real-time
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2">
-                            {["LR / Consignment Note", "E-way Bill", "Loading Photos", "Proof of Delivery (POD)"].map((docType, index) => (
-                              <div 
-                                key={index} 
-                                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer"
-                                onClick={() => openDocumentViewer(docType)}
-                                data-testid={`trip-document-${index}`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center">
-                                    <FileText className="h-4 w-4 text-primary" />
+                            {["LR / Consignment Note", "E-way Bill", "Loading Photos", "Proof of Delivery (POD)"].map((docLabel, index) => {
+                              const uploadedDoc = getUploadedDocument(docLabel);
+                              const docType = labelToDocumentType[docLabel];
+                              const isUploading = uploadingDocType === docType && uploadMutation.isPending;
+                              
+                              return (
+                                <div 
+                                  key={index} 
+                                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                                  data-testid={`trip-document-${index}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={`h-8 w-8 rounded flex items-center justify-center ${
+                                      uploadedDoc ? "bg-green-100 dark:bg-green-900/30" : "bg-primary/10"
+                                    }`}>
+                                      {uploadedDoc ? (
+                                        <Check className="h-4 w-4 text-green-600" />
+                                      ) : (
+                                        <FileText className="h-4 w-4 text-primary" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-sm">{docLabel}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {uploadedDoc 
+                                          ? `Uploaded ${uploadedDoc.createdAt ? format(new Date(uploadedDoc.createdAt), "MMM d, h:mm a") : "recently"}`
+                                          : "Not uploaded yet"
+                                        }
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <p className="font-medium text-sm">{docType}</p>
-                                    <p className="text-xs text-muted-foreground">Click to view</p>
+                                  <div className="flex items-center gap-2">
+                                    {uploadedDoc ? (
+                                      <>
+                                        <Badge variant="outline" className="text-green-600 border-green-200 dark:border-green-800">
+                                          Shared
+                                        </Badge>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() => openDocumentViewer(docLabel)}
+                                          data-testid={`button-view-doc-${index}`}
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleDocumentUpload(docLabel)}
+                                        disabled={isUploading || !shipmentId}
+                                        data-testid={`button-upload-doc-${index}`}
+                                      >
+                                        {isUploading ? (
+                                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                        ) : (
+                                          <Upload className="h-4 w-4 mr-1" />
+                                        )}
+                                        Upload
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-muted-foreground">Sample</Badge>
-                                  <Eye className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
+                          {shipmentDocuments.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-4 text-center">
+                              {shipmentDocuments.length} document(s) shared with shipper
+                            </p>
+                          )}
                         </CardContent>
                       </Card>
                     </TabsContent>

@@ -405,7 +405,7 @@ export default function ShipperLoadsPage() {
                     )}
                   </TableCell>
                   <TableCell className="font-medium">
-                    Rs. {parseFloat(load.finalPrice || load.adminPrice || '0').toLocaleString('en-IN')}
+                    Rs. {parseFloat(load.adminFinalPrice || load.finalPrice || '0').toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell>{formatDate(load.pickupDate)}</TableCell>
                   <TableCell>
@@ -515,7 +515,7 @@ export default function ShipperLoadsPage() {
                   </div>
                   <div className="flex items-center gap-1 ml-auto font-medium text-foreground">
                     <DollarSign className="h-3.5 w-3.5" />
-                    <span>Rs. {parseFloat(load.adminPrice || '0').toLocaleString('en-IN')}</span>
+                    <span>Rs. {parseFloat(load.adminFinalPrice || load.finalPrice || '0').toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </CardContent>

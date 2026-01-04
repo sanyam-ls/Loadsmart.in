@@ -61,11 +61,17 @@ const loadFormSchema = z.object({
   pickupCity: z.string().min(2, "Pickup city is required"),
   dropoffAddress: z.string().min(5, "Dropoff address is required"),
   dropoffCity: z.string().min(2, "Dropoff city is required"),
+  receiverName: z.string().min(2, "Receiver name is required"),
+  receiverPhone: z.string().min(10, "Valid receiver phone number is required"),
+  receiverEmail: z.string().email("Valid email is required").optional().or(z.literal("")),
   weight: z.string().min(1, "Weight is required"),
   weightUnit: z.string().default("tons"),
   goodsToBeCarried: z.string().min(2, "Please specify goods to be carried"),
   specialNotes: z.string().optional(),
+  rateType: z.enum(["per_ton", "fixed_price"]).default("per_ton"),
   shipperPricePerTon: z.string().optional(),
+  shipperFixedPrice: z.string().optional(),
+  advancePaymentPercent: z.string().optional(),
   requiredTruckType: z.string().optional(),
   pickupDate: z.string().min(1, "Pickup date is required"),
   deliveryDate: z.string().optional(),
@@ -571,11 +577,17 @@ export default function PostLoadPage() {
       pickupCity: "",
       dropoffAddress: "",
       dropoffCity: "",
+      receiverName: "",
+      receiverPhone: "",
+      receiverEmail: "",
       weight: "",
       weightUnit: "tons",
       goodsToBeCarried: "",
       specialNotes: "",
+      rateType: "per_ton",
       shipperPricePerTon: "",
+      shipperFixedPrice: "",
+      advancePaymentPercent: "",
       requiredTruckType: "",
       pickupDate: "",
       deliveryDate: "",
@@ -629,10 +641,16 @@ export default function PostLoadPage() {
         pickupCity: data.pickupCity,
         dropoffAddress: data.dropoffAddress,
         dropoffCity: data.dropoffCity,
+        receiverName: data.receiverName,
+        receiverPhone: data.receiverPhone,
+        receiverEmail: data.receiverEmail || null,
         weight: data.weight,
         goodsToBeCarried: finalGoodsDescription,
         specialNotes: data.specialNotes || "",
-        shipperPricePerTon: data.shipperPricePerTon || null,
+        rateType: data.rateType,
+        shipperPricePerTon: data.rateType === "per_ton" ? data.shipperPricePerTon || null : null,
+        shipperFixedPrice: data.rateType === "fixed_price" ? data.shipperFixedPrice || null : null,
+        advancePaymentPercent: data.advancePaymentPercent ? parseInt(data.advancePaymentPercent) : null,
         requiredTruckType: truckType,
         pickupDate: data.pickupDate,
         deliveryDate: data.deliveryDate || null,
@@ -929,6 +947,58 @@ export default function PostLoadPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-purple-500" />
+                    Receiver Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="receiverName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Receiver Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John Doe" {...field} data-testid="input-receiver-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="receiverPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Receiver Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+91 98765 43210" {...field} data-testid="input-receiver-phone" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="receiverEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Receiver Email (Optional)</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="receiver@example.com" {...field} data-testid="input-receiver-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
                     <Package className="h-4 w-4" />
                     Cargo Details
                   </CardTitle>
@@ -1038,27 +1108,107 @@ export default function PostLoadPage() {
                     Your Pricing Preference
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="shipperPricePerTon"
+                    name="rateType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price per Ton (Optional)</FormLabel>
+                        <FormLabel>Rate Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-rate-type">
+                              <SelectValue placeholder="Select rate type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="per_ton">Per Tonne Rate</SelectItem>
+                            <SelectItem value="fixed_price">Fixed Price</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-xs">
+                          Choose whether you want to pay per tonne or a fixed price for the entire load
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {form.watch("rateType") === "per_ton" ? (
+                    <FormField
+                      control={form.control}
+                      name="shipperPricePerTon"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price per Tonne (Optional)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rs.</span>
+                              <Input
+                                type="number"
+                                placeholder="Enter your preferred rate per tonne"
+                                className="pl-10"
+                                {...field}
+                                data-testid="input-price-per-ton"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            This helps our team understand your budget expectations
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="shipperFixedPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fixed Price (Optional)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rs.</span>
+                              <Input
+                                type="number"
+                                placeholder="Enter your preferred fixed price"
+                                className="pl-10"
+                                {...field}
+                                data-testid="input-fixed-price"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            Total amount for the entire load
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  <FormField
+                    control={form.control}
+                    name="advancePaymentPercent"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Advance Payment Percentage (Optional)</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rs.</span>
                             <Input
                               type="number"
-                              placeholder="Enter your preferred rate per ton"
-                              className="pl-10"
+                              min="0"
+                              max="100"
+                              placeholder="e.g. 30"
                               {...field}
-                              data-testid="input-price-per-ton"
+                              data-testid="input-advance-percent"
                             />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                           </div>
                         </FormControl>
                         <FormDescription className="text-xs">
-                          This helps our team understand your budget expectations. Final pricing will be determined by our logistics experts.
+                          Percentage of total price you prefer to pay as advance
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

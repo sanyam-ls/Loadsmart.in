@@ -332,6 +332,11 @@ export const loads = pgTable("loads", {
   dropoffLng: decimal("dropoff_lng", { precision: 10, scale: 7 }),
   distance: decimal("distance", { precision: 10, scale: 2 }),
   
+  // Receiver contact details
+  receiverName: text("receiver_name"),
+  receiverPhone: text("receiver_phone"),
+  receiverEmail: text("receiver_email"),
+  
   // Cargo details
   weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
   weightUnit: text("weight_unit").default("MT"), // Metric Tons
@@ -339,6 +344,8 @@ export const loads = pgTable("loads", {
   goodsToBeCarried: text("goods_to_be_carried"), // Type of goods being transported
   specialNotes: text("special_notes"), // Special handling instructions
   shipperPricePerTon: decimal("shipper_price_per_ton", { precision: 10, scale: 2 }), // Price per ton shipper is willing to pay
+  shipperFixedPrice: decimal("shipper_fixed_price", { precision: 12, scale: 2 }), // Fixed price shipper is willing to pay
+  rateType: text("rate_type").default("per_ton"), // per_ton or fixed_price
   materialType: text("material_type"), // Type of goods
   requiredTruckType: text("required_truck_type"),
   
@@ -1432,6 +1439,12 @@ export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, creat
   shipperContactName: z.string().min(1, "Contact name is required"),
   shipperCompanyAddress: z.string().min(1, "Company address is required"),
   shipperPhone: z.string().min(1, "Phone number is required"),
+  receiverName: z.string().optional().nullable(),
+  receiverPhone: z.string().optional().nullable(),
+  receiverEmail: z.string().optional().nullable(),
+  rateType: z.string().optional().nullable(),
+  shipperFixedPrice: z.string().optional().nullable(),
+  advancePaymentPercent: z.number().int().min(0).max(100).optional().nullable(),
 });
 export const insertBidSchema = createInsertSchema(bids).omit({ id: true, createdAt: true });
 export const insertAdminDecisionSchema = createInsertSchema(adminDecisions).omit({ id: true, createdAt: true });

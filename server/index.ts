@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupMarketplaceWebSocket } from "./websocket-marketplace";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { storage } from "./storage";
 import path from "path";
 import fs from "fs";
@@ -76,7 +77,12 @@ app.use((req, res, next) => {
   // Run data migration to fix any missing load numbers or pickup IDs
   await storage.runDataMigration();
   
+  // Note: Object storage routes are registered after main routes
+  // to ensure session middleware is available
   await registerRoutes(httpServer, app);
+  
+  // Register object storage routes (after session middleware)
+  registerObjectStorageRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

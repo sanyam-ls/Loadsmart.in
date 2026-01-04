@@ -253,15 +253,43 @@ export default function TripsPage() {
   const [uploadingDocType, setUploadingDocType] = useState<string | null>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ documentType, fileName, fileSize }: { documentType: string; fileName: string; fileSize: number }) => {
+    mutationFn: async ({ documentType, file }: { documentType: string; file: File }) => {
       if (!shipmentId) throw new Error("No shipment selected");
-      const timestamp = Date.now();
-      const fileExt = fileName.split('.').pop() || 'pdf';
+      
+      // Step 1: Request presigned URL from backend
+      const presignedRes = await fetch("/api/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          size: file.size,
+          contentType: file.type || "application/octet-stream",
+        }),
+      });
+      
+      if (!presignedRes.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+      
+      const { uploadURL, objectPath } = await presignedRes.json();
+      
+      // Step 2: Upload file directly to presigned URL
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+      });
+      
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload file to storage");
+      }
+      
+      // Step 3: Save document metadata to database
       return apiRequest("POST", `/api/shipments/${shipmentId}/documents`, {
         documentType,
-        fileName,
-        fileUrl: `/documents/${shipmentId}/${documentType}-${timestamp}.${fileExt}`,
-        fileSize,
+        fileName: file.name,
+        fileUrl: objectPath,
+        fileSize: file.size,
       });
     },
     onSuccess: () => {
@@ -275,13 +303,11 @@ export default function TripsPage() {
     },
   });
 
-  function handleDocumentUpload(docLabel: string, file?: File) {
+  function handleDocumentUpload(docLabel: string, file: File) {
     const docType = labelToDocumentType[docLabel];
-    if (!docType || !shipmentId) return;
+    if (!docType || !shipmentId || !file) return;
     setUploadingDocType(docType);
-    const fileName = file?.name || `${docType}-${Date.now()}.pdf`;
-    const fileSize = file?.size || 0;
-    uploadMutation.mutate({ documentType: docType, fileName, fileSize });
+    uploadMutation.mutate({ documentType: docType, file });
   }
 
   function getUploadedDocument(docLabel: string): ShipmentDocument | undefined {
@@ -659,7 +685,10 @@ export default function TripsPage() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => handleDocumentUpload(docLabel)}
+                                        onClick={() => {
+                                          setSelectedDocType(labelToDocumentType[docLabel]);
+                                          setUploadDialogOpen(true);
+                                        }}
                                         disabled={isUploading || !shipmentId}
                                         data-testid={`button-upload-doc-${index}`}
                                       >
@@ -1012,8 +1041,7 @@ export default function TripsPage() {
                 if (!shipmentId || !selectedDocType || !selectedFile) return;
                 uploadMutation.mutate({ 
                   documentType: selectedDocType,
-                  fileName: selectedFile.name,
-                  fileSize: selectedFile.size,
+                  file: selectedFile,
                 });
                 setUploadDialogOpen(false);
                 setSelectedFile(null);

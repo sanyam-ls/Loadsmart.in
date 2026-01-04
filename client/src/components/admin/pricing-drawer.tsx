@@ -640,63 +640,117 @@ export function PricingDrawer({
                       </CardContent>
                     </Card>
 
-                    {/* Per-Ton Rate Calculator - Simple Indian Pricing */}
+                    {/* Rate Type Selection */}
                     <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
                       <CardContent className="pt-4 space-y-4">
-                        <div className="flex items-center gap-2">
-                          <Scale className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium">Per Ton Rate Calculator</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Scale className="h-4 w-4 text-blue-600" />
+                            <span className="font-medium">Pricing Method</span>
+                          </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Tonnage (MT)</Label>
-                            <Input
-                              type="number"
-                              value={customTonnage !== null ? customTonnage : loadWeightInTons}
-                              onChange={(e) => {
-                                const newWeight = parseFloat(e.target.value) || 0;
-                                setCustomTonnage(newWeight);
-                              }}
-                              placeholder="Enter tonnage"
-                              className="text-lg font-medium"
-                              data-testid="input-tonnage"
-                            />
-                            {customTonnage === null && (
-                              <p className="text-xs text-muted-foreground">From load: {loadWeightInTons} MT</p>
+                        {/* Rate Type Toggle */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant={!usePerTonRate ? "default" : "outline"}
+                            className="w-full"
+                            onClick={() => {
+                              setUsePerTonRate(false);
+                              setRatePerTon(0);
+                            }}
+                            data-testid="button-rate-type-fixed"
+                          >
+                            <IndianRupee className="h-4 w-4 mr-2" />
+                            Fixed Price
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={usePerTonRate ? "default" : "outline"}
+                            className="w-full"
+                            onClick={() => setUsePerTonRate(true)}
+                            data-testid="button-rate-type-per-ton"
+                          >
+                            <Scale className="h-4 w-4 mr-2" />
+                            Per Tonne Rate
+                          </Button>
+                        </div>
+                        
+                        {/* Per Tonne Rate Calculator - Only shown when usePerTonRate is true */}
+                        {usePerTonRate && (
+                          <div className="space-y-4 pt-2 border-t">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Tonnage (MT)</Label>
+                                <Input
+                                  type="number"
+                                  value={customTonnage !== null ? customTonnage : loadWeightInTons}
+                                  onChange={(e) => {
+                                    const newWeight = parseFloat(e.target.value) || 0;
+                                    setCustomTonnage(newWeight);
+                                  }}
+                                  placeholder="Enter tonnage"
+                                  className="text-lg font-medium"
+                                  data-testid="input-tonnage"
+                                />
+                                {customTonnage === null && (
+                                  <p className="text-xs text-muted-foreground">From load: {loadWeightInTons} MT</p>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Rate Per Tonne (Rs.)</Label>
+                                <Input
+                                  type="number"
+                                  value={ratePerTon || ""}
+                                  onChange={(e) => {
+                                    const rate = parseInt(e.target.value) || 0;
+                                    setRatePerTon(rate);
+                                  }}
+                                  placeholder="e.g. 2000"
+                                  className="text-lg font-medium"
+                                  data-testid="input-rate-per-ton"
+                                />
+                              </div>
+                            </div>
+                            
+                            {ratePerTon > 0 && (
+                              <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <Calculator className="h-4 w-4 text-primary" />
+                                  <span className="text-sm font-medium">Calculated Total</span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-muted-foreground">
+                                    {weightInTons} MT x Rs. {ratePerTon.toLocaleString("en-IN")}
+                                  </p>
+                                  <p className="text-xl font-bold text-primary" data-testid="text-calculated-total">
+                                    {formatRupees(calculatedFromPerTon)}
+                                  </p>
+                                </div>
+                              </div>
                             )}
                           </div>
-                          <div className="space-y-2">
-                            <Label>Rate Per Ton (Rs.)</Label>
-                            <Input
-                              type="number"
-                              value={ratePerTon || ""}
-                              onChange={(e) => {
-                                const rate = parseInt(e.target.value) || 0;
-                                setRatePerTon(rate);
-                                setUsePerTonRate(rate > 0);
-                              }}
-                              placeholder="e.g. 2000"
-                              className="text-lg font-medium"
-                              data-testid="input-rate-per-ton"
-                            />
-                          </div>
-                        </div>
+                        )}
                         
-                        {ratePerTon > 0 && (
-                          <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+                        {/* Fixed Price Input - Only shown when usePerTonRate is false */}
+                        {!usePerTonRate && (
+                          <div className="space-y-2 pt-2 border-t">
+                            <Label>Enter Fixed Price (Rs.)</Label>
                             <div className="flex items-center gap-2">
-                              <Calculator className="h-4 w-4 text-primary" />
-                              <span className="text-sm font-medium">Total Price</span>
+                              <IndianRupee className="h-5 w-5 text-muted-foreground" />
+                              <Input
+                                type="number"
+                                value={grossPrice || ""}
+                                onChange={(e) => setGrossPrice(parseInt(e.target.value) || 0)}
+                                placeholder="e.g. 50000"
+                                className="text-lg font-medium"
+                                data-testid="input-fixed-price"
+                              />
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">
-                                {weightInTons} MT x Rs. {ratePerTon.toLocaleString("en-IN")}
-                              </p>
-                              <p className="text-xl font-bold text-primary" data-testid="text-calculated-total">
-                                {formatRupees(calculatedFromPerTon)}
-                              </p>
-                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              This is the total amount the shipper will pay
+                            </p>
                           </div>
                         )}
                       </CardContent>
@@ -745,21 +799,30 @@ export function PricingDrawer({
 
                     <Separator />
 
-                    {/* Total Price (Shipper pays) */}
+                    {/* Total Price Summary (Shipper pays) */}
                     <Card className={requiresApproval ? "border-amber-500" : "border-green-500"}>
                       <CardContent className="pt-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <IndianRupee className="h-5 w-5" />
                             <span className="font-medium">Total Price</span>
+                            <Badge variant="outline" className="text-xs">
+                              {usePerTonRate ? "Per Tonne" : "Fixed"}
+                            </Badge>
                           </div>
-                          <Input
-                            type="number"
-                            value={grossPrice}
-                            onChange={(e) => setGrossPrice(parseInt(e.target.value) || 0)}
-                            className="w-32 text-right font-bold text-lg"
-                            data-testid="input-gross-price"
-                          />
+                          {usePerTonRate ? (
+                            <span className="text-xl font-bold" data-testid="text-total-price">
+                              {formatRupees(grossPrice)}
+                            </span>
+                          ) : (
+                            <Input
+                              type="number"
+                              value={grossPrice}
+                              onChange={(e) => setGrossPrice(parseInt(e.target.value) || 0)}
+                              className="w-32 text-right font-bold text-lg"
+                              data-testid="input-gross-price"
+                            />
+                          )}
                         </div>
 
                         {priceDeviation !== 0 && (

@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   Package,
@@ -35,59 +36,67 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import type { LucideIcon } from "lucide-react";
 
-const shipperItems = [
-  { title: "Dashboard", url: "/shipper", icon: LayoutDashboard },
-  { title: "Post Load", url: "/shipper/post-load", icon: Plus },
-  { title: "My Loads", url: "/shipper/loads", icon: Package },
-  { title: "OTP Verification", url: "/shipper/otp-queue", icon: Key },
-  { title: "Invoices", url: "/shipper/invoices", icon: FileText },
-  { title: "Track Shipments", url: "/shipper/tracking", icon: Route },
-  { title: "Documents", url: "/shipper/documents", icon: FileText },
+interface NavItem {
+  titleKey: string;
+  url: string;
+  icon: LucideIcon;
+}
+
+const shipperItems: NavItem[] = [
+  { titleKey: "nav.dashboard", url: "/shipper", icon: LayoutDashboard },
+  { titleKey: "nav.postLoad", url: "/shipper/post-load", icon: Plus },
+  { titleKey: "nav.myLoads", url: "/shipper/loads", icon: Package },
+  { titleKey: "nav.otpVerification", url: "/shipper/otp-queue", icon: Key },
+  { titleKey: "nav.invoices", url: "/shipper/invoices", icon: FileText },
+  { titleKey: "nav.tracking", url: "/shipper/tracking", icon: Route },
+  { titleKey: "nav.documents", url: "/shipper/documents", icon: FileText },
 ];
 
-const carrierItems = [
-  { title: "Dashboard", url: "/carrier", icon: LayoutDashboard },
-  { title: "Add Truck", url: "/carrier/add-truck", icon: Plus },
-  { title: "My Fleet", url: "/carrier/fleet", icon: Truck },
-  { title: "Drivers", url: "/carrier/drivers", icon: User },
-  { title: "Available Loads", url: "/carrier/loads", icon: Route },
-  { title: "My Bids", url: "/carrier/bids", icon: Gavel },
-  { title: "My Shipments", url: "/carrier/shipments", icon: Package },
-  { title: "Active Trips", url: "/carrier/trips", icon: MapPin },
-  { title: "Trip History", url: "/carrier/history", icon: History },
-  { title: "Revenue", url: "/carrier/revenue", icon: DollarSign },
-  { title: "Documents", url: "/carrier/documents", icon: FileText },
+const carrierItems: NavItem[] = [
+  { titleKey: "nav.dashboard", url: "/carrier", icon: LayoutDashboard },
+  { titleKey: "fleet.addTruck", url: "/carrier/add-truck", icon: Plus },
+  { titleKey: "nav.myFleet", url: "/carrier/fleet", icon: Truck },
+  { titleKey: "nav.myDrivers", url: "/carrier/drivers", icon: User },
+  { titleKey: "nav.availableLoads", url: "/carrier/loads", icon: Route },
+  { titleKey: "nav.myBids", url: "/carrier/bids", icon: Gavel },
+  { titleKey: "nav.myShipments", url: "/carrier/shipments", icon: Package },
+  { titleKey: "nav.activeTrips", url: "/carrier/trips", icon: MapPin },
+  { titleKey: "nav.tripHistory", url: "/carrier/history", icon: History },
+  { titleKey: "nav.revenue", url: "/carrier/revenue", icon: DollarSign },
+  { titleKey: "nav.documents", url: "/carrier/documents", icon: FileText },
 ];
 
-const soloItems = [
-  { title: "Dashboard", url: "/carrier", icon: LayoutDashboard },
-  { title: "My Truck", url: "/carrier/my-truck", icon: Truck },
-  { title: "My Info", url: "/carrier/my-info", icon: User },
-  { title: "Available Loads", url: "/carrier/loads", icon: Route },
-  { title: "My Bids", url: "/carrier/bids", icon: Gavel },
-  { title: "My Shipments", url: "/carrier/shipments", icon: Package },
-  { title: "Active Trips", url: "/carrier/trips", icon: MapPin },
-  { title: "Trip History", url: "/carrier/history", icon: History },
-  { title: "Revenue", url: "/carrier/revenue", icon: DollarSign },
-  { title: "My Documents", url: "/carrier/my-documents", icon: FileText },
+const soloItems: NavItem[] = [
+  { titleKey: "nav.dashboard", url: "/carrier", icon: LayoutDashboard },
+  { titleKey: "nav.myTruck", url: "/carrier/my-truck", icon: Truck },
+  { titleKey: "nav.myInfo", url: "/carrier/my-info", icon: User },
+  { titleKey: "nav.availableLoads", url: "/carrier/loads", icon: Route },
+  { titleKey: "nav.myBids", url: "/carrier/bids", icon: Gavel },
+  { titleKey: "nav.myShipments", url: "/carrier/shipments", icon: Package },
+  { titleKey: "nav.activeTrips", url: "/carrier/trips", icon: MapPin },
+  { titleKey: "nav.tripHistory", url: "/carrier/history", icon: History },
+  { titleKey: "nav.revenue", url: "/carrier/revenue", icon: DollarSign },
+  { titleKey: "nav.myDocuments", url: "/carrier/my-documents", icon: FileText },
 ];
 
-const adminItems = [
-  { title: "Overview", url: "/admin", icon: LayoutDashboard },
-  { title: "Load Queue", url: "/admin/queue", icon: ClipboardList },
-  { title: "Bids & Negotiations", url: "/admin/negotiations", icon: Gavel },
-  { title: "Invoices", url: "/admin/invoices", icon: FileText },
-  { title: "Users", url: "/admin/users", icon: Users },
-  { title: "All Loads", url: "/admin/loads", icon: Package },
-  { title: "Carriers", url: "/admin/carriers", icon: Truck },
-  { title: "Verification", url: "/admin/verification", icon: Shield },
-  { title: "Reports", url: "/admin/reports", icon: BarChart3 },
+const adminItems: NavItem[] = [
+  { titleKey: "nav.overview", url: "/admin", icon: LayoutDashboard },
+  { titleKey: "nav.loadQueue", url: "/admin/queue", icon: ClipboardList },
+  { titleKey: "nav.bidsNegotiations", url: "/admin/negotiations", icon: Gavel },
+  { titleKey: "nav.invoices", url: "/admin/invoices", icon: FileText },
+  { titleKey: "nav.users", url: "/admin/users", icon: Users },
+  { titleKey: "nav.allLoads", url: "/admin/loads", icon: Package },
+  { titleKey: "nav.carriers", url: "/admin/carriers", icon: Truck },
+  { titleKey: "nav.verification", url: "/admin/verification", icon: Shield },
+  { titleKey: "nav.reports", url: "/admin/reports", icon: BarChart3 },
 ];
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, carrierType } = useAuth();
+  const { t } = useTranslation();
 
   // Detect solo carrier from carrierType
   const isSoloCarrier = user?.role === "carrier" && carrierType === "solo";
@@ -108,11 +117,11 @@ export function AppSidebar() {
   const getRoleLabel = () => {
     switch (user?.role) {
       case "shipper":
-        return "Shipper Portal";
+        return t("roles.shipperPortal");
       case "carrier":
-        return isSoloCarrier ? "Solo Driver" : "Carrier Portal";
+        return isSoloCarrier ? t("roles.soloDriver") : t("roles.carrierPortal");
       case "admin":
-        return "Admin Console";
+        return t("roles.adminConsole");
       default:
         return "Portal";
     }
@@ -148,18 +157,19 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("sections.navigation")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
                 const isActive = location === item.url || 
                   (item.url !== "/" && location.startsWith(item.url) && item.url.split("/").length > 2);
+                const title = t(item.titleKey);
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.titleKey}>
                     <SidebarMenuButton asChild data-active={isActive}>
-                      <Link href={item.url} data-testid={`link-nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <Link href={item.url} data-testid={`link-nav-${item.titleKey.replace(/\./g, "-")}`}>
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span>{title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -169,14 +179,14 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("common.settings")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild data-active={location === "/settings"}>
                   <Link href="/settings" data-testid="link-nav-settings">
                     <Settings className="h-4 w-4" />
-                    <span>Settings</span>
+                    <span>{t("common.settings")}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

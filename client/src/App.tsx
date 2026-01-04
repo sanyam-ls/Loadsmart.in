@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationPanel } from "@/components/notification-panel";
 import { GlobalSearch } from "@/components/global-search";
 import { AIConcierge } from "@/components/ai-concierge";
@@ -110,6 +111,7 @@ function AppContent() {
             </div>
             <div className="flex items-center gap-2">
               <NotificationPanel />
+              <LanguageSwitcher />
               <ThemeToggle />
             </div>
           </header>

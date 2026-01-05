@@ -1976,7 +1976,7 @@ export async function registerRoutes(
 
       // Update load with admin pricing
       // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
-      // Admin's carrier advance is separate and doesn't affect shipper invoice
+      // Admin's carrier advance is separate (carrierAdvancePercent) for marketplace display
       // IMPORTANT: finalPrice = carrier payout, adminFinalPrice = shipper's gross price
       const updatedLoad = await storage.updateLoad(load_id, {
         adminSuggestedPrice: suggested_price || final_price,
@@ -1987,6 +1987,7 @@ export async function registerRoutes(
         adminDecisionId: decision.id,
         invitedCarrierIds: invite_carrier_ids || null,
         allowCounterBids: allow_counter_bids || false,
+        carrierAdvancePercent: advance_payment_percent || 0,
         status: newStatus,
         postedAt: new Date(),
         adminReferenceNumber,
@@ -3316,6 +3317,7 @@ export async function registerRoutes(
       // Update load to 'priced' status first (canonical state machine)
       // This will transition to 'invoice_sent' after invoice is generated
       // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
+      // carrierAdvancePercent is the admin-set advance for carrier marketplace display
       // IMPORTANT: finalPrice = carrier payout (after platform margin deduction)
       // adminFinalPrice = shipper's gross price (for invoicing)
       await storage.updateLoad(pricing.loadId, {
@@ -3327,6 +3329,7 @@ export async function registerRoutes(
         adminId: user.id,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || [],
+        carrierAdvancePercent: advance_payment_percent || 0,
         priceLockedAt: new Date(),
         priceLockedBy: user.id,
         statusChangedBy: user.id,
@@ -3361,6 +3364,7 @@ export async function registerRoutes(
       // CRITICAL FIX: Set status to 'posted_to_carriers' so carriers can see the load immediately
       // This ensures the success message in the UI is accurate - no fake success states
       // IMPORTANT: finalPrice = carrier payout, adminFinalPrice = shipper's gross price
+      // carrierAdvancePercent = admin-set advance for carrier marketplace
       await storage.updateLoad(load.id, {
         status: 'posted_to_carriers',
         previousStatus: 'priced',
@@ -3370,6 +3374,7 @@ export async function registerRoutes(
         adminId: user.id,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || [],
+        carrierAdvancePercent: advance_payment_percent || 0,
         postedAt: new Date(),
         statusChangedBy: user.id,
         statusChangedAt: new Date(),
@@ -3460,6 +3465,7 @@ export async function registerRoutes(
 
       // Set to 'posted_to_carriers' status - carriers can see the load immediately
       // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
+      // carrierAdvancePercent = admin-set advance for carrier marketplace
       // IMPORTANT: finalPrice = carrier payout, adminFinalPrice = shipper's gross price
       await storage.updateLoad(pricing.loadId, {
         status: 'posted_to_carriers',
@@ -3470,6 +3476,7 @@ export async function registerRoutes(
         adminId: pricing.adminId,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || pricing.invitedCarrierIds || [],
+        carrierAdvancePercent: advance_payment_percent || 0,
         priceLockedAt: new Date(),
         priceLockedBy: user.id,
         postedAt: new Date(),

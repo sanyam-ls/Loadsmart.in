@@ -57,7 +57,7 @@ interface CarrierLoad {
   deliveryDate?: string | null;
   shipperLoadNumber?: number | null;
   adminReferenceNumber?: number | null;
-  advancePaymentPercent?: number | null;
+  carrierAdvancePercent?: number | null;
   cargoDescription?: string | null;
   postedAt?: string | null;
 }
@@ -336,7 +336,7 @@ export default function CarrierLoadsPage() {
     postedAt: string | null;
     pickupDate: string | null;
     deliveryDate: string | null;
-    advancePaymentPercent: number | null;
+    carrierAdvancePercent: number | null;
     cargoDescription: string | null;
     shipperLoadNumber: number | null;
     adminReferenceNumber: number | null;
@@ -367,7 +367,7 @@ export default function CarrierLoadsPage() {
       isSimulated: false,
       pickupDate: load.pickupDate,
       deliveryDate: load.deliveryDate,
-      advancePaymentPercent: load.advancePaymentPercent,
+      carrierAdvancePercent: load.carrierAdvancePercent,
       cargoDescription: load.cargoDescription,
       postedAt: load.postedAt,
       shipperLoadNumber: load.shipperLoadNumber,
@@ -1065,32 +1065,32 @@ export default function CarrierLoadsPage() {
                     <span className="text-xl font-bold text-primary">{formatCurrency(getCarrierPrice(detailLoad))}</span>
                   </div>
                   
-                  {(detailLoad.advancePaymentPercent !== null && detailLoad.advancePaymentPercent !== undefined && detailLoad.advancePaymentPercent > 0) && (
+                  {(detailLoad.carrierAdvancePercent !== null && detailLoad.carrierAdvancePercent !== undefined && detailLoad.carrierAdvancePercent > 0) && (
                     <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg space-y-2">
                       <div className="flex items-center gap-2">
                         <Star className="h-4 w-4 text-green-600" />
-                        <span className="font-medium text-green-700 dark:text-green-400">Advance Payment Required</span>
+                        <span className="font-medium text-green-700 dark:text-green-400">Advance Payment Available</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Advance Percentage:</span>
-                        <span className="font-semibold">{detailLoad.advancePaymentPercent}%</span>
+                        <span className="font-semibold">{detailLoad.carrierAdvancePercent}%</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Advance Amount:</span>
                         <span className="font-bold text-green-600 dark:text-green-400">
-                          {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (detailLoad.advancePaymentPercent / 100)))}
+                          {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (detailLoad.carrierAdvancePercent / 100)))}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Balance on Delivery:</span>
                         <span className="font-medium">
-                          {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (1 - detailLoad.advancePaymentPercent / 100)))}
+                          {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (1 - detailLoad.carrierAdvancePercent / 100)))}
                         </span>
                       </div>
                     </div>
                   )}
                   
-                  {(!detailLoad.advancePaymentPercent || detailLoad.advancePaymentPercent === 0) && (
+                  {(!detailLoad.carrierAdvancePercent || detailLoad.carrierAdvancePercent === 0) && (
                     <div className="p-3 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">No advance payment required for this load.</p>
                     </div>

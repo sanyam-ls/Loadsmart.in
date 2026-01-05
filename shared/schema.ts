@@ -354,7 +354,8 @@ export const loads = pgTable("loads", {
   finalPrice: decimal("final_price", { precision: 12, scale: 2 }),
   adminSuggestedPrice: decimal("admin_suggested_price", { precision: 12, scale: 2 }),
   adminFinalPrice: decimal("admin_final_price", { precision: 12, scale: 2 }),
-  advancePaymentPercent: integer("advance_payment_percent"), // Percentage of total price required as advance
+  advancePaymentPercent: integer("advance_payment_percent"), // Shipper's advance preference for invoicing
+  carrierAdvancePercent: integer("carrier_advance_percent"), // Admin-set advance percentage for carrier marketplace
   
   // Price lock fields (per specification)
   priceLocked: boolean("price_locked").default(false),

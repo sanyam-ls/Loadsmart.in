@@ -1969,6 +1969,8 @@ export async function registerRoutes(
       }
 
       // Update load with admin pricing
+      // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
+      // Admin's carrier advance is separate and doesn't affect shipper invoice
       const updatedLoad = await storage.updateLoad(load_id, {
         adminSuggestedPrice: suggested_price || final_price,
         adminFinalPrice: final_price,
@@ -1977,7 +1979,6 @@ export async function registerRoutes(
         adminDecisionId: decision.id,
         invitedCarrierIds: invite_carrier_ids || null,
         allowCounterBids: allow_counter_bids || false,
-        advancePaymentPercent: advance_payment_percent ?? null,
         status: newStatus,
         postedAt: new Date(),
         adminReferenceNumber,
@@ -3306,6 +3307,7 @@ export async function registerRoutes(
 
       // Update load to 'priced' status first (canonical state machine)
       // This will transition to 'invoice_sent' after invoice is generated
+      // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
       await storage.updateLoad(pricing.loadId, {
         status: 'priced',
         previousStatus: load.status,
@@ -3314,7 +3316,6 @@ export async function registerRoutes(
         adminId: user.id,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || [],
-        advancePaymentPercent: advance_payment_percent ?? null,
         priceLockedAt: new Date(),
         priceLockedBy: user.id,
         statusChangedBy: user.id,
@@ -3440,6 +3441,7 @@ export async function registerRoutes(
       const mode = post_mode || pricing.postMode || 'open';
 
       // Set to 'posted_to_carriers' status - carriers can see the load immediately
+      // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
       await storage.updateLoad(pricing.loadId, {
         status: 'posted_to_carriers',
         previousStatus: load.status,
@@ -3448,7 +3450,6 @@ export async function registerRoutes(
         adminId: pricing.adminId,
         allowCounterBids: allow_counter_bids !== false,
         invitedCarrierIds: invite_carrier_ids || pricing.invitedCarrierIds || [],
-        advancePaymentPercent: advance_payment_percent ?? null,
         priceLockedAt: new Date(),
         priceLockedBy: user.id,
         postedAt: new Date(),

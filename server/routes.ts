@@ -4392,11 +4392,11 @@ export async function registerRoutes(
       const existingInvoice = await storage.getInvoiceByLoad(load_id);
       let invoice;
       
-      // Calculate GST (18%) on the subtotal
+      // No GST - direct pricing as agreed
       const subtotal = parseFloat(amount);
-      const gstPercent = load.gstApplicable !== false ? 18 : 0;
-      const taxAmount = Math.round(subtotal * (gstPercent / 100));
-      const totalAmount = subtotal + taxAmount;
+      const gstPercent = 0;
+      const taxAmount = 0;
+      const totalAmount = subtotal;
       
       // Calculate advance payment from load
       const advancePercent = load.advancePaymentPercent || 0;

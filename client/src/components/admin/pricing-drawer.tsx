@@ -756,51 +756,10 @@ export function PricingDrawer({
                       </CardContent>
                     </Card>
 
-                    {/* Adjustments */}
-                    {!usePerTonRate && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label>Markup Percentage</Label>
-                          <span className="text-sm font-medium">{markupPercent}%</span>
-                        </div>
-                        <Slider
-                          value={[markupPercent]}
-                          onValueChange={([val]) => setMarkupPercent(val)}
-                          min={-20}
-                          max={30}
-                          step={1}
-                          data-testid="slider-markup"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Fixed Fee (Rs.)</Label>
-                          <Input
-                            type="number"
-                            value={fixedFee}
-                            onChange={(e) => setFixedFee(parseInt(e.target.value) || 0)}
-                            data-testid="input-fixed-fee"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Discount (Rs.)</Label>
-                          <Input
-                            type="number"
-                            value={discountAmount}
-                            onChange={(e) => setDiscountAmount(parseInt(e.target.value) || 0)}
-                            data-testid="input-discount"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    )}
-
                     <Separator />
 
                     {/* Total Price Summary (Shipper pays) */}
-                    <Card className={requiresApproval ? "border-amber-500" : "border-green-500"}>
+                    <Card className="border-green-500">
                       <CardContent className="pt-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -824,26 +783,6 @@ export function PricingDrawer({
                             />
                           )}
                         </div>
-
-                        {priceDeviation !== 0 && (
-                          <div className="flex items-center gap-2 text-sm">
-                            {priceDeviation > 0 ? (
-                              <TrendingUp className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <TrendingUp className="h-4 w-4 text-red-500 rotate-180" />
-                            )}
-                            <span className={priceDeviation > 0 ? "text-green-600" : "text-red-600"}>
-                              {priceDeviation > 0 ? "+" : ""}
-                              {priceDeviation.toFixed(1)}% from suggested
-                            </span>
-                            {requiresApproval && (
-                              <Badge variant="outline" className="text-amber-600 border-amber-500">
-                                <AlertTriangle className="h-3 w-3 mr-1" />
-                                Needs Approval
-                              </Badge>
-                            )}
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
 

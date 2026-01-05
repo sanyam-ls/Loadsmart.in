@@ -384,7 +384,7 @@ export function PricingDrawer({
       setTimeout(() => {
         toast({
           title: "Load Posted Successfully",
-          description: `Load has been priced at ${formatRupees(finalPrice)} and posted to carriers.`,
+          description: `Load has been priced at ${formatRupees(grossPrice)} and posted to carriers.`,
         });
         onSuccess?.();
         onOpenChange(false);
@@ -398,7 +398,8 @@ export function PricingDrawer({
         load_id: load.id,
         suggested_price: suggestedPrice,
         gross_price: grossPrice,
-        final_price: finalPrice, // Carrier payout (after margin)
+        final_price: grossPrice, // Shipper total (for invoice)
+        carrier_payout: finalPrice, // Carrier payout (after margin)
         markup_percent: markupPercent,
         fixed_fee: fixedFee,
         discount_amount: discountAmount,
@@ -416,7 +417,8 @@ export function PricingDrawer({
 
       const response = await apiRequest("POST", "/api/admin/pricing/lock", {
         pricing_id: currentPricingId,
-        final_price: finalPrice,
+        final_price: grossPrice, // Shipper total (for invoice)
+        carrier_payout: finalPrice, // Carrier payout (after margin)
         post_mode: postMode,
         invite_carrier_ids: postMode === "invite" ? selectedCarriers : [],
         allow_counter_bids: allowCounterBids,
@@ -427,7 +429,7 @@ export function PricingDrawer({
 
       toast({
         title: "Load Posted Successfully",
-        description: `Load has been priced at ${formatRupees(finalPrice)} and posted to carriers.`,
+        description: `Load has been priced at ${formatRupees(grossPrice)} and posted to carriers.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
       queryClient.invalidateQueries({ queryKey: ["/api/loads"] });

@@ -6112,9 +6112,7 @@ export async function registerRoutes(
       }
 
       const finalPrice = parseFloat(load.adminFinalPrice || load.finalPrice || load.estimatedPrice || '0');
-      const taxRate = 0.18;
-      const taxAmount = finalPrice * taxRate;
-      const totalAmount = finalPrice + taxAmount;
+      const totalAmount = finalPrice; // No GST - direct price
 
       // Calculate advance payment from load
       const advancePercent = load.advancePaymentPercent || 0;
@@ -6128,8 +6126,8 @@ export async function registerRoutes(
         shipperId: load.shipperId,
         adminId: user.id,
         subtotal: String(finalPrice),
-        taxPercent: '18',
-        taxAmount: String(Math.round(taxAmount)),
+        taxPercent: '0',
+        taxAmount: '0',
         totalAmount: String(Math.round(totalAmount)),
         advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
         advancePaymentAmount: advanceAmount,

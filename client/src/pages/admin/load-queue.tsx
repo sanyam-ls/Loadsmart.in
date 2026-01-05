@@ -1394,7 +1394,7 @@ export default function LoadQueuePage() {
                     )}
                     {detailsLoad.adminFinalPrice && (
                       <div>
-                        <Label className="text-muted-foreground text-xs">Invoice Total (incl. GST)</Label>
+                        <Label className="text-muted-foreground text-xs">Invoice Total</Label>
                         <p className="font-medium text-primary">
                           Rs. {Number(detailsLoad.adminFinalPrice).toLocaleString('en-IN')}
                         </p>

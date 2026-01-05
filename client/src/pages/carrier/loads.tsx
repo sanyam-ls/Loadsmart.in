@@ -338,6 +338,8 @@ export default function CarrierLoadsPage() {
     deliveryDate: string | null;
     advancePaymentPercent: number | null;
     cargoDescription: string | null;
+    shipperLoadNumber: number | null;
+    adminReferenceNumber: number | null;
   }
 
   const { data: rawApiLoads = [], isLoading, error } = useQuery<ApiLoad[]>({
@@ -368,6 +370,8 @@ export default function CarrierLoadsPage() {
       advancePaymentPercent: load.advancePaymentPercent,
       cargoDescription: load.cargoDescription,
       postedAt: load.postedAt,
+      shipperLoadNumber: load.shipperLoadNumber,
+      adminReferenceNumber: load.adminReferenceNumber,
     }));
   }, [rawApiLoads]);
 

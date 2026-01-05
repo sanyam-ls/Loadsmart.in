@@ -1968,12 +1968,20 @@ export async function registerRoutes(
         adminReferenceNumber = await storage.getNextAdminReferenceNumber(load.shipperId);
       }
 
+      // Calculate carrier payout (price after platform margin deduction)
+      const finalPriceNum = parseFloat(final_price);
+      const platformMarginPercent = parseFloat(req.body.platform_margin_percent || '10');
+      const platformMargin = Math.round(finalPriceNum * (platformMarginPercent / 100));
+      const payoutEstimate = Math.round(finalPriceNum - platformMargin);
+
       // Update load with admin pricing
       // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
       // Admin's carrier advance is separate and doesn't affect shipper invoice
+      // IMPORTANT: finalPrice = carrier payout, adminFinalPrice = shipper's gross price
       const updatedLoad = await storage.updateLoad(load_id, {
         adminSuggestedPrice: suggested_price || final_price,
         adminFinalPrice: final_price,
+        finalPrice: payoutEstimate.toString(),
         adminPostMode: post_mode,
         adminId: user.id,
         adminDecisionId: decision.id,
@@ -3308,10 +3316,13 @@ export async function registerRoutes(
       // Update load to 'priced' status first (canonical state machine)
       // This will transition to 'invoice_sent' after invoice is generated
       // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
+      // IMPORTANT: finalPrice = carrier payout (after platform margin deduction)
+      // adminFinalPrice = shipper's gross price (for invoicing)
       await storage.updateLoad(pricing.loadId, {
         status: 'priced',
         previousStatus: load.status,
         adminFinalPrice: finalPrice.toString(),
+        finalPrice: payoutEstimate.toString(),
         adminPostMode: post_mode,
         adminId: user.id,
         allowCounterBids: allow_counter_bids !== false,
@@ -3349,10 +3360,12 @@ export async function registerRoutes(
 
       // CRITICAL FIX: Set status to 'posted_to_carriers' so carriers can see the load immediately
       // This ensures the success message in the UI is accurate - no fake success states
+      // IMPORTANT: finalPrice = carrier payout, adminFinalPrice = shipper's gross price
       await storage.updateLoad(load.id, {
         status: 'posted_to_carriers',
         previousStatus: 'priced',
         adminFinalPrice: finalPrice.toString(),
+        finalPrice: payoutEstimate.toString(),
         adminPostMode: post_mode,
         adminId: user.id,
         allowCounterBids: allow_counter_bids !== false,
@@ -3386,12 +3399,12 @@ export async function registerRoutes(
         }
       }
 
-      // Broadcast real-time update to carrier clients
+      // Broadcast real-time update to carrier clients - send carrier payout price
       broadcastLoadPosted({
         id: load.id,
         pickupCity: load.pickupCity,
         dropoffCity: load.dropoffCity,
-        adminFinalPrice: finalPrice.toString(),
+        adminFinalPrice: payoutEstimate.toString(),
         requiredTruckType: load.requiredTruckType,
         status: 'posted_to_carriers',
       });
@@ -3439,13 +3452,20 @@ export async function registerRoutes(
 
       const finalPrice = parseFloat(pricing.finalPrice?.toString() || '0');
       const mode = post_mode || pricing.postMode || 'open';
+      
+      // Calculate carrier payout from stored pricing
+      const platformMarginPercent = parseFloat(pricing.platformMarginPercent?.toString() || '10');
+      const platformMargin = Math.round(finalPrice * (platformMarginPercent / 100));
+      const payoutEstimate = Math.round(finalPrice - platformMargin);
 
       // Set to 'posted_to_carriers' status - carriers can see the load immediately
       // NOTE: Do NOT overwrite advancePaymentPercent - this is the shipper's preference for invoicing
+      // IMPORTANT: finalPrice = carrier payout, adminFinalPrice = shipper's gross price
       await storage.updateLoad(pricing.loadId, {
         status: 'posted_to_carriers',
         previousStatus: load.status,
         adminFinalPrice: finalPrice.toString(),
+        finalPrice: payoutEstimate.toString(),
         adminPostMode: mode,
         adminId: pricing.adminId,
         allowCounterBids: allow_counter_bids !== false,

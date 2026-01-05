@@ -44,6 +44,7 @@ interface CarrierLoad {
   weight: string | null;
   estimatedDistance: number | null;
   adminFinalPrice: string | null;
+  finalPrice: string | null;
   allowCounterBids: boolean | null;
   shipperName: string | null;
   bidCount: number;
@@ -59,6 +60,11 @@ interface CarrierLoad {
   advancePaymentPercent?: number | null;
   cargoDescription?: string | null;
   postedAt?: string | null;
+}
+
+// Helper to get carrier display price (finalPrice = carrier payout, fallback to adminFinalPrice)
+function getCarrierPrice(load: CarrierLoad): number {
+  return parseFloat(load.finalPrice || load.adminFinalPrice || "0");
 }
 
 // Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
@@ -103,6 +109,7 @@ const simulatedLoads: CarrierLoad[] = [
     weight: "18",
     estimatedDistance: 1420,
     adminFinalPrice: "125000",
+    finalPrice: "112500",
     allowCounterBids: true,
     shipperName: "Reliance Industries",
     bidCount: 3,
@@ -120,6 +127,7 @@ const simulatedLoads: CarrierLoad[] = [
     weight: "12",
     estimatedDistance: 350,
     adminFinalPrice: "45000",
+    finalPrice: "40500",
     allowCounterBids: false,
     shipperName: "Tata Motors",
     bidCount: 5,
@@ -137,6 +145,7 @@ const simulatedLoads: CarrierLoad[] = [
     weight: "22",
     estimatedDistance: 680,
     adminFinalPrice: "78000",
+    finalPrice: "70200",
     allowCounterBids: true,
     shipperName: "Adani Group",
     bidCount: 2,
@@ -154,6 +163,7 @@ const simulatedLoads: CarrierLoad[] = [
     weight: "20",
     estimatedDistance: 980,
     adminFinalPrice: "92000",
+    finalPrice: "82800",
     allowCounterBids: false,
     shipperName: "ITC Limited",
     bidCount: 4,
@@ -171,6 +181,7 @@ const simulatedLoads: CarrierLoad[] = [
     weight: "15",
     estimatedDistance: 560,
     adminFinalPrice: "62000",
+    finalPrice: "55800",
     allowCounterBids: true,
     shipperName: "Mahindra Logistics",
     bidCount: 6,
@@ -188,6 +199,7 @@ const simulatedLoads: CarrierLoad[] = [
     weight: "25",
     estimatedDistance: 310,
     adminFinalPrice: "38000",
+    finalPrice: "34200",
     allowCounterBids: false,
     shipperName: "Hero MotoCorp",
     bidCount: 8,
@@ -205,6 +217,7 @@ const simulatedLoads: CarrierLoad[] = [
     weight: "28",
     estimatedDistance: 190,
     adminFinalPrice: "32000",
+    finalPrice: "28800",
     allowCounterBids: true,
     shipperName: "Asian Paints",
     bidCount: 1,
@@ -222,6 +235,7 @@ const simulatedLoads: CarrierLoad[] = [
     weight: "16",
     estimatedDistance: 350,
     adminFinalPrice: "48000",
+    finalPrice: "43200",
     allowCounterBids: false,
     shipperName: "Ultratech Cement",
     bidCount: 3,
@@ -311,6 +325,7 @@ export default function CarrierLoadsPage() {
     weight: string | null;
     distance: number | null;
     adminFinalPrice: string | null;
+    finalPrice: string | null;
     allowCounterBids: boolean | null;
     shipperName: string | null;
     bidCount: number;
@@ -339,6 +354,7 @@ export default function CarrierLoadsPage() {
       weight: load.weight,
       estimatedDistance: load.distance || estimateDistanceFromCities(load.pickupCity, load.dropoffCity),
       adminFinalPrice: load.adminFinalPrice,
+      finalPrice: load.finalPrice,
       allowCounterBids: load.allowCounterBids,
       shipperName: load.shipperName,
       bidCount: load.bidCount || 0,
@@ -404,8 +420,7 @@ export default function CarrierLoadsPage() {
         filtered.sort((a, b) => b.matchScore - a.matchScore);
         break;
       case "rate":
-        const getRate = (l: typeof filtered[0]) => parseFloat(l.adminFinalPrice || "0");
-        filtered.sort((a, b) => getRate(b) - getRate(a));
+        filtered.sort((a, b) => getCarrierPrice(b) - getCarrierPrice(a));
         break;
       case "distance":
         filtered.sort((a, b) => (a.estimatedDistance || 0) - (b.estimatedDistance || 0));
@@ -427,7 +442,7 @@ export default function CarrierLoadsPage() {
     const total = loads.length;
     const highMatch = loadsWithScores.filter(l => l.matchScore >= 85).length;
     const avgRate = loads.length > 0
-      ? Math.round(loads.reduce((sum, l) => sum + parseFloat(l.adminFinalPrice || "0"), 0) / loads.length)
+      ? Math.round(loads.reduce((sum, l) => sum + getCarrierPrice(l), 0) / loads.length)
       : 0;
     const fixedPriceLoads = loads.filter(l => l.priceFixed).length;
     
@@ -436,7 +451,7 @@ export default function CarrierLoadsPage() {
 
   const handleBid = (load: CarrierLoad & { matchScore: number }) => {
     setSelectedLoad(load);
-    const price = parseFloat(load.adminFinalPrice || "0");
+    const price = getCarrierPrice(load);
     setBidAmount(price.toString());
     setBidDialogOpen(true);
   };
@@ -479,7 +494,7 @@ export default function CarrierLoadsPage() {
 
   const handleAccept = async () => {
     if (!selectedLoad) return;
-    const price = parseFloat(selectedLoad.adminFinalPrice || "0");
+    const price = getCarrierPrice(selectedLoad);
     
     if (selectedLoad.isSimulated) {
       handleSimulatedAccept(selectedLoad, price);
@@ -513,8 +528,8 @@ export default function CarrierLoadsPage() {
     if (!bidAmount || !selectedLoad) return;
     
     const amount = parseInt(bidAmount);
-    const adminPrice = parseFloat(selectedLoad.adminFinalPrice || "0");
-    const isCounterBid = !selectedLoad.priceFixed && amount !== adminPrice;
+    const carrierPrice = getCarrierPrice(selectedLoad);
+    const isCounterBid = !selectedLoad.priceFixed && amount !== carrierPrice;
     
     if (selectedLoad.isSimulated) {
       handleSimulatedBid(selectedLoad, amount, isCounterBid);
@@ -674,7 +689,7 @@ export default function CarrierLoadsPage() {
                       <span className="font-medium truncate">{load.destination}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</span>
+                      <span className="text-lg font-bold">{formatCurrency(getCarrierPrice(load))}</span>
                       <Button 
                         size="sm" 
                         onClick={() => handleBid(load)} 
@@ -831,7 +846,7 @@ export default function CarrierLoadsPage() {
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div>
                     <p className="text-xs text-muted-foreground">Total Price</p>
-                    <p className="text-xl font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</p>
+                    <p className="text-xl font-bold">{formatCurrency(getCarrierPrice(load))}</p>
                   </div>
                   <Button 
                     onClick={(e) => {
@@ -914,7 +929,7 @@ export default function CarrierLoadsPage() {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">Rate</p>
-                          <p className="text-xl font-bold">{formatCurrency(parseFloat(load.adminFinalPrice || "0"))}</p>
+                          <p className="text-xl font-bold">{formatCurrency(getCarrierPrice(load))}</p>
                         </div>
                         <Button 
                           onClick={() => handleBid(load)} 
@@ -1043,7 +1058,7 @@ export default function CarrierLoadsPage() {
                 <CardContent className="pt-4 space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Total Price</span>
-                    <span className="text-xl font-bold text-primary">{formatCurrency(parseFloat(detailLoad.adminFinalPrice || "0"))}</span>
+                    <span className="text-xl font-bold text-primary">{formatCurrency(getCarrierPrice(detailLoad))}</span>
                   </div>
                   
                   {(detailLoad.advancePaymentPercent !== null && detailLoad.advancePaymentPercent !== undefined && detailLoad.advancePaymentPercent > 0) && (
@@ -1059,13 +1074,13 @@ export default function CarrierLoadsPage() {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Advance Amount:</span>
                         <span className="font-bold text-green-600 dark:text-green-400">
-                          {formatCurrency(Math.round(parseFloat(detailLoad.adminFinalPrice || "0") * (detailLoad.advancePaymentPercent / 100)))}
+                          {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (detailLoad.advancePaymentPercent / 100)))}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Balance on Delivery:</span>
                         <span className="font-medium">
-                          {formatCurrency(Math.round(parseFloat(detailLoad.adminFinalPrice || "0") * (1 - detailLoad.advancePaymentPercent / 100)))}
+                          {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (1 - detailLoad.advancePaymentPercent / 100)))}
                         </span>
                       </div>
                     </div>
@@ -1163,7 +1178,7 @@ export default function CarrierLoadsPage() {
                   
                   <div className="flex justify-between items-center pt-2 border-t">
                     <span className="text-muted-foreground">Total Price</span>
-                    <span className="text-lg font-bold">{formatCurrency(parseFloat(selectedLoad.adminFinalPrice || "0"))}</span>
+                    <span className="text-lg font-bold">{formatCurrency(getCarrierPrice(selectedLoad))}</span>
                   </div>
                 </CardContent>
               </Card>

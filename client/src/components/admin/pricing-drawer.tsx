@@ -167,9 +167,11 @@ export function PricingDrawer({
   // Determine if load is in "Carrier Finalized" state (awarded) - ready for invoice
   const isCarrierFinalized = load?.status === "awarded";
   
-  // Get the bid price for invoice
+  // Get the invoice price for shipper - use adminFinalPrice (shipper's gross price)
+  // NOT finalPrice which is carrier payout after platform margin deduction
   const bidPrice = useMemo(() => {
-    const price = load?.finalPrice || load?.adminFinalPrice || load?.adminPrice;
+    // For shipper invoices, use adminFinalPrice (shipper's gross price)
+    const price = load?.adminFinalPrice || load?.adminPrice;
     if (price) {
       return typeof price === 'string' ? parseFloat(price) : price;
     }

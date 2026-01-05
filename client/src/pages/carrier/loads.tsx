@@ -70,7 +70,7 @@ function getCarrierPrice(load: CarrierLoad): number {
 // Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
 function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
   if (load.adminReferenceNumber) {
-    return `LD-${load.adminReferenceNumber}`;
+    return `LD-${String(load.adminReferenceNumber).padStart(3, '0')}`;
   }
   if (load.shipperLoadNumber) {
     return `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`;

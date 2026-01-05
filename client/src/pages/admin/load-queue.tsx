@@ -583,7 +583,8 @@ export default function LoadQueuePage() {
             <CardContent className="pt-0">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {invoiceLoads.map((load) => {
-                  const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
+                  // For invoices, use adminFinalPrice (shipper total) first, not finalPrice (carrier negotiated)
+                  const price = load.adminFinalPrice || load.shipperFixedPrice || load.adminPrice;
                   const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
                   
                   return (
@@ -678,7 +679,8 @@ export default function LoadQueuePage() {
             <CardContent className="pt-0">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {sentLoads.map((load) => {
-                  const price = load.finalPrice || load.adminFinalPrice || load.adminPrice;
+                  // For invoices, use adminFinalPrice (shipper total) first, not finalPrice (carrier negotiated)
+                  const price = load.adminFinalPrice || load.shipperFixedPrice || load.adminPrice;
                   const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
                   
                   return (

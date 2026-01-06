@@ -129,32 +129,57 @@ function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
               <Separator className="my-2" />
               <div className="space-y-3 py-2">
                 {isSoloDriver ? (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Solo Driver Details</p>
-                    <div className="grid grid-cols-1 gap-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Name:</span>
-                        <span className="font-medium">{(request.carrier as any)?.driverName || request.carrier?.username || "—"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Phone:</span>
-                        <span className="font-medium">{request.carrier?.phone || "—"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Location:</span>
-                        <span className="font-medium">{(request.carrier as any)?.location || "—"}</span>
-                      </div>
-                      {assignedTruck && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Solo Driver Details</p>
+                      <div className="grid grid-cols-1 gap-2 text-sm">
                         <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Truck:</span>
-                          <span className="font-medium">
-                            {assignedTruck.registrationNumber} ({assignedTruck.manufacturer} {assignedTruck.model})
-                          </span>
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Name:</span>
+                          <span className="font-medium">{(request.carrier as any)?.driverName || request.carrier?.username || "—"}</span>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Phone:</span>
+                          <span className="font-medium">{request.carrier?.phone || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Location:</span>
+                          <span className="font-medium">{(request.carrier as any)?.location || "Not specified"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Truck Details</p>
+                      {assignedTruck ? (
+                        <div className="grid grid-cols-1 gap-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Truck Type:</span>
+                            <span className="font-medium">{assignedTruck.truckType || "—"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Truck Location:</span>
+                            <span className="font-medium">{(assignedTruck as any).truckLocation || "Not specified"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground ml-6">License Plate:</span>
+                            <span className="font-medium">{assignedTruck.licensePlate || assignedTruck.registrationNumber || "—"}</span>
+                          </div>
+                          {(assignedTruck.manufacturer || assignedTruck.model) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground ml-6">Vehicle:</span>
+                              <span className="font-medium">{[assignedTruck.manufacturer, assignedTruck.model].filter(Boolean).join(" ") || "—"}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No truck assigned yet</p>
                       )}
                     </div>
                   </div>
@@ -371,32 +396,57 @@ function ApprovedRequestCard({ request }: ApprovedRequestCardProps) {
               <Separator className="my-2" />
               <div className="space-y-3 py-2">
                 {isSoloDriver ? (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Solo Driver Details</p>
-                    <div className="grid grid-cols-1 gap-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Name:</span>
-                        <span className="font-medium">{(request.carrier as any)?.driverName || request.carrier?.username || "—"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Phone:</span>
-                        <span className="font-medium">{request.carrier?.phone || "—"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Location:</span>
-                        <span className="font-medium">{(request.carrier as any)?.location || "—"}</span>
-                      </div>
-                      {assignedTruck && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Solo Driver Details</p>
+                      <div className="grid grid-cols-1 gap-2 text-sm">
                         <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Truck:</span>
-                          <span className="font-medium">
-                            {assignedTruck.registrationNumber} ({assignedTruck.manufacturer} {assignedTruck.model})
-                          </span>
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Name:</span>
+                          <span className="font-medium">{(request.carrier as any)?.driverName || request.carrier?.username || "—"}</span>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Phone:</span>
+                          <span className="font-medium">{request.carrier?.phone || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Location:</span>
+                          <span className="font-medium">{(request.carrier as any)?.location || "Not specified"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Truck Details</p>
+                      {assignedTruck ? (
+                        <div className="grid grid-cols-1 gap-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Truck Type:</span>
+                            <span className="font-medium">{assignedTruck.truckType || "—"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Truck Location:</span>
+                            <span className="font-medium">{(assignedTruck as any).truckLocation || "Not specified"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground ml-6">License Plate:</span>
+                            <span className="font-medium">{assignedTruck.licensePlate || assignedTruck.registrationNumber || "—"}</span>
+                          </div>
+                          {(assignedTruck.manufacturer || assignedTruck.model) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground ml-6">Vehicle:</span>
+                              <span className="font-medium">{[assignedTruck.manufacturer, assignedTruck.model].filter(Boolean).join(" ") || "—"}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No truck assigned yet</p>
                       )}
                     </div>
                   </div>

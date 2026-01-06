@@ -133,9 +133,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Username already exists" });
       }
       
-      const existingEmail = await storage.getUserByEmail(data.email);
-      if (existingEmail) {
-        return res.status(400).json({ error: "Email already exists" });
+      if (data.email && data.email.trim() !== "") {
+        const existingEmail = await storage.getUserByEmail(data.email);
+        if (existingEmail) {
+          return res.status(400).json({ error: "Email already exists" });
+        }
       }
 
       const hashedPassword = await hashPassword(data.password);
@@ -266,7 +268,14 @@ export async function registerRoutes(
     try {
       const { username, password } = req.body;
       
-      const user = await storage.getUserByUsername(username);
+      // Try to find user by username, email, or phone
+      let user = await storage.getUserByUsername(username);
+      if (!user) {
+        user = await storage.getUserByEmail(username);
+      }
+      if (!user) {
+        user = await storage.getUserByPhone(username);
+      }
       if (!user) {
         return res.status(401).json({ error: "Invalid credentials" });
       }

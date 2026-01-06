@@ -499,9 +499,9 @@ export default function AuthPage() {
                         name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>{t("auth.username")}</FormLabel>
+                            <FormLabel>Username, Email or Phone</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter your username" {...field} data-testid="input-login-username" />
+                              <Input placeholder="Enter username, email or phone" {...field} data-testid="input-login-username" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

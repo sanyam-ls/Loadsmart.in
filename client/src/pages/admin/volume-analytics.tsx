@@ -932,7 +932,7 @@ export default function AdminVolumeAnalytics() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold">{formatCurrency(parseFloat(String(bid.bidPrice || 0)))}</p>
+                            <p className="font-bold">{formatCurrency(parseFloat(String(bid.amount || 0)))}</p>
                             <Badge 
                               variant={bid.status === 'accepted' ? 'default' : bid.status === 'rejected' ? 'destructive' : 'secondary'}
                               className="text-xs capitalize"
@@ -955,7 +955,7 @@ export default function AdminVolumeAnalytics() {
                       <h4 className="font-semibold mb-2 text-emerald-700 dark:text-emerald-400">Margin Calculation</h4>
                       <div className="text-sm space-y-1">
                         <p>Shipper Price: <span className="font-medium">{formatCurrency(selectedLoadDetail.shipperPrice)}</span></p>
-                        <p>Accepted Bid: <span className="font-medium">{formatCurrency(parseFloat(String(acceptedBid.bidPrice || 0)))}</span></p>
+                        <p>Accepted Bid: <span className="font-medium">{formatCurrency(parseFloat(String(acceptedBid.amount || 0)))}</span></p>
                         <p>Final Carrier Payout: <span className="font-medium">{formatCurrency(selectedLoadDetail.carrierPayout)}</span></p>
                         <p className="pt-1 border-t">
                           Platform keeps: {formatCurrency(selectedLoadDetail.shipperPrice)} - {formatCurrency(selectedLoadDetail.carrierPayout)} = <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(selectedLoadDetail.margin)}</span>

@@ -850,19 +850,19 @@ export default function AdminVolumeAnalytics() {
                     <p className="text-sm text-muted-foreground">Route</p>
                     <p className="font-medium flex items-center gap-1">
                       <MapPin className="h-4 w-4 text-primary" />
-                      {selectedLoadDetail.pickupCity}, {selectedLoadDetail.pickupState}
+                      {selectedLoadDetail.pickupCity}
                     </p>
                     <p className="text-sm text-muted-foreground">to</p>
                     <p className="font-medium flex items-center gap-1">
                       <MapPin className="h-4 w-4 text-destructive" />
-                      {selectedLoadDetail.dropoffCity}, {selectedLoadDetail.dropoffState}
+                      {selectedLoadDetail.dropoffCity}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Status</p>
                     <Badge variant="outline" className="capitalize">{selectedLoadDetail.status}</Badge>
-                    <p className="text-sm text-muted-foreground mt-2">Load Type</p>
-                    <p className="font-medium">{selectedLoadDetail.vehicleType || 'Not specified'}</p>
+                    <p className="text-sm text-muted-foreground mt-2">Truck Type</p>
+                    <p className="font-medium">{selectedLoadDetail.requiredTruckType || 'Not specified'}</p>
                   </div>
                 </div>
 

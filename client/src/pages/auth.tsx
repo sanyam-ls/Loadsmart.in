@@ -915,6 +915,12 @@ export default function AuthPage() {
                     data-testid="input-confirm-new-password"
                   />
                 </div>
+                {newPassword.length > 0 && newPassword.length < 6 && (
+                  <p className="text-sm text-destructive">Password must be at least 6 characters</p>
+                )}
+                {confirmNewPassword.length > 0 && newPassword !== confirmNewPassword && (
+                  <p className="text-sm text-destructive">Passwords do not match</p>
+                )}
                 <Button 
                   className="w-full" 
                   onClick={handleResetPassword}

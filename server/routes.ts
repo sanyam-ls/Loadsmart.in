@@ -8820,9 +8820,10 @@ export async function registerRoutes(
             assignedTruck = {
               id: truck.id,
               registrationNumber: truck.registrationNumber,
-              manufacturer: truck.manufacturer,
+              manufacturer: truck.make || "",
               model: truck.model,
               truckType: truck.truckType,
+              truckLocation: truck.currentLocation || truck.city || "Not specified",
             };
           }
         } else if (load?.assignedTruckId) {
@@ -8831,22 +8832,24 @@ export async function registerRoutes(
             assignedTruck = {
               id: truck.id,
               registrationNumber: truck.registrationNumber,
-              manufacturer: truck.manufacturer,
+              manufacturer: truck.make || "",
               model: truck.model,
               truckType: truck.truckType,
+              truckLocation: truck.currentLocation || truck.city || "Not specified",
             };
           }
-        } else if (carrierUser && isSoloDriver) {
-          // For solo drivers, get their truck
+        } else if (carrierUser) {
+          // Get carrier's first available truck
           const trucks = await storage.getTrucksByCarrier(carrierUser.id);
           if (trucks.length > 0) {
             const truck = trucks[0];
             assignedTruck = {
               id: truck.id,
               registrationNumber: truck.registrationNumber,
-              manufacturer: truck.manufacturer,
+              manufacturer: truck.make || "",
               model: truck.model,
               truckType: truck.truckType,
+              truckLocation: truck.currentLocation || truck.city || "Not specified",
             };
           }
         }
@@ -8857,7 +8860,7 @@ export async function registerRoutes(
           carrier: carrierUser ? {
             id: carrierUser.id,
             companyName: isSoloDriver ? undefined : (carrierProfile?.companyName || carrierUser.companyName),
-            driverName: isSoloDriver ? (carrierUser.fullName || carrierUser.username) : undefined,
+            driverName: isSoloDriver ? (carrierUser.companyName || carrierUser.username) : undefined,
             username: carrierUser.username,
             email: carrierUser.email,
             phone: carrierUser.phone,
@@ -8921,7 +8924,7 @@ export async function registerRoutes(
         );
         
         // Get driver name - for enterprise, get assigned driver from shipment; for solo, use carrier name
-        let driverName = carrierUser?.fullName || carrierUser?.username;
+        let driverName = carrierUser?.companyName || carrierUser?.username;
         if (!isSoloDriver && shipment?.driverId) {
           const driver = await storage.getDriver(shipment.driverId);
           if (driver) {

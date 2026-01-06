@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle, XCircle, Clock, RefreshCw, Key, Truck, MapPin, Copy, Phone, MessageSquare, User, Building2, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, RefreshCw, Key, Truck, MapPin, Copy, Phone, MessageSquare, User, Building2, ChevronDown, ChevronUp, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -161,22 +161,27 @@ function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
                 ) : (
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Company Details</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Enterprise Details</p>
                       <div className="grid grid-cols-1 gap-2 text-sm">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Company:</span>
-                          <span className="font-medium">{request.carrier?.companyName || "—"}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Company Phone:</span>
-                          <span className="font-medium">{request.carrier?.phone || "—"}</span>
+                          <span className="text-muted-foreground">Company Name:</span>
+                          <span className="font-medium">{request.carrier?.companyName || request.carrier?.username || "—"}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
                           <span className="text-muted-foreground">Location:</span>
-                          <span className="font-medium">{(request.carrier as any)?.location || "—"}</span>
+                          <span className="font-medium">{(request.carrier as any)?.location || "Not specified"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Phone:</span>
+                          <span className="font-medium">{request.carrier?.phone || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Email:</span>
+                          <span className="font-medium">{(request.carrier as any)?.email || "—"}</span>
                         </div>
                       </div>
                     </div>
@@ -184,7 +189,7 @@ function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
                     <Separator />
                     
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned Driver</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Driver Details</p>
                       {assignedDriver ? (
                         <div className="grid grid-cols-1 gap-2 text-sm">
                           <div className="flex items-center gap-2">
@@ -206,17 +211,22 @@ function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
                     <Separator />
                     
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned Truck</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Truck Details</p>
                       {assignedTruck ? (
                         <div className="grid grid-cols-1 gap-2 text-sm">
                           <div className="flex items-center gap-2">
                             <Truck className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Truck Number:</span>
-                            <span className="font-medium">{assignedTruck.registrationNumber}</span>
+                            <span className="text-muted-foreground">Truck Type:</span>
+                            <span className="font-medium">{assignedTruck.truckType || "—"}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground ml-6">Type:</span>
-                            <span className="font-medium">{assignedTruck.truckType || "—"}</span>
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Truck Location:</span>
+                            <span className="font-medium">{(assignedTruck as any).truckLocation || "Not specified"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground ml-6">Registration Number:</span>
+                            <span className="font-medium">{assignedTruck.registrationNumber || "—"}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground ml-6">Vehicle:</span>
@@ -391,22 +401,27 @@ function ApprovedRequestCard({ request }: ApprovedRequestCardProps) {
                 ) : (
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Company Details</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Enterprise Details</p>
                       <div className="grid grid-cols-1 gap-2 text-sm">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Company:</span>
-                          <span className="font-medium">{request.carrier?.companyName || "—"}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Company Phone:</span>
-                          <span className="font-medium">{request.carrier?.phone || "—"}</span>
+                          <span className="text-muted-foreground">Company Name:</span>
+                          <span className="font-medium">{request.carrier?.companyName || request.carrier?.username || "—"}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
                           <span className="text-muted-foreground">Location:</span>
-                          <span className="font-medium">{(request.carrier as any)?.location || "—"}</span>
+                          <span className="font-medium">{(request.carrier as any)?.location || "Not specified"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Phone:</span>
+                          <span className="font-medium">{request.carrier?.phone || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Email:</span>
+                          <span className="font-medium">{(request.carrier as any)?.email || "—"}</span>
                         </div>
                       </div>
                     </div>
@@ -414,7 +429,7 @@ function ApprovedRequestCard({ request }: ApprovedRequestCardProps) {
                     <Separator />
                     
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned Driver</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Driver Details</p>
                       {assignedDriver ? (
                         <div className="grid grid-cols-1 gap-2 text-sm">
                           <div className="flex items-center gap-2">
@@ -436,17 +451,22 @@ function ApprovedRequestCard({ request }: ApprovedRequestCardProps) {
                     <Separator />
                     
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned Truck</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Truck Details</p>
                       {assignedTruck ? (
                         <div className="grid grid-cols-1 gap-2 text-sm">
                           <div className="flex items-center gap-2">
                             <Truck className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Truck Number:</span>
-                            <span className="font-medium">{assignedTruck.registrationNumber}</span>
+                            <span className="text-muted-foreground">Truck Type:</span>
+                            <span className="font-medium">{assignedTruck.truckType || "—"}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground ml-6">Type:</span>
-                            <span className="font-medium">{assignedTruck.truckType || "—"}</span>
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Truck Location:</span>
+                            <span className="font-medium">{(assignedTruck as any).truckLocation || "Not specified"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground ml-6">Registration Number:</span>
+                            <span className="font-medium">{assignedTruck.registrationNumber || "—"}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground ml-6">Vehicle:</span>

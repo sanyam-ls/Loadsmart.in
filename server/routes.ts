@@ -8819,7 +8819,7 @@ export async function registerRoutes(
           if (truck) {
             assignedTruck = {
               id: truck.id,
-              registrationNumber: truck.registrationNumber,
+              licensePlate: truck.licensePlate,
               manufacturer: truck.make || "",
               model: truck.model,
               truckType: truck.truckType,
@@ -8831,7 +8831,7 @@ export async function registerRoutes(
           if (truck) {
             assignedTruck = {
               id: truck.id,
-              registrationNumber: truck.registrationNumber,
+              licensePlate: truck.licensePlate,
               manufacturer: truck.make || "",
               model: truck.model,
               truckType: truck.truckType,
@@ -8845,7 +8845,7 @@ export async function registerRoutes(
             const truck = trucks[0];
             assignedTruck = {
               id: truck.id,
-              registrationNumber: truck.registrationNumber,
+              licensePlate: truck.licensePlate,
               manufacturer: truck.make || "",
               model: truck.model,
               truckType: truck.truckType,

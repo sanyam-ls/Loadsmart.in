@@ -225,13 +225,15 @@ function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
                             <span className="font-medium">{(assignedTruck as any).truckLocation || "Not specified"}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground ml-6">Registration Number:</span>
-                            <span className="font-medium">{assignedTruck.registrationNumber || "—"}</span>
+                            <span className="text-muted-foreground ml-6">License Plate:</span>
+                            <span className="font-medium">{assignedTruck.licensePlate || assignedTruck.registrationNumber || "—"}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground ml-6">Vehicle:</span>
-                            <span className="font-medium">{assignedTruck.manufacturer} {assignedTruck.model}</span>
-                          </div>
+                          {(assignedTruck.manufacturer || assignedTruck.model) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground ml-6">Vehicle:</span>
+                              <span className="font-medium">{[assignedTruck.manufacturer, assignedTruck.model].filter(Boolean).join(" ") || "—"}</span>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground italic">No truck assigned yet</p>
@@ -465,13 +467,15 @@ function ApprovedRequestCard({ request }: ApprovedRequestCardProps) {
                             <span className="font-medium">{(assignedTruck as any).truckLocation || "Not specified"}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground ml-6">Registration Number:</span>
-                            <span className="font-medium">{assignedTruck.registrationNumber || "—"}</span>
+                            <span className="text-muted-foreground ml-6">License Plate:</span>
+                            <span className="font-medium">{assignedTruck.licensePlate || assignedTruck.registrationNumber || "—"}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground ml-6">Vehicle:</span>
-                            <span className="font-medium">{assignedTruck.manufacturer} {assignedTruck.model}</span>
-                          </div>
+                          {(assignedTruck.manufacturer || assignedTruck.model) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground ml-6">Vehicle:</span>
+                              <span className="font-medium">{[assignedTruck.manufacturer, assignedTruck.model].filter(Boolean).join(" ") || "—"}</span>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground italic">No truck assigned yet</p>

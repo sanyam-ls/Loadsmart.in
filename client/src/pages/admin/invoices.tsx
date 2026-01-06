@@ -840,6 +840,10 @@ export default function AdminInvoicesPage() {
                     <p className="mt-1">{getStatusBadge(selectedInvoice.status)}</p>
                   </div>
                   <div>
+                    <Label className="text-muted-foreground">Load ID</Label>
+                    <p className="font-medium font-mono">{selectedInvoice.loadId || "N/A"}</p>
+                  </div>
+                  <div>
                     <Label className="text-muted-foreground">Created</Label>
                     <p className="font-medium">{format(new Date(selectedInvoice.createdAt), "d MMM yyyy")}</p>
                   </div>

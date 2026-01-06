@@ -730,13 +730,13 @@ export default function AdminVolumeAnalytics() {
                 {platformMarginData.recentLoadsWithMargin.map((load) => (
                   <TableRow key={load.id} data-testid={`row-load-margin-${load.id}`}>
                     <TableCell className="font-medium">
-                      <Badge variant="outline">#{load.id}</Badge>
+                      <Badge variant="outline">#{load.adminReferenceNumber || load.shipperLoadNumber || '—'}</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         <span className="text-sm truncate max-w-[180px]">
-                          {load.pickupCity} - {load.deliveryCity}
+                          {load.pickupCity} - {load.dropoffCity}
                         </span>
                       </div>
                     </TableCell>

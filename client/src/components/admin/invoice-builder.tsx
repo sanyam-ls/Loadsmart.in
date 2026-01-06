@@ -63,6 +63,8 @@ interface LoadData {
   shipperId?: string;
   cargoDescription?: string;
   adminFinalPrice?: string | number;
+  adminReferenceNumber?: number | null;
+  shipperLoadNumber?: number | null;
 }
 
 interface PricingBreakdown {
@@ -429,7 +431,7 @@ Thank you for your business!
             Invoice Builder
           </DialogTitle>
           <DialogDescription>
-            Create and customize invoice for Load #{load.id?.slice(-8)}
+            Create and customize invoice for Load #{load.adminReferenceNumber || load.shipperLoadNumber || '—'}
           </DialogDescription>
         </DialogHeader>
 

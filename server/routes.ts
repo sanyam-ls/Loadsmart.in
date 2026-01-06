@@ -104,29 +104,54 @@ export async function registerRoutes(
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { otpId, ...userData } = req.body;
+      const { otpId, emailOtpId, ...userData } = req.body;
       const data = insertUserSchema.parse(userData);
       
-      // All users must verify their phone number with OTP
-      if (!otpId) {
-        return res.status(400).json({ error: "Phone verification required for registration" });
+      // Users must verify at least one contact method (email or phone)
+      const hasPhoneOtp = otpId && otpId.trim() !== "";
+      const hasEmailOtp = emailOtpId && emailOtpId.trim() !== "";
+      
+      if (!hasPhoneOtp && !hasEmailOtp) {
+        return res.status(400).json({ error: "Verification required. Please verify your email or phone number." });
       }
       
-      const otpRecord = await storage.getOtpVerification(otpId);
-      if (!otpRecord) {
-        return res.status(400).json({ error: "OTP verification not found. Please verify your phone again." });
+      // Verify phone OTP if provided
+      if (hasPhoneOtp) {
+        const otpRecord = await storage.getOtpVerification(otpId);
+        if (!otpRecord) {
+          return res.status(400).json({ error: "Phone OTP verification not found. Please verify your phone again." });
+        }
+        
+        if (otpRecord.status !== "verified") {
+          return res.status(400).json({ error: "Phone number not verified. Please complete OTP verification." });
+        }
+        
+        if (otpRecord.phoneNumber !== data.phone) {
+          return res.status(400).json({ error: "Phone number mismatch. The verified phone number doesn't match the one provided." });
+        }
+        
+        // Clean up used OTP by marking it as consumed
+        await storage.updateOtpVerification(otpId, { status: "consumed" });
       }
       
-      if (otpRecord.status !== "verified") {
-        return res.status(400).json({ error: "Phone number not verified. Please complete OTP verification." });
+      // Verify email OTP if provided
+      if (hasEmailOtp) {
+        const emailOtpRecord = await storage.getOtpVerification(emailOtpId);
+        if (!emailOtpRecord) {
+          return res.status(400).json({ error: "Email OTP verification not found. Please verify your email again." });
+        }
+        
+        if (emailOtpRecord.status !== "verified") {
+          return res.status(400).json({ error: "Email not verified. Please complete verification." });
+        }
+        
+        if (emailOtpRecord.phoneNumber !== data.email) {
+          return res.status(400).json({ error: "Email mismatch. The verified email doesn't match the one provided." });
+        }
+        
+        // Clean up used OTP by marking it as consumed
+        await storage.updateOtpVerification(emailOtpId, { status: "consumed" });
       }
-      
-      if (otpRecord.phoneNumber !== data.phone) {
-        return res.status(400).json({ error: "Phone number mismatch. The verified phone number doesn't match the one provided." });
-      }
-      
-      // Clean up used OTP by marking it as consumed
-      await storage.updateOtpVerification(otpId, { status: "consumed" });
       
       const existingUser = await storage.getUserByUsername(data.username);
       if (existingUser) {
@@ -9400,6 +9425,76 @@ export async function registerRoutes(
       });
     } catch (error) {
       console.error("Verify registration OTP error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Email OTP - For registration via email
+  app.post("/api/otp/registration/send-email", async (req, res) => {
+    try {
+      const { email, userId } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email address is required" });
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Invalid email address format" });
+      }
+
+      // Generate OTP
+      const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      const otp = await storage.createOtpVerification({
+        otpType: "email_registration",
+        otpCode,
+        userId: userId || null,
+        phoneNumber: email, // Store email in phoneNumber field (repurposed for contact)
+        validityMinutes: 10,
+        expiresAt,
+        status: "pending",
+      });
+
+      // Since no email service is configured, return OTP in response for in-app display
+      // In production, you would send an email here and not return the code
+      res.json({ 
+        success: true, 
+        message: "Verification code generated",
+        otpId: otp.id,
+        otpCode: otpCode, // Displayed in-app since no email service is configured
+      });
+    } catch (error: any) {
+      console.error("Send email registration OTP error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Verify email registration OTP
+  app.post("/api/otp/registration/verify-email", async (req, res) => {
+    try {
+      const { otpId, otpCode } = req.body;
+      if (!otpId || !otpCode) {
+        return res.status(400).json({ error: "OTP ID and code are required" });
+      }
+
+      const result = await storage.verifyOtp(otpId, otpCode);
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      // If OTP was linked to a user, mark them as verified
+      if (result.otp?.userId) {
+        await storage.updateUser(result.otp.userId, { isVerified: true });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Email verified successfully" 
+      });
+    } catch (error) {
+      console.error("Verify email registration OTP error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

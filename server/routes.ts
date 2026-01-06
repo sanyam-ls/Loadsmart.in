@@ -104,54 +104,29 @@ export async function registerRoutes(
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { otpId, emailOtpId, ...userData } = req.body;
+      const { otpId, ...userData } = req.body;
       const data = insertUserSchema.parse(userData);
       
-      // Users must verify at least one contact method (email or phone)
-      const hasPhoneOtp = otpId && otpId.trim() !== "";
-      const hasEmailOtp = emailOtpId && emailOtpId.trim() !== "";
-      
-      if (!hasPhoneOtp && !hasEmailOtp) {
-        return res.status(400).json({ error: "Verification required. Please verify your email or phone number." });
+      // All users must verify their phone number with OTP
+      if (!otpId) {
+        return res.status(400).json({ error: "Phone verification required for registration" });
       }
       
-      // Verify phone OTP if provided
-      if (hasPhoneOtp) {
-        const otpRecord = await storage.getOtpVerification(otpId);
-        if (!otpRecord) {
-          return res.status(400).json({ error: "Phone OTP verification not found. Please verify your phone again." });
-        }
-        
-        if (otpRecord.status !== "verified") {
-          return res.status(400).json({ error: "Phone number not verified. Please complete OTP verification." });
-        }
-        
-        if (otpRecord.phoneNumber !== data.phone) {
-          return res.status(400).json({ error: "Phone number mismatch. The verified phone number doesn't match the one provided." });
-        }
-        
-        // Clean up used OTP by marking it as consumed
-        await storage.updateOtpVerification(otpId, { status: "consumed" });
+      const otpRecord = await storage.getOtpVerification(otpId);
+      if (!otpRecord) {
+        return res.status(400).json({ error: "OTP verification not found. Please verify your phone again." });
       }
       
-      // Verify email OTP if provided
-      if (hasEmailOtp) {
-        const emailOtpRecord = await storage.getOtpVerification(emailOtpId);
-        if (!emailOtpRecord) {
-          return res.status(400).json({ error: "Email OTP verification not found. Please verify your email again." });
-        }
-        
-        if (emailOtpRecord.status !== "verified") {
-          return res.status(400).json({ error: "Email not verified. Please complete verification." });
-        }
-        
-        if (emailOtpRecord.phoneNumber !== data.email) {
-          return res.status(400).json({ error: "Email mismatch. The verified email doesn't match the one provided." });
-        }
-        
-        // Clean up used OTP by marking it as consumed
-        await storage.updateOtpVerification(emailOtpId, { status: "consumed" });
+      if (otpRecord.status !== "verified") {
+        return res.status(400).json({ error: "Phone number not verified. Please complete OTP verification." });
       }
+      
+      if (otpRecord.phoneNumber !== data.phone) {
+        return res.status(400).json({ error: "Phone number mismatch. The verified phone number doesn't match the one provided." });
+      }
+      
+      // Clean up used OTP by marking it as consumed
+      await storage.updateOtpVerification(otpId, { status: "consumed" });
       
       const existingUser = await storage.getUserByUsername(data.username);
       if (existingUser) {

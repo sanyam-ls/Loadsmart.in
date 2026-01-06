@@ -112,16 +112,6 @@ export default function AuthPage() {
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [verifiedPhone, setVerifiedPhone] = useState("");
   
-  // Email OTP states
-  const [emailOtpSent, setEmailOtpSent] = useState(false);
-  const [emailOtpVerified, setEmailOtpVerified] = useState(false);
-  const [emailOtpCode, setEmailOtpCode] = useState("");
-  const [emailOtpId, setEmailOtpId] = useState("");
-  const [enteredEmailOtp, setEnteredEmailOtp] = useState("");
-  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
-  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
-  const [emailOtpCountdown, setEmailOtpCountdown] = useState(0);
-  const [verifiedEmail, setVerifiedEmail] = useState("");
   
   // Forgot password state
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
@@ -145,13 +135,7 @@ export default function AuthPage() {
     }
   }, [otpCountdown]);
 
-  useEffect(() => {
-    if (emailOtpCountdown > 0) {
-      const timer = setTimeout(() => setEmailOtpCountdown(emailOtpCountdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [emailOtpCountdown]);
-
+  
   const handleSendOtp = async () => {
     const phone = registerForm.getValues("phone");
     if (!phone || phone.trim() === "") {
@@ -225,79 +209,7 @@ export default function AuthPage() {
     }
   };
 
-  const handleSendEmailOtp = async () => {
-    const email = registerForm.getValues("email");
-    if (!email || email.trim() === "") {
-      toast({ title: "Email Required", description: "Please enter your email address first.", variant: "destructive" });
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
-      return;
-    }
-
-    setSendingEmailOtp(true);
-    try {
-      const response = await fetch("/api/otp/registration/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        setEmailOtpSent(true);
-        setEmailOtpCountdown(60);
-        setEmailOtpCode(data.otpCode);
-        setEmailOtpId(data.otpId);
-        toast({ 
-          title: "Verification Code Sent!", 
-          description: `Your code is: ${data.otpCode}. This code is displayed here for demo purposes.`,
-          duration: 15000,
-        });
-      } else {
-        toast({ title: "Failed to send code", description: data.error || "Please try again.", variant: "destructive" });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to send verification code. Please try again.", variant: "destructive" });
-    } finally {
-      setSendingEmailOtp(false);
-    }
-  };
-
-  const handleVerifyEmailOtp = async () => {
-    if (!emailOtpId || enteredEmailOtp.length !== 6) {
-      toast({ title: "Invalid Code", description: "Please enter the 6-digit code.", variant: "destructive" });
-      return;
-    }
-
-    setVerifyingEmailOtp(true);
-    try {
-      const response = await fetch("/api/otp/registration/verify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otpId: emailOtpId, otpCode: enteredEmailOtp }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setEmailOtpVerified(true);
-        setVerifiedEmail(registerForm.getValues("email") || "");
-        toast({ title: "Email Verified!", description: "Your email has been verified successfully." });
-      } else {
-        toast({ title: "Invalid Code", description: data.error || "The code you entered doesn't match. Please try again.", variant: "destructive" });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to verify code. Please try again.", variant: "destructive" });
-    } finally {
-      setVerifyingEmailOtp(false);
-    }
-  };
-
+  
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "" },
@@ -322,7 +234,6 @@ export default function AuthPage() {
   const selectedRole = registerForm.watch("role");
   const selectedCarrierType = registerForm.watch("carrierType");
   const watchedPhone = registerForm.watch("phone");
-  const watchedEmail = registerForm.watch("email");
 
   // Reset OTP verification state when phone number changes
   useEffect(() => {
@@ -336,18 +247,7 @@ export default function AuthPage() {
     }
   }, [watchedPhone, verifiedPhone]);
 
-  // Reset email OTP verification state when email changes
-  useEffect(() => {
-    if (verifiedEmail && watchedEmail !== verifiedEmail) {
-      setEmailOtpVerified(false);
-      setEmailOtpSent(false);
-      setEmailOtpCode("");
-      setEmailOtpId("");
-      setEnteredEmailOtp("");
-      setVerifiedEmail("");
-    }
-  }, [watchedEmail, verifiedEmail]);
-
+  
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
@@ -366,12 +266,11 @@ export default function AuthPage() {
   };
 
   const handleRegister = async (data: RegisterFormData) => {
-    // Users must verify at least one contact method (email or phone)
-    const hasVerifiedContact = otpVerified || emailOtpVerified;
-    if (!hasVerifiedContact) {
+    // Users must verify their phone number
+    if (!otpVerified) {
       toast({ 
-        title: "Verification Required", 
-        description: "Please verify your email or phone number before creating your account.", 
+        title: "Phone Verification Required", 
+        description: "Please verify your phone number before creating your account.", 
         variant: "destructive" 
       });
       return;
@@ -388,7 +287,6 @@ export default function AuthPage() {
         phone: data.phone,
         carrierType: data.carrierType,
         otpId: otpId || undefined,
-        emailOtpId: emailOtpId || undefined,
       });
       if (success) {
         toast({ title: "Account created!", description: "Welcome to FreightFlow." });
@@ -403,9 +301,8 @@ export default function AuthPage() {
     }
   };
 
-  // Check if user can register (must have verified phone for all roles)
-  // Can register if either email or phone is verified
-  const canRegister = otpVerified || emailOtpVerified;
+  // Check if user can register (must have verified phone)
+  const canRegister = otpVerified;
 
   // Forgot password handlers
   const handleForgotPasswordOpen = () => {
@@ -793,76 +690,19 @@ export default function AuthPage() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email {emailOtpVerified && <span className="text-green-600 text-xs ml-1">(Optional if phone verified)</span>}</FormLabel>
+                            <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <div className="flex gap-2">
-                                <Input 
-                                  type="email" 
-                                  placeholder="you@company.com" 
-                                  {...field} 
-                                  data-testid="input-register-email" 
-                                  disabled={emailOtpVerified}
-                                />
-                                {!emailOtpVerified ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleSendEmailOtp}
-                                    disabled={sendingEmailOtp || (emailOtpSent && emailOtpCountdown > 0) || !field.value}
-                                    data-testid="button-send-email-otp"
-                                  >
-                                    {sendingEmailOtp ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : emailOtpSent && emailOtpCountdown > 0 ? (
-                                      `${emailOtpCountdown}s`
-                                    ) : emailOtpSent ? (
-                                      "Resend"
-                                    ) : (
-                                      "Verify"
-                                    )}
-                                  </Button>
-                                ) : (
-                                  <div className="flex items-center gap-1 text-green-600 px-3">
-                                    <CheckCircle className="h-4 w-4" />
-                                    <span className="text-sm font-medium">Verified</span>
-                                  </div>
-                                )}
-                              </div>
+                              <Input 
+                                type="email" 
+                                placeholder="you@company.com" 
+                                {...field} 
+                                data-testid="input-register-email" 
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
-                      {emailOtpSent && !emailOtpVerified && (
-                        <div className="space-y-2">
-                          <div className="flex gap-2">
-                            <div className="relative flex-1">
-                              <Input
-                                type="text"
-                                placeholder="Enter 6-digit code"
-                                value={enteredEmailOtp}
-                                onChange={(e) => setEnteredEmailOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                                maxLength={6}
-                                className="text-center text-lg tracking-widest"
-                                data-testid="input-email-otp"
-                              />
-                            </div>
-                            <Button
-                              type="button"
-                              onClick={handleVerifyEmailOtp}
-                              disabled={verifyingEmailOtp || enteredEmailOtp.length !== 6}
-                              data-testid="button-verify-email-otp"
-                            >
-                              {verifyingEmailOtp ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Verify"
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
                       <div className="space-y-3">
                         <FormField
                           control={registerForm.control}
@@ -978,7 +818,7 @@ export default function AuthPage() {
                         disabled={isLoading || !canRegister} 
                         data-testid="button-register"
                       >
-                        {isLoading ? "Creating account..." : !canRegister ? "Verify Email or Phone First" : "Create Account"}
+                        {isLoading ? "Creating account..." : !canRegister ? "Verify Phone First" : "Create Account"}
                       </Button>
                     </form>
                   </Form>

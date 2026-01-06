@@ -8603,15 +8603,84 @@ export async function registerRoutes(
         const load = await storage.getLoad(request.loadId);
         const shipment = await storage.getShipment(request.shipmentId);
         const approvedByUser = request.processedBy ? await storage.getUser(request.processedBy) : null;
+        const carrierProfile = carrierUser ? await storage.getCarrierProfile(carrierUser.id) : null;
+        
+        // Determine if solo driver
+        const isSoloDriver = carrierProfile && (
+          carrierProfile.fleetSize === 0 || 
+          (carrierProfile.fleetSize === null && carrierProfile.carrierType === 'solo') ||
+          carrierProfile.carrierType === 'solo'
+        );
+        
+        // Get driver details
+        let assignedDriver = null;
+        if (!isSoloDriver && shipment?.driverId) {
+          const driver = await storage.getDriver(shipment.driverId);
+          if (driver) {
+            assignedDriver = {
+              id: driver.id,
+              name: driver.name,
+              phone: driver.phone,
+              licenseNumber: driver.licenseNumber,
+            };
+          }
+        }
+        
+        // Get truck details
+        let assignedTruck = null;
+        if (shipment?.truckId) {
+          const truck = await storage.getTruck(shipment.truckId);
+          if (truck) {
+            assignedTruck = {
+              id: truck.id,
+              registrationNumber: truck.registrationNumber,
+              manufacturer: truck.manufacturer,
+              model: truck.model,
+              truckType: truck.truckType,
+            };
+          }
+        } else if (load?.assignedTruckId) {
+          const truck = await storage.getTruck(load.assignedTruckId);
+          if (truck) {
+            assignedTruck = {
+              id: truck.id,
+              registrationNumber: truck.registrationNumber,
+              manufacturer: truck.manufacturer,
+              model: truck.model,
+              truckType: truck.truckType,
+            };
+          }
+        } else if (carrierUser && isSoloDriver) {
+          // For solo drivers, get their truck
+          const trucks = await storage.getTrucksByCarrier(carrierUser.id);
+          if (trucks.length > 0) {
+            const truck = trucks[0];
+            assignedTruck = {
+              id: truck.id,
+              registrationNumber: truck.registrationNumber,
+              manufacturer: truck.manufacturer,
+              model: truck.model,
+              truckType: truck.truckType,
+            };
+          }
+        }
+        
         return {
           ...request,
+          isSoloDriver,
           carrier: carrierUser ? {
             id: carrierUser.id,
-            companyName: carrierUser.companyName,
+            companyName: isSoloDriver ? undefined : (carrierProfile?.companyName || carrierUser.companyName),
+            driverName: isSoloDriver ? (carrierUser.fullName || carrierUser.username) : undefined,
             username: carrierUser.username,
             email: carrierUser.email,
             phone: carrierUser.phone,
+            location: isSoloDriver 
+              ? (carrierProfile?.operatingRegion || carrierProfile?.city || "Not specified")
+              : (carrierProfile?.city || carrierProfile?.operatingRegion || "Not specified"),
           } : null,
+          assignedDriver,
+          assignedTruck,
           load: load ? {
             id: load.id,
             adminReferenceNumber: load.adminReferenceNumber,

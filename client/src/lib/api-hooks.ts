@@ -629,10 +629,24 @@ export function useRequestTripEndOtp() {
   });
 }
 
+export function useRequestRouteStartOtp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (shipmentId: string) => {
+      const res = await apiRequest('POST', '/api/otp/request-route-start', { shipmentId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+    },
+  });
+}
+
 export function useVerifyOtp() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ shipmentId, otpCode, otpType }: { shipmentId: string; otpCode: string; otpType: 'trip_start' | 'trip_end' }) => {
+    mutationFn: async ({ shipmentId, otpCode, otpType }: { shipmentId: string; otpCode: string; otpType: 'trip_start' | 'route_start' | 'trip_end' }) => {
       const res = await apiRequest('POST', '/api/otp/verify', { shipmentId, otpCode, otpType });
       return res.json();
     },

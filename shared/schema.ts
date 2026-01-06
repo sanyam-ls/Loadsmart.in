@@ -828,6 +828,10 @@ export const shipments = pgTable("shipments", {
   startOtpRequestedAt: timestamp("start_otp_requested_at"),
   startOtpVerified: boolean("start_otp_verified").default(false),
   startOtpVerifiedAt: timestamp("start_otp_verified_at"),
+  routeStartOtpRequested: boolean("route_start_otp_requested").default(false),
+  routeStartOtpRequestedAt: timestamp("route_start_otp_requested_at"),
+  routeStartOtpVerified: boolean("route_start_otp_verified").default(false),
+  routeStartOtpVerifiedAt: timestamp("route_start_otp_verified_at"),
   endOtpRequested: boolean("end_otp_requested").default(false),
   endOtpRequestedAt: timestamp("end_otp_requested_at"),
   endOtpVerified: boolean("end_otp_verified").default(false),
@@ -847,7 +851,7 @@ export const shipmentEvents = pgTable("shipment_events", {
 });
 
 // OTP Types for security gates
-export const otpTypes = ["registration", "trip_start", "trip_end"] as const;
+export const otpTypes = ["registration", "trip_start", "route_start", "trip_end"] as const;
 export type OtpType = typeof otpTypes[number];
 
 // OTP Statuses

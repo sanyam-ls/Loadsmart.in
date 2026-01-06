@@ -8427,6 +8427,82 @@ export async function registerRoutes(
     }
   });
 
+  // Carrier requests route start OTP (after trip start is verified)
+  app.post("/api/otp/request-route-start", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can request route start OTP" });
+      }
+
+      const { shipmentId } = req.body;
+      if (!shipmentId) {
+        return res.status(400).json({ error: "Shipment ID is required" });
+      }
+
+      const shipment = await storage.getShipment(shipmentId);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+      if (shipment.carrierId !== user.id) {
+        return res.status(403).json({ error: "Not authorized for this shipment" });
+      }
+      if (!shipment.startOtpVerified) {
+        return res.status(400).json({ error: "Trip not started yet. Complete trip start first." });
+      }
+      if ((shipment as any).routeStartOtpVerified) {
+        return res.status(400).json({ error: "Route already started" });
+      }
+
+      // Verify load is in correct state
+      const load = await storage.getLoad(shipment.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Check if there's already a pending request
+      const existingRequests = await storage.getOtpRequestsByShipment(shipmentId);
+      const pendingRouteStartRequest = existingRequests.find(r => r.requestType === "route_start" && r.status === "pending");
+      if (pendingRouteStartRequest) {
+        return res.status(400).json({ error: "Route start OTP request already pending", requestId: pendingRouteStartRequest.id });
+      }
+
+      // Create OTP request for admin
+      const request = await storage.createOtpRequest({
+        requestType: "route_start",
+        carrierId: user.id,
+        shipmentId,
+        loadId: shipment.loadId,
+        status: "pending",
+      });
+
+      // Update shipment
+      await storage.updateShipment(shipmentId, {
+        routeStartOtpRequested: true,
+        routeStartOtpRequestedAt: new Date(),
+      });
+
+      // Broadcast to admin
+      broadcastMarketplaceEvent("otp_request", {
+        type: "route_start",
+        requestId: request.id,
+        carrierId: user.id,
+        carrierName: user.companyName || user.username,
+        shipmentId,
+        loadId: shipment.loadId,
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Route start OTP requested. Admin will generate OTP shortly.",
+        requestId: request.id 
+      });
+    } catch (error) {
+      console.error("Request route start OTP error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Carrier requests trip end OTP
   app.post("/api/otp/request-end", requireAuth, async (req, res) => {
     try {
@@ -8788,7 +8864,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Shipment ID, OTP type, and OTP code are required" });
       }
 
-      if (!["trip_start", "trip_end"].includes(otpType)) {
+      if (!["trip_start", "route_start", "trip_end"].includes(otpType)) {
         return res.status(400).json({ error: "Invalid OTP type" });
       }
 
@@ -8817,12 +8893,10 @@ export async function registerRoutes(
         await storage.updateShipment(shipmentId, {
           startOtpVerified: true,
           startOtpVerifiedAt: new Date(),
-          status: "in_transit",
           startedAt: new Date(),
         });
 
-        // Update load status
-        await storage.updateLoad(shipment.loadId, { status: "in_transit" });
+        // Load status remains unchanged - route_start triggers in_transit
 
         // Broadcast trip started
         broadcastMarketplaceEvent("trip_started", {
@@ -8848,7 +8922,45 @@ export async function registerRoutes(
 
         res.json({ 
           success: true, 
-          message: "Trip started successfully. GPS tracking activated.",
+          message: "Trip started successfully. Now request Route Start OTP.",
+          shipmentStatus: "awaiting_route_start"
+        });
+      } else if (otpType === "route_start") {
+        // Route start - puts shipment in transit
+        await storage.updateShipment(shipmentId, {
+          routeStartOtpVerified: true,
+          routeStartOtpVerifiedAt: new Date(),
+          status: "in_transit",
+        });
+
+        // Update load status to in_transit
+        await storage.updateLoad(shipment.loadId, { status: "in_transit" });
+
+        // Broadcast route started
+        broadcastMarketplaceEvent("route_started", {
+          shipmentId,
+          loadId: shipment.loadId,
+          carrierId: user.id,
+          carrierName: user.companyName || user.username,
+        });
+
+        // Notify shipper
+        const load = await storage.getLoad(shipment.loadId);
+        if (load) {
+          await storage.createNotification({
+            userId: load.shipperId,
+            title: "Route Started",
+            message: `Your shipment is now in transit. GPS tracking activated.`,
+            type: "success",
+            isRead: false,
+            contextType: "shipment",
+            relatedLoadId: shipment.loadId,
+          });
+        }
+
+        res.json({ 
+          success: true, 
+          message: "Route started successfully. GPS tracking activated.",
           shipmentStatus: "in_transit"
         });
       } else {
@@ -8923,12 +9035,16 @@ export async function registerRoutes(
       const startApprovedRequest = requests.find(r => 
         r.requestType === "trip_start" && r.status === "approved" && r.otpId
       );
+      const routeStartApprovedRequest = requests.find(r => 
+        r.requestType === "route_start" && r.status === "approved" && r.otpId
+      );
       const endApprovedRequest = requests.find(r => 
         r.requestType === "trip_end" && r.status === "approved" && r.otpId
       );
 
       // Check if the OTP associated with approved request is still valid
       let startOtpApproved = false;
+      let routeStartOtpApproved = false;
       let endOtpApproved = false;
 
       if (startApprovedRequest?.otpId && !shipment.startOtpVerified) {
@@ -8937,6 +9053,12 @@ export async function registerRoutes(
         // Accept both "pending" and "approved" status as valid for entry
         const isValidStatus = otp && (otp.status === "pending" || otp.status === "approved");
         startOtpApproved = isValidStatus && new Date(otp!.expiresAt) > now;
+      }
+
+      if (routeStartApprovedRequest?.otpId && !(shipment as any).routeStartOtpVerified) {
+        const otp = await storage.getOtpVerification(routeStartApprovedRequest.otpId);
+        const isValidStatus = otp && (otp.status === "pending" || otp.status === "approved");
+        routeStartOtpApproved = isValidStatus && new Date(otp!.expiresAt) > now;
       }
 
       if (endApprovedRequest?.otpId && !shipment.endOtpVerified) {
@@ -8949,10 +9071,13 @@ export async function registerRoutes(
         shipmentId,
         startOtpRequested: shipment.startOtpRequested,
         startOtpVerified: shipment.startOtpVerified,
+        routeStartOtpRequested: (shipment as any).routeStartOtpRequested,
+        routeStartOtpVerified: (shipment as any).routeStartOtpVerified,
         endOtpRequested: shipment.endOtpRequested,
         endOtpVerified: shipment.endOtpVerified,
         // Approved means there's an approved request with a valid (non-expired) OTP
         startOtpApproved,
+        routeStartOtpApproved,
         endOtpApproved,
         requests: requests.map(r => ({
           id: r.id,

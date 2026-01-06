@@ -34,8 +34,20 @@ interface OtpRequestCardProps {
 }
 
 function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
-  const typeLabel = request.requestType === "trip_start" ? "Trip Start" : request.requestType === "trip_end" ? "Trip End" : "Registration";
-  const typeColor = request.requestType === "trip_start" ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+  const typeLabels: Record<string, string> = {
+    trip_start: "Trip Start",
+    route_start: "Route Start",
+    trip_end: "Trip End",
+    registration: "Registration"
+  };
+  const typeColors: Record<string, string> = {
+    trip_start: "bg-green-500/10 text-green-600 dark:text-green-400",
+    route_start: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    trip_end: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    registration: "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+  };
+  const typeLabel = typeLabels[request.requestType] || "Unknown";
+  const typeColor = typeColors[request.requestType] || "bg-muted text-muted-foreground";
   
   return (
     <Card className="mb-3" data-testid={`otp-request-card-${request.id}`}>

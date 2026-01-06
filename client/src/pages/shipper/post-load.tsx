@@ -51,6 +51,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { AddressAutocomplete, getRouteInfo } from "@/components/address-autocomplete";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
 
 const loadFormSchema = z.object({
   shipperCompanyName: z.string().min(2, "Company name is required"),
@@ -561,6 +562,7 @@ function suggestTruckType(weight: number, description: string): string {
 export default function PostLoadPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submittedLoadId, setSubmittedLoadId] = useState<string | null>(null);
@@ -609,6 +611,37 @@ export default function PostLoadPage() {
 
   const watchedFields = form.watch(["pickupCity", "dropoffCity", "weight", "goodsToBeCarried", "requiredTruckType"]);
   const [pickupCity, dropoffCity, weight, goodsDescription, truckType] = watchedFields;
+
+  // Auto-populate shipper details from user profile
+  useEffect(() => {
+    if (user) {
+      // Shipper details - auto-populate from user profile (contact person name is left empty)
+      if (user.companyName) {
+        form.setValue("shipperCompanyName", user.companyName);
+      }
+      if (user.phone) {
+        form.setValue("shipperPhone", user.phone);
+      }
+      // Company address - use user's address if available
+      const userAny = user as any;
+      if (userAny.companyAddress) {
+        form.setValue("shipperCompanyAddress", userAny.companyAddress);
+      }
+      // Pickup location - use user's default pickup address if available
+      if (userAny.defaultPickupAddress) {
+        form.setValue("pickupAddress", userAny.defaultPickupAddress);
+      }
+      if (userAny.defaultPickupCity) {
+        form.setValue("pickupCity", userAny.defaultPickupCity);
+      }
+      if (userAny.defaultPickupLocality) {
+        form.setValue("pickupLocality", userAny.defaultPickupLocality);
+      }
+      if (userAny.defaultPickupLandmark) {
+        form.setValue("pickupLandmark", userAny.defaultPickupLandmark);
+      }
+    }
+  }, [user, form]);
 
   useEffect(() => {
     if (pickupCity && dropoffCity && weight) {

@@ -241,9 +241,15 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").notNull().default("shipper"),
   companyName: text("company_name"),
+  companyAddress: text("company_address"),
   phone: text("phone"),
   avatar: text("avatar"),
   isVerified: boolean("is_verified").default(false),
+  // Default pickup location for shippers
+  defaultPickupAddress: text("default_pickup_address"),
+  defaultPickupLocality: text("default_pickup_locality"),
+  defaultPickupLandmark: text("default_pickup_landmark"),
+  defaultPickupCity: text("default_pickup_city"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

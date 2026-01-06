@@ -110,7 +110,7 @@ type MetricType = "volume" | "activeLoads" | "carrierSignups" | "revenue";
 const metricConfig: Record<MetricType, { label: string; formatter: (v: number) => string; icon: typeof DollarSign }> = {
   volume: { 
     label: "Transaction Volume", 
-    formatter: (v) => `$${(v / 1000000).toFixed(2)}M`,
+    formatter: (v) => `Rs. ${(v / 100000).toFixed(1)}L`,
     icon: DollarSign,
   },
   activeLoads: { 
@@ -125,7 +125,7 @@ const metricConfig: Record<MetricType, { label: string; formatter: (v: number) =
   },
   revenue: { 
     label: "Revenue", 
-    formatter: (v) => `$${(v / 1000000).toFixed(2)}M`,
+    formatter: (v) => `Rs. ${(v / 100000).toFixed(1)}L`,
     icon: DollarSign,
   },
 };
@@ -202,7 +202,7 @@ function MonthDetailPanel({ data, onClose, previousData }: MonthDetailPanelProps
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Transaction Volume</span>
-            <span className="font-mono font-semibold">${(data.volume / 1000000).toFixed(2)}M</span>
+            <span className="font-mono font-semibold">Rs. {(data.volume / 100000).toFixed(1)}L</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Completed Loads</span>
@@ -210,7 +210,7 @@ function MonthDetailPanel({ data, onClose, previousData }: MonthDetailPanelProps
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Avg Load Price</span>
-            <span className="font-mono font-semibold">${data.avgLoadPrice.toLocaleString()}</span>
+            <span className="font-mono font-semibold">Rs. {data.avgLoadPrice.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Growth</span>
@@ -313,7 +313,7 @@ export function TransactionVolumeChart() {
 
   const getYAxisFormatter = (value: number) => {
     if (metric === "volume" || metric === "revenue") {
-      return `$${(value / 1000000).toFixed(1)}M`;
+      return `Rs. ${(value / 100000).toFixed(1)}L`;
     }
     return value.toString();
   };
@@ -546,13 +546,13 @@ export function TransactionVolumeChart() {
               <div className="bg-muted/50 rounded-lg p-4">
                 <div className="text-muted-foreground text-sm mb-1">Total Volume (YTD)</div>
                 <div className="text-2xl font-bold font-mono">
-                  ${(fullYearData.reduce((sum, d) => sum + d.volume, 0) / 1000000).toFixed(1)}M
+                  Rs. {(fullYearData.reduce((sum, d) => sum + d.volume, 0) / 10000000).toFixed(1)}Cr
                 </div>
               </div>
               <div className="bg-muted/50 rounded-lg p-4">
                 <div className="text-muted-foreground text-sm mb-1">Avg Monthly Volume</div>
                 <div className="text-2xl font-bold font-mono">
-                  ${(fullYearData.reduce((sum, d) => sum + d.volume, 0) / fullYearData.length / 1000000).toFixed(2)}M
+                  Rs. {(fullYearData.reduce((sum, d) => sum + d.volume, 0) / fullYearData.length / 100000).toFixed(1)}L
                 </div>
               </div>
               <div className="bg-muted/50 rounded-lg p-4">
@@ -564,7 +564,7 @@ export function TransactionVolumeChart() {
               <div className="bg-muted/50 rounded-lg p-4">
                 <div className="text-muted-foreground text-sm mb-1">Avg Load Price</div>
                 <div className="text-2xl font-bold font-mono">
-                  ${Math.round(fullYearData.reduce((sum, d) => sum + d.avgLoadPrice, 0) / fullYearData.length).toLocaleString()}
+                  Rs. {Math.round(fullYearData.reduce((sum, d) => sum + d.avgLoadPrice, 0) / fullYearData.length).toLocaleString()}
                 </div>
               </div>
             </div>

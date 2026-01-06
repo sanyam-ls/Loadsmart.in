@@ -17,9 +17,22 @@ import {
   Percent,
   ArrowUpRight,
   ArrowDownRight,
+  Eye,
+  X,
+  Calculator,
+  IndianRupee,
+  FileText,
+  User,
 } from "lucide-react";
-import type { Load } from "@shared/schema";
+import type { Load, Bid } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -149,14 +162,26 @@ const loadTypeBreakdown = [
 
 type TimeRange = "30d" | "90d" | "1y" | "custom";
 
+interface LoadWithMargin extends Load {
+  shipperPrice: number;
+  carrierPayout: number;
+  margin: number;
+  marginPercent: number;
+}
+
 export default function AdminVolumeAnalytics() {
   const [, setLocation] = useLocation();
   const { theme } = useTheme();
   const [timeRange, setTimeRange] = useState<TimeRange>("1y");
   const [selectedMonth, setSelectedMonth] = useState<MonthlyVolumeData | null>(null);
+  const [selectedLoadDetail, setSelectedLoadDetail] = useState<LoadWithMargin | null>(null);
 
   const { data: loads = [] } = useQuery<Load[]>({
     queryKey: ["/api/loads"],
+  });
+
+  const { data: allBids = [] } = useQuery<Bid[]>({
+    queryKey: ["/api/bids"],
   });
 
   const platformMarginData = useMemo(() => {
@@ -736,7 +761,12 @@ export default function AdminVolumeAnalytics() {
                 </TableHeader>
                 <TableBody>
                   {platformMarginData.allLoadsWithMargin.map((load) => (
-                    <TableRow key={load.id} data-testid={`row-load-margin-${load.id}`}>
+                    <TableRow 
+                      key={load.id} 
+                      data-testid={`row-load-margin-${load.id}`}
+                      className="cursor-pointer hover-elevate"
+                      onClick={() => setSelectedLoadDetail(load)}
+                    >
                       <TableCell className="font-medium">
                         <Badge variant="outline">#{load.adminReferenceNumber || load.shipperLoadNumber || '—'}</Badge>
                       </TableCell>
@@ -760,18 +790,21 @@ export default function AdminVolumeAnalytics() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Badge 
-                          variant="secondary"
-                          className={load.marginPercent >= 10 
-                            ? "text-emerald-600 dark:text-emerald-400" 
-                            : load.marginPercent >= 5 
-                              ? "text-amber-600 dark:text-amber-400" 
-                              : "text-red-600 dark:text-red-400"
-                          }
-                        >
-                          {load.marginPercent >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
-                          {load.marginPercent.toFixed(1)}%
-                        </Badge>
+                        <div className="flex items-center justify-end gap-2">
+                          <Badge 
+                            variant="secondary"
+                            className={load.marginPercent >= 10 
+                              ? "text-emerald-600 dark:text-emerald-400" 
+                              : load.marginPercent >= 5 
+                                ? "text-amber-600 dark:text-amber-400" 
+                                : "text-red-600 dark:text-red-400"
+                            }
+                          >
+                            {load.marginPercent >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                            {load.marginPercent.toFixed(1)}%
+                          </Badge>
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -787,6 +820,155 @@ export default function AdminVolumeAnalytics() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!selectedLoadDetail} onOpenChange={() => setSelectedLoadDetail(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Load #{selectedLoadDetail?.adminReferenceNumber || selectedLoadDetail?.shipperLoadNumber || '—'} - Margin Breakdown
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedLoadDetail && (() => {
+            const loadBids = allBids.filter(bid => bid.loadId === selectedLoadDetail.id);
+            const acceptedBid = loadBids.find(bid => bid.status === 'accepted');
+            
+            return (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Route</p>
+                    <p className="font-medium flex items-center gap-1">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      {selectedLoadDetail.pickupCity}, {selectedLoadDetail.pickupState}
+                    </p>
+                    <p className="text-sm text-muted-foreground">to</p>
+                    <p className="font-medium flex items-center gap-1">
+                      <MapPin className="h-4 w-4 text-destructive" />
+                      {selectedLoadDetail.dropoffCity}, {selectedLoadDetail.dropoffState}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge variant="outline" className="capitalize">{selectedLoadDetail.status}</Badge>
+                    <p className="text-sm text-muted-foreground mt-2">Load Type</p>
+                    <p className="font-medium">{selectedLoadDetail.vehicleType || 'Not specified'}</p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Calculator className="h-4 w-4" />
+                    Pricing Breakdown
+                  </h4>
+                  
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Admin Set Price (Shipper Pays)</span>
+                      <span className="font-bold text-lg">{formatCurrency(selectedLoadDetail.shipperPrice)}</span>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Carrier Final Payout</span>
+                      <span className="font-medium text-lg">{formatCurrency(selectedLoadDetail.carrierPayout)}</span>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between bg-primary/10 dark:bg-primary/20 -mx-4 px-4 py-2 rounded-md">
+                      <span className="font-semibold flex items-center gap-2">
+                        <IndianRupee className="h-4 w-4" />
+                        Platform Margin
+                      </span>
+                      <div className="text-right">
+                        <span className={`font-bold text-xl ${selectedLoadDetail.margin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {selectedLoadDetail.margin >= 0 ? '+' : ''}{formatCurrency(selectedLoadDetail.margin)}
+                        </span>
+                        <Badge 
+                          variant="secondary" 
+                          className={`ml-2 ${selectedLoadDetail.marginPercent >= 10 
+                            ? "text-emerald-600 dark:text-emerald-400" 
+                            : selectedLoadDetail.marginPercent >= 5 
+                              ? "text-amber-600 dark:text-amber-400" 
+                              : "text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {selectedLoadDetail.marginPercent.toFixed(1)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Bidding History ({loadBids.length} bid{loadBids.length !== 1 ? 's' : ''})
+                  </h4>
+                  
+                  {loadBids.length > 0 ? (
+                    <div className="space-y-2">
+                      {loadBids
+                        .sort((a, b) => (b.status === 'accepted' ? 1 : 0) - (a.status === 'accepted' ? 1 : 0))
+                        .map((bid) => (
+                        <div 
+                          key={bid.id} 
+                          className={`flex items-center justify-between p-3 rounded-md border ${bid.status === 'accepted' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800' : 'bg-muted/30'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium text-sm">Carrier Bid</p>
+                              <p className="text-xs text-muted-foreground">
+                                {bid.createdAt ? new Date(bid.createdAt).toLocaleDateString() : 'Date unknown'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">{formatCurrency(parseFloat(String(bid.bidPrice || 0)))}</p>
+                            <Badge 
+                              variant={bid.status === 'accepted' ? 'default' : bid.status === 'rejected' ? 'destructive' : 'secondary'}
+                              className="text-xs capitalize"
+                            >
+                              {bid.status === 'accepted' ? 'Finalized' : bid.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No bids recorded for this load</p>
+                  )}
+                </div>
+
+                {acceptedBid && (
+                  <>
+                    <Separator />
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                      <h4 className="font-semibold mb-2 text-emerald-700 dark:text-emerald-400">Margin Calculation</h4>
+                      <div className="text-sm space-y-1">
+                        <p>Shipper Price: <span className="font-medium">{formatCurrency(selectedLoadDetail.shipperPrice)}</span></p>
+                        <p>Accepted Bid: <span className="font-medium">{formatCurrency(parseFloat(String(acceptedBid.bidPrice || 0)))}</span></p>
+                        <p>Final Carrier Payout: <span className="font-medium">{formatCurrency(selectedLoadDetail.carrierPayout)}</span></p>
+                        <p className="pt-1 border-t">
+                          Platform keeps: {formatCurrency(selectedLoadDetail.shipperPrice)} - {formatCurrency(selectedLoadDetail.carrierPayout)} = <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(selectedLoadDetail.margin)}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

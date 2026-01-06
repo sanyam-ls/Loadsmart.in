@@ -86,6 +86,8 @@ interface Invoice {
   id: string;
   invoiceNumber: string;
   loadId: string;
+  shipperLoadNumber?: number | null;
+  adminReferenceNumber?: number | null;
   shipperId: string;
   shipper?: { companyName?: string; username: string };
   load?: { 
@@ -131,6 +133,18 @@ interface Invoice {
   estimatedCarrierPayout?: string;
   winningBidAmount?: string;
   adminPostedPrice?: string;
+}
+
+// Format load ID for display - shows LD-1001 (admin ref) or LD-044 (shipper seq)
+function formatLoadId(invoice: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; loadId: string }): string {
+  if (invoice.adminReferenceNumber) {
+    return `LD-${String(invoice.adminReferenceNumber).padStart(3, '0')}`;
+  }
+  if (invoice.shipperLoadNumber) {
+    return `LD-${String(invoice.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  // Fallback to first 8 chars of loadId UUID
+  return invoice.loadId?.slice(0, 8)?.toUpperCase() || "N/A";
 }
 
 const simulatedInvoices: Invoice[] = [
@@ -841,7 +855,7 @@ export default function AdminInvoicesPage() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Load ID</Label>
-                    <p className="font-medium font-mono">{selectedInvoice.loadId || "N/A"}</p>
+                    <p className="font-medium font-mono">{formatLoadId(selectedInvoice)}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Created</Label>

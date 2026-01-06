@@ -89,6 +89,8 @@ interface Invoice {
   id: string;
   invoiceNumber: string;
   loadId: string;
+  shipperLoadNumber?: number | null;
+  adminReferenceNumber?: number | null;
   loadRoute?: string;
   pickupCity?: string;
   dropoffCity?: string;
@@ -118,6 +120,18 @@ interface Invoice {
   carrier?: CarrierDetails;
   driver?: DriverDetails;
   truck?: TruckDetails;
+}
+
+// Format load ID for display - shows LD-1001 (admin ref) or LD-044 (shipper seq)
+function formatLoadId(invoice: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; loadId: string }): string {
+  if (invoice.adminReferenceNumber) {
+    return `LD-${String(invoice.adminReferenceNumber).padStart(3, '0')}`;
+  }
+  if (invoice.shipperLoadNumber) {
+    return `LD-${String(invoice.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  // Fallback to first 8 chars of loadId UUID
+  return invoice.loadId?.slice(0, 8)?.toUpperCase() || "N/A";
 }
 
 const simulatedInvoices: Invoice[] = [
@@ -639,7 +653,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Load ID</Label>
-                    <p className="font-medium font-mono">{selectedInvoice.loadId || "N/A"}</p>
+                    <p className="font-medium font-mono">{formatLoadId(selectedInvoice)}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t('invoices.invoiceDate')}</Label>

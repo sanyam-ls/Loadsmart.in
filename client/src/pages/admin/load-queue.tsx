@@ -115,7 +115,12 @@ interface RealLoad {
   pickupCity: string;
   dropoffCity: string;
   pickupAddress?: string;
+  pickupLocality?: string;
+  pickupLandmark?: string;
   dropoffAddress?: string;
+  dropoffLocality?: string;
+  dropoffLandmark?: string;
+  dropoffBusinessName?: string;
   weight: number;
   weightUnit?: string;
   cargoDescription?: string;
@@ -1229,23 +1234,64 @@ export default function LoadQueuePage() {
                     Route Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-3 text-sm">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Pickup Address</Label>
-                      <p className="font-medium">{detailsLoad.pickupAddress || "N/A"}</p>
+                <CardContent className="grid gap-4 text-sm">
+                  {/* Pickup Location */}
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Pickup Location</Label>
+                    <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-green-500">
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Street Address</Label>
+                        <p className="font-medium">{detailsLoad.pickupAddress || "N/A"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">City, State</Label>
+                        <p className="font-medium">{detailsLoad.pickupCity}</p>
+                      </div>
+                      {detailsLoad.pickupLocality && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Locality / Area</Label>
+                          <p className="font-medium">{detailsLoad.pickupLocality}</p>
+                        </div>
+                      )}
+                      {detailsLoad.pickupLandmark && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Landmark</Label>
+                          <p className="font-medium">{detailsLoad.pickupLandmark}</p>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Pickup City</Label>
-                      <p className="font-medium">{detailsLoad.pickupCity}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Dropoff Address</Label>
-                      <p className="font-medium">{detailsLoad.dropoffAddress || "N/A"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Dropoff City</Label>
-                      <p className="font-medium">{detailsLoad.dropoffCity}</p>
+                  </div>
+
+                  {/* Dropoff Location */}
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Dropoff Location</Label>
+                    <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-red-500">
+                      {detailsLoad.dropoffBusinessName && (
+                        <div className="col-span-2">
+                          <Label className="text-muted-foreground text-xs">Business Name</Label>
+                          <p className="font-medium">{detailsLoad.dropoffBusinessName}</p>
+                        </div>
+                      )}
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Street Address</Label>
+                        <p className="font-medium">{detailsLoad.dropoffAddress || "N/A"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">City, State</Label>
+                        <p className="font-medium">{detailsLoad.dropoffCity}</p>
+                      </div>
+                      {detailsLoad.dropoffLocality && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Locality / Area</Label>
+                          <p className="font-medium">{detailsLoad.dropoffLocality}</p>
+                        </div>
+                      )}
+                      {detailsLoad.dropoffLandmark && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Landmark</Label>
+                          <p className="font-medium">{detailsLoad.dropoffLandmark}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>

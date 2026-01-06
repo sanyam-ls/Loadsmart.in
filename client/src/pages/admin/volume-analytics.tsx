@@ -189,16 +189,21 @@ export default function AdminVolumeAnalytics() {
     
     const loadsWithMargin = loads.filter((load) => {
       const adminPrice = parseFloat(String(load.adminFinalPrice || 0));
-      const finalPrice = parseFloat(String(load.finalPrice || 0));
       const isBidFinalized = load.assignedCarrierId || finalizedStatuses.includes(load.status || '');
-      return adminPrice > 0 && finalPrice > 0 && isBidFinalized;
+      const acceptedBid = allBids.find(bid => bid.loadId === load.id && bid.status === 'accepted');
+      return adminPrice > 0 && isBidFinalized && acceptedBid;
     });
+
+    const getCarrierPayout = (load: Load) => {
+      const acceptedBid = allBids.find(bid => bid.loadId === load.id && bid.status === 'accepted');
+      return acceptedBid ? parseFloat(String(acceptedBid.amount || 0)) : parseFloat(String(load.finalPrice || 0));
+    };
 
     const totalShipperPrice = loadsWithMargin.reduce((sum, load) => {
       return sum + parseFloat(String(load.adminFinalPrice || 0));
     }, 0);
     const totalCarrierPayout = loadsWithMargin.reduce((sum, load) => {
-      return sum + parseFloat(String(load.finalPrice || 0));
+      return sum + getCarrierPayout(load);
     }, 0);
     const totalMargin = totalShipperPrice - totalCarrierPayout;
     const avgMarginPercent = totalShipperPrice > 0 ? (totalMargin / totalShipperPrice) * 100 : 0;
@@ -207,7 +212,7 @@ export default function AdminVolumeAnalytics() {
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .map((load) => {
         const shipperPrice = parseFloat(String(load.adminFinalPrice || 0));
-        const carrierPayout = parseFloat(String(load.finalPrice || 0));
+        const carrierPayout = getCarrierPayout(load);
         const margin = shipperPrice - carrierPayout;
         const marginPercent = shipperPrice > 0 ? (margin / shipperPrice) * 100 : 0;
         return {
@@ -227,7 +232,7 @@ export default function AdminVolumeAnalytics() {
       loadsCount: loadsWithMargin.length,
       allLoadsWithMargin,
     };
-  }, [loads]);
+  }, [loads, allBids]);
 
   const filteredData = useMemo(() => {
     switch (timeRange) {

@@ -42,6 +42,8 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   role: z.enum(["shipper", "carrier", "admin"]),
   companyName: z.string().optional(),
+  companyPhone: z.string().optional(),
+  city: z.string().optional(),
   phone: z.string().optional(),
   carrierType: z.enum(["solo", "enterprise"]).optional(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -181,6 +183,8 @@ export default function AuthPage() {
       confirmPassword: "",
       role: "shipper",
       companyName: "",
+      companyPhone: "",
+      city: "",
       phone: "",
       carrierType: undefined,
     },
@@ -466,6 +470,49 @@ export default function AuthPage() {
                           )}
                         />
                       </div>
+                      
+                      {selectedRole === "carrier" && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={registerForm.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>City / Location</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="e.g. Mumbai, Delhi" 
+                                    {...field} 
+                                    data-testid="input-register-city" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          {selectedCarrierType === "enterprise" && (
+                            <FormField
+                              control={registerForm.control}
+                              name="companyPhone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Company Phone</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="tel"
+                                      placeholder="+91 22 1234 5678" 
+                                      {...field} 
+                                      data-testid="input-register-company-phone" 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+                        </div>
+                      )}
+                      
                       <FormField
                         control={registerForm.control}
                         name="email"

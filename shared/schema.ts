@@ -258,6 +258,10 @@ export const carrierProfiles = pgTable("carrier_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   carrierType: text("carrier_type").default("enterprise"), // enterprise or solo
+  companyName: text("company_name"), // Company name for enterprise carriers
+  companyPhone: text("company_phone"), // Separate company phone for enterprise
+  city: text("city"), // City/location
+  operatingRegion: text("operating_region"), // Operating region
   fleetSize: integer("fleet_size").default(1),
   serviceZones: text("service_zones").array(),
   reliabilityScore: decimal("reliability_score", { precision: 3, scale: 2 }).default("0"),

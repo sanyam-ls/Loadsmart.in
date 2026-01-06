@@ -152,6 +152,9 @@ export async function registerRoutes(
         await storage.createCarrierProfile({
           userId: user.id,
           carrierType: carrierType,
+          companyName: isSolo ? undefined : req.body.companyName,
+          companyPhone: isSolo ? undefined : req.body.companyPhone,
+          city: req.body.city || null,
           fleetSize: isSolo ? 1 : 0,
           serviceZones: [],
           reliabilityScore: "0",

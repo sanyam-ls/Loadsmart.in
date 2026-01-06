@@ -58,8 +58,13 @@ const loadFormSchema = z.object({
   shipperCompanyAddress: z.string().min(5, "Company address is required"),
   shipperPhone: z.string().min(10, "Valid phone number is required"),
   pickupAddress: z.string().min(5, "Pickup address is required"),
+  pickupLocality: z.string().optional(),
+  pickupLandmark: z.string().optional(),
   pickupCity: z.string().min(2, "Pickup city is required"),
   dropoffAddress: z.string().min(5, "Dropoff address is required"),
+  dropoffLocality: z.string().optional(),
+  dropoffLandmark: z.string().optional(),
+  dropoffBusinessName: z.string().optional(),
   dropoffCity: z.string().min(2, "Dropoff city is required"),
   receiverName: z.string().min(2, "Receiver name is required"),
   receiverPhone: z.string().min(10, "Valid receiver phone number is required"),
@@ -574,8 +579,13 @@ export default function PostLoadPage() {
       shipperCompanyAddress: "",
       shipperPhone: "",
       pickupAddress: "",
+      pickupLocality: "",
+      pickupLandmark: "",
       pickupCity: "",
       dropoffAddress: "",
+      dropoffLocality: "",
+      dropoffLandmark: "",
+      dropoffBusinessName: "",
       dropoffCity: "",
       receiverName: "",
       receiverPhone: "",
@@ -638,8 +648,13 @@ export default function PostLoadPage() {
         shipperCompanyAddress: data.shipperCompanyAddress,
         shipperPhone: data.shipperPhone,
         pickupAddress: data.pickupAddress,
+        pickupLocality: data.pickupLocality || null,
+        pickupLandmark: data.pickupLandmark || null,
         pickupCity: data.pickupCity,
         dropoffAddress: data.dropoffAddress,
+        dropoffLocality: data.dropoffLocality || null,
+        dropoffLandmark: data.dropoffLandmark || null,
+        dropoffBusinessName: data.dropoffBusinessName || null,
         dropoffCity: data.dropoffCity,
         receiverName: data.receiverName,
         receiverPhone: data.receiverPhone,
@@ -881,6 +896,34 @@ export default function PostLoadPage() {
                       </FormItem>
                     )}
                   />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="pickupLocality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Locality / Area</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Industrial Area, Sector 5" {...field} data-testid="input-pickup-locality" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="pickupLandmark"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Landmark</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Near ABC Factory" {...field} data-testid="input-pickup-landmark" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="pickupCity"
@@ -912,6 +955,19 @@ export default function PostLoadPage() {
                 <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
+                    name="dropoffBusinessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ABC Enterprises Pvt. Ltd." {...field} data-testid="input-dropoff-business-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name="dropoffAddress"
                     render={({ field }) => (
                       <FormItem>
@@ -923,6 +979,34 @@ export default function PostLoadPage() {
                       </FormItem>
                     )}
                   />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="dropoffLocality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Locality / Area</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Okhla Industrial Area" {...field} data-testid="input-dropoff-locality" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dropoffLandmark"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Landmark</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Opposite Metro Station" {...field} data-testid="input-dropoff-landmark" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="dropoffCity"

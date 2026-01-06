@@ -1311,7 +1311,7 @@ export default function AdminInvoicesPage() {
 
       {/* Cost Breakdown Dialog for Admin View */}
       <Dialog open={costBreakdownOpen} onOpenChange={setCostBreakdownOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calculator className="h-5 w-5 text-primary" />
@@ -1321,6 +1321,7 @@ export default function AdminInvoicesPage() {
               {costBreakdownInvoice?.invoiceNumber} - Internal financial details
             </DialogDescription>
           </DialogHeader>
+          <div className="flex-1 overflow-y-auto pr-2">
           {costBreakdownInvoice && (() => {
             const totalAmount = parseFloat(costBreakdownInvoice.totalAmount || '0');
             const adminPostedPrice = parseFloat(costBreakdownInvoice.adminPostedPrice || costBreakdownInvoice.load?.adminFinalPrice || costBreakdownInvoice.subtotal || '0');
@@ -1463,6 +1464,7 @@ export default function AdminInvoicesPage() {
               </div>
             );
           })()}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCostBreakdownOpen(false)}>
               Close

@@ -338,6 +338,7 @@ export default function CarrierLoadsPage() {
     deliveryDate: string | null;
     carrierAdvancePercent: number | null;
     cargoDescription: string | null;
+    goodsToBeCarried: string | null;
     shipperLoadNumber: number | null;
     adminReferenceNumber: number | null;
   }
@@ -368,7 +369,7 @@ export default function CarrierLoadsPage() {
       pickupDate: load.pickupDate,
       deliveryDate: load.deliveryDate,
       carrierAdvancePercent: load.carrierAdvancePercent,
-      cargoDescription: load.cargoDescription,
+      cargoDescription: load.goodsToBeCarried || load.cargoDescription,
       postedAt: load.postedAt,
       shipperLoadNumber: load.shipperLoadNumber,
       adminReferenceNumber: load.adminReferenceNumber,
@@ -1034,7 +1035,7 @@ export default function CarrierLoadsPage() {
                     {detailLoad.cargoDescription && (
                       <div className="flex items-center gap-2 col-span-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Cargo:</span>
+                        <span className="text-muted-foreground">Commodity:</span>
                         <span className="font-medium">{detailLoad.cargoDescription}</span>
                       </div>
                     )}

@@ -614,36 +614,6 @@ export function PricingDrawer({
                       </Select>
                     </div>
 
-                    {/* Suggested Price */}
-                    <Card className="bg-muted/50">
-                      <CardContent className="pt-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-medium">AI Suggested Price</span>
-                            {confidenceScore > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {confidenceScore}% confidence
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-xl font-bold" data-testid="text-suggested-price">
-                            {formatRupees(suggestedPrice)}
-                          </span>
-                        </div>
-                        {breakdown && (
-                          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                            <span>Base: {formatRupees(breakdown.baseAmount)}</span>
-                            <span>Fuel: +{formatRupees(breakdown.fuelSurcharge)}</span>
-                            <span>Handling: +{formatRupees(breakdown.handlingFee)}</span>
-                            {breakdown.seasonalMultiplier !== 1 && (
-                              <span>Season: x{breakdown.seasonalMultiplier.toFixed(2)}</span>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
                     {/* Rate Type Selection */}
                     <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
                       <CardContent className="pt-4 space-y-4">

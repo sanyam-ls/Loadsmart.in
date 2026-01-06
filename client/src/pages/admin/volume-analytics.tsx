@@ -269,6 +269,10 @@ export default function AdminVolumeAnalytics() {
     return `Rs. ${(value / 1000).toFixed(0)}K`;
   };
 
+  const formatFullCurrency = (value: number) => {
+    return `Rs. ${value.toLocaleString('en-IN')}`;
+  };
+
   const handleChartClick = (data: any) => {
     if (data?.activePayload?.[0]) {
       const monthData = fullYearData.find(d => d.month === data.activePayload[0].payload.month);
@@ -868,14 +872,14 @@ export default function AdminVolumeAnalytics() {
                   <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Admin Set Price (Shipper Pays)</span>
-                      <span className="font-bold text-lg">{formatCurrency(selectedLoadDetail.shipperPrice)}</span>
+                      <span className="font-bold text-lg">{formatFullCurrency(selectedLoadDetail.shipperPrice)}</span>
                     </div>
                     
                     <Separator />
                     
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Carrier Final Payout</span>
-                      <span className="font-medium text-lg">{formatCurrency(selectedLoadDetail.carrierPayout)}</span>
+                      <span className="font-medium text-lg">{formatFullCurrency(selectedLoadDetail.carrierPayout)}</span>
                     </div>
                     
                     <Separator />
@@ -887,7 +891,7 @@ export default function AdminVolumeAnalytics() {
                       </span>
                       <div className="text-right">
                         <span className={`font-bold text-xl ${selectedLoadDetail.margin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {selectedLoadDetail.margin >= 0 ? '+' : ''}{formatCurrency(selectedLoadDetail.margin)}
+                          {selectedLoadDetail.margin >= 0 ? '+' : ''}{formatFullCurrency(selectedLoadDetail.margin)}
                         </span>
                         <Badge 
                           variant="secondary" 
@@ -932,7 +936,7 @@ export default function AdminVolumeAnalytics() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold">{formatCurrency(parseFloat(String(bid.amount || 0)))}</p>
+                            <p className="font-bold">{formatFullCurrency(parseFloat(String(bid.amount || 0)))}</p>
                             <Badge 
                               variant={bid.status === 'accepted' ? 'default' : bid.status === 'rejected' ? 'destructive' : 'secondary'}
                               className="text-xs capitalize"
@@ -954,11 +958,11 @@ export default function AdminVolumeAnalytics() {
                     <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
                       <h4 className="font-semibold mb-2 text-emerald-700 dark:text-emerald-400">Margin Calculation</h4>
                       <div className="text-sm space-y-1">
-                        <p>Shipper Price: <span className="font-medium">{formatCurrency(selectedLoadDetail.shipperPrice)}</span></p>
-                        <p>Accepted Bid: <span className="font-medium">{formatCurrency(parseFloat(String(acceptedBid.amount || 0)))}</span></p>
-                        <p>Final Carrier Payout: <span className="font-medium">{formatCurrency(selectedLoadDetail.carrierPayout)}</span></p>
+                        <p>Shipper Price: <span className="font-medium">{formatFullCurrency(selectedLoadDetail.shipperPrice)}</span></p>
+                        <p>Accepted Bid: <span className="font-medium">{formatFullCurrency(parseFloat(String(acceptedBid.amount || 0)))}</span></p>
+                        <p>Final Carrier Payout: <span className="font-medium">{formatFullCurrency(selectedLoadDetail.carrierPayout)}</span></p>
                         <p className="pt-1 border-t">
-                          Platform keeps: {formatCurrency(selectedLoadDetail.shipperPrice)} - {formatCurrency(selectedLoadDetail.carrierPayout)} = <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(selectedLoadDetail.margin)}</span>
+                          Platform keeps: {formatFullCurrency(selectedLoadDetail.shipperPrice)} - {formatFullCurrency(selectedLoadDetail.carrierPayout)} = <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatFullCurrency(selectedLoadDetail.margin)}</span>
                         </p>
                       </div>
                     </div>

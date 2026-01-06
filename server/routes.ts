@@ -326,7 +326,7 @@ export async function registerRoutes(
       if (!user) {
         // Try by phone (normalize with/without +91)
         const normalizedPhone = emailOrPhone.startsWith("+91") ? emailOrPhone : `+91${emailOrPhone.replace(/\D/g, '')}`;
-        const users = await storage.getUsers();
+        const users = await storage.getAllUsers();
         user = users.find(u => u.phone === normalizedPhone || u.phone === emailOrPhone) || null;
       }
       
@@ -356,8 +356,8 @@ export async function registerRoutes(
         expiresAt: expiresAt,
       });
       
-      // Log the OTP for development (in production, would send via SMS/email)
-      console.log(`[PASSWORD RESET] OTP for ${user.email || user.phone}: ${otpCode}`);
+      // In production, would send OTP via SMS/email service
+      // For demo/testing purposes, the OTP is shown in a toast notification on the frontend
       
       // Determine reset method
       const isEmail = emailOrPhone.includes("@");
@@ -370,8 +370,8 @@ export async function registerRoutes(
         message: `Reset code sent to ${maskedContact}`,
         otpId: otpRecord.id,
         method: isEmail ? "email" : "phone",
-        // For development, include OTP in response
-        devOtp: process.env.NODE_ENV === "development" ? otpCode : undefined
+        // For demo purposes only - in production, remove this and send via SMS/email
+        demoOtp: otpCode
       });
     } catch (error) {
       console.error("Forgot password error:", error);

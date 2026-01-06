@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Truck, Eye, EyeOff, ArrowRight, Phone, Shield, CheckCircle, Loader2 } from "lucide-react";
+import { Truck, Eye, EyeOff, ArrowRight, Phone, Shield, CheckCircle, Loader2, KeyRound, Mail, ArrowLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,6 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -85,6 +92,18 @@ export default function AuthPage() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [verifiedPhone, setVerifiedPhone] = useState("");
+  
+  // Forgot password state
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<"email" | "otp" | "password">("email");
+  const [resetEmailOrPhone, setResetEmailOrPhone] = useState("");
+  const [resetOtpId, setResetOtpId] = useState("");
+  const [resetOtpCode, setResetOtpCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  
   const { t } = useTranslation();
   const { login, register } = useAuth();
   const { toast } = useToast();
@@ -262,6 +281,125 @@ export default function AuthPage() {
   // Check if user can register (must have verified phone for all roles)
   const canRegister = otpVerified;
 
+  // Forgot password handlers
+  const handleForgotPasswordOpen = () => {
+    setForgotPasswordOpen(true);
+    setResetStep("email");
+    setResetEmailOrPhone("");
+    setResetOtpId("");
+    setResetOtpCode("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+  };
+
+  const handleSendResetOtp = async () => {
+    if (!resetEmailOrPhone.trim()) {
+      toast({ title: "Required", description: "Please enter your email or phone number.", variant: "destructive" });
+      return;
+    }
+    
+    setResetLoading(true);
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailOrPhone: resetEmailOrPhone }),
+      });
+      
+      const data = await response.json();
+      console.log("[Password Reset] Response:", data);
+      
+      if (response.ok) {
+        if (data.otpId) {
+          console.log("[Password Reset] Setting OTP step, otpId:", data.otpId);
+          setResetOtpId(data.otpId);
+          setResetStep("otp");
+          const toastMsg = data.demoOtp 
+            ? `Your reset code is: ${data.demoOtp}` 
+            : data.message;
+          toast({ 
+            title: "Code Sent!", 
+            description: toastMsg,
+            duration: 30000,
+          });
+        } else {
+          console.log("[Password Reset] No otpId in response (user not found)");
+          toast({ title: "Sent", description: data.message });
+        }
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to send reset code.", variant: "destructive" });
+      }
+    } catch (error) {
+      console.error("[Password Reset] Error:", error);
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleVerifyResetOtp = async () => {
+    if (!resetOtpCode || resetOtpCode.length !== 6) {
+      toast({ title: "Invalid Code", description: "Please enter the 6-digit code.", variant: "destructive" });
+      return;
+    }
+    
+    setResetLoading(true);
+    try {
+      const response = await fetch("/api/auth/verify-reset-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otpId: resetOtpId, otpCode: resetOtpCode }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setResetStep("password");
+        toast({ title: "Verified!", description: "Now set your new password." });
+      } else {
+        toast({ title: "Invalid Code", description: data.error || "Please try again.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (newPassword.length < 6) {
+      toast({ title: "Weak Password", description: "Password must be at least 6 characters.", variant: "destructive" });
+      return;
+    }
+    
+    if (newPassword !== confirmNewPassword) {
+      toast({ title: "Mismatch", description: "Passwords do not match.", variant: "destructive" });
+      return;
+    }
+    
+    setResetLoading(true);
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otpId: resetOtpId, newPassword }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setForgotPasswordOpen(false);
+        toast({ title: "Success!", description: "Your password has been reset. Please sign in with your new password." });
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to reset password.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex">
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
@@ -378,6 +516,17 @@ export default function AuthPage() {
                       <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
                         {isLoading ? t("common.loading") : t("auth.signIn")}
                       </Button>
+                      <div className="text-center">
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          className="text-sm text-muted-foreground p-0 h-auto"
+                          onClick={handleForgotPasswordOpen}
+                          data-testid="link-forgot-password"
+                        >
+                          Forgot your password?
+                        </Button>
+                      </div>
                     </form>
                   </Form>
                 </TabsContent>
@@ -651,6 +800,135 @@ export default function AuthPage() {
           </Card>
         </div>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              {resetStep === "email" && "Enter your email or phone number to receive a reset code."}
+              {resetStep === "otp" && "Enter the 6-digit code sent to your email or phone."}
+              {resetStep === "password" && "Create a new password for your account."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Step 1: Email/Phone Input */}
+            {resetStep === "email" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email or Phone Number</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="email@example.com or 9876543210"
+                      value={resetEmailOrPhone}
+                      onChange={(e) => setResetEmailOrPhone(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-reset-email-phone"
+                    />
+                  </div>
+                </div>
+                <Button 
+                  className="w-full" 
+                  onClick={handleSendResetOtp}
+                  disabled={resetLoading}
+                  data-testid="button-send-reset-code"
+                >
+                  {resetLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Send Reset Code
+                </Button>
+              </>
+            )}
+
+            {/* Step 2: OTP Verification */}
+            {resetStep === "otp" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Verification Code</label>
+                  <Input
+                    placeholder="Enter 6-digit code"
+                    value={resetOtpCode}
+                    onChange={(e) => setResetOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    maxLength={6}
+                    className="text-center text-lg tracking-widest"
+                    data-testid="input-reset-otp"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setResetStep("email")}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button 
+                    className="flex-1" 
+                    onClick={handleVerifyResetOtp}
+                    disabled={resetLoading || resetOtpCode.length !== 6}
+                    data-testid="button-verify-reset-otp"
+                  >
+                    {resetLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Verify Code
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* Step 3: New Password */}
+            {resetStep === "password" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">New Password</label>
+                  <div className="relative">
+                    <Input
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      data-testid="input-new-password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Confirm New Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    data-testid="input-confirm-new-password"
+                  />
+                </div>
+                <Button 
+                  className="w-full" 
+                  onClick={handleResetPassword}
+                  disabled={resetLoading || newPassword.length < 6 || newPassword !== confirmNewPassword}
+                  data-testid="button-reset-password"
+                >
+                  {resetLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Reset Password
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

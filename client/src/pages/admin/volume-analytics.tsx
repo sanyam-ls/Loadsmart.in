@@ -160,10 +160,13 @@ export default function AdminVolumeAnalytics() {
   });
 
   const platformMarginData = useMemo(() => {
+    const finalizedStatuses = ['awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid', 'invoice_approved', 'invoice_negotiation', 'in_transit', 'delivered', 'closed'];
+    
     const loadsWithMargin = loads.filter((load) => {
       const adminPrice = parseFloat(String(load.adminFinalPrice || 0));
       const finalPrice = parseFloat(String(load.finalPrice || 0));
-      return adminPrice > 0 && finalPrice > 0;
+      const isBidFinalized = load.assignedCarrierId || finalizedStatuses.includes(load.status || '');
+      return adminPrice > 0 && finalPrice > 0 && isBidFinalized;
     });
 
     const totalShipperPrice = loadsWithMargin.reduce((sum, load) => {
@@ -175,9 +178,8 @@ export default function AdminVolumeAnalytics() {
     const totalMargin = totalShipperPrice - totalCarrierPayout;
     const avgMarginPercent = totalShipperPrice > 0 ? (totalMargin / totalShipperPrice) * 100 : 0;
 
-    const recentLoadsWithMargin = loadsWithMargin
+    const allLoadsWithMargin = loadsWithMargin
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-      .slice(0, 10)
       .map((load) => {
         const shipperPrice = parseFloat(String(load.adminFinalPrice || 0));
         const carrierPayout = parseFloat(String(load.finalPrice || 0));
@@ -198,7 +200,7 @@ export default function AdminVolumeAnalytics() {
       totalMargin,
       avgMarginPercent,
       loadsCount: loadsWithMargin.length,
-      recentLoadsWithMargin,
+      allLoadsWithMargin,
     };
   }, [loads]);
 
@@ -706,74 +708,81 @@ export default function AdminVolumeAnalytics() {
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <CardTitle className="text-lg">Recent Loads - Platform Margins</CardTitle>
-            <Badge variant="secondary">
-              <Percent className="h-3 w-3 mr-1" />
-              Real-time margin tracking
-            </Badge>
+            <CardTitle className="text-lg">All Finalized Loads - Platform Margins</CardTitle>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">
+                {platformMarginData.loadsCount} loads
+              </Badge>
+              <Badge variant="secondary">
+                <Percent className="h-3 w-3 mr-1" />
+                Real-time margin tracking
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {platformMarginData.recentLoadsWithMargin.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Load ID</TableHead>
-                  <TableHead>Route</TableHead>
-                  <TableHead className="text-right">Shipper Price</TableHead>
-                  <TableHead className="text-right">Carrier Payout</TableHead>
-                  <TableHead className="text-right">Platform Margin</TableHead>
-                  <TableHead className="text-right">Margin %</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {platformMarginData.recentLoadsWithMargin.map((load) => (
-                  <TableRow key={load.id} data-testid={`row-load-margin-${load.id}`}>
-                    <TableCell className="font-medium">
-                      <Badge variant="outline">#{load.adminReferenceNumber || load.shipperLoadNumber || '—'}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm truncate max-w-[180px]">
-                          {load.pickupCity} - {load.dropoffCity}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(load.shipperPrice)}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {formatCurrency(load.carrierPayout)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className={load.margin >= 0 ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-red-600 dark:text-red-400 font-medium"}>
-                        {load.margin >= 0 ? "+" : ""}{formatCurrency(load.margin)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge 
-                        variant="secondary"
-                        className={load.marginPercent >= 10 
-                          ? "text-emerald-600 dark:text-emerald-400" 
-                          : load.marginPercent >= 5 
-                            ? "text-amber-600 dark:text-amber-400" 
-                            : "text-red-600 dark:text-red-400"
-                        }
-                      >
-                        {load.marginPercent >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
-                        {load.marginPercent.toFixed(1)}%
-                      </Badge>
-                    </TableCell>
+          {platformMarginData.allLoadsWithMargin.length > 0 ? (
+            <div className="max-h-[500px] overflow-y-auto border rounded-md">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead>Load ID</TableHead>
+                    <TableHead>Route</TableHead>
+                    <TableHead className="text-right">Shipper Price</TableHead>
+                    <TableHead className="text-right">Carrier Payout</TableHead>
+                    <TableHead className="text-right">Platform Margin</TableHead>
+                    <TableHead className="text-right">Margin %</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {platformMarginData.allLoadsWithMargin.map((load) => (
+                    <TableRow key={load.id} data-testid={`row-load-margin-${load.id}`}>
+                      <TableCell className="font-medium">
+                        <Badge variant="outline">#{load.adminReferenceNumber || load.shipperLoadNumber || '—'}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm truncate max-w-[180px]">
+                            {load.pickupCity} - {load.dropoffCity}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(load.shipperPrice)}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatCurrency(load.carrierPayout)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className={load.margin >= 0 ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-red-600 dark:text-red-400 font-medium"}>
+                          {load.margin >= 0 ? "+" : ""}{formatCurrency(load.margin)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge 
+                          variant="secondary"
+                          className={load.marginPercent >= 10 
+                            ? "text-emerald-600 dark:text-emerald-400" 
+                            : load.marginPercent >= 5 
+                              ? "text-amber-600 dark:text-amber-400" 
+                              : "text-red-600 dark:text-red-400"
+                          }
+                        >
+                          {load.marginPercent >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                          {load.marginPercent.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Percent className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>No priced loads yet</p>
-              <p className="text-sm mt-1">Platform margins will appear here once loads have both shipper and carrier prices set</p>
+              <p>No finalized loads yet</p>
+              <p className="text-sm mt-1">Platform margins will appear here once bids are finalized (carrier assigned)</p>
             </div>
           )}
         </CardContent>

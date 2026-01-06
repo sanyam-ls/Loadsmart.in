@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -13,7 +14,11 @@ import {
   Building,
   Filter,
   Download,
+  Percent,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
+import type { Load } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -150,6 +155,53 @@ export default function AdminVolumeAnalytics() {
   const [timeRange, setTimeRange] = useState<TimeRange>("1y");
   const [selectedMonth, setSelectedMonth] = useState<MonthlyVolumeData | null>(null);
 
+  const { data: loads = [] } = useQuery<Load[]>({
+    queryKey: ["/api/loads"],
+  });
+
+  const platformMarginData = useMemo(() => {
+    const loadsWithMargin = loads.filter((load) => {
+      const adminPrice = parseFloat(String(load.adminFinalPrice || 0));
+      const finalPrice = parseFloat(String(load.finalPrice || 0));
+      return adminPrice > 0 && finalPrice > 0;
+    });
+
+    const totalShipperPrice = loadsWithMargin.reduce((sum, load) => {
+      return sum + parseFloat(String(load.adminFinalPrice || 0));
+    }, 0);
+    const totalCarrierPayout = loadsWithMargin.reduce((sum, load) => {
+      return sum + parseFloat(String(load.finalPrice || 0));
+    }, 0);
+    const totalMargin = totalShipperPrice - totalCarrierPayout;
+    const avgMarginPercent = totalShipperPrice > 0 ? (totalMargin / totalShipperPrice) * 100 : 0;
+
+    const recentLoadsWithMargin = loadsWithMargin
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 10)
+      .map((load) => {
+        const shipperPrice = parseFloat(String(load.adminFinalPrice || 0));
+        const carrierPayout = parseFloat(String(load.finalPrice || 0));
+        const margin = shipperPrice - carrierPayout;
+        const marginPercent = shipperPrice > 0 ? (margin / shipperPrice) * 100 : 0;
+        return {
+          ...load,
+          shipperPrice,
+          carrierPayout,
+          margin,
+          marginPercent,
+        };
+      });
+
+    return {
+      totalShipperPrice,
+      totalCarrierPayout,
+      totalMargin,
+      avgMarginPercent,
+      loadsCount: loadsWithMargin.length,
+      recentLoadsWithMargin,
+    };
+  }, [loads]);
+
   const filteredData = useMemo(() => {
     switch (timeRange) {
       case "30d":
@@ -236,7 +288,33 @@ export default function AdminVolumeAnalytics() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Card 
+          className="hover-elevate transition-all"
+          data-testid="card-platform-margin"
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Platform Margin</p>
+                <p className="text-2xl font-bold">{formatCurrency(platformMarginData.totalMargin)}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <Percent className="h-5 w-5 text-emerald-500" />
+              </div>
+            </div>
+            <Badge 
+              variant="secondary" 
+              className={`mt-2 ${platformMarginData.avgMarginPercent >= 10 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}
+            >
+              {platformMarginData.avgMarginPercent >= 10 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+              {platformMarginData.avgMarginPercent.toFixed(1)}% avg margin
+            </Badge>
+            <p className="text-xs text-muted-foreground mt-2">
+              From {platformMarginData.loadsCount} priced loads
+            </p>
+          </CardContent>
+        </Card>
         <Card 
           className="cursor-pointer hover-elevate transition-all"
           onClick={() => setLocation("/admin/revenue/sources")}
@@ -624,6 +702,82 @@ export default function AdminVolumeAnalytics() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="text-lg">Recent Loads - Platform Margins</CardTitle>
+            <Badge variant="secondary">
+              <Percent className="h-3 w-3 mr-1" />
+              Real-time margin tracking
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {platformMarginData.recentLoadsWithMargin.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Load ID</TableHead>
+                  <TableHead>Route</TableHead>
+                  <TableHead className="text-right">Shipper Price</TableHead>
+                  <TableHead className="text-right">Carrier Payout</TableHead>
+                  <TableHead className="text-right">Platform Margin</TableHead>
+                  <TableHead className="text-right">Margin %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {platformMarginData.recentLoadsWithMargin.map((load) => (
+                  <TableRow key={load.id} data-testid={`row-load-margin-${load.id}`}>
+                    <TableCell className="font-medium">
+                      <Badge variant="outline">#{load.id}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-sm truncate max-w-[180px]">
+                          {load.pickupCity} - {load.deliveryCity}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(load.shipperPrice)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {formatCurrency(load.carrierPayout)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className={load.margin >= 0 ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-red-600 dark:text-red-400 font-medium"}>
+                        {load.margin >= 0 ? "+" : ""}{formatCurrency(load.margin)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge 
+                        variant="secondary"
+                        className={load.marginPercent >= 10 
+                          ? "text-emerald-600 dark:text-emerald-400" 
+                          : load.marginPercent >= 5 
+                            ? "text-amber-600 dark:text-amber-400" 
+                            : "text-red-600 dark:text-red-400"
+                        }
+                      >
+                        {load.marginPercent >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                        {load.marginPercent.toFixed(1)}%
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Percent className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>No priced loads yet</p>
+              <p className="text-sm mt-1">Platform margins will appear here once loads have both shipper and carrier prices set</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -312,6 +312,180 @@ export async function registerRoutes(
     }
   });
 
+  // Forgot Password - Send reset OTP to email or phone
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { emailOrPhone } = req.body;
+      
+      if (!emailOrPhone) {
+        return res.status(400).json({ error: "Email or phone number is required" });
+      }
+      
+      // Try to find user by email or phone
+      let user = await storage.getUserByEmail(emailOrPhone);
+      if (!user) {
+        // Try by phone (normalize with/without +91)
+        const normalizedPhone = emailOrPhone.startsWith("+91") ? emailOrPhone : `+91${emailOrPhone.replace(/\D/g, '')}`;
+        const users = await storage.getUsers();
+        user = users.find(u => u.phone === normalizedPhone || u.phone === emailOrPhone) || null;
+      }
+      
+      if (!user) {
+        // Don't reveal if user exists for security
+        return res.json({ 
+          success: true, 
+          message: "If an account exists with this email or phone, you will receive a reset code.",
+          otpId: null
+        });
+      }
+      
+      // Generate 6-digit OTP
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Calculate expiry (15 minutes for password reset)
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      
+      // Store OTP in database
+      const otpRecord = await storage.createOtpVerification({
+        otpType: "password_reset",
+        otpCode: otpCode,
+        userId: user.id,
+        phoneNumber: user.phone || null,
+        status: "pending",
+        validityMinutes: 15,
+        expiresAt: expiresAt,
+      });
+      
+      // Log the OTP for development (in production, would send via SMS/email)
+      console.log(`[PASSWORD RESET] OTP for ${user.email || user.phone}: ${otpCode}`);
+      
+      // Determine reset method
+      const isEmail = emailOrPhone.includes("@");
+      const maskedContact = isEmail 
+        ? emailOrPhone.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+        : emailOrPhone.replace(/(.{3})(.*)(.{4})/, '$1****$3');
+      
+      res.json({ 
+        success: true, 
+        message: `Reset code sent to ${maskedContact}`,
+        otpId: otpRecord.id,
+        method: isEmail ? "email" : "phone",
+        // For development, include OTP in response
+        devOtp: process.env.NODE_ENV === "development" ? otpCode : undefined
+      });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ error: "Failed to process request" });
+    }
+  });
+
+  // Verify Password Reset OTP
+  app.post("/api/auth/verify-reset-otp", async (req, res) => {
+    try {
+      const { otpId, otpCode } = req.body;
+      
+      if (!otpId || !otpCode) {
+        return res.status(400).json({ error: "OTP ID and code are required" });
+      }
+      
+      const otpRecord = await storage.getOtpVerification(otpId);
+      
+      if (!otpRecord) {
+        return res.status(400).json({ error: "Invalid reset request" });
+      }
+      
+      if (otpRecord.otpType !== "password_reset") {
+        return res.status(400).json({ error: "Invalid reset request" });
+      }
+      
+      if (otpRecord.status !== "pending") {
+        return res.status(400).json({ error: "This reset code has already been used or expired" });
+      }
+      
+      if (new Date() > new Date(otpRecord.expiresAt)) {
+        await storage.updateOtpVerification(otpId, { status: "expired" });
+        return res.status(400).json({ error: "Reset code has expired. Please request a new one." });
+      }
+      
+      // Check attempts
+      if ((otpRecord.attempts || 0) >= 5) {
+        await storage.updateOtpVerification(otpId, { status: "expired" });
+        return res.status(400).json({ error: "Too many attempts. Please request a new code." });
+      }
+      
+      if (otpRecord.otpCode !== otpCode) {
+        await storage.updateOtpVerification(otpId, { attempts: (otpRecord.attempts || 0) + 1 });
+        return res.status(400).json({ error: "Invalid code. Please try again." });
+      }
+      
+      // Mark as verified (but not consumed yet - that happens when password is reset)
+      await storage.updateOtpVerification(otpId, { 
+        status: "verified",
+        verifiedAt: new Date()
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Code verified successfully",
+        userId: otpRecord.userId
+      });
+    } catch (error) {
+      console.error("Verify reset OTP error:", error);
+      res.status(500).json({ error: "Failed to verify code" });
+    }
+  });
+
+  // Reset Password
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { otpId, newPassword } = req.body;
+      
+      if (!otpId || !newPassword) {
+        return res.status(400).json({ error: "OTP ID and new password are required" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+      
+      const otpRecord = await storage.getOtpVerification(otpId);
+      
+      if (!otpRecord) {
+        return res.status(400).json({ error: "Invalid reset request" });
+      }
+      
+      if (otpRecord.status !== "verified") {
+        return res.status(400).json({ error: "Please verify your code first" });
+      }
+      
+      if (!otpRecord.userId) {
+        return res.status(400).json({ error: "Invalid reset request" });
+      }
+      
+      // Check expiry again (15 min window after verification)
+      const verifiedAt = otpRecord.verifiedAt ? new Date(otpRecord.verifiedAt) : new Date();
+      if (Date.now() - verifiedAt.getTime() > 15 * 60 * 1000) {
+        await storage.updateOtpVerification(otpId, { status: "expired" });
+        return res.status(400).json({ error: "Reset session expired. Please start over." });
+      }
+      
+      // Hash new password and update user
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(otpRecord.userId, { password: hashedPassword });
+      
+      // Mark OTP as consumed
+      await storage.updateOtpVerification(otpId, { status: "consumed" });
+      
+      res.json({ 
+        success: true, 
+        message: "Password reset successfully. You can now login with your new password."
+      });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
   app.get("/api/auth/me", async (req, res) => {
     try {
       if (!req.session.userId) {

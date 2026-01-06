@@ -24,7 +24,6 @@ import LoadDetailPage from "@/pages/shipper/load-detail";
 import TrackingPage from "@/pages/shipper/tracking";
 import ShipperDocumentsPage from "@/pages/shipper/documents";
 import ShipperInvoicesPage from "@/pages/shipper/invoices";
-import ShipperOtpQueuePage from "@/pages/shipper/otp-queue";
 import AdminNearbyTrucksPage from "@/pages/admin/nearby-trucks";
 
 import CarrierDashboard from "@/pages/carrier/dashboard";
@@ -60,6 +59,7 @@ import AdminNegotiationsPage from "@/pages/admin/negotiations";
 import AdminInvoicesPage from "@/pages/admin/invoices";
 import AdminCarrierVerificationPage from "@/pages/admin/carrier-verification";
 import NegotiationInbox from "@/pages/admin/negotiation-inbox";
+import AdminOtpQueuePage from "@/pages/admin/otp-queue";
 import { MockDataProvider } from "@/lib/mock-data-store";
 import { DocumentVaultProvider } from "@/lib/document-vault-store";
 import { AdminDataProvider } from "@/lib/admin-data-store";
@@ -129,8 +129,7 @@ function AppContent() {
               <Route path="/shipper/tracking" component={TrackingPage} />
               <Route path="/shipper/documents" component={ShipperDocumentsPage} />
               <Route path="/shipper/invoices" component={ShipperInvoicesPage} />
-              <Route path="/shipper/otp-queue" component={ShipperOtpQueuePage} />
-              
+                            
               <Route path="/carrier" component={CarrierDashboard} />
               <Route path="/carrier/add-truck" component={AddTruckPage} />
               <Route path="/carrier/fleet" component={FleetPage} />
@@ -170,6 +169,7 @@ function AppContent() {
               <Route path="/admin/verification" component={AdminCarrierVerificationPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
               <Route path="/admin/invoices" component={AdminInvoicesPage} />
+              <Route path="/admin/otp-queue" component={AdminOtpQueuePage} />
               
               <Route path="/settings" component={SettingsPage} />
               

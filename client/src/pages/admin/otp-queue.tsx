@@ -259,6 +259,236 @@ function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
   );
 }
 
+interface ApprovedRequestCardProps {
+  request: OtpRequest;
+}
+
+function ApprovedRequestCard({ request }: ApprovedRequestCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const typeLabels: Record<string, string> = {
+    trip_start: "Trip Start",
+    route_start: "Route Start",
+    trip_end: "Trip End",
+    registration: "Registration"
+  };
+  const typeColors: Record<string, string> = {
+    trip_start: "bg-green-500/10 text-green-600 dark:text-green-400",
+    route_start: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    trip_end: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    registration: "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+  };
+  const typeLabel = typeLabels[request.requestType] || "Unknown";
+  const typeColor = typeColors[request.requestType] || "bg-muted text-muted-foreground";
+
+  const isSoloDriver = (request as any).isSoloDriver;
+  const assignedDriver = (request as any).assignedDriver;
+  const assignedTruck = (request as any).assignedTruck;
+  
+  return (
+    <Card className="mb-3" data-testid={`approved-request-${request.id}`}>
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        <CardContent className="pt-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className={typeColor}>{typeLabel}</Badge>
+                <Badge variant="outline">{formatLoadId(request.load)}</Badge>
+                {isSoloDriver ? (
+                  <Badge variant="secondary" className="text-xs">Solo Driver</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">Enterprise</Badge>
+                )}
+              </div>
+              <Badge variant="secondary">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Approved
+              </Badge>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                {isSoloDriver ? (
+                  <User className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="font-medium">
+                  {isSoloDriver 
+                    ? ((request.carrier as any)?.driverName || request.carrier?.username || "Unknown Driver")
+                    : (request.carrier?.companyName || request.carrier?.username || "Unknown Carrier")
+                  }
+                </span>
+                {request.carrier?.phone && (
+                  <span className="text-muted-foreground">
+                    <Phone className="h-3 w-3 inline mr-1" />
+                    {request.carrier.phone}
+                  </span>
+                )}
+              </div>
+              {request.load && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>{request.load.pickupCity || "—"} → {request.load.deliveryCity || request.load.dropoffCity || "—"}</span>
+                </div>
+              )}
+            </div>
+
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-center text-muted-foreground"
+                data-testid={`button-expand-approved-${request.id}`}
+              >
+                {isExpanded ? (
+                  <>
+                    <ChevronUp className="h-4 w-4 mr-1" />
+                    Hide Details
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                    View Driver Details
+                  </>
+                )}
+              </Button>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent>
+              <Separator className="my-2" />
+              <div className="space-y-3 py-2">
+                {isSoloDriver ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Solo Driver Details</p>
+                    <div className="grid grid-cols-1 gap-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Name:</span>
+                        <span className="font-medium">{(request.carrier as any)?.driverName || request.carrier?.username || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Phone:</span>
+                        <span className="font-medium">{request.carrier?.phone || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Location:</span>
+                        <span className="font-medium">{(request.carrier as any)?.location || "—"}</span>
+                      </div>
+                      {assignedTruck && (
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Truck:</span>
+                          <span className="font-medium">
+                            {assignedTruck.registrationNumber} ({assignedTruck.manufacturer} {assignedTruck.model})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Company Details</p>
+                      <div className="grid grid-cols-1 gap-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Company:</span>
+                          <span className="font-medium">{request.carrier?.companyName || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Company Phone:</span>
+                          <span className="font-medium">{request.carrier?.phone || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Location:</span>
+                          <span className="font-medium">{(request.carrier as any)?.location || "—"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned Driver</p>
+                      {assignedDriver ? (
+                        <div className="grid grid-cols-1 gap-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Driver Name:</span>
+                            <span className="font-medium">{assignedDriver.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Driver Phone:</span>
+                            <span className="font-medium">{assignedDriver.phone || "—"}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No driver assigned yet</p>
+                      )}
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned Truck</p>
+                      {assignedTruck ? (
+                        <div className="grid grid-cols-1 gap-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Truck Number:</span>
+                            <span className="font-medium">{assignedTruck.registrationNumber}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground ml-6">Type:</span>
+                            <span className="font-medium">{assignedTruck.truckType || "—"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground ml-6">Vehicle:</span>
+                            <span className="font-medium">{assignedTruck.manufacturer} {assignedTruck.model}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No truck assigned yet</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <Separator className="my-2" />
+            </CollapsibleContent>
+            
+            <div className="flex flex-wrap gap-4 pt-2 text-xs text-muted-foreground border-t">
+              <div>
+                <span className="font-medium">Requested:</span>{" "}
+                {request.requestedAt 
+                  ? format(new Date(request.requestedAt), "MMM d, yyyy 'at' h:mm a")
+                  : "—"}
+              </div>
+              <div>
+                <span className="font-medium">Approved:</span>{" "}
+                {request.processedAt 
+                  ? format(new Date(request.processedAt), "MMM d, yyyy 'at' h:mm a")
+                  : "—"}
+              </div>
+              {request.approvedBy && (
+                <div>
+                  <span className="font-medium">By:</span> {request.approvedBy.username}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Collapsible>
+    </Card>
+  );
+}
+
 export default function AdminOtpQueue() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -439,66 +669,7 @@ export default function AdminOtpQueue() {
                 Showing {approvedRequests.length} approved request{approvedRequests.length !== 1 ? 's' : ''}
               </p>
               {approvedRequests.map(request => (
-                <Card key={request.id} className="mb-3" data-testid={`approved-request-${request.id}`}>
-                  <CardContent className="pt-4">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge className="bg-green-500/10 text-green-600 dark:text-green-400">
-                            {request.requestType === "trip_start" ? "Trip Start" : "Trip End"}
-                          </Badge>
-                          <Badge variant="outline">{formatLoadId(request.load)}</Badge>
-                        </div>
-                        <Badge variant="secondary">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Approved
-                        </Badge>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Truck className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {request.carrier?.companyName || request.carrier?.username || "Unknown Carrier"}
-                          </span>
-                          {request.carrier?.phone && (
-                            <span className="text-muted-foreground">
-                              <Phone className="h-3 w-3 inline mr-1" />
-                              {request.carrier.phone}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {request.load && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span>{request.load.pickupCity || "—"} → {request.load.deliveryCity || request.load.dropoffCity || "—"}</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-4 pt-2 text-xs text-muted-foreground border-t">
-                        <div>
-                          <span className="font-medium">Requested:</span>{" "}
-                          {request.requestedAt 
-                            ? format(new Date(request.requestedAt), "MMM d, yyyy 'at' h:mm a")
-                            : "—"}
-                        </div>
-                        <div>
-                          <span className="font-medium">Approved:</span>{" "}
-                          {request.processedAt 
-                            ? format(new Date(request.processedAt), "MMM d, yyyy 'at' h:mm a")
-                            : "—"}
-                        </div>
-                        {request.approvedBy && (
-                          <div>
-                            <span className="font-medium">By:</span> {request.approvedBy.username}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <ApprovedRequestCard key={request.id} request={request} />
               ))}
             </div>
           )}

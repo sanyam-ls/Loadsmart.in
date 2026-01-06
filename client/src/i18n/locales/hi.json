@@ -434,6 +434,7 @@
     "amountDue": "देय राशि",
     "send": "भेजें",
     "acknowledged": "स्वीकृत",
+    "acknowledge": "चालान स्वीकार करें",
     "sent": "भेजा गया",
     "resend": "पुनः भेजें"
   },

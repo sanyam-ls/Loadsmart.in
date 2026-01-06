@@ -435,6 +435,7 @@
     "amountDue": "Amount Due",
     "send": "Send",
     "acknowledged": "Acknowledged",
+    "acknowledge": "Acknowledge Invoice",
     "sent": "Sent",
     "resend": "Resend"
   },

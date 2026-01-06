@@ -434,6 +434,7 @@
     "amountDue": "देय रक्कम",
     "send": "पाठवा",
     "acknowledged": "स्वीकृत",
+    "acknowledge": "बिल स्वीकृत करा",
     "sent": "पाठवले",
     "resend": "पुन्हा पाठवा"
   },

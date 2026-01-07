@@ -49,9 +49,11 @@ The Shipper Portal integrates a CAN-Bus GPS + Telematics system for real-time tr
 ### Shipper Onboarding Workflow (Phase 0)
 
 New shippers must complete a business onboarding process before posting loads. The workflow includes:
+- **Auto-Draft Creation**: When a new shipper registers, a draft onboarding request is automatically created. The admin page shows these as "Awaiting Submission" in the Draft status filter.
 - **Shipper Form**: Multi-tab form at `/shipper/onboarding` capturing business identity (legal name, PAN, GST, CIN), contact details, trade references, compliance documents (GST certificate, PAN card, incorporation certificate), and banking information.
-- **Admin Review Queue**: Admin page at `/admin/onboarding` with status-based filtering, search, and detailed review dialog showing all onboarding data across tabs.
-- **Status Flow**: `pending → under_review → (approved | rejected | on_hold)`. Shippers can update if status is `on_hold` or `rejected`.
+- **Admin Review Queue**: Admin page at `/admin/onboarding` with status-based filtering (Draft, Pending, Under Review, Approved, Rejected, On Hold), search, and detailed review dialog showing all onboarding data across tabs.
+- **Status Flow**: `draft → pending → under_review → (approved | rejected | on_hold)`. Draft represents newly registered shippers who haven't submitted. Shippers can update if status is `on_hold` or `rejected`.
+- **Merged Credit Assessment**: The approval dialog integrates credit assessment fields (credit limit, payment terms, risk level) directly into the onboarding workflow, eliminating the need for a separate credit assessment page.
 - **Approval Integration**: When approved, sets `user.isVerified=true`, creates/updates `shipperCreditProfile` with admin-specified credit limit/payment terms/risk level.
 - **Gate Enforcement**: Shippers must be verified (`isVerified=true`) before posting loads.
 - **Full i18n**: All onboarding strings translated in English, Hindi, Punjabi, Marathi, and Tamil.

@@ -122,23 +122,24 @@ export default function AdminOnboardingPage() {
   };
 
   const filteredRequests = requests?.filter((item) => {
+    if (!item?.request) return false;
     const matchesSearch =
       !searchQuery ||
       item.request.legalCompanyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.user.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      item.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.user?.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || item.request.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const statusCounts = {
     all: requests?.length || 0,
-    draft: requests?.filter((r) => r.request.status === "draft").length || 0,
-    pending: requests?.filter((r) => r.request.status === "pending").length || 0,
-    under_review: requests?.filter((r) => r.request.status === "under_review").length || 0,
-    approved: requests?.filter((r) => r.request.status === "approved").length || 0,
-    rejected: requests?.filter((r) => r.request.status === "rejected").length || 0,
-    on_hold: requests?.filter((r) => r.request.status === "on_hold").length || 0,
+    draft: requests?.filter((r) => r.request?.status === "draft").length || 0,
+    pending: requests?.filter((r) => r.request?.status === "pending").length || 0,
+    under_review: requests?.filter((r) => r.request?.status === "under_review").length || 0,
+    approved: requests?.filter((r) => r.request?.status === "approved").length || 0,
+    rejected: requests?.filter((r) => r.request?.status === "rejected").length || 0,
+    on_hold: requests?.filter((r) => r.request?.status === "on_hold").length || 0,
   };
 
   const openReviewDialog = (item: OnboardingWithUser) => {

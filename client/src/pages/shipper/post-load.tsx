@@ -807,6 +807,12 @@ export default function PostLoadPage() {
                   {t("postLoad.completeOnboarding")}
                 </Button>
               )}
+              {onboardingStatus?.status === "draft" && (
+                <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-continue-onboarding">
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t("postLoad.continueOnboarding")}
+                </Button>
+              )}
               {(onboardingStatus?.status === "on_hold" || onboardingStatus?.status === "rejected") && (
                 <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-update-onboarding">
                   <FileText className="h-4 w-4 mr-2" />

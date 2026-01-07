@@ -50,6 +50,7 @@ The Shipper Portal integrates a CAN-Bus GPS + Telematics system for real-time tr
 
 New shippers must complete a business onboarding process before posting loads. The workflow includes:
 - **Auto-Draft Creation**: When a new shipper registers, a draft onboarding request is automatically created. The admin page shows these as "Awaiting Submission" in the Draft status filter.
+- **Draft Auto-Save**: Shippers with draft status can continue filling out their verification form with automatic saving. Changes are debounced (1.5s delay) and saved via `PATCH /api/shipper/onboarding/draft`. A visual indicator shows "Auto-saving..." and "Changes saved" status. Form fields are pre-populated when returning to continue a draft.
 - **Shipper Form**: Multi-tab form at `/shipper/onboarding` capturing business identity (legal name, PAN, GST, CIN), contact details, trade references, compliance documents (GST certificate, PAN card, incorporation certificate), and banking information.
 - **Admin Review Queue**: Admin page at `/admin/onboarding` with status-based filtering (Draft, Pending, Under Review, Approved, Rejected, On Hold), search, and detailed review dialog showing all onboarding data across tabs.
 - **Status Flow**: `draft → pending → under_review → (approved | rejected | on_hold)`. Draft represents newly registered shippers who haven't submitted. Shippers can update if status is `on_hold` or `rejected`.

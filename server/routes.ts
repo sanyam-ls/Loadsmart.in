@@ -170,7 +170,7 @@ export async function registerRoutes(
 
       // Auto-create draft onboarding request for shippers (only if none exists)
       if (user.role === "shipper") {
-        const existingRequest = await storage.getShipperOnboardingRequestByShipperId(user.id);
+        const existingRequest = await storage.getShipperOnboardingRequest(user.id);
         if (!existingRequest) {
           await storage.createShipperOnboardingRequest({
             shipperId: user.id,
@@ -7212,6 +7212,82 @@ export async function registerRoutes(
       res.json(onboarding || null);
     } catch (error) {
       console.error("Get shipper onboarding error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/shipper/onboarding/draft - Save draft data (auto-save)
+  app.patch("/api/shipper/onboarding/draft", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const existing = await storage.getShipperOnboardingRequest(user.id);
+      if (!existing) {
+        return res.status(404).json({ error: "No onboarding request found" });
+      }
+
+      if (existing.status !== "draft") {
+        return res.status(400).json({ 
+          error: "Can only save drafts for requests in draft status",
+          status: existing.status 
+        });
+      }
+
+      const draftSchema = z.object({
+        legalCompanyName: z.string().optional(),
+        tradeName: z.string().optional(),
+        businessType: z.string().optional(),
+        panNumber: z.string().optional(),
+        gstinNumber: z.string().optional(),
+        cinNumber: z.string().optional(),
+        incorporationDate: z.string().optional(),
+        registeredAddress: z.string().optional(),
+        registeredCity: z.string().optional(),
+        registeredState: z.string().optional(),
+        registeredPincode: z.string().optional(),
+        operatingRegions: z.array(z.string()).optional(),
+        primaryCommodities: z.array(z.string()).optional(),
+        estimatedMonthlyLoads: z.number().optional(),
+        avgLoadValueInr: z.string().optional(),
+        contactPersonName: z.string().optional(),
+        contactPersonDesignation: z.string().optional(),
+        contactPersonPhone: z.string().optional(),
+        contactPersonEmail: z.string().optional(),
+        gstCertificateUrl: z.string().optional(),
+        panCardUrl: z.string().optional(),
+        incorporationCertificateUrl: z.string().optional(),
+        cancelledChequeUrl: z.string().optional(),
+        businessAddressProofUrl: z.string().optional(),
+        tradeReference1Company: z.string().optional(),
+        tradeReference1Contact: z.string().optional(),
+        tradeReference1Phone: z.string().optional(),
+        tradeReference2Company: z.string().optional(),
+        tradeReference2Contact: z.string().optional(),
+        tradeReference2Phone: z.string().optional(),
+        bankName: z.string().optional(),
+        bankAccountNumber: z.string().optional(),
+        bankIfscCode: z.string().optional(),
+        bankBranchName: z.string().optional(),
+        preferredPaymentTerms: z.string().optional(),
+        requestedCreditLimit: z.string().optional(),
+      });
+
+      const validatedData = draftSchema.parse(req.body);
+
+      const updated = await storage.updateShipperOnboardingRequest(existing.id, {
+        ...validatedData,
+        incorporationDate: validatedData.incorporationDate ? new Date(validatedData.incorporationDate) : undefined,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Save draft error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

@@ -857,7 +857,10 @@
     "whyOnboarding": "Why is verification required?",
     "whyOnboardingDesc": "Business verification ensures compliance with Indian logistics regulations including GST, PAN, and transport permits. This protects all parties in freight transactions.",
     "completeOnboarding": "Complete Verification",
-    "updateOnboarding": "Update Application"
+    "updateOnboarding": "Update Application",
+    "continueOnboarding": "Continue Verification",
+    "autoSaving": "Auto-saving...",
+    "autoSaved": "Changes saved"
   },
   "solo": {
     "title": "Solo Driver Portal",
@@ -1134,6 +1137,7 @@
   "onboarding": {
     "title": "Business Onboarding",
     "subtitle": "Complete your business verification to start posting loads",
+    "continueDraftDesc": "Continue filling out your verification form. Changes are saved automatically.",
     "statusDescription": "Your onboarding application status",
     "tabBusiness": "Business",
     "tabContact": "Contact",

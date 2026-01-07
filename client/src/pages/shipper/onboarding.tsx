@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -80,6 +80,9 @@ export default function ShipperOnboarding() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("business");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedDataRef = useRef<string>("");
 
   const { data: onboardingStatus, isLoading: isLoadingStatus } = useQuery<any>({
     queryKey: ["/api/shipper/onboarding"],
@@ -104,6 +107,102 @@ export default function ShipperOnboarding() {
       preferredPaymentTerms: "net_30",
     },
   });
+
+  // Pre-populate form with existing draft data
+  useEffect(() => {
+    if (onboardingStatus && onboardingStatus.status === "draft") {
+      const draftData: Partial<OnboardingFormData> = {};
+      
+      if (onboardingStatus.legalCompanyName) draftData.legalCompanyName = onboardingStatus.legalCompanyName;
+      if (onboardingStatus.tradeName) draftData.tradeName = onboardingStatus.tradeName;
+      if (onboardingStatus.businessType) draftData.businessType = onboardingStatus.businessType;
+      if (onboardingStatus.panNumber) draftData.panNumber = onboardingStatus.panNumber;
+      if (onboardingStatus.gstinNumber) draftData.gstinNumber = onboardingStatus.gstinNumber;
+      if (onboardingStatus.cinNumber) draftData.cinNumber = onboardingStatus.cinNumber;
+      if (onboardingStatus.incorporationDate) draftData.incorporationDate = onboardingStatus.incorporationDate.split('T')[0];
+      if (onboardingStatus.registeredAddress) draftData.registeredAddress = onboardingStatus.registeredAddress;
+      if (onboardingStatus.registeredCity) draftData.registeredCity = onboardingStatus.registeredCity;
+      if (onboardingStatus.registeredState) draftData.registeredState = onboardingStatus.registeredState;
+      if (onboardingStatus.registeredPincode) draftData.registeredPincode = onboardingStatus.registeredPincode;
+      if (onboardingStatus.operatingRegions) draftData.operatingRegions = onboardingStatus.operatingRegions;
+      if (onboardingStatus.primaryCommodities) draftData.primaryCommodities = onboardingStatus.primaryCommodities;
+      if (onboardingStatus.estimatedMonthlyLoads) draftData.estimatedMonthlyLoads = onboardingStatus.estimatedMonthlyLoads;
+      if (onboardingStatus.avgLoadValueInr) draftData.avgLoadValueInr = onboardingStatus.avgLoadValueInr;
+      if (onboardingStatus.contactPersonName) draftData.contactPersonName = onboardingStatus.contactPersonName;
+      if (onboardingStatus.contactPersonDesignation) draftData.contactPersonDesignation = onboardingStatus.contactPersonDesignation;
+      if (onboardingStatus.contactPersonPhone) draftData.contactPersonPhone = onboardingStatus.contactPersonPhone;
+      if (onboardingStatus.contactPersonEmail) draftData.contactPersonEmail = onboardingStatus.contactPersonEmail;
+      if (onboardingStatus.gstCertificateUrl) draftData.gstCertificateUrl = onboardingStatus.gstCertificateUrl;
+      if (onboardingStatus.panCardUrl) draftData.panCardUrl = onboardingStatus.panCardUrl;
+      if (onboardingStatus.incorporationCertificateUrl) draftData.incorporationCertificateUrl = onboardingStatus.incorporationCertificateUrl;
+      if (onboardingStatus.cancelledChequeUrl) draftData.cancelledChequeUrl = onboardingStatus.cancelledChequeUrl;
+      if (onboardingStatus.businessAddressProofUrl) draftData.businessAddressProofUrl = onboardingStatus.businessAddressProofUrl;
+      if (onboardingStatus.tradeReference1Company) draftData.tradeReference1Company = onboardingStatus.tradeReference1Company;
+      if (onboardingStatus.tradeReference1Contact) draftData.tradeReference1Contact = onboardingStatus.tradeReference1Contact;
+      if (onboardingStatus.tradeReference1Phone) draftData.tradeReference1Phone = onboardingStatus.tradeReference1Phone;
+      if (onboardingStatus.tradeReference2Company) draftData.tradeReference2Company = onboardingStatus.tradeReference2Company;
+      if (onboardingStatus.tradeReference2Contact) draftData.tradeReference2Contact = onboardingStatus.tradeReference2Contact;
+      if (onboardingStatus.tradeReference2Phone) draftData.tradeReference2Phone = onboardingStatus.tradeReference2Phone;
+      if (onboardingStatus.bankName) draftData.bankName = onboardingStatus.bankName;
+      if (onboardingStatus.bankAccountNumber) draftData.bankAccountNumber = onboardingStatus.bankAccountNumber;
+      if (onboardingStatus.bankIfscCode) draftData.bankIfscCode = onboardingStatus.bankIfscCode;
+      if (onboardingStatus.bankBranchName) draftData.bankBranchName = onboardingStatus.bankBranchName;
+      if (onboardingStatus.preferredPaymentTerms) draftData.preferredPaymentTerms = onboardingStatus.preferredPaymentTerms;
+      if (onboardingStatus.requestedCreditLimit) draftData.requestedCreditLimit = onboardingStatus.requestedCreditLimit;
+
+      form.reset(draftData);
+      lastSavedDataRef.current = JSON.stringify(draftData);
+    }
+  }, [onboardingStatus, form]);
+
+  // Auto-save mutation for drafts
+  const autoSaveMutation = useMutation({
+    mutationFn: async (data: Partial<OnboardingFormData>) => {
+      const res = await apiRequest("PATCH", "/api/shipper/onboarding/draft", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      setAutoSaveStatus("saved");
+      setTimeout(() => setAutoSaveStatus("idle"), 2000);
+    },
+    onError: () => {
+      setAutoSaveStatus("idle");
+    },
+  });
+
+  // Debounced auto-save function
+  const debouncedAutoSave = useCallback((data: Partial<OnboardingFormData>) => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    const dataString = JSON.stringify(data);
+    if (dataString === lastSavedDataRef.current) {
+      return;
+    }
+
+    setAutoSaveStatus("saving");
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      lastSavedDataRef.current = dataString;
+      autoSaveMutation.mutate(data);
+    }, 1500);
+  }, [autoSaveMutation]);
+
+  // Watch form changes for auto-save (only for draft status)
+  useEffect(() => {
+    if (onboardingStatus?.status !== "draft") return;
+
+    const subscription = form.watch((data) => {
+      debouncedAutoSave(data as Partial<OnboardingFormData>);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [form, onboardingStatus?.status, debouncedAutoSave]);
 
   const submitMutation = useMutation({
     mutationFn: async (data: OnboardingFormData) => {
@@ -165,6 +264,8 @@ export default function ShipperOnboarding() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case "draft":
+        return <Badge variant="secondary" className="gap-1"><FileText className="h-3 w-3" />{t("onboarding.statusDraft")}</Badge>;
       case "pending":
         return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />{t("onboarding.statusPending")}</Badge>;
       case "under_review":
@@ -178,6 +279,28 @@ export default function ShipperOnboarding() {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  // Render auto-save indicator
+  const renderAutoSaveIndicator = () => {
+    if (onboardingStatus?.status !== "draft") return null;
+    
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="auto-save-indicator">
+        {autoSaveStatus === "saving" && (
+          <>
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>{t("postLoad.autoSaving")}</span>
+          </>
+        )}
+        {autoSaveStatus === "saved" && (
+          <>
+            <Check className="h-3 w-3 text-green-500" />
+            <span className="text-green-600 dark:text-green-400">{t("postLoad.autoSaved")}</span>
+          </>
+        )}
+      </div>
+    );
   };
 
   if (onboardingStatus && (onboardingStatus.status === "pending" || onboardingStatus.status === "under_review" || onboardingStatus.status === "approved")) {
@@ -309,14 +432,25 @@ export default function ShipperOnboarding() {
     );
   }
 
+  // For draft status, show form with auto-save
+  const isDraft = onboardingStatus?.status === "draft";
+
   return (
     <div className="container mx-auto py-6 max-w-4xl space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Building2 className="h-6 w-6" />
-          {t("onboarding.title")}
-        </h1>
-        <p className="text-muted-foreground">{t("onboarding.subtitle")}</p>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Building2 className="h-6 w-6" />
+            {t("onboarding.title")}
+          </h1>
+          <div className="flex items-center gap-3">
+            {renderAutoSaveIndicator()}
+            {isDraft && getStatusBadge("draft")}
+          </div>
+        </div>
+        <p className="text-muted-foreground">
+          {isDraft ? t("onboarding.continueDraftDesc") : t("onboarding.subtitle")}
+        </p>
       </div>
 
       <OnboardingFormComponent 

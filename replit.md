@@ -46,6 +46,10 @@ Carriers can upload documents (LR, E-way Bill, Photos, POD, Invoice, Other) to R
 
 The Shipper Portal integrates a CAN-Bus GPS + Telematics system for real-time tracking, diagnostics (speed, RPM, fuel), AI-driven ETA predictions, and driver behavior insights. The AI Concierge can answer queries using telematics data.
 
+### Credit Assessment System
+
+The platform includes both manual admin review and automated credit scoring for shippers. The automated system calculates scores based on weighted factors: payment history (±250 points from on-time rate), credit utilization (±150, optimal at ≤30%), load volume (±100 from recent 90-day activity), and tenure (±50 from account age). Base score is 500, with final scores ranging 0-1000. Risk thresholds: ≥750 low, ≥600 medium, ≥450 high, <450 critical. Default credit limits: low 1M, medium 500K, high 200K, critical 50K INR. Admins can run auto-assessment individually or in bulk, and manual overrides lock profiles from future auto-updates. The credit engine is in `server/services/credit-engine.ts`.
+
 ## External Dependencies
 
 ### Frontend Libraries

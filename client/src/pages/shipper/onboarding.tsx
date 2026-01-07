@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { indianStates } from "@shared/indian-locations";
+import { DocumentUpload } from "@/components/DocumentUpload";
 
 const onboardingFormSchema = z.object({
   legalCompanyName: z.string().min(1, "Company name is required"),
@@ -941,16 +942,12 @@ function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setA
                       <FormItem>
                         <FormLabel>{t("onboarding.gstCertificate")}</FormLabel>
                         <FormControl>
-                          <div className="flex items-center gap-2">
-                            <Input 
-                              placeholder={t("onboarding.documentUrlPlaceholder")} 
-                              {...field} 
-                              data-testid="input-gst-certificate"
-                            />
-                            <Button type="button" variant="outline" size="icon" disabled>
-                              <Upload className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <DocumentUpload
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-gst-certificate"
+                          />
                         </FormControl>
                         <FormDescription>{t("onboarding.gstCertificateDesc")}</FormDescription>
                       </FormItem>
@@ -963,16 +960,12 @@ function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setA
                       <FormItem>
                         <FormLabel>{t("onboarding.panCard")}</FormLabel>
                         <FormControl>
-                          <div className="flex items-center gap-2">
-                            <Input 
-                              placeholder={t("onboarding.documentUrlPlaceholder")} 
-                              {...field} 
-                              data-testid="input-pan-card"
-                            />
-                            <Button type="button" variant="outline" size="icon" disabled>
-                              <Upload className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <DocumentUpload
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-pan-card"
+                          />
                         </FormControl>
                         <FormDescription>{t("onboarding.panCardDesc")}</FormDescription>
                       </FormItem>
@@ -988,16 +981,12 @@ function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setA
                       <FormItem>
                         <FormLabel>{t("onboarding.incorporationCertificate")}</FormLabel>
                         <FormControl>
-                          <div className="flex items-center gap-2">
-                            <Input 
-                              placeholder={t("onboarding.documentUrlPlaceholder")} 
-                              {...field} 
-                              data-testid="input-incorporation-certificate"
-                            />
-                            <Button type="button" variant="outline" size="icon" disabled>
-                              <Upload className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <DocumentUpload
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-incorporation-certificate"
+                          />
                         </FormControl>
                         <FormDescription>{t("onboarding.incorporationCertificateDesc")}</FormDescription>
                       </FormItem>
@@ -1010,16 +999,12 @@ function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setA
                       <FormItem>
                         <FormLabel>{t("onboarding.addressProof")}</FormLabel>
                         <FormControl>
-                          <div className="flex items-center gap-2">
-                            <Input 
-                              placeholder={t("onboarding.documentUrlPlaceholder")} 
-                              {...field} 
-                              data-testid="input-address-proof"
-                            />
-                            <Button type="button" variant="outline" size="icon" disabled>
-                              <Upload className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <DocumentUpload
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-address-proof"
+                          />
                         </FormControl>
                         <FormDescription>{t("onboarding.addressProofDesc")}</FormDescription>
                       </FormItem>
@@ -1126,16 +1111,12 @@ function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setA
                     <FormItem>
                       <FormLabel>{t("onboarding.cancelledCheque")}</FormLabel>
                       <FormControl>
-                        <div className="flex items-center gap-2">
-                          <Input 
-                            placeholder={t("onboarding.documentUrlPlaceholder")} 
-                            {...field} 
-                            data-testid="input-cancelled-cheque"
-                          />
-                          <Button type="button" variant="outline" size="icon" disabled>
-                            <Upload className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <DocumentUpload
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          placeholder={t("onboarding.noFileSelected")}
+                          testId="upload-cancelled-cheque"
+                        />
                       </FormControl>
                       <FormDescription>{t("onboarding.cancelledChequeDesc")}</FormDescription>
                     </FormItem>

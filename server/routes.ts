@@ -6965,6 +6965,63 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/admin/credit-assessments/:shipperId/auto-assess - Run auto-assessment for a shipper
+  app.post("/api/admin/credit-assessments/:shipperId/auto-assess", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { runAutoAssessment } = await import("./services/credit-engine");
+      const applyResults = req.body.apply === true;
+      const result = await runAutoAssessment(req.params.shipperId, applyResults);
+
+      if (applyResults && result.applied) {
+        await storage.createAuditLog({
+          adminId: user.id,
+          userId: req.params.shipperId,
+          actionType: "auto_credit_assessment",
+          actionDescription: `Auto-assessment applied: Score ${result.creditScore}, Risk ${result.riskLevel}`,
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent"),
+        });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Auto assessment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/credit-assessments/bulk-auto-assess - Run auto-assessment for all shippers
+  app.post("/api/admin/credit-assessments/bulk-auto-assess", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { runBulkAutoAssessment } = await import("./services/credit-engine");
+      const applyResults = req.body.apply === true;
+      const result = await runBulkAutoAssessment(applyResults);
+
+      await storage.createAuditLog({
+        adminId: user.id,
+        actionType: "bulk_auto_credit_assessment",
+        actionDescription: `Bulk auto-assessment: ${result.processed} processed, ${result.applied} applied, ${result.errors} errors`,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Bulk auto assessment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // POST /api/carrier/verification - Submit carrier verification request
   app.post("/api/carrier/verification", requireAuth, async (req, res) => {
     try {

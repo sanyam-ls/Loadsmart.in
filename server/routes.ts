@@ -6797,6 +6797,174 @@ export async function registerRoutes(
     }
   });
 
+  // =============================================
+  // SHIPPER CREDIT ASSESSMENT ROUTES (Admin only)
+  // =============================================
+
+  // GET /api/admin/credit-assessments - Get all shippers with their credit profiles
+  app.get("/api/admin/credit-assessments", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const shippersWithProfiles = await storage.getShippersWithCreditProfiles();
+      res.json(shippersWithProfiles);
+    } catch (error) {
+      console.error("Get credit assessments error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/credit-assessments/:shipperId - Get specific shipper's credit profile
+  app.get("/api/admin/credit-assessments/:shipperId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const shipper = await storage.getUser(req.params.shipperId);
+      if (!shipper || shipper.role !== "shipper") {
+        return res.status(404).json({ error: "Shipper not found" });
+      }
+
+      const creditProfile = await storage.getShipperCreditProfile(req.params.shipperId);
+      const evaluations = await storage.getShipperCreditEvaluations(req.params.shipperId);
+
+      res.json({
+        shipper,
+        creditProfile,
+        evaluations,
+      });
+    } catch (error) {
+      console.error("Get shipper credit assessment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/credit-assessments/:shipperId - Create or update shipper credit profile
+  app.post("/api/admin/credit-assessments/:shipperId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const shipper = await storage.getUser(req.params.shipperId);
+      if (!shipper || shipper.role !== "shipper") {
+        return res.status(404).json({ error: "Shipper not found" });
+      }
+
+      const creditSchema = z.object({
+        creditLimit: z.string().optional(),
+        creditScore: z.number().int().min(0).max(1000).optional(),
+        riskLevel: z.enum(["low", "medium", "high", "critical"]).optional(),
+        paymentTerms: z.number().int().min(0).max(365).optional(),
+        notes: z.string().optional(),
+        rationale: z.string().optional(),
+      });
+
+      const validated = creditSchema.parse(req.body);
+      const existingProfile = await storage.getShipperCreditProfile(req.params.shipperId);
+
+      let profile;
+      if (existingProfile) {
+        // Update existing profile
+        const updates: any = {
+          lastAssessmentAt: new Date(),
+          lastAssessedBy: user.id,
+        };
+        if (validated.creditLimit !== undefined) updates.creditLimit = validated.creditLimit;
+        if (validated.creditScore !== undefined) updates.creditScore = validated.creditScore;
+        if (validated.riskLevel !== undefined) updates.riskLevel = validated.riskLevel;
+        if (validated.paymentTerms !== undefined) updates.paymentTerms = validated.paymentTerms;
+        if (validated.notes !== undefined) updates.notes = validated.notes;
+
+        // Calculate available credit
+        const newLimit = validated.creditLimit ? parseFloat(validated.creditLimit) : parseFloat(String(existingProfile.creditLimit || "0"));
+        const outstanding = parseFloat(String(existingProfile.outstandingBalance || "0"));
+        updates.availableCredit = String(Math.max(0, newLimit - outstanding));
+
+        profile = await storage.updateShipperCreditProfile(req.params.shipperId, updates);
+
+        // Create evaluation record for audit trail
+        await storage.createShipperCreditEvaluation({
+          shipperId: req.params.shipperId,
+          assessorId: user.id,
+          previousCreditLimit: existingProfile.creditLimit,
+          newCreditLimit: validated.creditLimit || existingProfile.creditLimit,
+          previousRiskLevel: existingProfile.riskLevel,
+          newRiskLevel: validated.riskLevel || existingProfile.riskLevel,
+          previousCreditScore: existingProfile.creditScore,
+          newCreditScore: validated.creditScore || existingProfile.creditScore,
+          decision: "adjusted",
+          rationale: validated.rationale || "Credit profile updated",
+        });
+      } else {
+        // Create new profile
+        const creditLimit = validated.creditLimit || "0";
+        profile = await storage.createShipperCreditProfile({
+          shipperId: req.params.shipperId,
+          creditLimit,
+          creditScore: validated.creditScore || 500,
+          riskLevel: validated.riskLevel || "medium",
+          paymentTerms: validated.paymentTerms || 30,
+          availableCredit: creditLimit,
+          notes: validated.notes,
+          lastAssessmentAt: new Date(),
+          lastAssessedBy: user.id,
+        });
+
+        // Create initial evaluation record
+        await storage.createShipperCreditEvaluation({
+          shipperId: req.params.shipperId,
+          assessorId: user.id,
+          newCreditLimit: creditLimit,
+          newRiskLevel: validated.riskLevel || "medium",
+          newCreditScore: validated.creditScore || 500,
+          decision: "approved",
+          rationale: validated.rationale || "Initial credit assessment",
+        });
+      }
+
+      // Create audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        userId: req.params.shipperId,
+        actionType: "credit_assessment",
+        actionDescription: `${existingProfile ? "Updated" : "Created"} credit profile for shipper ${shipper.companyName || shipper.username}`,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      res.json(profile);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Update credit assessment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/credit-assessments/:shipperId/evaluations - Get evaluation history
+  app.get("/api/admin/credit-assessments/:shipperId/evaluations", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const evaluations = await storage.getShipperCreditEvaluations(req.params.shipperId);
+      res.json(evaluations);
+    } catch (error) {
+      console.error("Get evaluations error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // POST /api/carrier/verification - Submit carrier verification request
   app.post("/api/carrier/verification", requireAuth, async (req, res) => {
     try {

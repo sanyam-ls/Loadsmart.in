@@ -8,6 +8,7 @@ import {
   invoiceHistory, carrierProposals, loadStateChangeLogs, shipperInvoiceResponses,
   carrierVerifications, carrierVerificationDocuments, bidNegotiations, negotiationThreads,
   otpVerifications, otpRequests,
+  shipperCreditProfiles, shipperCreditEvaluations,
   validStateTransitions,
   type User, type InsertUser,
   type Truck, type InsertTruck,
@@ -40,6 +41,8 @@ import {
   type NegotiationThread, type InsertNegotiationThread,
   type OtpVerification, type InsertOtpVerification,
   type OtpRequest, type InsertOtpRequest,
+  type ShipperCreditProfile, type InsertShipperCreditProfile,
+  type ShipperCreditEvaluation, type InsertShipperCreditEvaluation,
   type LoadStatus,
 } from "@shared/schema";
 
@@ -257,6 +260,15 @@ export interface IStorage {
   acceptBidInThread(loadId: string, bidId: string, carrierId: string, amount: string): Promise<NegotiationThread | undefined>;
   incrementThreadBidCount(loadId: string, isSimulated: boolean): Promise<void>;
   getNegotiationCounters(): Promise<{ pending: number; counterSent: number; accepted: number; rejected: number }>;
+  
+  // Shipper Credit Assessment methods
+  getShipperCreditProfile(shipperId: string): Promise<ShipperCreditProfile | undefined>;
+  getAllShipperCreditProfiles(): Promise<ShipperCreditProfile[]>;
+  createShipperCreditProfile(profile: InsertShipperCreditProfile): Promise<ShipperCreditProfile>;
+  updateShipperCreditProfile(shipperId: string, updates: Partial<ShipperCreditProfile>): Promise<ShipperCreditProfile | undefined>;
+  getShipperCreditEvaluations(shipperId: string): Promise<ShipperCreditEvaluation[]>;
+  createShipperCreditEvaluation(evaluation: InsertShipperCreditEvaluation): Promise<ShipperCreditEvaluation>;
+  getShippersWithCreditProfiles(): Promise<Array<{ user: User; creditProfile: ShipperCreditProfile | null }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1627,6 +1639,55 @@ export class DatabaseStorage implements IStorage {
       console.error("[Migration] Error during data migration:", error);
       // Don't throw - let the app continue even if migration fails
     }
+  }
+
+  // Shipper Credit Assessment methods
+  async getShipperCreditProfile(shipperId: string): Promise<ShipperCreditProfile | undefined> {
+    const [profile] = await db.select().from(shipperCreditProfiles).where(eq(shipperCreditProfiles.shipperId, shipperId));
+    return profile;
+  }
+
+  async getAllShipperCreditProfiles(): Promise<ShipperCreditProfile[]> {
+    return db.select().from(shipperCreditProfiles).orderBy(desc(shipperCreditProfiles.updatedAt));
+  }
+
+  async createShipperCreditProfile(profile: InsertShipperCreditProfile): Promise<ShipperCreditProfile> {
+    const [newProfile] = await db.insert(shipperCreditProfiles).values(profile).returning();
+    return newProfile;
+  }
+
+  async updateShipperCreditProfile(shipperId: string, updates: Partial<ShipperCreditProfile>): Promise<ShipperCreditProfile | undefined> {
+    const [updated] = await db.update(shipperCreditProfiles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(shipperCreditProfiles.shipperId, shipperId))
+      .returning();
+    return updated;
+  }
+
+  async getShipperCreditEvaluations(shipperId: string): Promise<ShipperCreditEvaluation[]> {
+    return db.select().from(shipperCreditEvaluations)
+      .where(eq(shipperCreditEvaluations.shipperId, shipperId))
+      .orderBy(desc(shipperCreditEvaluations.evaluatedAt));
+  }
+
+  async createShipperCreditEvaluation(evaluation: InsertShipperCreditEvaluation): Promise<ShipperCreditEvaluation> {
+    const [newEval] = await db.insert(shipperCreditEvaluations).values(evaluation).returning();
+    return newEval;
+  }
+
+  async getShippersWithCreditProfiles(): Promise<Array<{ user: User; creditProfile: ShipperCreditProfile | null }>> {
+    const shippers = await db.select()
+      .from(users)
+      .where(eq(users.role, "shipper"))
+      .orderBy(desc(users.createdAt));
+    
+    const result = await Promise.all(
+      shippers.map(async (user) => {
+        const profile = await this.getShipperCreditProfile(user.id);
+        return { user, creditProfile: profile || null };
+      })
+    );
+    return result;
   }
 }
 

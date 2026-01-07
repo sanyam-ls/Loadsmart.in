@@ -1684,6 +1684,100 @@ export type ShipperCreditProfile = typeof shipperCreditProfiles.$inferSelect;
 export type InsertShipperCreditEvaluation = z.infer<typeof insertShipperCreditEvaluationSchema>;
 export type ShipperCreditEvaluation = typeof shipperCreditEvaluations.$inferSelect;
 
+// Shipper Onboarding Status enum
+export const shipperOnboardingStatuses = [
+  "pending",        // Initial submission, awaiting admin review
+  "under_review",   // Admin is reviewing the application
+  "approved",       // Application approved, shipper can post loads
+  "rejected",       // Application rejected
+  "on_hold",        // Application on hold, pending additional info
+] as const;
+export type ShipperOnboardingStatus = typeof shipperOnboardingStatuses[number];
+
+// Shipper Onboarding Requests table
+export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  shipperId: varchar("shipper_id").notNull().references(() => users.id),
+  status: text("status").default("pending"), // pending, under_review, approved, rejected, on_hold
+  
+  // Business Identity
+  legalCompanyName: text("legal_company_name").notNull(),
+  tradeName: text("trade_name"), // Trading as / DBA name
+  businessType: text("business_type"), // proprietorship, partnership, pvt_ltd, public_ltd, llp
+  incorporationDate: timestamp("incorporation_date"),
+  cinNumber: text("cin_number"), // Corporate Identification Number
+  panNumber: text("pan_number").notNull(), // Permanent Account Number
+  gstinNumber: text("gstin_number"), // GST Identification Number
+  
+  // Registered Address
+  registeredAddress: text("registered_address").notNull(),
+  registeredCity: text("registered_city").notNull(),
+  registeredState: text("registered_state").notNull(),
+  registeredPincode: text("registered_pincode").notNull(),
+  
+  // Operations Details
+  operatingRegions: text("operating_regions").array(), // States/regions where shipper operates
+  primaryCommodities: text("primary_commodities").array(), // Types of goods typically shipped
+  estimatedMonthlyLoads: integer("estimated_monthly_loads"), // Expected volume
+  avgLoadValueInr: decimal("avg_load_value_inr", { precision: 12, scale: 2 }), // Average load value
+  
+  // Key Contact Person
+  contactPersonName: text("contact_person_name").notNull(),
+  contactPersonDesignation: text("contact_person_designation"),
+  contactPersonPhone: text("contact_person_phone").notNull(),
+  contactPersonEmail: text("contact_person_email").notNull(),
+  
+  // Compliance Documents (references to uploaded files)
+  gstCertificateUrl: text("gst_certificate_url"),
+  panCardUrl: text("pan_card_url"),
+  incorporationCertificateUrl: text("incorporation_certificate_url"),
+  cancelledChequeUrl: text("cancelled_cheque_url"),
+  businessAddressProofUrl: text("business_address_proof_url"),
+  
+  // Trade References
+  tradeReference1Company: text("trade_reference_1_company"),
+  tradeReference1Contact: text("trade_reference_1_contact"),
+  tradeReference1Phone: text("trade_reference_1_phone"),
+  tradeReference2Company: text("trade_reference_2_company"),
+  tradeReference2Contact: text("trade_reference_2_contact"),
+  tradeReference2Phone: text("trade_reference_2_phone"),
+  
+  // Bank Details (for verification)
+  bankName: text("bank_name"),
+  bankAccountNumber: text("bank_account_number"),
+  bankIfscCode: text("bank_ifsc_code"),
+  bankBranchName: text("bank_branch_name"),
+  
+  // Preferred Payment Terms
+  preferredPaymentTerms: text("preferred_payment_terms"), // cod, net_7, net_15, net_30, net_45
+  requestedCreditLimit: decimal("requested_credit_limit", { precision: 12, scale: 2 }),
+  
+  // Admin Review Fields
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  decisionNote: text("decision_note"), // Reason for approval/rejection/hold
+  followUpDate: timestamp("follow_up_date"), // For on_hold cases
+  creditAssessmentId: varchar("credit_assessment_id"), // Link to credit evaluation if conducted
+  
+  // Timestamps
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schema for shipper onboarding
+export const insertShipperOnboardingRequestSchema = createInsertSchema(shipperOnboardingRequests).omit({
+  id: true,
+  submittedAt: true,
+  updatedAt: true,
+  reviewedAt: true,
+  reviewedBy: true,
+  creditAssessmentId: true,
+});
+
+// Types for shipper onboarding
+export type InsertShipperOnboardingRequest = z.infer<typeof insertShipperOnboardingRequestSchema>;
+export type ShipperOnboardingRequest = typeof shipperOnboardingRequests.$inferSelect;
+
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {
   vehicleId: string;

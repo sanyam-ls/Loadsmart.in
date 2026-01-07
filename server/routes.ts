@@ -7110,6 +7110,336 @@ export async function registerRoutes(
     }
   });
 
+  // ========================================
+  // SHIPPER ONBOARDING ROUTES
+  // ========================================
+
+  // POST /api/shipper/onboarding - Submit onboarding request
+  app.post("/api/shipper/onboarding", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      // Check for existing onboarding request
+      const existing = await storage.getShipperOnboardingRequest(user.id);
+      if (existing && (existing.status === "pending" || existing.status === "under_review" || existing.status === "approved")) {
+        return res.status(400).json({ 
+          error: "You already have an active onboarding request",
+          status: existing.status 
+        });
+      }
+
+      const onboardingSchema = z.object({
+        legalCompanyName: z.string().min(1, "Company name is required"),
+        tradeName: z.string().optional(),
+        businessType: z.enum(["proprietorship", "partnership", "pvt_ltd", "public_ltd", "llp"]).optional(),
+        incorporationDate: z.string().optional(),
+        cinNumber: z.string().optional(),
+        panNumber: z.string().min(10).max(10, "PAN must be 10 characters"),
+        gstinNumber: z.string().optional(),
+        registeredAddress: z.string().min(1, "Address is required"),
+        registeredCity: z.string().min(1, "City is required"),
+        registeredState: z.string().min(1, "State is required"),
+        registeredPincode: z.string().min(6).max(6, "Pincode must be 6 digits"),
+        operatingRegions: z.array(z.string()).optional(),
+        primaryCommodities: z.array(z.string()).optional(),
+        estimatedMonthlyLoads: z.number().int().min(0).optional(),
+        avgLoadValueInr: z.string().optional(),
+        contactPersonName: z.string().min(1, "Contact name is required"),
+        contactPersonDesignation: z.string().optional(),
+        contactPersonPhone: z.string().min(10, "Phone is required"),
+        contactPersonEmail: z.string().email("Valid email required"),
+        gstCertificateUrl: z.string().optional(),
+        panCardUrl: z.string().optional(),
+        incorporationCertificateUrl: z.string().optional(),
+        cancelledChequeUrl: z.string().optional(),
+        businessAddressProofUrl: z.string().optional(),
+        tradeReference1Company: z.string().optional(),
+        tradeReference1Contact: z.string().optional(),
+        tradeReference1Phone: z.string().optional(),
+        tradeReference2Company: z.string().optional(),
+        tradeReference2Contact: z.string().optional(),
+        tradeReference2Phone: z.string().optional(),
+        bankName: z.string().optional(),
+        bankAccountNumber: z.string().optional(),
+        bankIfscCode: z.string().optional(),
+        bankBranchName: z.string().optional(),
+        preferredPaymentTerms: z.enum(["cod", "net_7", "net_15", "net_30", "net_45"]).optional(),
+        requestedCreditLimit: z.string().optional(),
+      });
+
+      const validatedData = onboardingSchema.parse(req.body);
+
+      const onboardingRequest = await storage.createShipperOnboardingRequest({
+        shipperId: user.id,
+        status: "pending",
+        ...validatedData,
+        incorporationDate: validatedData.incorporationDate ? new Date(validatedData.incorporationDate) : undefined,
+      });
+
+      res.json(onboardingRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Submit onboarding error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/shipper/onboarding - Get shipper's own onboarding status
+  app.get("/api/shipper/onboarding", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const onboarding = await storage.getShipperOnboardingRequest(user.id);
+      res.json(onboarding || null);
+    } catch (error) {
+      console.error("Get shipper onboarding error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PUT /api/shipper/onboarding - Update onboarding request (only if on_hold or rejected)
+  app.put("/api/shipper/onboarding", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const existing = await storage.getShipperOnboardingRequest(user.id);
+      if (!existing) {
+        return res.status(404).json({ error: "No onboarding request found" });
+      }
+
+      if (existing.status !== "on_hold" && existing.status !== "rejected") {
+        return res.status(400).json({ 
+          error: "Can only update requests that are on hold or rejected",
+          status: existing.status 
+        });
+      }
+
+      const updateSchema = z.object({
+        legalCompanyName: z.string().optional(),
+        tradeName: z.string().optional(),
+        businessType: z.string().optional(),
+        panNumber: z.string().optional(),
+        gstinNumber: z.string().optional(),
+        registeredAddress: z.string().optional(),
+        registeredCity: z.string().optional(),
+        registeredState: z.string().optional(),
+        registeredPincode: z.string().optional(),
+        contactPersonName: z.string().optional(),
+        contactPersonPhone: z.string().optional(),
+        contactPersonEmail: z.string().optional(),
+        gstCertificateUrl: z.string().optional(),
+        panCardUrl: z.string().optional(),
+        incorporationCertificateUrl: z.string().optional(),
+        cancelledChequeUrl: z.string().optional(),
+        businessAddressProofUrl: z.string().optional(),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+
+      const updated = await storage.updateShipperOnboardingRequest(existing.id, {
+        ...validatedData,
+        status: "pending", // Re-submit for review
+      });
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Update onboarding error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/onboarding-requests - Get all onboarding requests (admin)
+  app.get("/api/admin/onboarding-requests", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { status } = req.query;
+      let requests;
+      if (status && typeof status === "string") {
+        requests = await storage.getShipperOnboardingRequestsByStatus(status);
+      } else {
+        requests = await storage.getAllShipperOnboardingRequests();
+      }
+
+      // Enrich with shipper details
+      const enrichedRequests = await Promise.all(
+        requests.map(async (request) => {
+          const shipper = await storage.getUser(request.shipperId);
+          const creditProfile = await storage.getShipperCreditProfile(request.shipperId);
+          return { ...request, shipper, creditProfile };
+        })
+      );
+
+      res.json(enrichedRequests);
+    } catch (error) {
+      console.error("Get onboarding requests error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/onboarding-requests/:id - Get specific onboarding request (admin)
+  app.get("/api/admin/onboarding-requests/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const request = await storage.getShipperOnboardingRequestById(req.params.id);
+      if (!request) {
+        return res.status(404).json({ error: "Onboarding request not found" });
+      }
+
+      const shipper = await storage.getUser(request.shipperId);
+      const creditProfile = await storage.getShipperCreditProfile(request.shipperId);
+
+      res.json({ ...request, shipper, creditProfile });
+    } catch (error) {
+      console.error("Get onboarding request error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/onboarding-requests/:id/review - Admin review decision
+  app.post("/api/admin/onboarding-requests/:id/review", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const request = await storage.getShipperOnboardingRequestById(req.params.id);
+      if (!request) {
+        return res.status(404).json({ error: "Onboarding request not found" });
+      }
+
+      const reviewSchema = z.object({
+        decision: z.enum(["approved", "rejected", "on_hold", "under_review"]),
+        decisionNote: z.string().optional(),
+        followUpDate: z.string().optional(),
+        creditLimit: z.string().optional(),
+        paymentTerms: z.number().int().min(0).max(90).optional(),
+        riskLevel: z.enum(["low", "medium", "high", "critical"]).optional(),
+      });
+
+      const reviewData = reviewSchema.parse(req.body);
+
+      // Update onboarding request
+      const updatedRequest = await storage.updateShipperOnboardingRequest(request.id, {
+        status: reviewData.decision,
+        reviewedBy: user.id,
+        reviewedAt: new Date(),
+        decisionNote: reviewData.decisionNote,
+        followUpDate: reviewData.followUpDate ? new Date(reviewData.followUpDate) : undefined,
+      });
+
+      // If approved, update user verification status and create/update credit profile
+      if (reviewData.decision === "approved") {
+        await storage.updateUser(request.shipperId, { isVerified: true });
+
+        // Create or update credit profile
+        const existingProfile = await storage.getShipperCreditProfile(request.shipperId);
+        if (existingProfile) {
+          await storage.updateShipperCreditProfile(request.shipperId, {
+            creditLimit: reviewData.creditLimit || existingProfile.creditLimit,
+            paymentTerms: reviewData.paymentTerms ?? existingProfile.paymentTerms,
+            riskLevel: reviewData.riskLevel || existingProfile.riskLevel,
+            lastAssessmentAt: new Date(),
+            lastAssessedBy: user.id,
+            gstCompliant: !!request.gstinNumber,
+            gstNumber: request.gstinNumber,
+          });
+        } else {
+          await storage.createShipperCreditProfile({
+            shipperId: request.shipperId,
+            creditLimit: reviewData.creditLimit || "500000",
+            paymentTerms: reviewData.paymentTerms ?? 30,
+            riskLevel: reviewData.riskLevel || "medium",
+            lastAssessmentAt: new Date(),
+            lastAssessedBy: user.id,
+            gstCompliant: !!request.gstinNumber,
+            gstNumber: request.gstinNumber,
+          });
+        }
+
+        // Create evaluation record
+        await storage.createShipperCreditEvaluation({
+          shipperId: request.shipperId,
+          assessorId: user.id,
+          evaluationType: "manual",
+          newCreditLimit: reviewData.creditLimit || "500000",
+          newRiskLevel: reviewData.riskLevel || "medium",
+          newPaymentTerms: reviewData.paymentTerms ?? 30,
+          decision: "approved",
+          rationale: `Onboarding approved: ${reviewData.decisionNote || "Initial onboarding assessment"}`,
+        });
+      }
+
+      // Audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        actionType: "shipper_onboarding_review",
+        actionDescription: `${reviewData.decision} onboarding for shipper ${request.shipperId}`,
+        entityType: "shipper_onboarding",
+        entityId: request.id,
+        previousState: JSON.stringify({ status: request.status }),
+        newState: JSON.stringify({ status: reviewData.decision }),
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      res.json(updatedRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Review onboarding error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/onboarding-requests/stats - Get onboarding statistics
+  app.get("/api/admin/onboarding-requests/stats", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const allRequests = await storage.getAllShipperOnboardingRequests();
+      const stats = {
+        total: allRequests.length,
+        pending: allRequests.filter(r => r.status === "pending").length,
+        underReview: allRequests.filter(r => r.status === "under_review").length,
+        approved: allRequests.filter(r => r.status === "approved").length,
+        rejected: allRequests.filter(r => r.status === "rejected").length,
+        onHold: allRequests.filter(r => r.status === "on_hold").length,
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Get onboarding stats error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // POST /api/carrier/verification - Submit carrier verification request
   app.post("/api/carrier/verification", requireAuth, async (req, res) => {
     try {

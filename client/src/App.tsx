@@ -24,6 +24,7 @@ import LoadDetailPage from "@/pages/shipper/load-detail";
 import TrackingPage from "@/pages/shipper/tracking";
 import ShipperDocumentsPage from "@/pages/shipper/documents";
 import ShipperInvoicesPage from "@/pages/shipper/invoices";
+import ShipperOnboardingPage from "@/pages/shipper/onboarding";
 import AdminNearbyTrucksPage from "@/pages/admin/nearby-trucks";
 
 import CarrierDashboard from "@/pages/carrier/dashboard";
@@ -130,6 +131,7 @@ function AppContent() {
               <Route path="/shipper/tracking" component={TrackingPage} />
               <Route path="/shipper/documents" component={ShipperDocumentsPage} />
               <Route path="/shipper/invoices" component={ShipperInvoicesPage} />
+              <Route path="/shipper/onboarding" component={ShipperOnboardingPage} />
                             
               <Route path="/carrier" component={CarrierDashboard} />
               <Route path="/carrier/add-truck" component={AddTruckPage} />

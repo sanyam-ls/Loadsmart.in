@@ -9,6 +9,7 @@ import {
   carrierVerifications, carrierVerificationDocuments, bidNegotiations, negotiationThreads,
   otpVerifications, otpRequests,
   shipperCreditProfiles, shipperCreditEvaluations,
+  shipperOnboardingRequests,
   validStateTransitions,
   type User, type InsertUser,
   type Truck, type InsertTruck,
@@ -43,6 +44,7 @@ import {
   type OtpRequest, type InsertOtpRequest,
   type ShipperCreditProfile, type InsertShipperCreditProfile,
   type ShipperCreditEvaluation, type InsertShipperCreditEvaluation,
+  type ShipperOnboardingRequest, type InsertShipperOnboardingRequest,
   type LoadStatus,
 } from "@shared/schema";
 
@@ -269,6 +271,14 @@ export interface IStorage {
   getShipperCreditEvaluations(shipperId: string): Promise<ShipperCreditEvaluation[]>;
   createShipperCreditEvaluation(evaluation: InsertShipperCreditEvaluation): Promise<ShipperCreditEvaluation>;
   getShippersWithCreditProfiles(): Promise<Array<{ user: User; creditProfile: ShipperCreditProfile | null }>>;
+  
+  // Shipper Onboarding methods
+  createShipperOnboardingRequest(request: InsertShipperOnboardingRequest): Promise<ShipperOnboardingRequest>;
+  getShipperOnboardingRequest(shipperId: string): Promise<ShipperOnboardingRequest | undefined>;
+  getShipperOnboardingRequestById(id: string): Promise<ShipperOnboardingRequest | undefined>;
+  getAllShipperOnboardingRequests(): Promise<ShipperOnboardingRequest[]>;
+  getShipperOnboardingRequestsByStatus(status: string): Promise<ShipperOnboardingRequest[]>;
+  updateShipperOnboardingRequest(id: string, updates: Partial<ShipperOnboardingRequest>): Promise<ShipperOnboardingRequest | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1688,6 +1698,44 @@ export class DatabaseStorage implements IStorage {
       })
     );
     return result;
+  }
+
+  // Shipper Onboarding methods
+  async createShipperOnboardingRequest(request: InsertShipperOnboardingRequest): Promise<ShipperOnboardingRequest> {
+    const [newRequest] = await db.insert(shipperOnboardingRequests).values(request).returning();
+    return newRequest;
+  }
+
+  async getShipperOnboardingRequest(shipperId: string): Promise<ShipperOnboardingRequest | undefined> {
+    const [request] = await db.select().from(shipperOnboardingRequests)
+      .where(eq(shipperOnboardingRequests.shipperId, shipperId))
+      .orderBy(desc(shipperOnboardingRequests.submittedAt));
+    return request;
+  }
+
+  async getShipperOnboardingRequestById(id: string): Promise<ShipperOnboardingRequest | undefined> {
+    const [request] = await db.select().from(shipperOnboardingRequests)
+      .where(eq(shipperOnboardingRequests.id, id));
+    return request;
+  }
+
+  async getAllShipperOnboardingRequests(): Promise<ShipperOnboardingRequest[]> {
+    return db.select().from(shipperOnboardingRequests)
+      .orderBy(desc(shipperOnboardingRequests.submittedAt));
+  }
+
+  async getShipperOnboardingRequestsByStatus(status: string): Promise<ShipperOnboardingRequest[]> {
+    return db.select().from(shipperOnboardingRequests)
+      .where(eq(shipperOnboardingRequests.status, status))
+      .orderBy(desc(shipperOnboardingRequests.submittedAt));
+  }
+
+  async updateShipperOnboardingRequest(id: string, updates: Partial<ShipperOnboardingRequest>): Promise<ShipperOnboardingRequest | undefined> {
+    const [updated] = await db.update(shipperOnboardingRequests)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(shipperOnboardingRequests.id, id))
+      .returning();
+    return updated;
   }
 }
 

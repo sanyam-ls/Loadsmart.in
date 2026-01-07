@@ -7183,10 +7183,20 @@ export async function registerRoutes(
 
       const validatedData = onboardingSchema.parse(req.body);
 
+      // Sanitize numeric fields - remove commas from formatted numbers
+      const sanitizedCreditLimit = validatedData.requestedCreditLimit 
+        ? validatedData.requestedCreditLimit.replace(/,/g, '') 
+        : undefined;
+      const sanitizedAvgLoadValue = validatedData.avgLoadValueInr
+        ? validatedData.avgLoadValueInr.replace(/,/g, '')
+        : undefined;
+
       const onboardingRequest = await storage.createShipperOnboardingRequest({
         shipperId: user.id,
         status: "pending",
         ...validatedData,
+        requestedCreditLimit: sanitizedCreditLimit,
+        avgLoadValueInr: sanitizedAvgLoadValue,
         incorporationDate: validatedData.incorporationDate ? new Date(validatedData.incorporationDate) : undefined,
       });
 
@@ -7277,8 +7287,18 @@ export async function registerRoutes(
 
       const validatedData = draftSchema.parse(req.body);
 
+      // Sanitize numeric fields - remove commas from formatted numbers
+      const sanitizedCreditLimit = validatedData.requestedCreditLimit 
+        ? validatedData.requestedCreditLimit.replace(/,/g, '') 
+        : undefined;
+      const sanitizedAvgLoadValue = validatedData.avgLoadValueInr
+        ? validatedData.avgLoadValueInr.replace(/,/g, '')
+        : undefined;
+
       const updated = await storage.updateShipperOnboardingRequest(existing.id, {
         ...validatedData,
+        requestedCreditLimit: sanitizedCreditLimit,
+        avgLoadValueInr: sanitizedAvgLoadValue,
         incorporationDate: validatedData.incorporationDate ? new Date(validatedData.incorporationDate) : undefined,
       });
 

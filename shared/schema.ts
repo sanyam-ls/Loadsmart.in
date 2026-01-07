@@ -1594,6 +1594,11 @@ export const shipperCreditProfiles = pgTable("shipper_credit_profiles", {
   averagePaymentDays: decimal("average_payment_days", { precision: 5, scale: 1 }).default("0"),
   lastAssessmentAt: timestamp("last_assessment_at"),
   lastAssessedBy: varchar("last_assessed_by").references(() => users.id),
+  lastAutoAssessmentAt: timestamp("last_auto_assessment_at"),
+  isManualOverride: boolean("is_manual_override").default(false),
+  autoSuggestedScore: integer("auto_suggested_score"),
+  autoSuggestedRiskLevel: text("auto_suggested_risk_level"),
+  autoSuggestedCreditLimit: decimal("auto_suggested_credit_limit", { precision: 12, scale: 2 }),
   notes: text("notes"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1604,15 +1609,19 @@ export const shipperCreditProfiles = pgTable("shipper_credit_profiles", {
 export const shipperCreditEvaluations = pgTable("shipper_credit_evaluations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   shipperId: varchar("shipper_id").notNull().references(() => users.id),
-  assessorId: varchar("assessor_id").notNull().references(() => users.id),
+  assessorId: varchar("assessor_id").references(() => users.id),
+  evaluationType: text("evaluation_type").default("manual"), // manual, auto
   previousCreditLimit: decimal("previous_credit_limit", { precision: 12, scale: 2 }),
   newCreditLimit: decimal("new_credit_limit", { precision: 12, scale: 2 }),
   previousRiskLevel: text("previous_risk_level"),
   newRiskLevel: text("new_risk_level"),
   previousCreditScore: integer("previous_credit_score"),
   newCreditScore: integer("new_credit_score"),
-  decision: text("decision").notNull(), // approved, rejected, adjusted, under_review
+  previousPaymentTerms: integer("previous_payment_terms"),
+  newPaymentTerms: integer("new_payment_terms"),
+  decision: text("decision").notNull(), // approved, rejected, adjusted, under_review, auto_calculated
   rationale: text("rationale"),
+  scoringBreakdown: text("scoring_breakdown"), // JSON with detailed scoring factors
   supportingDocuments: text("supporting_documents").array(),
   evaluatedAt: timestamp("evaluated_at").defaultNow(),
 });

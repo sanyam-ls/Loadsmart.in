@@ -1571,6 +1571,70 @@ export type BidNegotiation = typeof bidNegotiations.$inferSelect;
 export type InsertNegotiationThread = z.infer<typeof insertNegotiationThreadSchema>;
 export type NegotiationThread = typeof negotiationThreads.$inferSelect;
 
+// Credit risk level enum
+export const creditRiskLevels = ["low", "medium", "high", "critical"] as const;
+export type CreditRiskLevel = typeof creditRiskLevels[number];
+
+// Credit assessment status enum
+export const creditAssessmentStatuses = ["pending", "approved", "rejected", "under_review"] as const;
+export type CreditAssessmentStatus = typeof creditAssessmentStatuses[number];
+
+// Shipper Credit Profiles - stores current credit status for each shipper
+export const shipperCreditProfiles = pgTable("shipper_credit_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  shipperId: varchar("shipper_id").notNull().references(() => users.id),
+  creditLimit: decimal("credit_limit", { precision: 12, scale: 2 }).default("0"),
+  creditScore: integer("credit_score").default(0), // 0-1000 internal score
+  riskLevel: text("risk_level").default("medium"), // low, medium, high, critical
+  paymentTerms: integer("payment_terms").default(30), // days
+  outstandingBalance: decimal("outstanding_balance", { precision: 12, scale: 2 }).default("0"),
+  availableCredit: decimal("available_credit", { precision: 12, scale: 2 }).default("0"),
+  totalLoadsCompleted: integer("total_loads_completed").default(0),
+  onTimePaymentRate: decimal("on_time_payment_rate", { precision: 5, scale: 2 }).default("0"), // percentage
+  averagePaymentDays: decimal("average_payment_days", { precision: 5, scale: 1 }).default("0"),
+  lastAssessmentAt: timestamp("last_assessment_at"),
+  lastAssessedBy: varchar("last_assessed_by").references(() => users.id),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Shipper Credit Evaluations - history of all credit assessments
+export const shipperCreditEvaluations = pgTable("shipper_credit_evaluations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  shipperId: varchar("shipper_id").notNull().references(() => users.id),
+  assessorId: varchar("assessor_id").notNull().references(() => users.id),
+  previousCreditLimit: decimal("previous_credit_limit", { precision: 12, scale: 2 }),
+  newCreditLimit: decimal("new_credit_limit", { precision: 12, scale: 2 }),
+  previousRiskLevel: text("previous_risk_level"),
+  newRiskLevel: text("new_risk_level"),
+  previousCreditScore: integer("previous_credit_score"),
+  newCreditScore: integer("new_credit_score"),
+  decision: text("decision").notNull(), // approved, rejected, adjusted, under_review
+  rationale: text("rationale"),
+  supportingDocuments: text("supporting_documents").array(),
+  evaluatedAt: timestamp("evaluated_at").defaultNow(),
+});
+
+// Insert schemas for credit assessment
+export const insertShipperCreditProfileSchema = createInsertSchema(shipperCreditProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShipperCreditEvaluationSchema = createInsertSchema(shipperCreditEvaluations).omit({
+  id: true,
+  evaluatedAt: true,
+});
+
+// Types for credit assessment
+export type InsertShipperCreditProfile = z.infer<typeof insertShipperCreditProfileSchema>;
+export type ShipperCreditProfile = typeof shipperCreditProfiles.$inferSelect;
+export type InsertShipperCreditEvaluation = z.infer<typeof insertShipperCreditEvaluationSchema>;
+export type ShipperCreditEvaluation = typeof shipperCreditEvaluations.$inferSelect;
+
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {
   vehicleId: string;

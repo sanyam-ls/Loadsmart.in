@@ -7365,12 +7365,12 @@ export async function registerRoutes(
         requests = await storage.getAllShipperOnboardingRequests();
       }
 
-      // Enrich with shipper details
+      // Enrich with shipper details - format as { request, user, creditProfile }
       const enrichedRequests = await Promise.all(
         requests.map(async (request) => {
           const shipper = await storage.getUser(request.shipperId);
           const creditProfile = await storage.getShipperCreditProfile(request.shipperId);
-          return { ...request, shipper, creditProfile };
+          return { request, user: shipper, creditProfile };
         })
       );
 
@@ -7397,7 +7397,7 @@ export async function registerRoutes(
       const shipper = await storage.getUser(request.shipperId);
       const creditProfile = await storage.getShipperCreditProfile(request.shipperId);
 
-      res.json({ ...request, shipper, creditProfile });
+      res.json({ request, user: shipper, creditProfile });
     } catch (error) {
       console.error("Get onboarding request error:", error);
       res.status(500).json({ error: "Internal server error" });

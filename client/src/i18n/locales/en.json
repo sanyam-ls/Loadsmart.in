@@ -1247,7 +1247,7 @@
     "underReviewMessage": "Application under review",
     "underReviewDescription": "Our team is currently verifying your documents and business details.",
     "actionRequired": "Action Required",
-    "rejectedDescription": "Your application was not approved. Please review the feedback and resubmit.",
+    "rejectedDescription": "Sorry, your request to onboard has been denied. Please contact us at 7564382901 for more information.",
     "onHoldDescription": "Your application is on hold pending additional information.",
     "adminNote": "Admin Feedback"
   }

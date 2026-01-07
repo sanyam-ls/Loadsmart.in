@@ -1042,6 +1042,18 @@
     "historyTitle": "Assessment History",
     "noHistory": "No assessment history found",
     "limit": "Limit",
-    "risk": "Risk"
+    "risk": "Risk",
+    "runAutoAssessAll": "Auto-Assess All",
+    "runAutoAssess": "Auto-Assess",
+    "autoAssessComplete": "Auto-Assessment Complete",
+    "autoAssessApplied": "Credit assessment has been automatically calculated and applied.",
+    "autoAssessCalculated": "Credit assessment has been calculated (not applied).",
+    "autoAssessFailed": "Failed to run auto-assessment. Please try again.",
+    "bulkAssessComplete": "Bulk Assessment Complete",
+    "bulkAssessDesc": "All shipper credit assessments have been recalculated.",
+    "bulkAssessFailed": "Failed to run bulk assessment. Please try again.",
+    "autoAssessed": "Auto",
+    "manualAssessed": "Manual",
+    "actions": "Actions"
   }
 }

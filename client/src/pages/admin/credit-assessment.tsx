@@ -18,6 +18,9 @@ import {
   DollarSign,
   Shield,
   ChevronRight,
+  Zap,
+  Bot,
+  User as UserIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -109,6 +112,50 @@ export default function CreditAssessmentPage() {
       toast({
         title: t("common.error"),
         description: t("creditAssessment.saveFailed"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const autoAssessMutation = useMutation({
+    mutationFn: async (data: { shipperId: string; apply: boolean }) => {
+      return apiRequest("POST", `/api/admin/credit-assessments/${data.shipperId}/auto-assess`, {
+        apply: data.apply,
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/credit-assessments"] });
+      toast({
+        title: t("creditAssessment.autoAssessComplete"),
+        description: variables.apply 
+          ? t("creditAssessment.autoAssessApplied") 
+          : t("creditAssessment.autoAssessCalculated"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("creditAssessment.autoAssessFailed"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkAutoAssessMutation = useMutation({
+    mutationFn: async (apply: boolean) => {
+      return apiRequest("POST", "/api/admin/credit-assessments/bulk-auto-assess", { apply });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/credit-assessments"] });
+      toast({
+        title: t("creditAssessment.bulkAssessComplete"),
+        description: t("creditAssessment.bulkAssessDesc"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("creditAssessment.bulkAssessFailed"),
         variant: "destructive",
       });
     },
@@ -222,10 +269,21 @@ export default function CreditAssessmentPage() {
           </h1>
           <p className="text-muted-foreground">{t("creditAssessment.subtitle")}</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()} data-testid="button-refresh">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          {t("common.refresh")}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="default" 
+            onClick={() => bulkAutoAssessMutation.mutate(true)}
+            disabled={bulkAutoAssessMutation.isPending}
+            data-testid="button-bulk-auto-assess"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            {bulkAutoAssessMutation.isPending ? t("common.loading") : t("creditAssessment.runAutoAssessAll")}
+          </Button>
+          <Button variant="outline" onClick={() => refetch()} data-testid="button-refresh">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {t("common.refresh")}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -375,6 +433,16 @@ export default function CreditAssessmentPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => autoAssessMutation.mutate({ shipperId: item.user.id, apply: true })}
+                          disabled={autoAssessMutation.isPending}
+                          data-testid={`button-auto-assess-${item.user.id}`}
+                        >
+                          <Zap className="h-4 w-4 mr-1" />
+                          {t("creditAssessment.runAutoAssess")}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

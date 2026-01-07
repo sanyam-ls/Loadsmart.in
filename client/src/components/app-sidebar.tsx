@@ -20,6 +20,7 @@ import {
   History,
   ClipboardList,
   Key,
+  CreditCard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -90,6 +91,7 @@ const adminItems: NavItem[] = [
   { titleKey: "nav.allLoads", url: "/admin/loads", icon: Package },
   { titleKey: "nav.carriers", url: "/admin/carriers", icon: Truck },
   { titleKey: "nav.verification", url: "/admin/verification", icon: Shield },
+  { titleKey: "nav.creditAssessment", url: "/admin/credit-assessment", icon: CreditCard },
   { titleKey: "nav.reports", url: "/admin/reports", icon: BarChart3 },
 ];
 

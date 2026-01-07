@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
-import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search, AlertCircle, Loader2, FileText } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -563,6 +565,7 @@ export default function PostLoadPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submittedLoadId, setSubmittedLoadId] = useState<string | null>(null);
@@ -572,6 +575,12 @@ export default function PostLoadPage() {
     suggestedTruck: string;
     nearbyTrucks: number;
   } | null>(null);
+
+  // Check shipper onboarding status - only verified shippers can post loads
+  const { data: onboardingStatus, isLoading: isLoadingOnboarding } = useQuery<any>({
+    queryKey: ["/api/shipper/onboarding"],
+    enabled: user?.role === "shipper",
+  });
 
   const form = useForm<LoadFormData>({
     resolver: zodResolver(loadFormSchema),
@@ -727,6 +736,92 @@ export default function PostLoadPage() {
       setIsLoading(false);
     }
   };
+
+  // Gate: Only verified shippers can post loads
+  if (isLoadingOnboarding) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Check if shipper has not completed onboarding or is not approved
+  const isApproved = onboardingStatus?.status === "approved";
+  const hasSubmittedOnboarding = !!onboardingStatus;
+
+  if (!isApproved && user?.role === "shipper") {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+              <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+            </div>
+            <CardTitle className="text-xl" data-testid="text-onboarding-required">
+              {t("postLoad.onboardingRequired")}
+            </CardTitle>
+            <CardDescription>
+              {hasSubmittedOnboarding 
+                ? t("postLoad.onboardingPendingDesc", { status: onboardingStatus?.status })
+                : t("postLoad.completeOnboardingDesc")
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {hasSubmittedOnboarding ? (
+              <div className="p-4 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{t("postLoad.applicationStatus")}</p>
+                    <p className="text-sm text-muted-foreground capitalize">{onboardingStatus?.status?.replace(/_/g, " ")}</p>
+                  </div>
+                </div>
+                {onboardingStatus?.decisionNote && (
+                  <div className="mt-3 p-3 rounded bg-background border">
+                    <p className="text-sm text-muted-foreground">{onboardingStatus.decisionNote}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-blue-700 dark:text-blue-300 text-sm">
+                      {t("postLoad.whyOnboarding")}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      {t("postLoad.whyOnboardingDesc")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">
+              {!hasSubmittedOnboarding && (
+                <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-complete-onboarding">
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t("postLoad.completeOnboarding")}
+                </Button>
+              )}
+              {(onboardingStatus?.status === "on_hold" || onboardingStatus?.status === "rejected") && (
+                <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-update-onboarding">
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t("postLoad.updateOnboarding")}
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => navigate("/shipper")} data-testid="button-back-dashboard">
+                {t("common.backToDashboard")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (

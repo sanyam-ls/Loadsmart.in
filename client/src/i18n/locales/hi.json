@@ -72,6 +72,7 @@
     "perPage": "प्रति पेज",
     "sortBy": "क्रमबद्ध करें",
     "ascending": "आरोही",
+    "backToDashboard": "डैशबोर्ड पर वापस जाएं",
     "descending": "अवरोही",
     "apply": "लागू करें",
     "reset": "रीसेट",
@@ -468,7 +469,21 @@
     "privacyPolicy": "गोपनीयता नीति",
     "agreeToTerms": "मैं नियम और शर्तों से सहमत हूं",
     "loginError": "लॉगिन विफल। कृपया अपने क्रेडेंशियल्स जांचें।",
-    "registerError": "पंजीकरण विफल। कृपया पुनः प्रयास करें।"
+    "registerError": "पंजीकरण विफल। कृपया पुनः प्रयास करें।",
+    "digitalFreightMarketplace": "डिजिटल माल ढुलाई मार्केटप्लेस",
+    "welcomeToFreightFlow": "FreightFlow में आपका स्वागत है",
+    "signInOrCreateAccount": "अपने खाते में साइन इन करें या नया बनाएं",
+    "iAmA": "मैं एक हूं",
+    "creatingAccount": "खाता बना रहा है...",
+    "verifyPhoneFirst": "पहले फोन सत्यापित करें",
+    "submitOnboardingRequest": "ऑनबोर्डिंग अनुरोध जमा करें",
+    "accountCreated": "खाता बनाया गया",
+    "completeOnboarding": "कृपया लोड पोस्ट करने के लिए अपना व्यापार सत्यापन पूरा करें।",
+    "features": {
+      "realTimeTracking": "रीयल-टाइम शिपमेंट ट्रैकिंग",
+      "competitiveBidding": "प्रतिस्पर्धी बोली मार्केटप्लेस",
+      "secureDocuments": "सुरक्षित दस्तावेज़ प्रबंधन"
+    }
   },
   "messages": {
     "success": "सफल",
@@ -830,6 +845,16 @@
     "filterByType": "प्रकार से फ़िल्टर करें",
     "allCarriers": "सभी वाहक",
     "enterpriseCarriers": "एंटरप्राइज़ वाहक"
+  },
+  "postLoad": {
+    "onboardingRequired": "व्यापार सत्यापन आवश्यक",
+    "onboardingPendingDesc": "आपका व्यापार सत्यापन वर्तमान में {{status}} है। कृपया लोड पोस्ट करने से पहले व्यवस्थापक की मंजूरी की प्रतीक्षा करें।",
+    "completeOnboardingDesc": "FreightFlow पर लोड पोस्ट करने के लिए, आपको पहले अपना व्यापार सत्यापन पूरा करना होगा। यह लॉजिस्टिक्स नियमों के अनुपालन को सुनिश्चित करता है।",
+    "applicationStatus": "आवेदन स्थिति",
+    "whyOnboarding": "सत्यापन क्यों आवश्यक है?",
+    "whyOnboardingDesc": "व्यापार सत्यापन GST, PAN और परिवहन परमिट सहित भारतीय लॉजिस्टिक्स नियमों के अनुपालन को सुनिश्चित करता है। यह माल ढुलाई लेनदेन में सभी पक्षों की रक्षा करता है।",
+    "completeOnboarding": "सत्यापन पूर्ण करें",
+    "updateOnboarding": "आवेदन अपडेट करें"
   },
   "solo": {
     "title": "सोलो ड्राइवर पोर्टल",

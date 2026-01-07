@@ -289,8 +289,17 @@ export default function AuthPage() {
         otpId: otpId || undefined,
       });
       if (success) {
-        toast({ title: "Account created!", description: "Welcome to FreightFlow." });
-        navigate("/");
+        // Shippers need to complete onboarding before they can post loads
+        if (data.role === "shipper") {
+          toast({ 
+            title: t("auth.accountCreated"), 
+            description: t("auth.completeOnboarding"),
+          });
+          navigate("/shipper/onboarding");
+        } else {
+          toast({ title: t("auth.accountCreated"), description: t("auth.welcomeToFreightFlow") });
+          navigate("/");
+        }
       } else {
         toast({ title: "Registration failed", description: "Username or email may already exist.", variant: "destructive" });
       }
@@ -818,7 +827,14 @@ export default function AuthPage() {
                         disabled={isLoading || !canRegister} 
                         data-testid="button-register"
                       >
-                        {isLoading ? "Creating account..." : !canRegister ? "Verify Phone First" : "Create Account"}
+                        {isLoading 
+                          ? t("auth.creatingAccount") 
+                          : !canRegister 
+                            ? t("auth.verifyPhoneFirst") 
+                            : selectedRole === "shipper" 
+                              ? t("auth.submitOnboardingRequest") 
+                              : t("auth.createAccount")
+                        }
                       </Button>
                     </form>
                   </Form>

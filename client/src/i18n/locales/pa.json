@@ -72,6 +72,7 @@
     "perPage": "ਪ੍ਰਤੀ ਪੰਨਾ",
     "sortBy": "ਕ੍ਰਮਬੱਧ ਕਰੋ",
     "ascending": "ਵਧਦੇ ਕ੍ਰਮ",
+    "backToDashboard": "ਡੈਸ਼ਬੋਰਡ ਤੇ ਵਾਪਸ ਜਾਓ",
     "descending": "ਘਟਦੇ ਕ੍ਰਮ",
     "apply": "ਲਾਗੂ ਕਰੋ",
     "reset": "ਰੀਸੈੱਟ",
@@ -468,7 +469,21 @@
     "privacyPolicy": "ਗੋਪਨੀਯਤਾ ਨੀਤੀ",
     "agreeToTerms": "ਮੈਂ ਨਿਯਮ ਅਤੇ ਸ਼ਰਤਾਂ ਨਾਲ ਸਹਿਮਤ ਹਾਂ",
     "loginError": "ਲੌਗ ਇਨ ਅਸਫਲ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੇ ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ ਚੈੱਕ ਕਰੋ।",
-    "registerError": "ਰਜਿਸਟ੍ਰੇਸ਼ਨ ਅਸਫਲ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
+    "registerError": "ਰਜਿਸਟ੍ਰੇਸ਼ਨ ਅਸਫਲ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+    "digitalFreightMarketplace": "ਡਿਜੀਟਲ ਮਾਲ ਢੋਣ ਮਾਰਕੀਟਪਲੇਸ",
+    "welcomeToFreightFlow": "FreightFlow ਵਿੱਚ ਜੀ ਆਇਆਂ ਨੂੰ",
+    "signInOrCreateAccount": "ਆਪਣੇ ਖਾਤੇ ਵਿੱਚ ਸਾਈਨ ਇਨ ਕਰੋ ਜਾਂ ਨਵਾਂ ਬਣਾਓ",
+    "iAmA": "ਮੈਂ ਇੱਕ ਹਾਂ",
+    "creatingAccount": "ਖਾਤਾ ਬਣਾ ਰਿਹਾ ਹੈ...",
+    "verifyPhoneFirst": "ਪਹਿਲਾਂ ਫੋਨ ਤਸਦੀਕ ਕਰੋ",
+    "submitOnboardingRequest": "ਆਨਬੋਰਡਿੰਗ ਬੇਨਤੀ ਜਮ੍ਹਾਂ ਕਰੋ",
+    "accountCreated": "ਖਾਤਾ ਬਣਾਇਆ ਗਿਆ",
+    "completeOnboarding": "ਕਿਰਪਾ ਕਰਕੇ ਲੋਡ ਪੋਸਟ ਕਰਨ ਲਈ ਆਪਣੀ ਕਾਰੋਬਾਰ ਤਸਦੀਕ ਪੂਰੀ ਕਰੋ।",
+    "features": {
+      "realTimeTracking": "ਰੀਅਲ-ਟਾਈਮ ਸ਼ਿਪਮੈਂਟ ਟਰੈਕਿੰਗ",
+      "competitiveBidding": "ਪ੍ਰਤੀਯੋਗੀ ਬੋਲੀ ਮਾਰਕੀਟਪਲੇਸ",
+      "secureDocuments": "ਸੁਰੱਖਿਅਤ ਦਸਤਾਵੇਜ਼ ਪ੍ਰਬੰਧਨ"
+    }
   },
   "messages": {
     "success": "ਸਫਲ",
@@ -830,6 +845,16 @@
     "rejectVerification": "ਤਸਦੀਕ ਰੱਦ ਕਰੋ",
     "rejectVerificationDescription": "{{name}} ਲਈ ਤਸਦੀਕ ਰੱਦ ਕਰੋ? ਕਿਰਪਾ ਕਰਕੇ ਕਾਰਨ ਦੱਸੋ।",
     "reasonForRejection": "ਰੱਦ ਕਰਨ ਦਾ ਕਾਰਨ"
+  },
+  "postLoad": {
+    "onboardingRequired": "ਕਾਰੋਬਾਰ ਤਸਦੀਕ ਲੋੜੀਂਦੀ ਹੈ",
+    "onboardingPendingDesc": "ਤੁਹਾਡੀ ਕਾਰੋਬਾਰ ਤਸਦੀਕ ਵਰਤਮਾਨ ਵਿੱਚ {{status}} ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਲੋਡ ਪੋਸਟ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਪ੍ਰਬੰਧਕ ਦੀ ਮਨਜ਼ੂਰੀ ਦੀ ਉਡੀਕ ਕਰੋ।",
+    "completeOnboardingDesc": "FreightFlow ਤੇ ਲੋਡ ਪੋਸਟ ਕਰਨ ਲਈ, ਤੁਹਾਨੂੰ ਪਹਿਲਾਂ ਆਪਣੀ ਕਾਰੋਬਾਰ ਤਸਦੀਕ ਪੂਰੀ ਕਰਨੀ ਹੋਵੇਗੀ। ਇਹ ਲੌਜਿਸਟਿਕਸ ਨਿਯਮਾਂ ਦੀ ਪਾਲਣਾ ਯਕੀਨੀ ਬਣਾਉਂਦਾ ਹੈ।",
+    "applicationStatus": "ਅਰਜ਼ੀ ਸਥਿਤੀ",
+    "whyOnboarding": "ਤਸਦੀਕ ਕਿਉਂ ਲੋੜੀਂਦੀ ਹੈ?",
+    "whyOnboardingDesc": "ਕਾਰੋਬਾਰ ਤਸਦੀਕ GST, PAN ਅਤੇ ਟ੍ਰਾਂਸਪੋਰਟ ਪਰਮਿਟ ਸਮੇਤ ਭਾਰਤੀ ਲੌਜਿਸਟਿਕਸ ਨਿਯਮਾਂ ਦੀ ਪਾਲਣਾ ਯਕੀਨੀ ਬਣਾਉਂਦੀ ਹੈ। ਇਹ ਮਾਲ ਢੋਣ ਲੈਣ-ਦੇਣ ਵਿੱਚ ਸਾਰੀਆਂ ਧਿਰਾਂ ਦੀ ਰੱਖਿਆ ਕਰਦੀ ਹੈ।",
+    "completeOnboarding": "ਤਸਦੀਕ ਪੂਰੀ ਕਰੋ",
+    "updateOnboarding": "ਅਰਜ਼ੀ ਅੱਪਡੇਟ ਕਰੋ"
   },
   "solo": {
     "title": "ਸੋਲੋ ਡਰਾਈਵਰ ਪੋਰਟਲ",

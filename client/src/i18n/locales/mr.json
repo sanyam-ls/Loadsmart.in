@@ -72,6 +72,7 @@
     "perPage": "प्रति पृष्ठ",
     "sortBy": "क्रमवारी लावा",
     "ascending": "चढत्या क्रमाने",
+    "backToDashboard": "डॅशबोर्डवर परत जा",
     "descending": "उतरत्या क्रमाने",
     "apply": "लागू करा",
     "reset": "रीसेट",
@@ -468,7 +469,21 @@
     "privacyPolicy": "गोपनीयता धोरण",
     "agreeToTerms": "मी अटी आणि शर्तींशी सहमत आहे",
     "loginError": "लॉगिन अयशस्वी. कृपया तुमची क्रेडेन्शियल्स तपासा.",
-    "registerError": "नोंदणी अयशस्वी. कृपया पुन्हा प्रयत्न करा."
+    "registerError": "नोंदणी अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+    "digitalFreightMarketplace": "डिजिटल मालवाहतूक मार्केटप्लेस",
+    "welcomeToFreightFlow": "FreightFlow मध्ये स्वागत आहे",
+    "signInOrCreateAccount": "तुमच्या खात्यात साइन इन करा किंवा नवीन तयार करा",
+    "iAmA": "मी एक आहे",
+    "creatingAccount": "खाते तयार करत आहे...",
+    "verifyPhoneFirst": "प्रथम फोन सत्यापित करा",
+    "submitOnboardingRequest": "ऑनबोर्डिंग विनंती सबमिट करा",
+    "accountCreated": "खाते तयार झाले",
+    "completeOnboarding": "कृपया लोड पोस्ट करण्यासाठी तुमचे व्यवसाय सत्यापन पूर्ण करा.",
+    "features": {
+      "realTimeTracking": "रीअल-टाइम शिपमेंट ट्रॅकिंग",
+      "competitiveBidding": "स्पर्धात्मक बोली मार्केटप्लेस",
+      "secureDocuments": "सुरक्षित कागदपत्र व्यवस्थापन"
+    }
   },
   "messages": {
     "success": "यशस्वी",
@@ -830,6 +845,16 @@
     "rejectVerification": "सत्यापन नाकारा",
     "rejectVerificationDescription": "{{name}} साठी सत्यापन नाकारायचे? कृपया कारण द्या.",
     "reasonForRejection": "नकाराचे कारण"
+  },
+  "postLoad": {
+    "onboardingRequired": "व्यवसाय सत्यापन आवश्यक",
+    "onboardingPendingDesc": "तुमचे व्यवसाय सत्यापन सध्या {{status}} आहे. कृपया लोड पोस्ट करण्यापूर्वी प्रशासकाच्या मंजुरीची वाट पहा.",
+    "completeOnboardingDesc": "FreightFlow वर लोड पोस्ट करण्यासाठी, तुम्हाला आधी तुमचे व्यवसाय सत्यापन पूर्ण करणे आवश्यक आहे. हे लॉजिस्टिक्स नियमांचे पालन सुनिश्चित करते.",
+    "applicationStatus": "अर्ज स्थिती",
+    "whyOnboarding": "सत्यापन का आवश्यक आहे?",
+    "whyOnboardingDesc": "व्यवसाय सत्यापन GST, PAN आणि वाहतूक परवाने यासह भारतीय लॉजिस्टिक्स नियमांचे पालन सुनिश्चित करते. हे मालवाहतूक व्यवहारातील सर्व पक्षांचे संरक्षण करते.",
+    "completeOnboarding": "सत्यापन पूर्ण करा",
+    "updateOnboarding": "अर्ज अद्यतनित करा"
   },
   "solo": {
     "title": "सोलो ड्रायव्हर पोर्टल",

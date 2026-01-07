@@ -1599,6 +1599,46 @@ export const shipperCreditProfiles = pgTable("shipper_credit_profiles", {
   autoSuggestedScore: integer("auto_suggested_score"),
   autoSuggestedRiskLevel: text("auto_suggested_risk_level"),
   autoSuggestedCreditLimit: decimal("auto_suggested_credit_limit", { precision: 12, scale: 2 }),
+  
+  // Financial Health (India-specific)
+  annualRevenue: decimal("annual_revenue", { precision: 16, scale: 2 }), // INR
+  totalAssets: decimal("total_assets", { precision: 16, scale: 2 }), // INR
+  debtSummary: text("debt_summary"), // Description of overall debt
+  cashFlowRating: text("cash_flow_rating"), // excellent, good, fair, poor
+  liquidityRatio: decimal("liquidity_ratio", { precision: 5, scale: 2 }), // Current ratio
+  debtToEquityRatio: decimal("debt_to_equity_ratio", { precision: 5, scale: 2 }),
+  outstandingDebtAmount: decimal("outstanding_debt_amount", { precision: 14, scale: 2 }),
+  
+  // Business Profile
+  businessYearsInOperation: integer("business_years_in_operation"),
+  companyScale: text("company_scale"), // small, medium, large, enterprise
+  paymentHistoryScore: integer("payment_history_score"), // 0-100 rating
+  averageDaysToPay: integer("average_days_to_pay"),
+  latePaymentCount: integer("late_payment_count").default(0),
+  reputationRating: text("reputation_rating"), // excellent, good, fair, poor
+  
+  // Compliance & Documentation (India-specific)
+  gstCompliant: boolean("gst_compliant").default(false),
+  gstNumber: text("gst_number"),
+  incomeTaxCompliant: boolean("income_tax_compliant").default(false),
+  dgftRegistered: boolean("dgft_registered").default(false), // For export finance
+  dgftIecNumber: text("dgft_iec_number"), // Import-Export Code
+  hasValidContracts: boolean("has_valid_contracts").default(false),
+  contractTypes: text("contract_types"), // POs, LCs, etc.
+  confirmedOrdersValue: decimal("confirmed_orders_value", { precision: 16, scale: 2 }),
+  
+  // Credit History
+  externalCreditScore: integer("external_credit_score"), // External bureau score (300-900)
+  creditBureauScore: integer("credit_bureau_score"), // CIBIL/Experian score
+  lastCreditBureauCheck: timestamp("last_credit_bureau_check"),
+  hasPublicRecords: boolean("has_public_records").default(false), // legal/financial issues
+  publicRecordsDetails: text("public_records_details"),
+  creditUtilizationPercent: decimal("credit_utilization_percent", { precision: 5, scale: 2 }),
+  
+  // Section Notes
+  financialAnalysisNotes: text("financial_analysis_notes"),
+  qualitativeAssessmentNotes: text("qualitative_assessment_notes"),
+  
   notes: text("notes"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),

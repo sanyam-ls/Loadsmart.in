@@ -6857,30 +6857,116 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Shipper not found" });
       }
 
+      const ratingEnum = z.enum(["excellent", "good", "fair", "poor"]);
       const creditSchema = z.object({
+        // Core fields
         creditLimit: z.string().optional(),
         creditScore: z.number().int().min(0).max(1000).optional(),
         riskLevel: z.enum(["low", "medium", "high", "critical"]).optional(),
         paymentTerms: z.number().int().min(0).max(365).optional(),
         notes: z.string().optional(),
         rationale: z.string().optional(),
+        
+        // Financial Health
+        annualRevenue: z.string().optional(),
+        totalAssets: z.string().optional(),
+        debtSummary: z.string().optional(),
+        cashFlowRating: ratingEnum.optional(),
+        liquidityRatio: z.string().optional(),
+        debtToEquityRatio: z.string().optional(),
+        outstandingDebtAmount: z.string().optional(),
+        
+        // Business Profile
+        businessYearsInOperation: z.number().int().min(0).optional(),
+        companyScale: z.enum(["small", "medium", "large", "enterprise"]).optional(),
+        paymentHistoryScore: z.number().int().min(0).max(100).optional(),
+        averageDaysToPay: z.number().int().min(0).optional(),
+        latePaymentCount: z.number().int().min(0).optional(),
+        reputationRating: ratingEnum.optional(),
+        
+        // Compliance (India-specific)
+        gstCompliant: z.boolean().optional(),
+        gstNumber: z.string().optional(),
+        incomeTaxCompliant: z.boolean().optional(),
+        dgftRegistered: z.boolean().optional(),
+        dgftIecNumber: z.string().optional(),
+        hasValidContracts: z.boolean().optional(),
+        contractTypes: z.string().optional(),
+        confirmedOrdersValue: z.string().optional(),
+        
+        // Credit History
+        creditBureauScore: z.number().int().min(0).max(900).optional(),
+        creditUtilizationPercent: z.string().optional(),
+        hasPublicRecords: z.boolean().optional(),
+        publicRecordsDetails: z.string().optional(),
+        
+        // Notes
+        financialAnalysisNotes: z.string().optional(),
+        qualitativeAssessmentNotes: z.string().optional(),
       });
 
       const validated = creditSchema.parse(req.body);
       const existingProfile = await storage.getShipperCreditProfile(req.params.shipperId);
 
-      let profile;
-      if (existingProfile) {
-        // Update existing profile
+      // Build updates object with all fields
+      const buildUpdates = () => {
         const updates: any = {
           lastAssessmentAt: new Date(),
           lastAssessedBy: user.id,
+          isManualOverride: true, // Manual assessment locks from auto-updates
         };
+        
+        // Core fields
         if (validated.creditLimit !== undefined) updates.creditLimit = validated.creditLimit;
         if (validated.creditScore !== undefined) updates.creditScore = validated.creditScore;
         if (validated.riskLevel !== undefined) updates.riskLevel = validated.riskLevel;
         if (validated.paymentTerms !== undefined) updates.paymentTerms = validated.paymentTerms;
         if (validated.notes !== undefined) updates.notes = validated.notes;
+        
+        // Financial Health
+        if (validated.annualRevenue !== undefined) updates.annualRevenue = validated.annualRevenue || null;
+        if (validated.totalAssets !== undefined) updates.totalAssets = validated.totalAssets || null;
+        if (validated.debtSummary !== undefined) updates.debtSummary = validated.debtSummary || null;
+        if (validated.cashFlowRating !== undefined) updates.cashFlowRating = validated.cashFlowRating;
+        if (validated.liquidityRatio !== undefined) updates.liquidityRatio = validated.liquidityRatio || null;
+        if (validated.debtToEquityRatio !== undefined) updates.debtToEquityRatio = validated.debtToEquityRatio || null;
+        if (validated.outstandingDebtAmount !== undefined) updates.outstandingDebtAmount = validated.outstandingDebtAmount || null;
+        
+        // Business Profile
+        if (validated.businessYearsInOperation !== undefined) updates.businessYearsInOperation = validated.businessYearsInOperation;
+        if (validated.companyScale !== undefined) updates.companyScale = validated.companyScale;
+        if (validated.paymentHistoryScore !== undefined) updates.paymentHistoryScore = validated.paymentHistoryScore;
+        if (validated.averageDaysToPay !== undefined) updates.averageDaysToPay = validated.averageDaysToPay;
+        if (validated.latePaymentCount !== undefined) updates.latePaymentCount = validated.latePaymentCount;
+        if (validated.reputationRating !== undefined) updates.reputationRating = validated.reputationRating;
+        
+        // Compliance
+        if (validated.gstCompliant !== undefined) updates.gstCompliant = validated.gstCompliant;
+        if (validated.gstNumber !== undefined) updates.gstNumber = validated.gstNumber || null;
+        if (validated.incomeTaxCompliant !== undefined) updates.incomeTaxCompliant = validated.incomeTaxCompliant;
+        if (validated.dgftRegistered !== undefined) updates.dgftRegistered = validated.dgftRegistered;
+        if (validated.dgftIecNumber !== undefined) updates.dgftIecNumber = validated.dgftIecNumber || null;
+        if (validated.hasValidContracts !== undefined) updates.hasValidContracts = validated.hasValidContracts;
+        if (validated.contractTypes !== undefined) updates.contractTypes = validated.contractTypes || null;
+        if (validated.confirmedOrdersValue !== undefined) updates.confirmedOrdersValue = validated.confirmedOrdersValue || null;
+        
+        // Credit History
+        if (validated.creditBureauScore !== undefined) updates.creditBureauScore = validated.creditBureauScore;
+        if (validated.creditUtilizationPercent !== undefined) updates.creditUtilizationPercent = validated.creditUtilizationPercent || null;
+        if (validated.hasPublicRecords !== undefined) updates.hasPublicRecords = validated.hasPublicRecords;
+        if (validated.publicRecordsDetails !== undefined) updates.publicRecordsDetails = validated.publicRecordsDetails || null;
+        
+        // Notes
+        if (validated.financialAnalysisNotes !== undefined) updates.financialAnalysisNotes = validated.financialAnalysisNotes || null;
+        if (validated.qualitativeAssessmentNotes !== undefined) updates.qualitativeAssessmentNotes = validated.qualitativeAssessmentNotes || null;
+        
+        return updates;
+      };
+
+      let profile;
+      if (existingProfile) {
+        // Update existing profile
+        const updates = buildUpdates();
 
         // Calculate available credit
         const newLimit = validated.creditLimit ? parseFloat(validated.creditLimit) : parseFloat(String(existingProfile.creditLimit || "0"));
@@ -6893,6 +6979,7 @@ export async function registerRoutes(
         await storage.createShipperCreditEvaluation({
           shipperId: req.params.shipperId,
           assessorId: user.id,
+          evaluationType: "manual",
           previousCreditLimit: existingProfile.creditLimit,
           newCreditLimit: validated.creditLimit || existingProfile.creditLimit,
           previousRiskLevel: existingProfile.riskLevel,
@@ -6900,32 +6987,33 @@ export async function registerRoutes(
           previousCreditScore: existingProfile.creditScore,
           newCreditScore: validated.creditScore || existingProfile.creditScore,
           decision: "adjusted",
-          rationale: validated.rationale || "Credit profile updated",
+          rationale: validated.rationale || "Credit profile updated with comprehensive assessment",
         });
       } else {
         // Create new profile
+        const updates = buildUpdates();
         const creditLimit = validated.creditLimit || "0";
+        
         profile = await storage.createShipperCreditProfile({
           shipperId: req.params.shipperId,
+          ...updates,
           creditLimit,
           creditScore: validated.creditScore || 500,
           riskLevel: validated.riskLevel || "medium",
           paymentTerms: validated.paymentTerms || 30,
           availableCredit: creditLimit,
-          notes: validated.notes,
-          lastAssessmentAt: new Date(),
-          lastAssessedBy: user.id,
         });
 
         // Create initial evaluation record
         await storage.createShipperCreditEvaluation({
           shipperId: req.params.shipperId,
           assessorId: user.id,
+          evaluationType: "manual",
           newCreditLimit: creditLimit,
           newRiskLevel: validated.riskLevel || "medium",
           newCreditScore: validated.creditScore || 500,
           decision: "approved",
-          rationale: validated.rationale || "Initial credit assessment",
+          rationale: validated.rationale || "Initial comprehensive credit assessment",
         });
       }
 

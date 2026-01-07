@@ -21,6 +21,12 @@ import {
   Zap,
   Bot,
   User as UserIcon,
+  FileText,
+  Scale,
+  Landmark,
+  CircleDollarSign,
+  BadgeCheck,
+  FileCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +59,9 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, format } from "date-fns";
@@ -72,12 +81,50 @@ export default function CreditAssessmentPage() {
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
+    // Core Assessment
     creditLimit: "",
     creditScore: 500,
     riskLevel: "medium" as "low" | "medium" | "high" | "critical",
     paymentTerms: 30,
     notes: "",
     rationale: "",
+    
+    // Financial Health
+    annualRevenue: "",
+    totalAssets: "",
+    debtSummary: "",
+    cashFlowRating: "fair" as "excellent" | "good" | "fair" | "poor",
+    liquidityRatio: "",
+    debtToEquityRatio: "",
+    outstandingDebtAmount: "",
+    
+    // Business Profile
+    businessYearsInOperation: 0,
+    companyScale: "small" as "small" | "medium" | "large" | "enterprise",
+    paymentHistoryScore: 50,
+    averageDaysToPay: 30,
+    latePaymentCount: 0,
+    reputationRating: "good" as "excellent" | "good" | "fair" | "poor",
+    
+    // Compliance (India-specific)
+    gstCompliant: false,
+    gstNumber: "",
+    incomeTaxCompliant: false,
+    dgftRegistered: false,
+    dgftIecNumber: "",
+    hasValidContracts: false,
+    contractTypes: "",
+    confirmedOrdersValue: "",
+    
+    // Credit History
+    creditBureauScore: 0,
+    creditUtilizationPercent: "",
+    hasPublicRecords: false,
+    publicRecordsDetails: "",
+    
+    // Section Notes
+    financialAnalysisNotes: "",
+    qualitativeAssessmentNotes: "",
   });
 
   const { data: shippers, isLoading, refetch } = useQuery<ShipperWithProfile[]>({
@@ -91,14 +138,7 @@ export default function CreditAssessmentPage() {
 
   const assessmentMutation = useMutation({
     mutationFn: async (data: { shipperId: string; assessment: typeof formData }) => {
-      return apiRequest("POST", `/api/admin/credit-assessments/${data.shipperId}`, {
-        creditLimit: data.assessment.creditLimit,
-        creditScore: data.assessment.creditScore,
-        riskLevel: data.assessment.riskLevel,
-        paymentTerms: data.assessment.paymentTerms,
-        notes: data.assessment.notes,
-        rationale: data.assessment.rationale,
-      });
+      return apiRequest("POST", `/api/admin/credit-assessments/${data.shipperId}`, data.assessment);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/credit-assessments"] });
@@ -203,14 +243,42 @@ export default function CreditAssessmentPage() {
 
   const handleOpenAssessment = (shipper: ShipperWithProfile) => {
     setSelectedShipper(shipper);
-    if (shipper.creditProfile) {
+    const cp = shipper.creditProfile;
+    if (cp) {
       setFormData({
-        creditLimit: String(shipper.creditProfile.creditLimit || "0"),
-        creditScore: shipper.creditProfile.creditScore || 500,
-        riskLevel: (shipper.creditProfile.riskLevel as "low" | "medium" | "high" | "critical") || "medium",
-        paymentTerms: shipper.creditProfile.paymentTerms || 30,
-        notes: shipper.creditProfile.notes || "",
+        creditLimit: String(cp.creditLimit || "0"),
+        creditScore: cp.creditScore || 500,
+        riskLevel: (cp.riskLevel as "low" | "medium" | "high" | "critical") || "medium",
+        paymentTerms: cp.paymentTerms || 30,
+        notes: cp.notes || "",
         rationale: "",
+        annualRevenue: String(cp.annualRevenue || ""),
+        totalAssets: String(cp.totalAssets || ""),
+        debtSummary: cp.debtSummary || "",
+        cashFlowRating: (cp.cashFlowRating as any) || "fair",
+        liquidityRatio: String(cp.liquidityRatio || ""),
+        debtToEquityRatio: String(cp.debtToEquityRatio || ""),
+        outstandingDebtAmount: String(cp.outstandingDebtAmount || ""),
+        businessYearsInOperation: cp.businessYearsInOperation || 0,
+        companyScale: (cp.companyScale as any) || "small",
+        paymentHistoryScore: cp.paymentHistoryScore || 50,
+        averageDaysToPay: cp.averageDaysToPay || 30,
+        latePaymentCount: cp.latePaymentCount || 0,
+        reputationRating: (cp.reputationRating as any) || "good",
+        gstCompliant: cp.gstCompliant || false,
+        gstNumber: cp.gstNumber || "",
+        incomeTaxCompliant: cp.incomeTaxCompliant || false,
+        dgftRegistered: cp.dgftRegistered || false,
+        dgftIecNumber: cp.dgftIecNumber || "",
+        hasValidContracts: cp.hasValidContracts || false,
+        contractTypes: cp.contractTypes || "",
+        confirmedOrdersValue: String(cp.confirmedOrdersValue || ""),
+        creditBureauScore: cp.creditBureauScore || 0,
+        creditUtilizationPercent: String(cp.creditUtilizationPercent || ""),
+        hasPublicRecords: cp.hasPublicRecords || false,
+        publicRecordsDetails: cp.publicRecordsDetails || "",
+        financialAnalysisNotes: cp.financialAnalysisNotes || "",
+        qualitativeAssessmentNotes: cp.qualitativeAssessmentNotes || "",
       });
     } else {
       setFormData({
@@ -220,6 +288,33 @@ export default function CreditAssessmentPage() {
         paymentTerms: 30,
         notes: "",
         rationale: "Initial credit assessment",
+        annualRevenue: "",
+        totalAssets: "",
+        debtSummary: "",
+        cashFlowRating: "fair",
+        liquidityRatio: "",
+        debtToEquityRatio: "",
+        outstandingDebtAmount: "",
+        businessYearsInOperation: 0,
+        companyScale: "small",
+        paymentHistoryScore: 50,
+        averageDaysToPay: 30,
+        latePaymentCount: 0,
+        reputationRating: "good",
+        gstCompliant: false,
+        gstNumber: "",
+        incomeTaxCompliant: false,
+        dgftRegistered: false,
+        dgftIecNumber: "",
+        hasValidContracts: false,
+        contractTypes: "",
+        confirmedOrdersValue: "",
+        creditBureauScore: 0,
+        creditUtilizationPercent: "",
+        hasPublicRecords: false,
+        publicRecordsDetails: "",
+        financialAnalysisNotes: "",
+        qualitativeAssessmentNotes: "",
       });
     }
     setIsAssessmentDialogOpen(true);
@@ -473,7 +568,7 @@ export default function CreditAssessmentPage() {
       </Card>
 
       <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
@@ -486,99 +581,496 @@ export default function CreditAssessmentPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="creditLimit">{t("creditAssessment.creditLimit")}</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="creditLimit"
-                    type="number"
-                    value={formData.creditLimit}
-                    onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-                    className="pl-10"
-                    data-testid="input-credit-limit"
+          <Tabs defaultValue="decision" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="decision" data-testid="tab-decision">
+                <Scale className="h-4 w-4 mr-1" />
+                {t("creditAssessment.tabDecision")}
+              </TabsTrigger>
+              <TabsTrigger value="financial" data-testid="tab-financial">
+                <CircleDollarSign className="h-4 w-4 mr-1" />
+                {t("creditAssessment.tabFinancial")}
+              </TabsTrigger>
+              <TabsTrigger value="business" data-testid="tab-business">
+                <Building2 className="h-4 w-4 mr-1" />
+                {t("creditAssessment.tabBusiness")}
+              </TabsTrigger>
+              <TabsTrigger value="compliance" data-testid="tab-compliance">
+                <FileCheck className="h-4 w-4 mr-1" />
+                {t("creditAssessment.tabCompliance")}
+              </TabsTrigger>
+              <TabsTrigger value="credit" data-testid="tab-credit">
+                <Landmark className="h-4 w-4 mr-1" />
+                {t("creditAssessment.tabCreditHistory")}
+              </TabsTrigger>
+            </TabsList>
+
+            <ScrollArea className="h-[400px] mt-4 pr-4">
+              <TabsContent value="decision" className="space-y-4 mt-0">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="creditLimit">{t("creditAssessment.creditLimit")}</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="creditLimit"
+                        type="number"
+                        value={formData.creditLimit}
+                        onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
+                        className="pl-10"
+                        data-testid="input-credit-limit"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="creditScore">{t("creditAssessment.creditScore")}</Label>
+                    <Input
+                      id="creditScore"
+                      type="number"
+                      min={0}
+                      max={1000}
+                      value={formData.creditScore}
+                      onChange={(e) => setFormData({ ...formData, creditScore: parseInt(e.target.value) || 0 })}
+                      data-testid="input-credit-score"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="riskLevel">{t("creditAssessment.riskLevel")}</Label>
+                    <Select
+                      value={formData.riskLevel}
+                      onValueChange={(value) => setFormData({ ...formData, riskLevel: value as any })}
+                    >
+                      <SelectTrigger data-testid="select-risk-level">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">{t("creditAssessment.lowRisk")}</SelectItem>
+                        <SelectItem value="medium">{t("creditAssessment.mediumRisk")}</SelectItem>
+                        <SelectItem value="high">{t("creditAssessment.highRisk")}</SelectItem>
+                        <SelectItem value="critical">{t("creditAssessment.criticalRisk")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentTerms">{t("creditAssessment.paymentTerms")}</Label>
+                    <div className="relative">
+                      <Input
+                        id="paymentTerms"
+                        type="number"
+                        min={0}
+                        max={365}
+                        value={formData.paymentTerms}
+                        onChange={(e) => setFormData({ ...formData, paymentTerms: parseInt(e.target.value) || 0 })}
+                        data-testid="input-payment-terms"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                        {t("creditAssessment.days")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rationale">{t("creditAssessment.rationale")}</Label>
+                  <Textarea
+                    id="rationale"
+                    value={formData.rationale}
+                    onChange={(e) => setFormData({ ...formData, rationale: e.target.value })}
+                    placeholder={t("creditAssessment.rationalePlaceholder")}
+                    rows={3}
+                    data-testid="input-rationale"
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="creditScore">{t("creditAssessment.creditScore")}</Label>
-                <Input
-                  id="creditScore"
-                  type="number"
-                  min={0}
-                  max={1000}
-                  value={formData.creditScore}
-                  onChange={(e) => setFormData({ ...formData, creditScore: parseInt(e.target.value) || 0 })}
-                  data-testid="input-credit-score"
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="riskLevel">{t("creditAssessment.riskLevel")}</Label>
-                <Select
-                  value={formData.riskLevel}
-                  onValueChange={(value) => setFormData({ ...formData, riskLevel: value as any })}
-                >
-                  <SelectTrigger data-testid="select-risk-level">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">{t("creditAssessment.lowRisk")}</SelectItem>
-                    <SelectItem value="medium">{t("creditAssessment.mediumRisk")}</SelectItem>
-                    <SelectItem value="high">{t("creditAssessment.highRisk")}</SelectItem>
-                    <SelectItem value="critical">{t("creditAssessment.criticalRisk")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="paymentTerms">{t("creditAssessment.paymentTerms")}</Label>
-                <div className="relative">
-                  <Input
-                    id="paymentTerms"
-                    type="number"
-                    min={0}
-                    max={365}
-                    value={formData.paymentTerms}
-                    onChange={(e) => setFormData({ ...formData, paymentTerms: parseInt(e.target.value) || 0 })}
-                    data-testid="input-payment-terms"
+                <div className="space-y-2">
+                  <Label htmlFor="notes">{t("creditAssessment.notes")}</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder={t("creditAssessment.notesPlaceholder")}
+                    rows={2}
+                    data-testid="input-notes"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    {t("creditAssessment.days")}
-                  </span>
                 </div>
-              </div>
-            </div>
+              </TabsContent>
 
-            <div className="space-y-2">
-              <Label htmlFor="rationale">{t("creditAssessment.rationale")}</Label>
-              <Textarea
-                id="rationale"
-                value={formData.rationale}
-                onChange={(e) => setFormData({ ...formData, rationale: e.target.value })}
-                placeholder={t("creditAssessment.rationalePlaceholder")}
-                rows={3}
-                data-testid="input-rationale"
-              />
-            </div>
+              <TabsContent value="financial" className="space-y-4 mt-0">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.annualRevenue")}</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        value={formData.annualRevenue}
+                        onChange={(e) => setFormData({ ...formData, annualRevenue: e.target.value })}
+                        className="pl-10"
+                        placeholder="Annual revenue in INR"
+                        data-testid="input-annual-revenue"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.totalAssets")}</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        value={formData.totalAssets}
+                        onChange={(e) => setFormData({ ...formData, totalAssets: e.target.value })}
+                        className="pl-10"
+                        placeholder="Total assets in INR"
+                        data-testid="input-total-assets"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">{t("creditAssessment.notes")}</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder={t("creditAssessment.notesPlaceholder")}
-                rows={2}
-                data-testid="input-notes"
-              />
-            </div>
-          </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.cashFlowRating")}</Label>
+                    <Select
+                      value={formData.cashFlowRating}
+                      onValueChange={(value) => setFormData({ ...formData, cashFlowRating: value as any })}
+                    >
+                      <SelectTrigger data-testid="select-cashflow">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excellent">{t("creditAssessment.excellent")}</SelectItem>
+                        <SelectItem value="good">{t("creditAssessment.good")}</SelectItem>
+                        <SelectItem value="fair">{t("creditAssessment.fair")}</SelectItem>
+                        <SelectItem value="poor">{t("creditAssessment.poor")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.outstandingDebt")}</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        value={formData.outstandingDebtAmount}
+                        onChange={(e) => setFormData({ ...formData, outstandingDebtAmount: e.target.value })}
+                        className="pl-10"
+                        data-testid="input-outstanding-debt"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-          <DialogFooter>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.liquidityRatio")}</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.liquidityRatio}
+                      onChange={(e) => setFormData({ ...formData, liquidityRatio: e.target.value })}
+                      placeholder="Current ratio (e.g., 1.5)"
+                      data-testid="input-liquidity-ratio"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.debtToEquity")}</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.debtToEquityRatio}
+                      onChange={(e) => setFormData({ ...formData, debtToEquityRatio: e.target.value })}
+                      placeholder="Debt-to-equity ratio"
+                      data-testid="input-debt-equity"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("creditAssessment.debtSummary")}</Label>
+                  <Textarea
+                    value={formData.debtSummary}
+                    onChange={(e) => setFormData({ ...formData, debtSummary: e.target.value })}
+                    placeholder="Summary of outstanding debts and liabilities"
+                    rows={2}
+                    data-testid="input-debt-summary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("creditAssessment.financialNotes")}</Label>
+                  <Textarea
+                    value={formData.financialAnalysisNotes}
+                    onChange={(e) => setFormData({ ...formData, financialAnalysisNotes: e.target.value })}
+                    placeholder="Additional notes on financial analysis"
+                    rows={2}
+                    data-testid="input-financial-notes"
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="business" className="space-y-4 mt-0">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.yearsInOperation")}</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formData.businessYearsInOperation}
+                      onChange={(e) => setFormData({ ...formData, businessYearsInOperation: parseInt(e.target.value) || 0 })}
+                      data-testid="input-years-operation"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.companyScale")}</Label>
+                    <Select
+                      value={formData.companyScale}
+                      onValueChange={(value) => setFormData({ ...formData, companyScale: value as any })}
+                    >
+                      <SelectTrigger data-testid="select-company-scale">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="small">{t("creditAssessment.scaleSmall")}</SelectItem>
+                        <SelectItem value="medium">{t("creditAssessment.scaleMedium")}</SelectItem>
+                        <SelectItem value="large">{t("creditAssessment.scaleLarge")}</SelectItem>
+                        <SelectItem value="enterprise">{t("creditAssessment.scaleEnterprise")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.reputationRating")}</Label>
+                    <Select
+                      value={formData.reputationRating}
+                      onValueChange={(value) => setFormData({ ...formData, reputationRating: value as any })}
+                    >
+                      <SelectTrigger data-testid="select-reputation">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excellent">{t("creditAssessment.excellent")}</SelectItem>
+                        <SelectItem value="good">{t("creditAssessment.good")}</SelectItem>
+                        <SelectItem value="fair">{t("creditAssessment.fair")}</SelectItem>
+                        <SelectItem value="poor">{t("creditAssessment.poor")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.paymentHistoryScore")}</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={formData.paymentHistoryScore}
+                      onChange={(e) => setFormData({ ...formData, paymentHistoryScore: parseInt(e.target.value) || 0 })}
+                      data-testid="input-payment-history-score"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.avgDaysToPay")}</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formData.averageDaysToPay}
+                      onChange={(e) => setFormData({ ...formData, averageDaysToPay: parseInt(e.target.value) || 0 })}
+                      data-testid="input-avg-days-pay"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.latePaymentCount")}</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formData.latePaymentCount}
+                      onChange={(e) => setFormData({ ...formData, latePaymentCount: parseInt(e.target.value) || 0 })}
+                      data-testid="input-late-payments"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t("creditAssessment.businessNotes")}</Label>
+                  <Textarea
+                    value={formData.qualitativeAssessmentNotes}
+                    onChange={(e) => setFormData({ ...formData, qualitativeAssessmentNotes: e.target.value })}
+                    placeholder="Additional notes on business profile"
+                    rows={2}
+                    data-testid="input-business-notes"
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="compliance" className="space-y-4 mt-0">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="gstCompliant"
+                      checked={formData.gstCompliant}
+                      onCheckedChange={(checked) => setFormData({ ...formData, gstCompliant: !!checked })}
+                      data-testid="checkbox-gst"
+                    />
+                    <Label htmlFor="gstCompliant" className="font-normal">
+                      {t("creditAssessment.gstCompliant")}
+                    </Label>
+                  </div>
+                  {formData.gstCompliant && (
+                    <div className="space-y-2 ml-6">
+                      <Label>{t("creditAssessment.gstNumber")}</Label>
+                      <Input
+                        value={formData.gstNumber}
+                        onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
+                        placeholder="GSTIN (e.g., 22AAAAA0000A1Z5)"
+                        data-testid="input-gst-number"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="incomeTaxCompliant"
+                      checked={formData.incomeTaxCompliant}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incomeTaxCompliant: !!checked })}
+                      data-testid="checkbox-income-tax"
+                    />
+                    <Label htmlFor="incomeTaxCompliant" className="font-normal">
+                      {t("creditAssessment.incomeTaxCompliant")}
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="dgftRegistered"
+                      checked={formData.dgftRegistered}
+                      onCheckedChange={(checked) => setFormData({ ...formData, dgftRegistered: !!checked })}
+                      data-testid="checkbox-dgft"
+                    />
+                    <Label htmlFor="dgftRegistered" className="font-normal">
+                      {t("creditAssessment.dgftRegistered")}
+                    </Label>
+                  </div>
+                  {formData.dgftRegistered && (
+                    <div className="space-y-2 ml-6">
+                      <Label>{t("creditAssessment.dgftIecNumber")}</Label>
+                      <Input
+                        value={formData.dgftIecNumber}
+                        onChange={(e) => setFormData({ ...formData, dgftIecNumber: e.target.value })}
+                        placeholder="IEC Number (e.g., 0300000000)"
+                        data-testid="input-iec-number"
+                      />
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="hasValidContracts"
+                      checked={formData.hasValidContracts}
+                      onCheckedChange={(checked) => setFormData({ ...formData, hasValidContracts: !!checked })}
+                      data-testid="checkbox-contracts"
+                    />
+                    <Label htmlFor="hasValidContracts" className="font-normal">
+                      {t("creditAssessment.hasValidContracts")}
+                    </Label>
+                  </div>
+                  {formData.hasValidContracts && (
+                    <div className="grid grid-cols-2 gap-4 ml-6">
+                      <div className="space-y-2">
+                        <Label>{t("creditAssessment.contractTypes")}</Label>
+                        <Input
+                          value={formData.contractTypes}
+                          onChange={(e) => setFormData({ ...formData, contractTypes: e.target.value })}
+                          placeholder="PO, LC, Bank Guarantee, etc."
+                          data-testid="input-contract-types"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("creditAssessment.confirmedOrdersValue")}</Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            value={formData.confirmedOrdersValue}
+                            onChange={(e) => setFormData({ ...formData, confirmedOrdersValue: e.target.value })}
+                            className="pl-10"
+                            data-testid="input-orders-value"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="credit" className="space-y-4 mt-0">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.creditBureauScore")}</Label>
+                    <Input
+                      type="number"
+                      min={300}
+                      max={900}
+                      value={formData.creditBureauScore}
+                      onChange={(e) => setFormData({ ...formData, creditBureauScore: parseInt(e.target.value) || 0 })}
+                      placeholder="CIBIL/Experian score (300-900)"
+                      data-testid="input-bureau-score"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.creditUtilization")}</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.1"
+                        value={formData.creditUtilizationPercent}
+                        onChange={(e) => setFormData({ ...formData, creditUtilizationPercent: e.target.value })}
+                        data-testid="input-credit-utilization"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="hasPublicRecords"
+                      checked={formData.hasPublicRecords}
+                      onCheckedChange={(checked) => setFormData({ ...formData, hasPublicRecords: !!checked })}
+                      data-testid="checkbox-public-records"
+                    />
+                    <Label htmlFor="hasPublicRecords" className="font-normal text-destructive">
+                      {t("creditAssessment.hasPublicRecords")}
+                    </Label>
+                  </div>
+                  {formData.hasPublicRecords && (
+                    <div className="space-y-2 ml-6">
+                      <Label>{t("creditAssessment.publicRecordsDetails")}</Label>
+                      <Textarea
+                        value={formData.publicRecordsDetails}
+                        onChange={(e) => setFormData({ ...formData, publicRecordsDetails: e.target.value })}
+                        placeholder="Details of bankruptcies, liens, lawsuits, or legal issues"
+                        rows={3}
+                        data-testid="input-public-records-details"
+                      />
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </ScrollArea>
+          </Tabs>
+
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsAssessmentDialogOpen(false)}>
               {t("common.cancel")}
             </Button>

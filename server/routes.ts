@@ -168,6 +168,17 @@ export async function registerRoutes(
         });
       }
 
+      // Auto-create draft onboarding request for shippers (only if none exists)
+      if (user.role === "shipper") {
+        const existingRequest = await storage.getShipperOnboardingRequestByShipperId(user.id);
+        if (!existingRequest) {
+          await storage.createShipperOnboardingRequest({
+            shipperId: user.id,
+            status: "draft",
+          });
+        }
+      }
+
       req.session.userId = user.id;
       
       const { password: _, ...userWithoutPassword } = user;

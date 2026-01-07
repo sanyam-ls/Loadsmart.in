@@ -1221,6 +1221,7 @@
     "updateSuccess": "ਅਰਜ਼ੀ ਅੱਪਡੇਟ ਹੋਈ",
     "updateSuccessDesc": "ਦੁਬਾਰਾ ਜਮ੍ਹਾਂ ਹੋਈ",
     "updateError": "ਅੱਪਡੇਟ ਅਸਫਲ",
+    "statusDraft": "ਜਮ੍ਹਾਂ ਕਰਨ ਦੀ ਉਡੀਕ",
     "statusPending": "ਸਮੀਖਿਆ ਬਕਾਇਆ",
     "statusUnderReview": "ਸਮੀਖਿਆ ਅਧੀਨ",
     "statusApproved": "ਮਨਜ਼ੂਰ",

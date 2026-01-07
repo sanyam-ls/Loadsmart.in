@@ -1221,6 +1221,7 @@
     "updateSuccess": "अर्ज अद्यतनित झाला",
     "updateSuccessDesc": "पुन्हा सबमिट झाला",
     "updateError": "अद्यतन अयशस्वी",
+    "statusDraft": "सबमिशन प्रतीक्षेत",
     "statusPending": "समीक्षा प्रलंबित",
     "statusUnderReview": "समीक्षेत",
     "statusApproved": "मंजूर",

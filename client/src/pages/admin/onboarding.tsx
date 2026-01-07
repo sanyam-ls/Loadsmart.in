@@ -81,7 +81,7 @@ export default function AdminOnboardingPage() {
   });
 
   const reviewMutation = useMutation({
-    mutationFn: async (data: { requestId: number; review: typeof reviewData }) => {
+    mutationFn: async (data: { requestId: string; review: typeof reviewData }) => {
       return apiRequest("POST", `/api/admin/onboarding-requests/${data.requestId}/review`, data.review);
     },
     onSuccess: () => {
@@ -104,6 +104,7 @@ export default function AdminOnboardingPage() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
+      draft: { variant: "outline", icon: AlertCircle },
       pending: { variant: "secondary", icon: Clock },
       under_review: { variant: "default", icon: Eye },
       approved: { variant: "default", icon: CheckCircle },
@@ -123,7 +124,7 @@ export default function AdminOnboardingPage() {
   const filteredRequests = requests?.filter((item) => {
     const matchesSearch =
       !searchQuery ||
-      item.request.legalCompanyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.request.legalCompanyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.user.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || item.request.status === statusFilter;
@@ -132,6 +133,7 @@ export default function AdminOnboardingPage() {
 
   const statusCounts = {
     all: requests?.length || 0,
+    draft: requests?.filter((r) => r.request.status === "draft").length || 0,
     pending: requests?.filter((r) => r.request.status === "pending").length || 0,
     under_review: requests?.filter((r) => r.request.status === "under_review").length || 0,
     approved: requests?.filter((r) => r.request.status === "approved").length || 0,
@@ -174,11 +176,17 @@ export default function AdminOnboardingPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
         <Card className={statusFilter === "all" ? "border-primary" : ""}>
           <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("all")}>
             <div className="text-2xl font-bold">{statusCounts.all}</div>
             <div className="text-sm text-muted-foreground">{t("common.all")}</div>
+          </CardContent>
+        </Card>
+        <Card className={statusFilter === "draft" ? "border-primary" : ""}>
+          <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("draft")}>
+            <div className="text-2xl font-bold text-gray-500">{statusCounts.draft}</div>
+            <div className="text-sm text-muted-foreground">{t("onboarding.statusDraft")}</div>
           </CardContent>
         </Card>
         <Card className={statusFilter === "pending" ? "border-primary" : ""}>
@@ -268,15 +276,15 @@ export default function AdminOnboardingPage() {
                     <TableCell>
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-sm">
-                          <span>{item.request.contactName}</span>
+                          <span>{item.request.contactPersonName || "-"}</span>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Phone className="h-3 w-3" />
-                          <span>{item.request.contactPhone}</span>
+                          <span>{item.request.contactPersonPhone || "-"}</span>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(item.request.status)}</TableCell>
+                    <TableCell>{getStatusBadge(item.request.status || "draft")}</TableCell>
                     <TableCell>{item.request.businessType}</TableCell>
                     <TableCell>
                       {item.request.submittedAt
@@ -344,15 +352,15 @@ export default function AdminOnboardingPage() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.pan")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.pan}</p>
+                    <p className="font-medium">{selectedRequest?.request.panNumber || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.gstin")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.gstin}</p>
+                    <p className="font-medium">{selectedRequest?.request.gstinNumber || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.cin")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.cin || "-"}</p>
+                    <p className="font-medium">{selectedRequest?.request.cinNumber || "-"}</p>
                   </div>
                 </div>
 
@@ -361,8 +369,8 @@ export default function AdminOnboardingPage() {
                 <div>
                   <Label className="text-muted-foreground">{t("onboarding.registeredAddress")}</Label>
                   <p className="font-medium">
-                    {selectedRequest?.request.registeredAddressLine}, {selectedRequest?.request.registeredCity},{" "}
-                    {selectedRequest?.request.registeredState} - {selectedRequest?.request.registeredPincode}
+                    {selectedRequest?.request.registeredAddress || "-"}, {selectedRequest?.request.registeredCity || "-"},{" "}
+                    {selectedRequest?.request.registeredState || "-"} - {selectedRequest?.request.registeredPincode || "-"}
                   </p>
                 </div>
               </TabsContent>
@@ -371,19 +379,19 @@ export default function AdminOnboardingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.contactName")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.contactName}</p>
+                    <p className="font-medium">{selectedRequest?.request.contactPersonName || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.designation")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.contactDesignation}</p>
+                    <p className="font-medium">{selectedRequest?.request.contactPersonDesignation || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.phone")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.contactPhone}</p>
+                    <p className="font-medium">{selectedRequest?.request.contactPersonPhone || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.email")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.contactEmail}</p>
+                    <p className="font-medium">{selectedRequest?.request.contactPersonEmail || "-"}</p>
                   </div>
                 </div>
 
@@ -393,16 +401,16 @@ export default function AdminOnboardingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <Card>
                     <CardContent className="p-4 space-y-2">
-                      <p className="font-medium">{selectedRequest?.request.reference1Company || "-"}</p>
-                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.reference1Contact}</p>
-                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.reference1Phone}</p>
+                      <p className="font-medium">{selectedRequest?.request.tradeReference1Company || "-"}</p>
+                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.tradeReference1Contact || "-"}</p>
+                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.tradeReference1Phone || "-"}</p>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4 space-y-2">
-                      <p className="font-medium">{selectedRequest?.request.reference2Company || "-"}</p>
-                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.reference2Contact}</p>
-                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.reference2Phone}</p>
+                      <p className="font-medium">{selectedRequest?.request.tradeReference2Company || "-"}</p>
+                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.tradeReference2Contact || "-"}</p>
+                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.tradeReference2Phone || "-"}</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -460,9 +468,9 @@ export default function AdminOnboardingPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">{t("onboarding.addressProof")}</Label>
-                    {selectedRequest?.request.addressProofUrl ? (
+                    {selectedRequest?.request.businessAddressProofUrl ? (
                       <a
-                        href={selectedRequest.request.addressProofUrl}
+                        href={selectedRequest.request.businessAddressProofUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline flex items-center gap-1"
@@ -481,19 +489,19 @@ export default function AdminOnboardingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.bankName")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.bankName}</p>
+                    <p className="font-medium">{selectedRequest?.request.bankName || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.branchName")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.branchName}</p>
+                    <p className="font-medium">{selectedRequest?.request.bankBranchName || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.accountNumber")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.accountNumber}</p>
+                    <p className="font-medium">{selectedRequest?.request.bankAccountNumber || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.ifscCode")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.ifscCode}</p>
+                    <p className="font-medium">{selectedRequest?.request.bankIfscCode || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.paymentTerms")}</Label>

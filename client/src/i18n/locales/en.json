@@ -1224,6 +1224,7 @@
     "updateSuccess": "Application Updated",
     "updateSuccessDesc": "Your application has been resubmitted for review",
     "updateError": "Update Failed",
+    "statusDraft": "Awaiting Submission",
     "statusPending": "Pending Review",
     "statusUnderReview": "Under Review",
     "statusApproved": "Approved",

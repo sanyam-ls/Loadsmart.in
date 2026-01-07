@@ -1686,7 +1686,8 @@ export type ShipperCreditEvaluation = typeof shipperCreditEvaluations.$inferSele
 
 // Shipper Onboarding Status enum
 export const shipperOnboardingStatuses = [
-  "pending",        // Initial submission, awaiting admin review
+  "draft",          // Auto-created on registration, awaiting shipper to complete form
+  "pending",        // Shipper submitted, awaiting admin review
   "under_review",   // Admin is reviewing the application
   "approved",       // Application approved, shipper can post loads
   "rejected",       // Application rejected
@@ -1698,22 +1699,22 @@ export type ShipperOnboardingStatus = typeof shipperOnboardingStatuses[number];
 export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   shipperId: varchar("shipper_id").notNull().references(() => users.id),
-  status: text("status").default("pending"), // pending, under_review, approved, rejected, on_hold
+  status: text("status").default("draft"), // draft, pending, under_review, approved, rejected, on_hold
   
-  // Business Identity
-  legalCompanyName: text("legal_company_name").notNull(),
+  // Business Identity (optional for draft, required on submission)
+  legalCompanyName: text("legal_company_name"),
   tradeName: text("trade_name"), // Trading as / DBA name
   businessType: text("business_type"), // proprietorship, partnership, pvt_ltd, public_ltd, llp
   incorporationDate: timestamp("incorporation_date"),
   cinNumber: text("cin_number"), // Corporate Identification Number
-  panNumber: text("pan_number").notNull(), // Permanent Account Number
+  panNumber: text("pan_number"), // Permanent Account Number
   gstinNumber: text("gstin_number"), // GST Identification Number
   
-  // Registered Address
-  registeredAddress: text("registered_address").notNull(),
-  registeredCity: text("registered_city").notNull(),
-  registeredState: text("registered_state").notNull(),
-  registeredPincode: text("registered_pincode").notNull(),
+  // Registered Address (optional for draft, required on submission)
+  registeredAddress: text("registered_address"),
+  registeredCity: text("registered_city"),
+  registeredState: text("registered_state"),
+  registeredPincode: text("registered_pincode"),
   
   // Operations Details
   operatingRegions: text("operating_regions").array(), // States/regions where shipper operates
@@ -1721,11 +1722,11 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   estimatedMonthlyLoads: integer("estimated_monthly_loads"), // Expected volume
   avgLoadValueInr: decimal("avg_load_value_inr", { precision: 12, scale: 2 }), // Average load value
   
-  // Key Contact Person
-  contactPersonName: text("contact_person_name").notNull(),
+  // Key Contact Person (optional for draft, required on submission)
+  contactPersonName: text("contact_person_name"),
   contactPersonDesignation: text("contact_person_designation"),
-  contactPersonPhone: text("contact_person_phone").notNull(),
-  contactPersonEmail: text("contact_person_email").notNull(),
+  contactPersonPhone: text("contact_person_phone"),
+  contactPersonEmail: text("contact_person_email"),
   
   // Compliance Documents (references to uploaded files)
   gstCertificateUrl: text("gst_certificate_url"),

@@ -1221,6 +1221,7 @@
     "updateSuccess": "आवेदन अपडेट हुआ",
     "updateSuccessDesc": "पुनः जमा हो गया",
     "updateError": "अपडेट विफल",
+    "statusDraft": "सबमिशन की प्रतीक्षा",
     "statusPending": "समीक्षा लंबित",
     "statusUnderReview": "समीक्षाधीन",
     "statusApproved": "स्वीकृत",

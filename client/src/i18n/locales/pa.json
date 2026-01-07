@@ -120,6 +120,8 @@
     "bidsNegotiations": "ਬੋਲੀ ਅਤੇ ਗੱਲਬਾਤ",
     "allLoads": "ਸਾਰੇ ਲੋਡ",
     "verification": "ਤਸਦੀਕ",
+    "creditAssessment": "ਕ੍ਰੈਡਿਟ ਮੁਲਾਂਕਣ",
+    "shipperOnboarding": "ਸ਼ਿਪਰ ਆਨਬੋਰਡਿੰਗ",
     "reports": "ਰਿਪੋਰਟਾਂ",
     "overview": "ਸੰਖੇਪ",
     "earnings": "ਕਮਾਈ",
@@ -1082,6 +1084,24 @@
     "scaleMedium": "ਮੱਧਮ (10-50 ਕਰੋੜ)",
     "scaleLarge": "ਵੱਡਾ (50-200 ਕਰੋੜ)",
     "scaleEnterprise": "ਐਂਟਰਪ੍ਰਾਈਜ਼ (> 200 ਕਰੋੜ)"
+  },
+  "adminOnboarding": {
+    "title": "ਸ਼ਿਪਰ ਆਨਬੋਰਡਿੰਗ",
+    "subtitle": "ਸ਼ਿਪਰ ਰਜਿਸਟ੍ਰੇਸ਼ਨ ਬੇਨਤੀਆਂ ਦੀ ਸਮੀਖਿਆ ਅਤੇ ਮਨਜ਼ੂਰੀ",
+    "queue": "ਆਨਬੋਰਡਿੰਗ ਕਤਾਰ",
+    "queueDesc": "ਬਕਾਇਆ ਸ਼ਿਪਰ ਤਸਦੀਕ ਬੇਨਤੀਆਂ",
+    "searchPlaceholder": "ਕੰਪਨੀ, ਉਪਭੋਗਤਾ ਜਾਂ ਈਮੇਲ ਨਾਲ ਖੋਜੋ",
+    "noRequests": "ਕੋਈ ਆਨਬੋਰਡਿੰਗ ਬੇਨਤੀ ਨਹੀਂ ਮਿਲੀ",
+    "review": "ਸਮੀਖਿਆ",
+    "reviewTitle": "ਆਨਬੋਰਡਿੰਗ ਬੇਨਤੀ ਦੀ ਸਮੀਖਿਆ",
+    "decision": "ਸਮੀਖਿਆ ਫੈਸਲਾ",
+    "selectDecision": "ਫੈਸਲਾ ਚੁਣੋ",
+    "submitReview": "ਸਮੀਖਿਆ ਜਮ੍ਹਾਂ ਕਰੋ",
+    "notePlaceholder": "ਇਸ ਸਮੀਖਿਆ ਫੈਸਲੇ ਬਾਰੇ ਨੋਟਸ ਜੋੜੋ...",
+    "decisionNote": "ਫੈਸਲੇ ਦੇ ਨੋਟਸ",
+    "reviewSaved": "ਸਮੀਖਿਆ ਸੁਰੱਖਿਅਤ",
+    "reviewSavedDesc": "ਆਨਬੋਰਡਿੰਗ ਸਮੀਖਿਆ ਸਫਲਤਾਪੂਰਵਕ ਅੱਪਡੇਟ ਕੀਤੀ ਗਈ",
+    "reviewFailed": "ਸਮੀਖਿਆ ਸੁਰੱਖਿਅਤ ਕਰਨ ਵਿੱਚ ਅਸਫਲ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
   },
   "onboarding": {
     "title": "ਕਾਰੋਬਾਰ ਆਨਬੋਰਡਿੰਗ",

@@ -123,6 +123,7 @@
     "allLoads": "All Loads",
     "verification": "Verification",
     "creditAssessment": "Credit Assessment",
+    "shipperOnboarding": "Shipper Onboarding",
     "reports": "Reports",
     "overview": "Overview",
     "earnings": "Earnings",
@@ -1095,6 +1096,24 @@
     "scaleMedium": "Medium (10-50 Cr)",
     "scaleLarge": "Large (50-200 Cr)",
     "scaleEnterprise": "Enterprise (> 200 Cr)"
+  },
+  "adminOnboarding": {
+    "title": "Shipper Onboarding",
+    "subtitle": "Review and approve shipper registration requests",
+    "queue": "Onboarding Queue",
+    "queueDesc": "Pending shipper verification requests",
+    "searchPlaceholder": "Search by company, user, or email",
+    "noRequests": "No onboarding requests found",
+    "review": "Review",
+    "reviewTitle": "Review Onboarding Request",
+    "decision": "Review Decision",
+    "selectDecision": "Select a decision",
+    "submitReview": "Submit Review",
+    "notePlaceholder": "Add notes about this review decision...",
+    "decisionNote": "Decision Notes",
+    "reviewSaved": "Review Saved",
+    "reviewSavedDesc": "The onboarding review has been updated successfully",
+    "reviewFailed": "Failed to save review. Please try again."
   },
   "onboarding": {
     "title": "Business Onboarding",

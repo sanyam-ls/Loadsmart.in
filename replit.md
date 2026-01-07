@@ -46,6 +46,16 @@ Carriers can upload documents (LR, E-way Bill, Photos, POD, Invoice, Other) to R
 
 The Shipper Portal integrates a CAN-Bus GPS + Telematics system for real-time tracking, diagnostics (speed, RPM, fuel), AI-driven ETA predictions, and driver behavior insights. The AI Concierge can answer queries using telematics data.
 
+### Shipper Onboarding Workflow (Phase 0)
+
+New shippers must complete a business onboarding process before posting loads. The workflow includes:
+- **Shipper Form**: Multi-tab form at `/shipper/onboarding` capturing business identity (legal name, PAN, GST, CIN), contact details, trade references, compliance documents (GST certificate, PAN card, incorporation certificate), and banking information.
+- **Admin Review Queue**: Admin page at `/admin/onboarding` with status-based filtering, search, and detailed review dialog showing all onboarding data across tabs.
+- **Status Flow**: `pending → under_review → (approved | rejected | on_hold)`. Shippers can update if status is `on_hold` or `rejected`.
+- **Approval Integration**: When approved, sets `user.isVerified=true`, creates/updates `shipperCreditProfile` with admin-specified credit limit/payment terms/risk level.
+- **Gate Enforcement**: Shippers must be verified (`isVerified=true`) before posting loads.
+- **Full i18n**: All onboarding strings translated in English, Hindi, Punjabi, Marathi, and Tamil.
+
 ### Credit Assessment System
 
 The platform includes both manual admin review and automated credit scoring for shippers. The automated system calculates scores based on weighted factors: payment history (±250 points from on-time rate), credit utilization (±150, optimal at ≤30%), load volume (±100 from recent 90-day activity), and tenure (±50 from account age). Base score is 500, with final scores ranging 0-1000. Risk thresholds: ≥750 low, ≥600 medium, ≥450 high, <450 critical. Default credit limits: low 1M, medium 500K, high 200K, critical 50K INR. Admins can run auto-assessment individually or in bulk, and manual overrides lock profiles from future auto-updates. The credit engine is in `server/services/credit-engine.ts`.

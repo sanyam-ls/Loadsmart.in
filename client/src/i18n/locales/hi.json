@@ -120,6 +120,8 @@
     "bidsNegotiations": "बोलियां और वार्ता",
     "allLoads": "सभी लोड",
     "verification": "सत्यापन",
+    "creditAssessment": "क्रेडिट मूल्यांकन",
+    "shipperOnboarding": "शिपर ऑनबोर्डिंग",
     "reports": "रिपोर्ट",
     "overview": "अवलोकन",
     "earnings": "कमाई",
@@ -1082,6 +1084,24 @@
     "scaleMedium": "मध्यम (10-50 करोड़)",
     "scaleLarge": "बड़ा (50-200 करोड़)",
     "scaleEnterprise": "उद्यम (> 200 करोड़)"
+  },
+  "adminOnboarding": {
+    "title": "शिपर ऑनबोर्डिंग",
+    "subtitle": "शिपर पंजीकरण अनुरोधों की समीक्षा और अनुमोदन करें",
+    "queue": "ऑनबोर्डिंग कतार",
+    "queueDesc": "लंबित शिपर सत्यापन अनुरोध",
+    "searchPlaceholder": "कंपनी, उपयोगकर्ता या ईमेल से खोजें",
+    "noRequests": "कोई ऑनबोर्डिंग अनुरोध नहीं मिला",
+    "review": "समीक्षा",
+    "reviewTitle": "ऑनबोर्डिंग अनुरोध की समीक्षा करें",
+    "decision": "समीक्षा निर्णय",
+    "selectDecision": "निर्णय चुनें",
+    "submitReview": "समीक्षा जमा करें",
+    "notePlaceholder": "इस समीक्षा निर्णय के बारे में नोट्स जोड़ें...",
+    "decisionNote": "निर्णय नोट्स",
+    "reviewSaved": "समीक्षा सहेजी गई",
+    "reviewSavedDesc": "ऑनबोर्डिंग समीक्षा सफलतापूर्वक अपडेट की गई",
+    "reviewFailed": "समीक्षा सहेजने में विफल। कृपया पुनः प्रयास करें।"
   },
   "onboarding": {
     "title": "व्यवसाय ऑनबोर्डिंग",

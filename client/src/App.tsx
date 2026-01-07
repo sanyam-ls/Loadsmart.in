@@ -60,6 +60,7 @@ import AdminNegotiationsPage from "@/pages/admin/negotiations";
 import AdminInvoicesPage from "@/pages/admin/invoices";
 import AdminCarrierVerificationPage from "@/pages/admin/carrier-verification";
 import AdminCreditAssessmentPage from "@/pages/admin/credit-assessment";
+import AdminOnboardingPage from "@/pages/admin/onboarding";
 import NegotiationInbox from "@/pages/admin/negotiation-inbox";
 import AdminOtpQueuePage from "@/pages/admin/otp-queue";
 import { MockDataProvider } from "@/lib/mock-data-store";
@@ -171,6 +172,7 @@ function AppContent() {
               <Route path="/admin/nearby-trucks" component={AdminNearbyTrucksPage} />
               <Route path="/admin/verification" component={AdminCarrierVerificationPage} />
               <Route path="/admin/credit-assessment" component={AdminCreditAssessmentPage} />
+              <Route path="/admin/onboarding" component={AdminOnboardingPage} />
               <Route path="/admin/reports" component={AdminVolumeAnalytics} />
               <Route path="/admin/invoices" component={AdminInvoicesPage} />
               <Route path="/admin/otp-queue" component={AdminOtpQueuePage} />

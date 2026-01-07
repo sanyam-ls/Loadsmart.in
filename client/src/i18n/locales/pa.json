@@ -1195,6 +1195,8 @@
     "addressProof": "ਕਾਰੋਬਾਰੀ ਪਤੇ ਦਾ ਸਬੂਤ",
     "addressProofDesc": "ਬਿਜਲੀ ਬਿੱਲ ਜਾਂ ਕਿਰਾਏ ਦਾ ਸਮਝੌਤਾ",
     "documentUrlPlaceholder": "ਦਸਤਾਵੇਜ਼ URL",
+    "noFileSelected": "ਕੋਈ ਫਾਈਲ ਨਹੀਂ ਚੁਣੀ ਗਈ",
+    "uploadDocument": "ਦਸਤਾਵੇਜ਼ ਅੱਪਲੋਡ ਕਰੋ",
     "bankName": "ਬੈਂਕ ਦਾ ਨਾਮ",
     "bankNamePlaceholder": "ਸਟੇਟ ਬੈਂਕ ਆਫ ਇੰਡੀਆ",
     "branchName": "ਬ੍ਰਾਂਚ ਦਾ ਨਾਮ",

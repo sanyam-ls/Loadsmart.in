@@ -1198,6 +1198,8 @@
     "addressProof": "Business Address Proof",
     "addressProofDesc": "Utility bill or rent agreement",
     "documentUrlPlaceholder": "Document URL",
+    "noFileSelected": "No file selected",
+    "uploadDocument": "Upload document",
     "bankName": "Bank Name",
     "bankNamePlaceholder": "State Bank of India",
     "branchName": "Branch Name",

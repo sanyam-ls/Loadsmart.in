@@ -1195,6 +1195,8 @@
     "addressProof": "व्यवसाय पत्त्याचा पुरावा",
     "addressProofDesc": "वीज बिल किंवा भाडे करार",
     "documentUrlPlaceholder": "दस्तऐवज URL",
+    "noFileSelected": "कोणतीही फाइल निवडलेली नाही",
+    "uploadDocument": "दस्तऐवज अपलोड करा",
     "bankName": "बँकेचे नाव",
     "bankNamePlaceholder": "स्टेट बँक ऑफ इंडिया",
     "branchName": "शाखेचे नाव",

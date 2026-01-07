@@ -1195,6 +1195,8 @@
     "addressProof": "வணிக முகவரி ஆதாரம்",
     "addressProofDesc": "மின் கட்டணம் அல்லது வாடகை ஒப்பந்தம்",
     "documentUrlPlaceholder": "ஆவண URL",
+    "noFileSelected": "கோப்பு தேர்ந்தெடுக்கப்படவில்லை",
+    "uploadDocument": "ஆவணத்தை பதிவேற்றவும்",
     "bankName": "வங்கி பெயர்",
     "bankNamePlaceholder": "ஸ்டேட் பாங்க் ஆப் இந்தியா",
     "branchName": "கிளை பெயர்",

@@ -1195,6 +1195,8 @@
     "addressProof": "व्यावसायिक पता प्रमाण",
     "addressProofDesc": "बिजली बिल या किराया समझौता",
     "documentUrlPlaceholder": "दस्तावेज़ URL",
+    "noFileSelected": "कोई फ़ाइल नहीं चुनी गई",
+    "uploadDocument": "दस्तावेज़ अपलोड करें",
     "bankName": "बैंक का नाम",
     "bankNamePlaceholder": "भारतीय स्टेट बैंक",
     "branchName": "शाखा का नाम",

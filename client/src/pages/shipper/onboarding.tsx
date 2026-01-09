@@ -97,15 +97,37 @@ export default function ShipperOnboarding() {
       businessType: "pvt_ltd",
       panNumber: "",
       gstinNumber: "",
+      cinNumber: "",
+      incorporationDate: "",
       registeredAddress: "",
       registeredCity: "",
       registeredState: "",
       registeredPincode: "",
+      operatingRegions: [],
+      primaryCommodities: [],
+      estimatedMonthlyLoads: undefined,
+      avgLoadValueInr: "",
       contactPersonName: "",
       contactPersonDesignation: "",
       contactPersonPhone: "",
       contactPersonEmail: "",
+      gstCertificateUrl: "",
+      panCardUrl: "",
+      incorporationCertificateUrl: "",
+      cancelledChequeUrl: "",
+      businessAddressProofUrl: "",
+      tradeReference1Company: "",
+      tradeReference1Contact: "",
+      tradeReference1Phone: "",
+      tradeReference2Company: "",
+      tradeReference2Contact: "",
+      tradeReference2Phone: "",
+      bankName: "",
+      bankAccountNumber: "",
+      bankIfscCode: "",
+      bankBranchName: "",
       preferredPaymentTerms: "net_30",
+      requestedCreditLimit: "",
     },
   });
 
@@ -124,19 +146,19 @@ export default function ShipperOnboarding() {
         registeredCity: onboardingStatus.registeredCity || "",
         registeredState: onboardingStatus.registeredState || "",
         registeredPincode: onboardingStatus.registeredPincode || "",
-        operatingRegions: onboardingStatus.operatingRegions || undefined,
-        primaryCommodities: onboardingStatus.primaryCommodities || undefined,
+        operatingRegions: onboardingStatus.operatingRegions || [],
+        primaryCommodities: onboardingStatus.primaryCommodities || [],
         estimatedMonthlyLoads: onboardingStatus.estimatedMonthlyLoads || undefined,
         avgLoadValueInr: onboardingStatus.avgLoadValueInr || "",
         contactPersonName: onboardingStatus.contactPersonName || "",
         contactPersonDesignation: onboardingStatus.contactPersonDesignation || "",
         contactPersonPhone: onboardingStatus.contactPersonPhone || "",
         contactPersonEmail: onboardingStatus.contactPersonEmail || "",
-        gstCertificateUrl: onboardingStatus.gstCertificateUrl || undefined,
-        panCardUrl: onboardingStatus.panCardUrl || undefined,
-        incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || undefined,
-        cancelledChequeUrl: onboardingStatus.cancelledChequeUrl || undefined,
-        businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || undefined,
+        gstCertificateUrl: onboardingStatus.gstCertificateUrl || "",
+        panCardUrl: onboardingStatus.panCardUrl || "",
+        incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || "",
+        cancelledChequeUrl: onboardingStatus.cancelledChequeUrl || "",
+        businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || "",
         tradeReference1Company: onboardingStatus.tradeReference1Company || "",
         tradeReference1Contact: onboardingStatus.tradeReference1Contact || "",
         tradeReference1Phone: onboardingStatus.tradeReference1Phone || "",
@@ -552,7 +574,7 @@ function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setA
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("onboarding.businessType")} *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-business-type">
                               <SelectValue placeholder={t("onboarding.selectBusinessType")} />
@@ -694,7 +716,7 @@ function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setA
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("onboarding.state")} *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger data-testid="select-state">
                                 <SelectValue placeholder={t("onboarding.selectState")} />
@@ -1130,7 +1152,7 @@ function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setA
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("onboarding.paymentTerms")}</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-payment-terms">
                               <SelectValue placeholder={t("onboarding.selectPaymentTerms")} />

@@ -112,44 +112,44 @@ export default function ShipperOnboarding() {
   // Pre-populate form with existing draft data
   useEffect(() => {
     if (onboardingStatus && onboardingStatus.status === "draft") {
-      const draftData: Partial<OnboardingFormData> = {};
-      
-      if (onboardingStatus.legalCompanyName) draftData.legalCompanyName = onboardingStatus.legalCompanyName;
-      if (onboardingStatus.tradeName) draftData.tradeName = onboardingStatus.tradeName;
-      if (onboardingStatus.businessType) draftData.businessType = onboardingStatus.businessType;
-      if (onboardingStatus.panNumber) draftData.panNumber = onboardingStatus.panNumber;
-      if (onboardingStatus.gstinNumber) draftData.gstinNumber = onboardingStatus.gstinNumber;
-      if (onboardingStatus.cinNumber) draftData.cinNumber = onboardingStatus.cinNumber;
-      if (onboardingStatus.incorporationDate) draftData.incorporationDate = onboardingStatus.incorporationDate.split('T')[0];
-      if (onboardingStatus.registeredAddress) draftData.registeredAddress = onboardingStatus.registeredAddress;
-      if (onboardingStatus.registeredCity) draftData.registeredCity = onboardingStatus.registeredCity;
-      if (onboardingStatus.registeredState) draftData.registeredState = onboardingStatus.registeredState;
-      if (onboardingStatus.registeredPincode) draftData.registeredPincode = onboardingStatus.registeredPincode;
-      if (onboardingStatus.operatingRegions) draftData.operatingRegions = onboardingStatus.operatingRegions;
-      if (onboardingStatus.primaryCommodities) draftData.primaryCommodities = onboardingStatus.primaryCommodities;
-      if (onboardingStatus.estimatedMonthlyLoads) draftData.estimatedMonthlyLoads = onboardingStatus.estimatedMonthlyLoads;
-      if (onboardingStatus.avgLoadValueInr) draftData.avgLoadValueInr = onboardingStatus.avgLoadValueInr;
-      if (onboardingStatus.contactPersonName) draftData.contactPersonName = onboardingStatus.contactPersonName;
-      if (onboardingStatus.contactPersonDesignation) draftData.contactPersonDesignation = onboardingStatus.contactPersonDesignation;
-      if (onboardingStatus.contactPersonPhone) draftData.contactPersonPhone = onboardingStatus.contactPersonPhone;
-      if (onboardingStatus.contactPersonEmail) draftData.contactPersonEmail = onboardingStatus.contactPersonEmail;
-      if (onboardingStatus.gstCertificateUrl) draftData.gstCertificateUrl = onboardingStatus.gstCertificateUrl;
-      if (onboardingStatus.panCardUrl) draftData.panCardUrl = onboardingStatus.panCardUrl;
-      if (onboardingStatus.incorporationCertificateUrl) draftData.incorporationCertificateUrl = onboardingStatus.incorporationCertificateUrl;
-      if (onboardingStatus.cancelledChequeUrl) draftData.cancelledChequeUrl = onboardingStatus.cancelledChequeUrl;
-      if (onboardingStatus.businessAddressProofUrl) draftData.businessAddressProofUrl = onboardingStatus.businessAddressProofUrl;
-      if (onboardingStatus.tradeReference1Company) draftData.tradeReference1Company = onboardingStatus.tradeReference1Company;
-      if (onboardingStatus.tradeReference1Contact) draftData.tradeReference1Contact = onboardingStatus.tradeReference1Contact;
-      if (onboardingStatus.tradeReference1Phone) draftData.tradeReference1Phone = onboardingStatus.tradeReference1Phone;
-      if (onboardingStatus.tradeReference2Company) draftData.tradeReference2Company = onboardingStatus.tradeReference2Company;
-      if (onboardingStatus.tradeReference2Contact) draftData.tradeReference2Contact = onboardingStatus.tradeReference2Contact;
-      if (onboardingStatus.tradeReference2Phone) draftData.tradeReference2Phone = onboardingStatus.tradeReference2Phone;
-      if (onboardingStatus.bankName) draftData.bankName = onboardingStatus.bankName;
-      if (onboardingStatus.bankAccountNumber) draftData.bankAccountNumber = onboardingStatus.bankAccountNumber;
-      if (onboardingStatus.bankIfscCode) draftData.bankIfscCode = onboardingStatus.bankIfscCode;
-      if (onboardingStatus.bankBranchName) draftData.bankBranchName = onboardingStatus.bankBranchName;
-      if (onboardingStatus.preferredPaymentTerms) draftData.preferredPaymentTerms = onboardingStatus.preferredPaymentTerms;
-      if (onboardingStatus.requestedCreditLimit) draftData.requestedCreditLimit = onboardingStatus.requestedCreditLimit;
+      const draftData: Partial<OnboardingFormData> = {
+        legalCompanyName: onboardingStatus.legalCompanyName || "",
+        tradeName: onboardingStatus.tradeName || "",
+        businessType: onboardingStatus.businessType || "pvt_ltd",
+        panNumber: onboardingStatus.panNumber || "",
+        gstinNumber: onboardingStatus.gstinNumber || "",
+        cinNumber: onboardingStatus.cinNumber || "",
+        incorporationDate: onboardingStatus.incorporationDate ? onboardingStatus.incorporationDate.split('T')[0] : "",
+        registeredAddress: onboardingStatus.registeredAddress || "",
+        registeredCity: onboardingStatus.registeredCity || "",
+        registeredState: onboardingStatus.registeredState || "",
+        registeredPincode: onboardingStatus.registeredPincode || "",
+        operatingRegions: onboardingStatus.operatingRegions || undefined,
+        primaryCommodities: onboardingStatus.primaryCommodities || undefined,
+        estimatedMonthlyLoads: onboardingStatus.estimatedMonthlyLoads || undefined,
+        avgLoadValueInr: onboardingStatus.avgLoadValueInr || "",
+        contactPersonName: onboardingStatus.contactPersonName || "",
+        contactPersonDesignation: onboardingStatus.contactPersonDesignation || "",
+        contactPersonPhone: onboardingStatus.contactPersonPhone || "",
+        contactPersonEmail: onboardingStatus.contactPersonEmail || "",
+        gstCertificateUrl: onboardingStatus.gstCertificateUrl || undefined,
+        panCardUrl: onboardingStatus.panCardUrl || undefined,
+        incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || undefined,
+        cancelledChequeUrl: onboardingStatus.cancelledChequeUrl || undefined,
+        businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || undefined,
+        tradeReference1Company: onboardingStatus.tradeReference1Company || "",
+        tradeReference1Contact: onboardingStatus.tradeReference1Contact || "",
+        tradeReference1Phone: onboardingStatus.tradeReference1Phone || "",
+        tradeReference2Company: onboardingStatus.tradeReference2Company || "",
+        tradeReference2Contact: onboardingStatus.tradeReference2Contact || "",
+        tradeReference2Phone: onboardingStatus.tradeReference2Phone || "",
+        bankName: onboardingStatus.bankName || "",
+        bankAccountNumber: onboardingStatus.bankAccountNumber || "",
+        bankIfscCode: onboardingStatus.bankIfscCode || "",
+        bankBranchName: onboardingStatus.bankBranchName || "",
+        preferredPaymentTerms: onboardingStatus.preferredPaymentTerms || "net_30",
+        requestedCreditLimit: onboardingStatus.requestedCreditLimit || "",
+      };
 
       form.reset(draftData);
       lastSavedDataRef.current = JSON.stringify(draftData);

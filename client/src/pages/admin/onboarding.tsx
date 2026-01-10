@@ -320,7 +320,7 @@ export default function AdminOnboardingPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 min-h-0 pr-4">
             <Tabs defaultValue="business" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="business">{t("onboarding.tabBusiness")}</TabsTrigger>

@@ -132,9 +132,9 @@ export default function ShipperOnboarding() {
     },
   });
 
-  // Pre-populate form with existing draft data
+  // Pre-populate form with existing data (draft, pending, under_review, on_hold, rejected)
   useEffect(() => {
-    if (onboardingStatus && onboardingStatus.status === "draft") {
+    if (onboardingStatus && (onboardingStatus.status === "draft" || onboardingStatus.status === "pending" || onboardingStatus.status === "under_review" || onboardingStatus.status === "on_hold" || onboardingStatus.status === "rejected")) {
       const draftData: Partial<OnboardingFormData> = {
         legalCompanyName: onboardingStatus.legalCompanyName || "",
         tradeName: onboardingStatus.tradeName || "",

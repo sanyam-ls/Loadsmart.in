@@ -7191,14 +7191,28 @@ export async function registerRoutes(
         ? validatedData.avgLoadValueInr.replace(/,/g, '')
         : undefined;
 
-      const onboardingRequest = await storage.createShipperOnboardingRequest({
-        shipperId: user.id,
-        status: "pending",
-        ...validatedData,
-        requestedCreditLimit: sanitizedCreditLimit,
-        avgLoadValueInr: sanitizedAvgLoadValue,
-        incorporationDate: validatedData.incorporationDate ? new Date(validatedData.incorporationDate) : undefined,
-      });
+      let onboardingRequest;
+      
+      // If there's an existing draft, update it instead of creating a new one
+      if (existing && (existing.status === "draft" || existing.status === "on_hold" || existing.status === "rejected")) {
+        onboardingRequest = await storage.updateShipperOnboardingRequest(existing.id, {
+          status: "pending",
+          ...validatedData,
+          requestedCreditLimit: sanitizedCreditLimit,
+          avgLoadValueInr: sanitizedAvgLoadValue,
+          incorporationDate: validatedData.incorporationDate ? new Date(validatedData.incorporationDate) : undefined,
+        });
+      } else {
+        // Create new request only if no existing record
+        onboardingRequest = await storage.createShipperOnboardingRequest({
+          shipperId: user.id,
+          status: "pending",
+          ...validatedData,
+          requestedCreditLimit: sanitizedCreditLimit,
+          avgLoadValueInr: sanitizedAvgLoadValue,
+          incorporationDate: validatedData.incorporationDate ? new Date(validatedData.incorporationDate) : undefined,
+        });
+      }
 
       res.json(onboardingRequest);
     } catch (error) {

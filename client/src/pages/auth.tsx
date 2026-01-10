@@ -286,6 +286,7 @@ export default function AuthPage() {
         companyName: data.companyName,
         phone: data.phone,
         carrierType: data.carrierType,
+        city: data.city,
         otpId: otpId || undefined,
       });
       if (success) {

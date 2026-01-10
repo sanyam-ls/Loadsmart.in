@@ -12,7 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   carrierType: "enterprise" | "solo" | undefined;
   login: (username: string, password: string) => Promise<boolean>;
-  register: (userData: { username: string; email: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string }) => Promise<boolean>;
+  register: (userData: { username: string; email: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string; city?: string }) => Promise<boolean>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
 }
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (userData: { username: string; email?: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string; otpId?: string }): Promise<boolean> => {
+  const register = async (userData: { username: string; email?: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string; city?: string; otpId?: string }): Promise<boolean> => {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",

@@ -90,6 +90,7 @@ interface OnboardingResponse {
   gstinNumber?: string;
   tanNumber?: string;
   rejectionReason?: string;
+  notes?: string;
   documents: Array<{
     id: string;
     documentType: string;
@@ -425,6 +426,27 @@ export default function CarrierOnboarding() {
                 <div>
                   <p className="font-medium text-destructive">{t("carrierOnboarding.rejectedReason")}</p>
                   <p className="text-sm text-muted-foreground">{onboardingStatus.rejectionReason}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {onboardingStatus?.status === "on_hold" && (
+          <Card className="mt-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-yellow-700 dark:text-yellow-500">Your verification is on hold</p>
+                  {onboardingStatus.notes ? (
+                    <p className="text-sm mt-1">{onboardingStatus.notes}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-1">Please review and update your information below, then resubmit for review.</p>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-2">
+                    For assistance, please contact support at <a href="tel:+919876543210" className="text-primary font-medium underline">+91 98765 43210</a>
+                  </p>
                 </div>
               </div>
             </CardContent>

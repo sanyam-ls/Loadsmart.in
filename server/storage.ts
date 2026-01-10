@@ -1707,10 +1707,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getShipperOnboardingRequest(shipperId: string): Promise<ShipperOnboardingRequest | undefined> {
-    const [request] = await db.select().from(shipperOnboardingRequests)
+    // Get all requests for this shipper
+    const requests = await db.select().from(shipperOnboardingRequests)
       .where(eq(shipperOnboardingRequests.shipperId, shipperId))
-      .orderBy(desc(shipperOnboardingRequests.submittedAt));
-    return request;
+      .orderBy(desc(shipperOnboardingRequests.updatedAt));
+    
+    // Prioritize non-draft statuses (approved, pending, under_review, etc.) over draft
+    const nonDraftRequest = requests.find(r => r.status !== 'draft');
+    if (nonDraftRequest) {
+      return nonDraftRequest;
+    }
+    // Fall back to most recently updated draft if no non-draft exists
+    return requests[0];
   }
 
   async getShipperOnboardingRequestById(id: string): Promise<ShipperOnboardingRequest | undefined> {

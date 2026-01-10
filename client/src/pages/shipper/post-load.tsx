@@ -586,9 +586,18 @@ export default function PostLoadPage() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
 
   // Check shipper onboarding status - only verified shippers can post loads
+  // Poll every 5 seconds when status is pending/under_review to detect approval in real-time
   const { data: onboardingStatus, isLoading: isLoadingOnboarding } = useQuery<any>({
     queryKey: ["/api/shipper/onboarding"],
     enabled: user?.role === "shipper",
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      // Poll frequently when waiting for approval
+      if (status === "pending" || status === "under_review") {
+        return 5000; // Poll every 5 seconds
+      }
+      return false; // Stop polling once approved/rejected
+    },
   });
 
   // Show approval celebration dialog when shipper has been approved

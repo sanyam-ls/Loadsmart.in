@@ -514,15 +514,7 @@ export default function AdminOnboardingPage() {
                 <div className="space-y-2">
                   <Label className="text-muted-foreground">{t("onboarding.cancelledCheque")}</Label>
                   {selectedRequest?.request.cancelledChequeUrl ? (
-                    <a
-                      href={selectedRequest.request.cancelledChequeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline flex items-center gap-1"
-                    >
-                      <FileText className="h-4 w-4" />
-                      {t("common.viewDocument")}
-                    </a>
+                    <DocumentLink value={selectedRequest.request.cancelledChequeUrl} />
                   ) : (
                     <p className="text-muted-foreground">{t("common.notProvided")}</p>
                   )}

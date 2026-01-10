@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search, AlertCircle, Loader2, FileText, Phone } from "lucide-react";
+import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search, AlertCircle, Loader2, FileText, Phone, Eye } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -891,6 +891,12 @@ export default function PostLoadPage() {
                 <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-update-onboarding">
                   <FileText className="h-4 w-4 mr-2" />
                   {t("postLoad.updateOnboarding")}
+                </Button>
+              )}
+              {isPending && (
+                <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-view-application">
+                  <Eye className="h-4 w-4 mr-2" />
+                  {t("postLoad.viewApplication")}
                 </Button>
               )}
               <Button variant="outline" onClick={() => navigate("/shipper")} data-testid="button-back-dashboard">

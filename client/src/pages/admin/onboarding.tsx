@@ -320,15 +320,15 @@ export default function AdminOnboardingPage() {
       </Card>
 
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{t("adminOnboarding.reviewTitle")}</DialogTitle>
             <DialogDescription>
               {selectedRequest?.request.legalCompanyName}
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0 pr-4">
+          <ScrollArea className="flex-1 min-h-0 pr-4 overflow-y-auto">
             <Tabs defaultValue="business" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="business">{t("onboarding.tabBusiness")}</TabsTrigger>
@@ -622,7 +622,7 @@ export default function AdminOnboardingPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="pt-4 border-t">
+          <DialogFooter className="pt-4 border-t flex-shrink-0">
             <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)} data-testid="button-cancel">
               {t("common.cancel")}
             </Button>

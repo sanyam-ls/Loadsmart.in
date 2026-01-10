@@ -1257,6 +1257,8 @@
     "pendingDescription": "Our team will review your application within 2-3 business days.",
     "underReviewMessage": "Application under review",
     "underReviewDescription": "Our team is currently verifying your documents and business details.",
+    "viewFullApplication": "View Full Application",
+    "backToSummary": "Back to Summary",
     "actionRequired": "Action Required",
     "rejectedDescription": "Sorry, your request to onboard has been denied. Please contact us at 7564382901 for more information.",
     "onHoldDescription": "Your application is on hold pending additional information.",

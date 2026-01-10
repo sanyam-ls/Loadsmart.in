@@ -82,6 +82,7 @@ export default function ShipperOnboarding() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("business");
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [showFullForm, setShowFullForm] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedDataRef = useRef<string>("");
 
@@ -326,7 +327,7 @@ export default function ShipperOnboarding() {
     );
   };
 
-  if (onboardingStatus && (onboardingStatus.status === "pending" || onboardingStatus.status === "under_review" || onboardingStatus.status === "approved")) {
+  if (onboardingStatus && (onboardingStatus.status === "pending" || onboardingStatus.status === "under_review" || onboardingStatus.status === "approved") && !showFullForm) {
     return (
       <div className="container mx-auto py-6 max-w-4xl">
         <Card>
@@ -349,8 +350,8 @@ export default function ShipperOnboarding() {
                 <p className="font-medium">{onboardingStatus.legalCompanyName}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("onboarding.pan")}</p>
-                <p className="font-medium">{onboardingStatus.panNumber}</p>
+                <p className="text-sm text-muted-foreground">{t("onboarding.gstin")}</p>
+                <p className="font-medium">{onboardingStatus.gstinNumber || "-"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">{t("onboarding.submittedAt")}</p>
@@ -407,6 +408,18 @@ export default function ShipperOnboarding() {
                 </p>
               </div>
             )}
+
+            {(onboardingStatus.status === "pending" || onboardingStatus.status === "under_review") && (
+              <Button
+                variant="outline"
+                onClick={() => setShowFullForm(true)}
+                data-testid="button-view-full-application"
+                className="w-full"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {t("onboarding.viewFullApplication")}
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -457,6 +470,7 @@ export default function ShipperOnboarding() {
 
   // For draft status, show form with auto-save
   const isDraft = onboardingStatus?.status === "draft";
+  const isPendingOrUnderReview = onboardingStatus?.status === "pending" || onboardingStatus?.status === "under_review";
 
   return (
     <div className="container mx-auto py-6 max-w-4xl space-y-6">
@@ -469,12 +483,24 @@ export default function ShipperOnboarding() {
           <div className="flex items-center gap-3">
             {renderAutoSaveIndicator()}
             {isDraft && getStatusBadge("draft")}
+            {isPendingOrUnderReview && getStatusBadge(onboardingStatus?.status)}
           </div>
         </div>
         <p className="text-muted-foreground">
           {isDraft ? t("onboarding.continueDraftDesc") : t("onboarding.subtitle")}
         </p>
       </div>
+
+      {showFullForm && isPendingOrUnderReview && (
+        <Button
+          variant="outline"
+          onClick={() => setShowFullForm(false)}
+          data-testid="button-back-to-summary"
+        >
+          <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
+          {t("onboarding.backToSummary")}
+        </Button>
+      )}
 
       <OnboardingFormComponent 
         form={form} 

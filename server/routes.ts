@@ -6808,6 +6808,63 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/admin/verifications/:id/hold - Put carrier verification on hold
+  app.post("/api/admin/verifications/:id/hold", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const verification = await storage.getCarrierVerification(req.params.id);
+      if (!verification) {
+        return res.status(404).json({ error: "Verification not found" });
+      }
+
+      // Validate request body - only allow safe fields
+      const holdSchema = z.object({
+        notes: z.string().min(1, "Notes are required when putting on hold"),
+      });
+
+      const validatedBody = holdSchema.parse(req.body);
+
+      // Update verification with server-controlled sensitive fields
+      const updated = await storage.updateCarrierVerification(req.params.id, {
+        status: "on_hold", // Server-controlled
+        reviewedBy: user.id, // Always use authenticated admin
+        reviewedAt: new Date(), // Server timestamp
+        notes: validatedBody.notes,
+      });
+
+      // Create audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        userId: verification.carrierId,
+        actionType: "hold_verification",
+        actionDescription: `Put carrier verification on hold for ${verification.carrierId}: ${validatedBody.notes}`,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      // Get carrier info for broadcast
+      const carrier = await storage.getUser(verification.carrierId);
+      
+      // Broadcast real-time verification status to carrier
+      broadcastVerificationStatus(verification.carrierId, "on_hold", {
+        companyName: carrier?.companyName || "Carrier",
+        notes: validatedBody.notes,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Put verification on hold error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // =============================================
   // SHIPPER CREDIT ASSESSMENT ROUTES (Admin only)
   // =============================================

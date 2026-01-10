@@ -5,7 +5,7 @@ import {
   Truck, Search, FileText, ChevronLeft, Eye, ExternalLink,
   ShieldCheck, ShieldX, ShieldAlert, Clock,
   CheckCircle, XCircle, User, Building2, MapPin, Phone,
-  ChevronDown, Info, Image, FileType, Ruler
+  ChevronDown, Info, Image, FileType, Ruler, PauseCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -135,6 +135,8 @@ export default function CarrierVerificationPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [holdDialogOpen, setHoldDialogOpen] = useState(false);
+  const [holdNotes, setHoldNotes] = useState("");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<VerificationDocument | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -194,6 +196,31 @@ export default function CarrierVerificationPage() {
     },
   });
 
+  const holdMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      return apiRequest("POST", `/api/admin/verifications/${id}/hold`, { notes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carriers"] });
+      toast({
+        title: "Verification On Hold",
+        description: "The carrier verification has been put on hold.",
+      });
+      setHoldDialogOpen(false);
+      setDetailsOpen(false);
+      setSelectedVerification(null);
+      setHoldNotes("");
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to put verification on hold",
+      });
+    },
+  });
+
   const pendingVerifications = useMemo(() => {
     return verifications.filter(v => v.status === "pending" || v.status === "under_review");
   }, [verifications]);
@@ -225,6 +252,12 @@ export default function CarrierVerificationPage() {
   const handleReject = () => {
     if (selectedVerification && rejectReason.trim()) {
       rejectMutation.mutate({ id: selectedVerification.id, reason: rejectReason });
+    }
+  };
+
+  const handleHold = () => {
+    if (selectedVerification && holdNotes.trim()) {
+      holdMutation.mutate({ id: selectedVerification.id, notes: holdNotes });
     }
   };
 
@@ -294,6 +327,12 @@ export default function CarrierVerificationPage() {
                   <Badge variant="destructive" className="gap-1">
                     <XCircle className="h-3 w-3" />
                     Rejected: {verification.rejectionReason}
+                  </Badge>
+                )}
+                {verification.status === "on_hold" && verification.notes && (
+                  <Badge variant="secondary" className="gap-1">
+                    <PauseCircle className="h-3 w-3" />
+                    On Hold: {verification.notes}
                   </Badge>
                 )}
               </div>
@@ -650,10 +689,28 @@ export default function CarrierVerificationPage() {
                         )) || <span className="text-muted-foreground">Not specified</span>}
                       </div>
                     </div>
-                    {selectedVerification.notes && (
+                    {selectedVerification.notes && selectedVerification.status !== "on_hold" && (
                       <div className="col-span-2">
                         <Label className="text-muted-foreground">Notes from Carrier</Label>
                         <p className="font-medium">{selectedVerification.notes}</p>
+                      </div>
+                    )}
+                    {selectedVerification.status === "on_hold" && selectedVerification.notes && (
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground flex items-center gap-2">
+                          <PauseCircle className="h-4 w-4 text-orange-500" />
+                          Admin Notes (On Hold)
+                        </Label>
+                        <p className="font-medium text-orange-600 dark:text-orange-400">{selectedVerification.notes}</p>
+                      </div>
+                    )}
+                    {selectedVerification.status === "rejected" && selectedVerification.rejectionReason && (
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground flex items-center gap-2">
+                          <XCircle className="h-4 w-4 text-destructive" />
+                          Rejection Reason
+                        </Label>
+                        <p className="font-medium text-destructive">{selectedVerification.rejectionReason}</p>
                       </div>
                     )}
                   </CardContent>
@@ -816,6 +873,16 @@ export default function CarrierVerificationPage() {
                   Reject
                 </Button>
                 <Button 
+                  variant="secondary"
+                  onClick={() => {
+                    setHoldDialogOpen(true);
+                  }}
+                  data-testid="button-hold-carrier"
+                >
+                  <PauseCircle className="h-4 w-4 mr-2" />
+                  Put on Hold
+                </Button>
+                <Button 
                   onClick={() => handleApprove(selectedVerification)}
                   disabled={approveMutation.isPending}
                   data-testid="button-approve-carrier"
@@ -860,6 +927,47 @@ export default function CarrierVerificationPage() {
               data-testid="button-confirm-reject"
             >
               Reject Verification
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Put on Hold Dialog */}
+      <Dialog open={holdDialogOpen} onOpenChange={(open) => {
+        setHoldDialogOpen(open);
+        if (!open) setHoldNotes("");
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Put Verification on Hold</DialogTitle>
+            <DialogDescription>
+              Add notes explaining why {selectedVerification?.carrier?.companyName}'s verification is being put on hold.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                placeholder="Enter notes about why this verification is on hold..."
+                value={holdNotes}
+                onChange={(e) => setHoldNotes(e.target.value)}
+                className="mt-2"
+                data-testid="input-hold-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHoldDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={handleHold}
+              disabled={!holdNotes.trim() || holdMutation.isPending}
+              data-testid="button-confirm-hold"
+            >
+              <PauseCircle className="h-4 w-4 mr-2" />
+              Put on Hold
             </Button>
           </DialogFooter>
         </DialogContent>

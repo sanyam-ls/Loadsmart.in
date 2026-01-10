@@ -1,6 +1,6 @@
-import { useLocation } from "wouter";
+import { useLocation, Redirect } from "wouter";
 import { useEffect, useState } from "react";
-import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2, CheckCircle, XCircle, FileText, ShieldCheck, ShieldX, ShieldAlert, Eye, Bell } from "lucide-react";
+import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2, CheckCircle, XCircle, FileText, ShieldCheck, ShieldX, ShieldAlert, Eye, Bell, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,16 @@ export default function CarrierDashboard() {
   const { t } = useTranslation();
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
   const [hasNewVerificationUpdate, setHasNewVerificationUpdate] = useState(false);
+  
+  // Fetch onboarding status for gating
+  const { data: onboardingStatus, isLoading: isLoadingOnboarding } = useQuery<{
+    id: string;
+    status: string;
+    carrierType: string;
+    rejectionReason?: string;
+  }>({
+    queryKey: ["/api/carrier/onboarding"],
+  });
   
   // Fetch verification status
   const { data: verification, refetch: refetchVerification } = useQuery<{
@@ -162,12 +172,26 @@ export default function CarrierDashboard() {
   const { data: allLoads, isLoading: loadsLoading } = useLoads();
   const { data: allShipments } = useShipments();
 
-  if (statsLoading || loadsLoading) {
+  if (statsLoading || loadsLoading || isLoadingOnboarding) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // Onboarding gate: redirect unverified carriers to onboarding page
+  const isVerified = user?.isVerified === true;
+  const onboardingApproved = onboardingStatus?.status === "approved";
+  const onboardingComplete = isVerified || onboardingApproved;
+  
+  // Block ALL non-approved carriers - redirect to onboarding
+  const needsOnboarding = !onboardingComplete;
+  const pendingReview = onboardingStatus?.status === "pending" || onboardingStatus?.status === "under_review";
+
+  // Redirect carriers who need to complete onboarding (even pending review)
+  if (needsOnboarding) {
+    return <Redirect to="/carrier/onboarding" />;
   }
 
   // Use stats from the API endpoint
@@ -229,6 +253,27 @@ export default function CarrierDashboard() {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Pending Review Banner */}
+      {pendingReview && (
+        <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-full">
+                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">{t("carrierOnboarding.pendingReview")}</h3>
+                <p className="text-sm text-muted-foreground">{t("carrierOnboarding.pendingReviewDesc")}</p>
+              </div>
+              <Badge variant="secondary">
+                <Clock className="h-3 w-3 mr-1" />
+                {t(`carrierOnboarding.status.${onboardingStatus?.status}`)}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-welcome">

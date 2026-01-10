@@ -42,6 +42,7 @@ import MyTruckPage from "@/pages/carrier/my-truck";
 import MyInfoPage from "@/pages/carrier/my-info";
 import MyDocumentsPage from "@/pages/carrier/my-documents";
 import CarrierOnboardingPage from "@/pages/carrier/onboarding";
+import { CarrierOnboardingGate } from "@/hooks/use-carrier-onboarding-gate";
 
 import SoloLoadFeed from "@/pages/solo/load-feed";
 import SoloMyBids from "@/pages/solo/my-bids";
@@ -136,26 +137,26 @@ function AppContent() {
               <Route path="/shipper/onboarding" component={ShipperOnboardingPage} />
                             
               <Route path="/carrier" component={CarrierDashboard} />
-              <Route path="/carrier/add-truck" component={AddTruckPage} />
-              <Route path="/carrier/fleet" component={FleetPage} />
-              <Route path="/carrier/loads" component={CarrierLoadsPage} />
-              <Route path="/carrier/bids" component={CarrierBidsPage} />
-              <Route path="/carrier/trips" component={TripsPage} />
-              <Route path="/carrier/documents" component={CarrierDocumentsPage} />
-              <Route path="/carrier/revenue" component={CarrierRevenuePage} />
-              <Route path="/carrier/drivers" component={CarrierDriversPage} />
-              <Route path="/carrier/history" component={CarrierHistoryPage} />
-              <Route path="/carrier/shipments" component={CarrierShipmentsPage} />
-              <Route path="/carrier/my-truck" component={MyTruckPage} />
-              <Route path="/carrier/my-info" component={MyInfoPage} />
-              <Route path="/carrier/my-documents" component={MyDocumentsPage} />
+              <Route path="/carrier/add-truck" component={() => <CarrierOnboardingGate><AddTruckPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/fleet" component={() => <CarrierOnboardingGate><FleetPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/loads" component={() => <CarrierOnboardingGate><CarrierLoadsPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/bids" component={() => <CarrierOnboardingGate><CarrierBidsPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/trips" component={() => <CarrierOnboardingGate><TripsPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/documents" component={() => <CarrierOnboardingGate><CarrierDocumentsPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/revenue" component={() => <CarrierOnboardingGate><CarrierRevenuePage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/drivers" component={() => <CarrierOnboardingGate><CarrierDriversPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/history" component={() => <CarrierOnboardingGate><CarrierHistoryPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/shipments" component={() => <CarrierOnboardingGate><CarrierShipmentsPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/my-truck" component={() => <CarrierOnboardingGate><MyTruckPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/my-info" component={() => <CarrierOnboardingGate><MyInfoPage /></CarrierOnboardingGate>} />
+              <Route path="/carrier/my-documents" component={() => <CarrierOnboardingGate><MyDocumentsPage /></CarrierOnboardingGate>} />
               <Route path="/carrier/onboarding" component={CarrierOnboardingPage} />
               
-              <Route path="/solo" component={SoloLoadFeed} />
-              <Route path="/solo/loads" component={SoloLoadFeed} />
-              <Route path="/solo/bids" component={SoloMyBids} />
-              <Route path="/solo/trips" component={SoloMyTrips} />
-              <Route path="/solo/earnings" component={SoloEarnings} />
+              <Route path="/solo" component={() => <CarrierOnboardingGate><SoloLoadFeed /></CarrierOnboardingGate>} />
+              <Route path="/solo/loads" component={() => <CarrierOnboardingGate><SoloLoadFeed /></CarrierOnboardingGate>} />
+              <Route path="/solo/bids" component={() => <CarrierOnboardingGate><SoloMyBids /></CarrierOnboardingGate>} />
+              <Route path="/solo/trips" component={() => <CarrierOnboardingGate><SoloMyTrips /></CarrierOnboardingGate>} />
+              <Route path="/solo/earnings" component={() => <CarrierOnboardingGate><SoloEarnings /></CarrierOnboardingGate>} />
               
               <Route path="/admin" component={AdminOverview} />
               <Route path="/admin/queue" component={AdminLoadQueuePage} />

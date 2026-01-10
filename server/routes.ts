@@ -7569,18 +7569,32 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Carrier access required" });
       }
 
-      // Check for existing pending verification
+      // Check for existing verification - if draft/on_hold/rejected, update it instead
       const existing = await storage.getCarrierVerificationByCarrier(user.id);
       if (existing && existing.status === "pending") {
         return res.status(400).json({ error: "You already have a pending verification request" });
       }
 
-      // Strict schema - ONLY user-controlled fields, using .strict() to reject unknown keys
+      // Extended schema for solo/fleet carrier onboarding
       const userInputSchema = z.object({
         carrierType: z.enum(["solo", "enterprise"]).optional().default("solo"),
         fleetSize: z.number().int().min(1).optional().default(1),
         notes: z.string().optional(),
-      }).strict();
+        // Solo operator fields
+        aadhaarNumber: z.string().optional(),
+        driverLicenseNumber: z.string().optional(),
+        permitType: z.enum(["national", "domestic"]).optional(),
+        uniqueRegistrationNumber: z.string().optional(),
+        chassisNumber: z.string().optional(),
+        licensePlateNumber: z.string().optional(),
+        // Fleet/Company fields
+        incorporationType: z.enum(["pvt_ltd", "llp", "proprietorship", "partnership"]).optional(),
+        businessRegistrationNumber: z.string().optional(),
+        businessAddress: z.string().optional(),
+        panNumber: z.string().optional(),
+        gstinNumber: z.string().optional(),
+        tanNumber: z.string().optional(),
+      });
 
       const userInput = userInputSchema.parse(req.body);
 
@@ -7591,6 +7605,19 @@ export async function registerRoutes(
         fleetSize: userInput.fleetSize,
         status: "pending",
         notes: userInput.notes,
+        aadhaarNumber: userInput.aadhaarNumber,
+        driverLicenseNumber: userInput.driverLicenseNumber,
+        permitType: userInput.permitType,
+        uniqueRegistrationNumber: userInput.uniqueRegistrationNumber,
+        chassisNumber: userInput.chassisNumber,
+        licensePlateNumber: userInput.licensePlateNumber,
+        incorporationType: userInput.incorporationType,
+        businessRegistrationNumber: userInput.businessRegistrationNumber,
+        businessAddress: userInput.businessAddress,
+        panNumber: userInput.panNumber,
+        gstinNumber: userInput.gstinNumber,
+        tanNumber: userInput.tanNumber,
+        submittedAt: new Date(),
       });
 
       res.json(verification);
@@ -7599,6 +7626,153 @@ export async function registerRoutes(
         return res.status(400).json({ error: error.errors });
       }
       console.error("Submit verification error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier/onboarding - Get or create carrier onboarding request
+  app.get("/api/carrier/onboarding", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      let onboarding = await storage.getCarrierVerificationByCarrier(user.id);
+      
+      // Auto-create draft if no onboarding request exists
+      if (!onboarding) {
+        // Get carrier profile to determine carrier type
+        const profile = await storage.getCarrierProfile(user.id);
+        onboarding = await storage.createCarrierVerification({
+          carrierId: user.id,
+          carrierType: profile?.carrierType || "solo",
+          fleetSize: profile?.fleetSize || 1,
+          status: "draft",
+        });
+      }
+
+      const documents = await storage.getVerificationDocuments(onboarding.id);
+      res.json({ ...onboarding, documents });
+    } catch (error) {
+      console.error("Get carrier onboarding error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/carrier/onboarding/draft - Auto-save draft carrier onboarding
+  app.patch("/api/carrier/onboarding/draft", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const onboarding = await storage.getCarrierVerificationByCarrier(user.id);
+      if (!onboarding) {
+        return res.status(404).json({ error: "No onboarding request found" });
+      }
+
+      // Only allow updates for draft, on_hold, or rejected status
+      if (!["draft", "on_hold", "rejected"].includes(onboarding.status || "")) {
+        return res.status(400).json({ error: "Cannot update onboarding request in current status" });
+      }
+
+      const updateSchema = z.object({
+        carrierType: z.enum(["solo", "enterprise"]).optional(),
+        fleetSize: z.number().int().min(1).optional(),
+        notes: z.string().optional(),
+        // Solo operator fields
+        aadhaarNumber: z.string().optional(),
+        driverLicenseNumber: z.string().optional(),
+        permitType: z.enum(["national", "domestic"]).optional(),
+        uniqueRegistrationNumber: z.string().optional(),
+        chassisNumber: z.string().optional(),
+        licensePlateNumber: z.string().optional(),
+        // Fleet/Company fields
+        incorporationType: z.enum(["pvt_ltd", "llp", "proprietorship", "partnership"]).optional(),
+        businessRegistrationNumber: z.string().optional(),
+        businessAddress: z.string().optional(),
+        panNumber: z.string().optional(),
+        gstinNumber: z.string().optional(),
+        tanNumber: z.string().optional(),
+      });
+
+      const updates = updateSchema.parse(req.body);
+      const updated = await storage.updateCarrierVerification(onboarding.id, updates);
+      
+      const documents = await storage.getVerificationDocuments(onboarding.id);
+      res.json({ ...updated, documents });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Update carrier onboarding draft error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/carrier/onboarding/submit - Submit carrier onboarding for review
+  app.post("/api/carrier/onboarding/submit", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      const onboarding = await storage.getCarrierVerificationByCarrier(user.id);
+      if (!onboarding) {
+        return res.status(404).json({ error: "No onboarding request found" });
+      }
+
+      // Only allow submission from draft, on_hold, or rejected status
+      if (!["draft", "on_hold", "rejected"].includes(onboarding.status || "")) {
+        return res.status(400).json({ error: "Cannot submit onboarding request in current status" });
+      }
+
+      // Validate required documents based on carrier type
+      const documents = await storage.getVerificationDocuments(onboarding.id);
+      const docTypes = documents.map(d => d.documentType);
+
+      if (onboarding.carrierType === "solo") {
+        // Solo requires: aadhaar, license, permit, rc, insurance, fitness
+        const requiredSoloDocs = ["aadhaar", "license", "permit", "rc", "insurance", "fitness"];
+        const missingSoloDocs = requiredSoloDocs.filter(d => !docTypes.includes(d));
+        if (missingSoloDocs.length > 0) {
+          return res.status(400).json({ 
+            error: "Missing required documents", 
+            missingDocuments: missingSoloDocs 
+          });
+        }
+        // Validate required fields for solo
+        if (!onboarding.aadhaarNumber || !onboarding.driverLicenseNumber || !onboarding.licensePlateNumber) {
+          return res.status(400).json({ error: "Please fill all required fields" });
+        }
+      } else {
+        // Fleet/Enterprise requires: incorporation, trade_license, address_proof, pan, gstin, tan
+        const requiredFleetDocs = ["incorporation", "trade_license", "address_proof", "pan", "gstin", "tan"];
+        const missingFleetDocs = requiredFleetDocs.filter(d => !docTypes.includes(d));
+        if (missingFleetDocs.length > 0) {
+          return res.status(400).json({ 
+            error: "Missing required documents", 
+            missingDocuments: missingFleetDocs 
+          });
+        }
+        // Validate required fields for fleet
+        if (!onboarding.panNumber || !onboarding.gstinNumber || !onboarding.businessAddress) {
+          return res.status(400).json({ error: "Please fill all required fields" });
+        }
+      }
+
+      const updated = await storage.updateCarrierVerification(onboarding.id, {
+        status: "pending",
+        submittedAt: new Date(),
+      });
+
+      const updatedDocs = await storage.getVerificationDocuments(onboarding.id);
+      res.json({ ...updated, documents: updatedDocs });
+    } catch (error) {
+      console.error("Submit carrier onboarding error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -7637,11 +7811,18 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No verification request found. Please submit a verification request first." });
       }
 
-      // Strict schema - ONLY user-controlled fields
+      // Extended schema with all carrier verification document types
       const userInputSchema = z.object({
-        documentType: z.enum(["license", "rc", "insurance", "pan", "gst", "aadhar", "fleet_proof", "other"]),
+        documentType: z.enum([
+          // Solo operator documents
+          "aadhaar", "license", "permit", "rc", "insurance", "fitness",
+          // Fleet/Company documents
+          "incorporation", "trade_license", "address_proof", "pan", "gstin", "tan",
+          // Legacy types
+          "gst", "aadhar", "fleet_proof", "other"
+        ]),
         fileName: z.string().min(1),
-        fileUrl: z.string().url(),
+        fileUrl: z.string().min(1),
         fileSize: z.number().int().optional(),
         expiryDate: z.string().optional(),
       });

@@ -41,6 +41,7 @@ import CarrierShipmentsPage from "@/pages/carrier/shipments";
 import MyTruckPage from "@/pages/carrier/my-truck";
 import MyInfoPage from "@/pages/carrier/my-info";
 import MyDocumentsPage from "@/pages/carrier/my-documents";
+import CarrierOnboardingPage from "@/pages/carrier/onboarding";
 
 import SoloLoadFeed from "@/pages/solo/load-feed";
 import SoloMyBids from "@/pages/solo/my-bids";
@@ -148,6 +149,7 @@ function AppContent() {
               <Route path="/carrier/my-truck" component={MyTruckPage} />
               <Route path="/carrier/my-info" component={MyInfoPage} />
               <Route path="/carrier/my-documents" component={MyDocumentsPage} />
+              <Route path="/carrier/onboarding" component={CarrierOnboardingPage} />
               
               <Route path="/solo" component={SoloLoadFeed} />
               <Route path="/solo/loads" component={SoloLoadFeed} />

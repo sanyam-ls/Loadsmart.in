@@ -60,6 +60,19 @@ New shippers must complete a business onboarding process before posting loads. T
 - **Gate Enforcement**: Shippers must be verified (`isVerified=true`) before posting loads.
 - **Full i18n**: All onboarding strings translated in English, Hindi, Punjabi, Marathi, and Tamil.
 
+### Carrier Onboarding Workflow
+
+New carriers must complete a verification process before accessing the marketplace. The workflow includes:
+- **Carrier Type Selection**: Carriers select either "Solo Operator" (single truck owner-operators) or "Fleet/Company" (transport companies with multiple trucks).
+- **Solo Operator Requirements**: Identity tab (Aadhaar Number, Driver License Number, Permit Type), Vehicle tab (License Plate, Chassis Number, Registration Number), Documents tab (Aadhaar Card, Driver License, Permit Document, RC, Insurance Certificate, Fitness Certificate).
+- **Fleet/Company Requirements**: Business tab (Incorporation Type, Business Registration Number, Business Address, Fleet Size), Compliance tab (PAN Number, GSTIN Number, TAN Number), Documents tab (Incorporation Certificate, Trade License, Address Proof, PAN Card, GSTIN Certificate, TAN Certificate).
+- **Auto-Save**: Changes auto-save for draft, on_hold, and rejected statuses via `PATCH /api/carrier/onboarding/draft`.
+- **Document Upload**: Uses `DocumentUpload` component for direct file uploads to Replit Object Storage.
+- **Status Flow**: `draft → pending → under_review → (approved | rejected | on_hold)`. Carriers can update if status is `on_hold` or `rejected`.
+- **Approval Integration**: When approved, sets `user.isVerified=true`, enabling marketplace access.
+- **Gate Enforcement**: Carriers must be verified (`isVerified=true`) before accessing loads or placing bids.
+- **Full i18n**: All onboarding strings translated in English (other languages pending).
+
 ### Credit Assessment System
 
 The platform includes both manual admin review and automated credit scoring for shippers. The automated system calculates scores based on weighted factors: payment history (±250 points from on-time rate), credit utilization (±150, optimal at ≤30%), load volume (±100 from recent 90-day activity), and tenure (±50 from account age). Base score is 500, with final scores ranging 0-1000. Risk thresholds: ≥750 low, ≥600 medium, ≥450 high, <450 critical. Default credit limits: low 1M, medium 500K, high 200K, critical 50K INR. Admins can run auto-assessment individually or in bulk, and manual overrides lock profiles from future auto-updates. The credit engine is in `server/services/credit-engine.ts`.

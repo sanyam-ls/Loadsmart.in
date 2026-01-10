@@ -1321,18 +1321,60 @@ export const featureFlagsRelations = relations(featureFlags, ({ one }) => ({
   }),
 }));
 
+// Carrier onboarding statuses
+export const carrierOnboardingStatuses = ["draft", "pending", "under_review", "approved", "rejected", "on_hold"] as const;
+export type CarrierOnboardingStatus = typeof carrierOnboardingStatuses[number];
+
+// Carrier verification document types - extended for solo and fleet
+export const carrierVerificationDocTypes = [
+  // Solo operator documents
+  "aadhaar",           // Aadhaar Card
+  "license",           // Driver License
+  "permit",            // National/Domestic Permit
+  "rc",                // Registration Certificate
+  "insurance",         // Vehicle Insurance Certificate
+  "fitness",           // Fitness Certificate
+  // Fleet/Company documents
+  "incorporation",     // Company Incorporation Documents
+  "trade_license",     // Business Registration/Trade License
+  "address_proof",     // Business Address Proof
+  "pan",               // PAN Card
+  "gstin",             // GSTIN Certificate
+  "tan",               // TAN Certificate
+] as const;
+export type CarrierVerificationDocType = typeof carrierVerificationDocTypes[number];
+
 // Carrier Verification table (for pending/rejected verification queue)
 export const carrierVerifications = pgTable("carrier_verifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   carrierId: varchar("carrier_id").notNull().references(() => users.id),
-  status: text("status").default("pending"), // pending, approved, rejected, expired
-  carrierType: text("carrier_type").default("solo"), // solo or fleet
+  status: text("status").default("draft"), // draft, pending, under_review, approved, rejected, on_hold
+  carrierType: text("carrier_type").default("solo"), // solo or fleet/enterprise
   fleetSize: integer("fleet_size").default(1),
+  
+  // Solo operator specific fields
+  aadhaarNumber: text("aadhaar_number"),
+  driverLicenseNumber: text("driver_license_number"),
+  permitType: text("permit_type"), // national or domestic
+  uniqueRegistrationNumber: text("unique_registration_number"),
+  chassisNumber: text("chassis_number"),
+  licensePlateNumber: text("license_plate_number"),
+  
+  // Fleet/Company specific fields
+  incorporationType: text("incorporation_type"), // pvt_ltd, llp, proprietorship, partnership
+  businessRegistrationNumber: text("business_registration_number"),
+  businessAddress: text("business_address"),
+  panNumber: text("pan_number"),
+  gstinNumber: text("gstin_number"),
+  tanNumber: text("tan_number"),
+  
+  // Admin review fields
   reviewedBy: varchar("reviewed_by").references(() => users.id),
   reviewedAt: timestamp("reviewed_at"),
   rejectionReason: text("rejection_reason"),
   expiresAt: timestamp("expires_at"),
   notes: text("notes"),
+  submittedAt: timestamp("submitted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

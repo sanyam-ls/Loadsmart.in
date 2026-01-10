@@ -752,7 +752,7 @@ export default function CarrierVerificationPage() {
                     <CardDescription>Review and verify each document (scroll to see all)</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                       {(selectedVerification.documents || []).length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No documents uploaded yet</p>
                       ) : (

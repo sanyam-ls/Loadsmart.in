@@ -6645,7 +6645,17 @@ export async function registerRoutes(
           const documents = await storage.getVerificationDocuments(v.id);
           return {
             ...v,
-            carrier: carrier ? { username: carrier.username, companyName: carrier.companyName, email: carrier.email } : null,
+            carrier: carrier ? { 
+              id: carrier.id,
+              username: carrier.username, 
+              companyName: carrier.companyName, 
+              email: carrier.email,
+              phone: carrier.phone || profile?.phone || null,
+              // Use serviceZones if available, otherwise use city as fallback
+              serviceZones: (profile?.serviceZones && profile.serviceZones.length > 0) 
+                ? profile.serviceZones 
+                : (profile?.city ? [profile.city] : []),
+            } : null,
             profile,
             documents,
           };
@@ -6676,7 +6686,17 @@ export async function registerRoutes(
           const documents = await storage.getVerificationDocuments(v.id);
           return {
             ...v,
-            carrier: carrier ? { username: carrier.username, companyName: carrier.companyName, email: carrier.email } : null,
+            carrier: carrier ? { 
+              id: carrier.id,
+              username: carrier.username, 
+              companyName: carrier.companyName, 
+              email: carrier.email,
+              phone: carrier.phone || profile?.phone || null,
+              // Use serviceZones if available, otherwise use city as fallback
+              serviceZones: (profile?.serviceZones && profile.serviceZones.length > 0) 
+                ? profile.serviceZones 
+                : (profile?.city ? [profile.city] : []),
+            } : null,
             profile,
             documents,
           };

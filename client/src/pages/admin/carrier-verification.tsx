@@ -307,7 +307,16 @@ export default function CarrierVerificationPage() {
   };
 
   const getCarrierTypeDisplay = (verification: CarrierVerification) => {
-    if (verification.carrierType === "solo" || verification.fleetSize === 1) {
+    // Prioritize explicit carrierType from database over fleet size
+    if (verification.carrierType === "solo") {
+      return { label: "Solo Owner-Operator", icon: User, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" };
+    }
+    // Enterprise/fleet carriers show as Fleet regardless of fleet size
+    if (verification.carrierType === "enterprise") {
+      return { label: `Fleet (${verification.fleetSize} truck${verification.fleetSize !== 1 ? 's' : ''})`, icon: Building2, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" };
+    }
+    // Fallback for legacy data without explicit carrierType
+    if (verification.fleetSize === 1) {
       return { label: "Solo Owner-Operator", icon: User, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" };
     }
     return { label: `Fleet (${verification.fleetSize} trucks)`, icon: Building2, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" };

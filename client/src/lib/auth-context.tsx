@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { User, UserRole } from "@shared/schema";
+import { queryClient } from "./queryClient";
 
 interface AuthUser extends Omit<User, "password"> {
   role: UserRole;
@@ -52,6 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (response.ok) {
         const data = await response.json();
+        // Clear any stale cached data from previous session
+        queryClient.clear();
         setUser(data.user);
         return true;
       }
@@ -72,6 +75,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (response.ok) {
         const data = await response.json();
+        // Clear any stale cached data from previous session
+        queryClient.clear();
         setUser(data.user);
         return true;
       }
@@ -91,6 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Logout failed:", error);
     }
+    // Clear all cached queries to ensure fresh data for next user
+    queryClient.clear();
     setUser(null);
   };
 

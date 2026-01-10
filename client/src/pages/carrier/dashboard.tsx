@@ -635,138 +635,169 @@ export default function CarrierDashboard() {
           setHasNewVerificationUpdate(false);
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {verification?.status === "approved" ? (
-                <ShieldCheck className="h-5 w-5 text-green-600" />
-              ) : verification?.status === "rejected" ? (
-                <ShieldX className="h-5 w-5 text-destructive" />
-              ) : (
-                <ShieldAlert className="h-5 w-5 text-yellow-600" />
-              )}
-              {verification?.status === "approved" ? "Welcome Aboard! You are Verified!" : "Verification Status"}
-            </DialogTitle>
-            <DialogDescription>
-              {verification?.status === "approved" 
-                ? "Congratulations! Your carrier account has been verified. You can now bid on loads and start earning."
-                : verification?.status === "rejected"
-                ? "Your verification was rejected. Please review the details below and resubmit."
-                : "Your verification is pending review by our team."}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {verification && (
-            <ScrollArea className="flex-1 max-h-[60vh] pr-4">
-              <div className="space-y-4">
-                {/* Overall Status */}
-                <Card className={
-                  verification.status === "approved" ? "border-green-500/50" :
-                  verification.status === "rejected" ? "border-destructive/50" :
-                  "border-yellow-500/50"
-                }>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold">Overall Status</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {verification.updatedAt && `Last updated: ${format(new Date(verification.updatedAt), "MMM d, yyyy 'at' h:mm a")}`}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant={
-                          verification.status === "approved" ? "default" :
-                          verification.status === "rejected" ? "destructive" :
-                          "secondary"
-                        }
-                        className={verification.status === "approved" ? "bg-green-600" : ""}
-                      >
-                        {verification.status === "approved" ? "Verified" : 
-                         verification.status === "rejected" ? "Rejected" : 
-                         "Pending Review"}
-                      </Badge>
-                    </div>
-                    {verification.rejectionReason && (
-                      <div className="mt-3 p-3 bg-destructive/10 rounded-md">
-                        <p className="text-sm font-medium text-destructive">Rejection Reason:</p>
-                        <p className="text-sm text-muted-foreground">{verification.rejectionReason}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Documents List */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Submitted Documents ({verification.documents?.length || 0})</CardTitle>
-                    <CardDescription>Status of each document you submitted</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {(verification.documents || []).length === 0 ? (
-                        <p className="text-muted-foreground text-center py-4">No documents submitted yet</p>
-                      ) : (
-                        verification.documents?.map((doc) => (
-                          <div 
-                            key={doc.id} 
-                            className={`flex items-center justify-between p-3 border rounded-lg ${
-                              doc.status === "approved" ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" :
-                              doc.status === "rejected" ? "border-destructive/30 bg-red-50/50 dark:bg-red-950/20" :
-                              ""
-                            }`}
+        <DialogContent className={verification?.status === "approved" ? "max-w-md" : "max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"}>
+          {verification?.status === "approved" ? (
+            <>
+              <DialogHeader className="text-center pb-4">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                  <ShieldCheck className="h-8 w-8 text-green-600" />
+                </div>
+                <DialogTitle className="text-2xl font-bold">
+                  Welcome Aboard, {user?.companyName || user?.username || "Partner"}!
+                </DialogTitle>
+                <DialogDescription className="text-base pt-2">
+                  Congratulations! Your carrier account has been verified. You can now bid on loads and start earning.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col gap-3 pt-2">
+                <Button 
+                  onClick={() => {
+                    setVerificationDialogOpen(false);
+                    navigate("/carrier/my-documents");
+                  }}
+                  variant="outline"
+                  data-testid="button-view-documents"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  View My Documents
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setVerificationDialogOpen(false);
+                    navigate("/carrier/loads");
+                  }}
+                  data-testid="button-start-bidding"
+                >
+                  Start Bidding on Loads
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {verification?.status === "rejected" ? (
+                    <ShieldX className="h-5 w-5 text-destructive" />
+                  ) : (
+                    <ShieldAlert className="h-5 w-5 text-yellow-600" />
+                  )}
+                  Verification Status
+                </DialogTitle>
+                <DialogDescription>
+                  {verification?.status === "rejected"
+                    ? "Your verification was rejected. Please review the details below and resubmit."
+                    : "Your verification is pending review by our team."}
+                </DialogDescription>
+              </DialogHeader>
+              
+              {verification && (
+                <ScrollArea className="flex-1 max-h-[60vh] pr-4">
+                  <div className="space-y-4">
+                    {/* Overall Status */}
+                    <Card className={
+                      verification.status === "rejected" ? "border-destructive/50" :
+                      "border-yellow-500/50"
+                    }>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <h3 className="font-semibold">Overall Status</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {verification.updatedAt && `Last updated: ${format(new Date(verification.updatedAt), "MMM d, yyyy 'at' h:mm a")}`}
+                            </p>
+                          </div>
+                          <Badge 
+                            variant={
+                              verification.status === "rejected" ? "destructive" :
+                              "secondary"
+                            }
                           >
-                            <div className="flex items-center gap-3">
-                              <FileText className="h-5 w-5 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium">{getDocumentDisplayName(doc.documentType)}</p>
-                                <p className="text-sm text-muted-foreground">{doc.fileName}</p>
-                                {doc.uploadedAt && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Uploaded {format(new Date(doc.uploadedAt), "MMM d, yyyy")}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {doc.status === "approved" ? (
-                                <Badge variant="default" className="bg-green-600">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Approved
-                                </Badge>
-                              ) : doc.status === "rejected" ? (
-                                <div className="text-right">
-                                  <Badge variant="destructive">
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Rejected
-                                  </Badge>
-                                  {doc.rejectionReason && (
-                                    <p className="text-xs text-destructive mt-1">{doc.rejectionReason}</p>
+                            {verification.status === "rejected" ? "Rejected" : "Pending Review"}
+                          </Badge>
+                        </div>
+                        {verification.rejectionReason && (
+                          <div className="mt-3 p-3 bg-destructive/10 rounded-md">
+                            <p className="text-sm font-medium text-destructive">Rejection Reason:</p>
+                            <p className="text-sm text-muted-foreground">{verification.rejectionReason}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Documents List - only show for non-approved status */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Submitted Documents ({verification.documents?.length || 0})</CardTitle>
+                        <CardDescription>Status of each document you submitted</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {(verification.documents || []).length === 0 ? (
+                            <p className="text-muted-foreground text-center py-4">No documents submitted yet</p>
+                          ) : (
+                            verification.documents?.map((doc) => (
+                              <div 
+                                key={doc.id} 
+                                className={`flex items-center justify-between p-3 border rounded-lg ${
+                                  doc.status === "approved" ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" :
+                                  doc.status === "rejected" ? "border-destructive/30 bg-red-50/50 dark:bg-red-950/20" :
+                                  ""
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <FileText className="h-5 w-5 text-muted-foreground" />
+                                  <div>
+                                    <p className="font-medium">{getDocumentDisplayName(doc.documentType)}</p>
+                                    <p className="text-sm text-muted-foreground">{doc.fileName}</p>
+                                    {doc.uploadedAt && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Uploaded {format(new Date(doc.uploadedAt), "MMM d, yyyy")}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {doc.status === "approved" ? (
+                                    <Badge variant="default" className="bg-green-600">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Approved
+                                    </Badge>
+                                  ) : doc.status === "rejected" ? (
+                                    <div className="text-right">
+                                      <Badge variant="destructive">
+                                        <XCircle className="h-3 w-3 mr-1" />
+                                        Rejected
+                                      </Badge>
+                                      {doc.rejectionReason && (
+                                        <p className="text-xs text-destructive mt-1">{doc.rejectionReason}</p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <Badge variant="secondary">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      Pending
+                                    </Badge>
                                   )}
                                 </div>
-                              ) : (
-                                <Badge variant="secondary">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  Pending
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                {/* Action Buttons */}
-                {verification.status === "rejected" && (
-                  <div className="flex justify-end">
-                    <Button onClick={() => navigate("/carrier/verification")} data-testid="button-resubmit-verification">
-                      Resubmit Documents
-                    </Button>
+                    {/* Action Buttons */}
+                    {verification.status === "rejected" && (
+                      <div className="flex justify-end">
+                        <Button onClick={() => navigate("/carrier/verification")} data-testid="button-resubmit-verification">
+                          Resubmit Documents
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                </ScrollArea>
+              )}
+            </>
           )}
         </DialogContent>
       </Dialog>

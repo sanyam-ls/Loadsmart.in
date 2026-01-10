@@ -81,6 +81,46 @@ const getDocumentDisplayName = (type: string) => {
   return DOCUMENT_TYPE_LABELS[type] || type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 };
 
+// Document priority order for display (lower number = higher priority)
+const DOCUMENT_PRIORITY: Record<string, number> = {
+  // Solo operator documents - identity first
+  aadhaar: 1,
+  aadhar: 1,
+  aadhaar_card: 1,
+  license: 2,
+  driver_license: 2,
+  permit: 3,
+  permit_document: 3,
+  rc: 4,
+  insurance: 5,
+  insurance_certificate: 5,
+  fitness: 6,
+  fitness_certificate: 6,
+  // Fleet/Company documents
+  incorporation: 10,
+  incorporation_certificate: 10,
+  trade_license: 11,
+  address_proof: 12,
+  pan: 13,
+  pan_card: 13,
+  gstin: 14,
+  gstin_certificate: 14,
+  gst: 14,
+  tan: 15,
+  tan_certificate: 15,
+  fleet_proof: 16,
+  other: 99,
+};
+
+// Sort documents by priority
+const sortDocumentsByPriority = (docs: VerificationDocument[]) => {
+  return [...docs].sort((a, b) => {
+    const priorityA = DOCUMENT_PRIORITY[a.documentType] ?? 50;
+    const priorityB = DOCUMENT_PRIORITY[b.documentType] ?? 50;
+    return priorityA - priorityB;
+  });
+};
+
 interface CarrierVerification {
   id: string;
   carrierId: string;
@@ -814,7 +854,7 @@ export default function CarrierVerificationPage() {
                       {(selectedVerification.documents || []).length === 0 ? (
                         <p className="text-muted-foreground text-center py-4">No documents uploaded yet</p>
                       ) : (
-                        selectedVerification.documents?.map((doc) => (
+                        sortDocumentsByPriority(selectedVerification.documents || []).map((doc) => (
                           <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
                             <div className="flex items-center gap-3">
                               <FileText className="h-5 w-5 text-muted-foreground" />

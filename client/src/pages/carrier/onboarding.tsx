@@ -426,6 +426,9 @@ export default function CarrierOnboarding() {
                 <div>
                   <p className="font-medium text-destructive">{t("carrierOnboarding.rejectedReason")}</p>
                   <p className="text-sm text-muted-foreground">{onboardingStatus.rejectionReason}</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    For assistance, please contact us at <a href="tel:+919876543210" className="text-primary font-medium underline">+91 98765 43210</a>
+                  </p>
                 </div>
               </div>
             </CardContent>

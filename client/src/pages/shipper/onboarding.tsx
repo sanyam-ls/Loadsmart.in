@@ -278,6 +278,40 @@ export default function ShipperOnboarding() {
     }
   };
 
+  // Helper to determine which tab has the first error
+  const getTabWithError = (errors: any): string | null => {
+    const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredCity", "registeredState", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
+    const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
+    const documentFields = ["gstCertificateUrl", "panCardUrl", "incorporationCertificateUrl", "cancelledChequeUrl", "businessAddressProofUrl"];
+    const bankingFields = ["bankName", "bankAccountNumber", "bankIfscCode", "bankBranchName", "preferredPaymentTerms", "requestedCreditLimit"];
+
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.some(key => businessFields.includes(key))) return "business";
+    if (errorKeys.some(key => contactFields.includes(key))) return "contact";
+    if (errorKeys.some(key => documentFields.includes(key))) return "documents";
+    if (errorKeys.some(key => bankingFields.includes(key))) return "banking";
+    return null;
+  };
+
+  const onInvalid = (errors: any) => {
+    const errorMessages = Object.entries(errors)
+      .map(([field, error]: [string, any]) => `${field}: ${error?.message || "Invalid"}`)
+      .slice(0, 3)
+      .join(", ");
+    
+    toast({
+      title: t("onboarding.validationError") || "Please fix the errors",
+      description: errorMessages + (Object.keys(errors).length > 3 ? "..." : ""),
+      variant: "destructive",
+    });
+
+    // Navigate to the tab with the first error
+    const tabWithError = getTabWithError(errors);
+    if (tabWithError) {
+      setActiveTab(tabWithError);
+    }
+  };
+
   if (isLoadingStatus) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -459,6 +493,7 @@ export default function ShipperOnboarding() {
         <OnboardingFormComponent 
           form={form} 
           onSubmit={onSubmit} 
+          onInvalid={onInvalid}
           isSubmitting={updateMutation.isPending}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -505,6 +540,7 @@ export default function ShipperOnboarding() {
       <OnboardingFormComponent 
         form={form} 
         onSubmit={onSubmit} 
+        onInvalid={onInvalid}
         isSubmitting={submitMutation.isPending}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -517,18 +553,19 @@ export default function ShipperOnboarding() {
 interface OnboardingFormProps {
   form: ReturnType<typeof useForm<OnboardingFormData>>;
   onSubmit: (data: OnboardingFormData) => void;
+  onInvalid: (errors: any) => void;
   isSubmitting: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isUpdate: boolean;
 }
 
-function OnboardingFormComponent({ form, onSubmit, isSubmitting, activeTab, setActiveTab, isUpdate }: OnboardingFormProps) {
+function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, activeTab, setActiveTab, isUpdate }: OnboardingFormProps) {
   const { t } = useTranslation();
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="business" className="gap-1" data-testid="tab-business">

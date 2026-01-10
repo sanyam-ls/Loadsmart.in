@@ -486,7 +486,7 @@ export default function CarrierOnboarding() {
       </Card>
 
       {carrierType === "solo" ? (
-        <Form {...soloForm}>
+        <Form {...soloForm} key="solo-form">
           <form>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-3">
@@ -694,7 +694,7 @@ export default function CarrierOnboarding() {
           </form>
         </Form>
       ) : (
-        <Form {...fleetForm}>
+        <Form {...fleetForm} key="fleet-form">
           <form>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-3">

@@ -240,6 +240,9 @@ export default function CarrierDashboard() {
       };
     });
 
+  // Show pending review banner if onboarding is pending or under_review
+  const pendingReview = onboardingStatus?.status === "pending" || onboardingStatus?.status === "under_review";
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Pending Review Banner */}

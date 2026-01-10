@@ -29,56 +29,24 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 
-// Document Requirements for Indian Freight Carriers (with pixel specifications)
-const DOCUMENT_REQUIREMENTS = [
-  { 
-    type: "rc", 
-    name: "RC (Registration Certificate)", 
-    minPixels: "1200 x 800 px", 
-    recPixels: "1600 x 1200 px", 
-    dpi: "200-300", 
-    formats: "JPG / PNG / PDF" 
-  },
-  { 
-    type: "insurance", 
-    name: "Vehicle Insurance", 
-    minPixels: "1200 x 800 px", 
-    recPixels: "1600 x 1200 px", 
-    dpi: "200-300", 
-    formats: "PDF / JPG" 
-  },
-  { 
-    type: "fitness", 
-    name: "Fitness Certificate", 
-    minPixels: "1200 x 800 px", 
-    recPixels: "1600 x 1200 px", 
-    dpi: "200-300", 
-    formats: "PDF / JPG" 
-  },
-  { 
-    type: "permit", 
-    name: "National / State Permit", 
-    minPixels: "1200 x 800 px", 
-    recPixels: "1600 x 1200 px", 
-    dpi: "200-300", 
-    formats: "PDF / JPG" 
-  },
-  { 
-    type: "puc", 
-    name: "PUC Certificate", 
-    minPixels: "1000 x 700 px", 
-    recPixels: "1200 x 800 px", 
-    dpi: "200+", 
-    formats: "PDF / JPG" 
-  },
-  { 
-    type: "road_tax", 
-    name: "Road Tax / Challan Clearance", 
-    minPixels: "1000 x 700 px", 
-    recPixels: "1200 x 800 px", 
-    dpi: "200+", 
-    formats: "PDF / JPG" 
-  },
+// Document Requirements for Solo Operators
+const SOLO_DOCUMENT_REQUIREMENTS = [
+  { type: "aadhaar_card", name: "Aadhaar Card", formats: "JPG / PNG / PDF" },
+  { type: "driver_license", name: "Driver License", formats: "JPG / PNG / PDF" },
+  { type: "permit_document", name: "Permit Document (National/Domestic)", formats: "JPG / PNG / PDF" },
+  { type: "rc", name: "RC (Registration Certificate)", formats: "JPG / PNG / PDF" },
+  { type: "insurance_certificate", name: "Insurance Certificate", formats: "JPG / PNG / PDF" },
+  { type: "fitness_certificate", name: "Fitness Certificate", formats: "PDF / JPG" },
+];
+
+// Document Requirements for Fleet/Company Carriers
+const ENTERPRISE_DOCUMENT_REQUIREMENTS = [
+  { type: "incorporation_certificate", name: "Incorporation Certificate", formats: "PDF / JPG" },
+  { type: "trade_license", name: "Trade License / Business Registration", formats: "PDF / JPG" },
+  { type: "address_proof", name: "Business Address Proof", formats: "PDF / JPG" },
+  { type: "pan_card", name: "PAN Card", formats: "JPG / PNG / PDF" },
+  { type: "gstin_certificate", name: "GSTIN Certificate", formats: "PDF / JPG" },
+  { type: "tan_certificate", name: "TAN Certificate", formats: "PDF / JPG" },
 ];
 
 // Complete document type labels for all supported types
@@ -94,6 +62,17 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   gst: "GST Certificate",
   aadhar: "Aadhaar Card",
   fleet_proof: "Fleet Ownership Proof",
+  aadhaar_card: "Aadhaar Card",
+  driver_license: "Driver License",
+  permit_document: "Permit Document",
+  insurance_certificate: "Insurance Certificate",
+  fitness_certificate: "Fitness Certificate",
+  incorporation_certificate: "Incorporation Certificate",
+  trade_license: "Trade License",
+  address_proof: "Business Address Proof",
+  pan_card: "PAN Card",
+  gstin_certificate: "GSTIN Certificate",
+  tan_certificate: "TAN Certificate",
 };
 
 // Helper to get document display name
@@ -106,12 +85,13 @@ interface CarrierVerification {
   carrierId: string;
   carrierType: "solo" | "enterprise";
   fleetSize: number;
-  status: "pending" | "approved" | "rejected";
+  status: "draft" | "pending" | "under_review" | "approved" | "rejected" | "on_hold";
   notes?: string;
   rejectionReason?: string;
   reviewedBy?: string;
   reviewedAt?: string;
   createdAt: string;
+  submittedAt?: string;
   carrier?: {
     id: string;
     username: string;
@@ -121,6 +101,18 @@ interface CarrierVerification {
     serviceZones?: string[];
   };
   documents?: VerificationDocument[];
+  aadhaarNumber?: string;
+  driverLicenseNumber?: string;
+  permitType?: "national" | "domestic";
+  uniqueRegistrationNumber?: string;
+  chassisNumber?: string;
+  licensePlateNumber?: string;
+  incorporationType?: "pvt_ltd" | "llp" | "proprietorship" | "partnership";
+  businessRegistrationNumber?: string;
+  businessAddress?: string;
+  panNumber?: string;
+  gstinNumber?: string;
+  tanNumber?: string;
 }
 
 interface VerificationDocument {
@@ -202,15 +194,20 @@ export default function CarrierVerificationPage() {
   });
 
   const pendingVerifications = useMemo(() => {
-    return verifications.filter(v => v.status === "pending");
+    return verifications.filter(v => v.status === "pending" || v.status === "under_review");
+  }, [verifications]);
+
+  const draftVerifications = useMemo(() => {
+    return verifications.filter(v => v.status === "draft");
   }, [verifications]);
 
   const rejectedVerifications = useMemo(() => {
-    return verifications.filter(v => v.status === "rejected");
+    return verifications.filter(v => v.status === "rejected" || v.status === "on_hold");
   }, [verifications]);
 
   const filteredVerifications = useMemo(() => {
-    const list = activeTab === "pending" ? pendingVerifications : rejectedVerifications;
+    const list = activeTab === "pending" ? pendingVerifications : 
+                 activeTab === "draft" ? draftVerifications : rejectedVerifications;
     if (!searchQuery) return list;
     
     const query = searchQuery.toLowerCase();
@@ -218,7 +215,7 @@ export default function CarrierVerificationPage() {
       v.carrier?.companyName?.toLowerCase().includes(query) ||
       v.carrier?.email?.toLowerCase().includes(query)
     );
-  }, [activeTab, pendingVerifications, rejectedVerifications, searchQuery]);
+  }, [activeTab, pendingVerifications, draftVerifications, rejectedVerifications, searchQuery]);
 
   const handleApprove = (verification: CarrierVerification) => {
     approveMutation.mutate(verification.id);
@@ -468,44 +465,66 @@ export default function CarrierVerificationPage() {
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <CardContent className="pt-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 px-3 font-medium">Document Type</th>
-                      <th className="text-left py-2 px-3 font-medium">
-                        <div className="flex items-center gap-1">
-                          <Ruler className="h-3 w-3" /> Min Pixels
-                        </div>
-                      </th>
-                      <th className="text-left py-2 px-3 font-medium">
-                        <div className="flex items-center gap-1">
-                          <Image className="h-3 w-3" /> Recommended
-                        </div>
-                      </th>
-                      <th className="text-left py-2 px-3 font-medium">DPI</th>
-                      <th className="text-left py-2 px-3 font-medium">
-                        <div className="flex items-center gap-1">
-                          <FileType className="h-3 w-3" /> Formats
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {DOCUMENT_REQUIREMENTS.map((doc) => (
-                      <tr key={doc.type} className="border-b last:border-0 hover-elevate">
-                        <td className="py-2 px-3 font-medium">{doc.name}</td>
-                        <td className="py-2 px-3 text-muted-foreground">{doc.minPixels}</td>
-                        <td className="py-2 px-3 text-muted-foreground">{doc.recPixels}</td>
-                        <td className="py-2 px-3 text-muted-foreground">{doc.dpi}</td>
-                        <td className="py-2 px-3">
-                          <Badge variant="secondary" className="text-xs">{doc.formats}</Badge>
-                        </td>
+            <CardContent className="pt-0 space-y-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium text-sm">Solo Operator Documents</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-3 font-medium">Document Type</th>
+                        <th className="text-left py-2 px-3 font-medium">
+                          <div className="flex items-center gap-1">
+                            <FileType className="h-3 w-3" /> Formats
+                          </div>
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {SOLO_DOCUMENT_REQUIREMENTS.map((doc) => (
+                        <tr key={doc.type} className="border-b last:border-0">
+                          <td className="py-2 px-3 font-medium">{doc.name}</td>
+                          <td className="py-2 px-3">
+                            <Badge variant="secondary" className="text-xs">{doc.formats}</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Building2 className="h-4 w-4 text-purple-600" />
+                  <span className="font-medium text-sm">Fleet/Company Documents</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-3 font-medium">Document Type</th>
+                        <th className="text-left py-2 px-3 font-medium">
+                          <div className="flex items-center gap-1">
+                            <FileType className="h-3 w-3" /> Formats
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ENTERPRISE_DOCUMENT_REQUIREMENTS.map((doc) => (
+                        <tr key={doc.type} className="border-b last:border-0">
+                          <td className="py-2 px-3 font-medium">{doc.name}</td>
+                          <td className="py-2 px-3">
+                            <Badge variant="secondary" className="text-xs">{doc.formats}</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </CardContent>
           </CollapsibleContent>
@@ -531,6 +550,10 @@ export default function CarrierVerificationPage() {
             <ShieldAlert className="h-4 w-4" />
             Pending ({pendingVerifications.length})
           </TabsTrigger>
+          <TabsTrigger value="draft" data-testid="tab-draft" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Draft ({draftVerifications.length})
+          </TabsTrigger>
           <TabsTrigger value="rejected" data-testid="tab-rejected" className="gap-2">
             <ShieldX className="h-4 w-4" />
             Rejected ({rejectedVerifications.length})
@@ -544,6 +567,20 @@ export default function CarrierVerificationPage() {
                 <ShieldCheck className="h-12 w-12 mx-auto text-green-500 mb-4" />
                 <h3 className="text-lg font-semibold">All Caught Up!</h3>
                 <p className="text-muted-foreground">No pending verification requests at this time.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredVerifications.map(verification => renderVerificationCard(verification))
+          )}
+        </TabsContent>
+
+        <TabsContent value="draft" className="mt-4 space-y-4">
+          {filteredVerifications.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold">No Draft Applications</h3>
+                <p className="text-muted-foreground">No carriers have started their onboarding yet.</p>
               </CardContent>
             </Card>
           ) : (
@@ -620,6 +657,94 @@ export default function CarrierVerificationPage() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Solo Operator Details */}
+                {selectedVerification.carrierType === "solo" && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        Solo Operator Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="text-muted-foreground">Aadhaar Number</Label>
+                        <p className="font-medium">{selectedVerification.aadhaarNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Driver License Number</Label>
+                        <p className="font-medium">{selectedVerification.driverLicenseNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Permit Type</Label>
+                        <p className="font-medium">
+                          {selectedVerification.permitType === "national" ? "National Permit" : 
+                           selectedVerification.permitType === "domestic" ? "Domestic Permit" : "Not provided"}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">License Plate Number</Label>
+                        <p className="font-medium">{selectedVerification.licensePlateNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Chassis Number</Label>
+                        <p className="font-medium">{selectedVerification.chassisNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Unique Registration Number</Label>
+                        <p className="font-medium">{selectedVerification.uniqueRegistrationNumber || "Not provided"}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Fleet/Company Details */}
+                {selectedVerification.carrierType === "enterprise" && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-purple-600" />
+                        Fleet/Company Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="text-muted-foreground">Incorporation Type</Label>
+                        <p className="font-medium">
+                          {selectedVerification.incorporationType === "pvt_ltd" ? "Private Limited" :
+                           selectedVerification.incorporationType === "llp" ? "LLP" :
+                           selectedVerification.incorporationType === "proprietorship" ? "Proprietorship" :
+                           selectedVerification.incorporationType === "partnership" ? "Partnership" : "Not provided"}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Business Registration Number</Label>
+                        <p className="font-medium">{selectedVerification.businessRegistrationNumber || "Not provided"}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground">Business Address</Label>
+                        <p className="font-medium">{selectedVerification.businessAddress || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">PAN Number</Label>
+                        <p className="font-medium">{selectedVerification.panNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">GSTIN Number</Label>
+                        <p className="font-medium">{selectedVerification.gstinNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">TAN Number</Label>
+                        <p className="font-medium">{selectedVerification.tanNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Fleet Size</Label>
+                        <p className="font-medium">{selectedVerification.fleetSize || 1} truck(s)</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 <Card>
                   <CardHeader className="pb-2">

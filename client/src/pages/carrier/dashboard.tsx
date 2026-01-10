@@ -279,11 +279,54 @@ export default function CarrierDashboard() {
         </Button>
       </div>
 
-      {/* Verification Status Card - Show if not verified or recently updated */}
-      {verification && (verification.status === "pending" || verification.status === "approved" || verification.status === "rejected") && (
+      {/* Welcome Box for Verified Carriers */}
+      {verification?.status === "approved" && (
+        <Card 
+          className="border-green-500/50 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30"
+          data-testid="card-welcome-verified"
+        >
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0">
+                <div className="h-20 w-20 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                  <ShieldCheck className="h-10 w-10 text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-2xl font-bold text-green-800 dark:text-green-200">
+                  Welcome Aboard, {user?.companyName || user?.username}!
+                </h2>
+                <p className="text-green-700 dark:text-green-300 mt-1">
+                  Your carrier account has been verified. You can now bid on loads and start earning.
+                </p>
+                <div className="flex flex-wrap gap-3 mt-4 justify-center md:justify-start">
+                  <Button 
+                    onClick={() => navigate("/carrier/my-documents")}
+                    variant="outline"
+                    className="border-green-600 text-green-700 hover:bg-green-100 dark:border-green-400 dark:text-green-300 dark:hover:bg-green-900/50"
+                    data-testid="button-view-documents"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View My Documents
+                  </Button>
+                  <Button 
+                    onClick={() => navigate("/carrier/loads")}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    data-testid="button-start-bidding"
+                  >
+                    Start Bidding on Loads
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Verification Status Card - Show for pending or rejected */}
+      {verification && (verification.status === "pending" || verification.status === "rejected") && (
         <Card 
           className={`cursor-pointer hover-elevate ${
-            verification.status === "approved" ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20" : 
             verification.status === "rejected" ? "border-destructive/50 bg-red-50/50 dark:bg-red-950/20" : 
             "border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20"
           }`}
@@ -296,11 +339,7 @@ export default function CarrierDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
-                {verification.status === "approved" ? (
-                  <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-full">
-                    <ShieldCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  </div>
-                ) : verification.status === "rejected" ? (
+                {verification.status === "rejected" ? (
                   <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-full">
                     <ShieldX className="h-6 w-6 text-destructive" />
                   </div>
@@ -314,14 +353,10 @@ export default function CarrierDashboard() {
                 )}
                 <div>
                   <h3 className="font-semibold">
-                    {verification.status === "approved" ? "Verification Complete" : 
-                     verification.status === "rejected" ? "Verification Rejected" : 
-                     "Verification Pending"}
+                    {verification.status === "rejected" ? "Verification Rejected" : "Verification Pending"}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {verification.status === "approved" 
-                      ? `Your account is verified. ${verification.documents?.length || 0} documents approved.`
-                      : verification.status === "rejected"
+                    {verification.status === "rejected"
                       ? verification.rejectionReason || "Please review the rejection details and resubmit."
                       : `${verification.documents?.length || 0} documents submitted and awaiting review.`}
                   </p>

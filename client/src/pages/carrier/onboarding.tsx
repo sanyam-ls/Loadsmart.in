@@ -432,44 +432,29 @@ export default function CarrierOnboarding() {
       </div>
 
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Truck className="h-5 w-5" />
-            {t("carrierOnboarding.selectType")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => canEdit && setCarrierType("solo")}
-              disabled={!canEdit}
-              className={`p-4 rounded-lg border-2 transition-all text-left ${
-                carrierType === "solo" 
-                  ? "border-primary bg-primary/5" 
-                  : "border-border hover:border-primary/50"
-              } ${!canEdit ? "opacity-50 cursor-not-allowed" : ""}`}
-              data-testid="button-select-solo"
-            >
-              <User className="h-8 w-8 mb-2 text-primary" />
-              <h3 className="font-semibold">{t("carrierOnboarding.soloOperator")}</h3>
-              <p className="text-sm text-muted-foreground">{t("carrierOnboarding.soloDesc")}</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => canEdit && setCarrierType("enterprise")}
-              disabled={!canEdit}
-              className={`p-4 rounded-lg border-2 transition-all text-left ${
-                carrierType === "enterprise" 
-                  ? "border-primary bg-primary/5" 
-                  : "border-border hover:border-primary/50"
-              } ${!canEdit ? "opacity-50 cursor-not-allowed" : ""}`}
-              data-testid="button-select-fleet"
-            >
-              <Building2 className="h-8 w-8 mb-2 text-primary" />
-              <h3 className="font-semibold">{t("carrierOnboarding.fleetCompany")}</h3>
-              <p className="text-sm text-muted-foreground">{t("carrierOnboarding.fleetDesc")}</p>
-            </button>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            {carrierType === "solo" ? (
+              <>
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{t("carrierOnboarding.soloOperator")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("carrierOnboarding.soloDesc")}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{t("carrierOnboarding.fleetCompany")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("carrierOnboarding.fleetDesc")}</p>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

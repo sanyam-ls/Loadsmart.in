@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { parseDocumentValue } from "@/components/DocumentUpload";
 import {
   UserCheck,
   Search,
@@ -69,6 +70,22 @@ const businessTypeLabels: Record<string, string> = {
   llp: "onboarding.llp",
 };
 
+function DocumentLink({ value }: { value: string }) {
+  const doc = parseDocumentValue(value);
+  if (!doc) return null;
+  
+  return (
+    <a
+      href={doc.path}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary hover:underline flex items-center gap-1"
+    >
+      <FileText className="h-4 w-4" />
+      {doc.name}
+    </a>
+  );
+}
 
 export default function AdminOnboardingPage() {
   const { t } = useTranslation();
@@ -431,15 +448,7 @@ export default function AdminOnboardingPage() {
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">{t("onboarding.gstCertificate")}</Label>
                     {selectedRequest?.request.gstCertificateUrl ? (
-                      <a
-                        href={selectedRequest.request.gstCertificateUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline flex items-center gap-1"
-                      >
-                        <FileText className="h-4 w-4" />
-                        {t("common.viewDocument")}
-                      </a>
+                      <DocumentLink value={selectedRequest.request.gstCertificateUrl} />
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}
@@ -447,15 +456,7 @@ export default function AdminOnboardingPage() {
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">{t("onboarding.panCard")}</Label>
                     {selectedRequest?.request.panCardUrl ? (
-                      <a
-                        href={selectedRequest.request.panCardUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline flex items-center gap-1"
-                      >
-                        <FileText className="h-4 w-4" />
-                        {t("common.viewDocument")}
-                      </a>
+                      <DocumentLink value={selectedRequest.request.panCardUrl} />
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}
@@ -463,15 +464,7 @@ export default function AdminOnboardingPage() {
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">{t("onboarding.incorporationCertificate")}</Label>
                     {selectedRequest?.request.incorporationCertificateUrl ? (
-                      <a
-                        href={selectedRequest.request.incorporationCertificateUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline flex items-center gap-1"
-                      >
-                        <FileText className="h-4 w-4" />
-                        {t("common.viewDocument")}
-                      </a>
+                      <DocumentLink value={selectedRequest.request.incorporationCertificateUrl} />
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}
@@ -479,15 +472,7 @@ export default function AdminOnboardingPage() {
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">{t("onboarding.addressProof")}</Label>
                     {selectedRequest?.request.businessAddressProofUrl ? (
-                      <a
-                        href={selectedRequest.request.businessAddressProofUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline flex items-center gap-1"
-                      >
-                        <FileText className="h-4 w-4" />
-                        {t("common.viewDocument")}
-                      </a>
+                      <DocumentLink value={selectedRequest.request.businessAddressProofUrl} />
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}

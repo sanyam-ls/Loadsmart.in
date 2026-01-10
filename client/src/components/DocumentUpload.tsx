@@ -5,6 +5,24 @@ import { Upload, FileCheck, Loader2, X, FileText } from "lucide-react";
 import { useUpload } from "@/hooks/use-upload";
 import { useTranslation } from "react-i18next";
 
+interface DocumentMetadata {
+  path: string;
+  name: string;
+}
+
+// Helper to parse document value - handles both JSON metadata and legacy plain URLs
+export function parseDocumentValue(value: string): DocumentMetadata | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed.path) return parsed as DocumentMetadata;
+  } catch {
+    // Legacy plain URL - show "View Document" for old uploads without stored filename
+    return { path: value, name: "View Document" };
+  }
+  return null;
+}
+
 interface DocumentUploadProps {
   value: string;
   onChange: (value: string) => void;
@@ -22,21 +40,27 @@ export function DocumentUpload({
 }: DocumentUploadProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [fileName, setFileName] = useState<string>("");
+  const [pendingFileName, setPendingFileName] = useState<string>("");
 
   const { uploadFile, isUploading, error } = useUpload({
     onSuccess: (response) => {
-      onChange(response.objectPath);
+      // Store JSON metadata with both path and original filename
+      const metadata: DocumentMetadata = {
+        path: response.objectPath,
+        name: pendingFileName,
+      };
+      onChange(JSON.stringify(metadata));
     },
     onError: (err) => {
       console.error("Upload error:", err);
+      setPendingFileName("");
     },
   });
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFileName(file.name);
+      setPendingFileName(file.name);
       await uploadFile(file);
     }
     if (fileInputRef.current) {
@@ -46,11 +70,12 @@ export function DocumentUpload({
 
   const handleClear = () => {
     onChange("");
-    setFileName("");
+    setPendingFileName("");
   };
 
   const hasUploadedFile = !!value;
-  const displayName = fileName || (value ? value.split("/").pop() : "");
+  const parsedDoc = parseDocumentValue(value);
+  const displayName = parsedDoc?.name || (value ? value.split("/").pop() : "");
 
   return (
     <div className="space-y-2">

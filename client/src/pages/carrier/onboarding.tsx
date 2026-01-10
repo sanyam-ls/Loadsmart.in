@@ -298,18 +298,19 @@ export default function CarrierOnboarding() {
     
     try {
       const parsed = JSON.parse(value);
-      if (parsed.path && parsed.name) {
+      if (parsed.path) {
         uploadDocMutation.mutate({
           documentType,
           fileUrl: parsed.path,
-          fileName: parsed.name,
+          fileName: parsed.name || "Uploaded Document",
         });
       }
     } catch {
+      // Legacy plain URL format
       uploadDocMutation.mutate({
         documentType,
         fileUrl: value,
-        fileName: "document",
+        fileName: "Uploaded Document",
       });
     }
   };

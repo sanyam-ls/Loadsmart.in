@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search, AlertCircle, Loader2, FileText } from "lucide-react";
+import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search, AlertCircle, Loader2, FileText, Phone } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -779,27 +779,71 @@ export default function PostLoadPage() {
   // Check if shipper has not completed onboarding or is not approved
   const isApproved = onboardingStatus?.status === "approved";
   const hasSubmittedOnboarding = !!onboardingStatus;
+  const isDraft = onboardingStatus?.status === "draft";
+  const isOnHold = onboardingStatus?.status === "on_hold";
+  const isRejected = onboardingStatus?.status === "rejected";
+  const isPending = onboardingStatus?.status === "pending" || onboardingStatus?.status === "under_review";
+  
+  // Check if draft is empty (new shipper who hasn't started) vs has data (continuing)
+  // The API returns snake_case fields from database, so check legal_company_name
+  const isEmptyDraft = isDraft && (
+    !onboardingStatus?.legal_company_name && 
+    !onboardingStatus?.pan_number && 
+    !onboardingStatus?.contact_person_name
+  );
 
   if (!isApproved && user?.role === "shipper") {
+    // Determine title and description based on status
+    let title = t("postLoad.onboardingRequired");
+    let description = t("postLoad.completeOnboardingDesc");
+    let iconBgColor = "bg-amber-100 dark:bg-amber-900/30";
+    let iconColor = "text-amber-600 dark:text-amber-400";
+    
+    if (isOnHold) {
+      title = t("postLoad.onHoldTitle");
+      description = t("postLoad.onHoldDesc");
+      iconBgColor = "bg-orange-100 dark:bg-orange-900/30";
+      iconColor = "text-orange-600 dark:text-orange-400";
+    } else if (isRejected) {
+      title = t("postLoad.rejectedTitle");
+      description = t("postLoad.rejectedDesc");
+      iconBgColor = "bg-red-100 dark:bg-red-900/30";
+      iconColor = "text-red-600 dark:text-red-400";
+    } else if (isPending) {
+      description = t("postLoad.onboardingPendingDesc", { status: onboardingStatus?.status?.replace(/_/g, " ") });
+    }
+
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <Card>
           <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
-              <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+            <div className={`mx-auto w-16 h-16 rounded-full ${iconBgColor} flex items-center justify-center mb-4`}>
+              <AlertCircle className={`h-8 w-8 ${iconColor}`} />
             </div>
             <CardTitle className="text-xl" data-testid="text-onboarding-required">
-              {t("postLoad.onboardingRequired")}
+              {title}
             </CardTitle>
             <CardDescription>
-              {hasSubmittedOnboarding 
-                ? t("postLoad.onboardingPendingDesc", { status: onboardingStatus?.status })
-                : t("postLoad.completeOnboardingDesc")
-              }
+              {description}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {hasSubmittedOnboarding ? (
+            {(isOnHold || isRejected) ? (
+              <div className="p-4 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{t("postLoad.contactUs")}</p>
+                    <p className="text-sm text-primary font-semibold">{t("postLoad.contactPhone")}</p>
+                  </div>
+                </div>
+                {onboardingStatus?.decisionNote && (
+                  <div className="mt-3 p-3 rounded bg-background border">
+                    <p className="text-sm text-muted-foreground">{onboardingStatus.decisionNote}</p>
+                  </div>
+                )}
+              </div>
+            ) : isPending ? (
               <div className="p-4 rounded-lg bg-muted/50">
                 <div className="flex items-center gap-3">
                   <Clock className="h-5 w-5 text-muted-foreground" />
@@ -831,19 +875,19 @@ export default function PostLoadPage() {
             )}
 
             <div className="flex flex-col gap-3">
-              {!hasSubmittedOnboarding && (
-                <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-complete-onboarding">
+              {isDraft && isEmptyDraft && (
+                <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-start-application">
                   <FileText className="h-4 w-4 mr-2" />
-                  {t("postLoad.completeOnboarding")}
+                  {t("postLoad.startApplication")}
                 </Button>
               )}
-              {onboardingStatus?.status === "draft" && (
+              {isDraft && !isEmptyDraft && (
                 <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-continue-onboarding">
                   <FileText className="h-4 w-4 mr-2" />
                   {t("postLoad.continueOnboarding")}
                 </Button>
               )}
-              {(onboardingStatus?.status === "on_hold" || onboardingStatus?.status === "rejected") && (
+              {(isOnHold || isRejected) && (
                 <Button onClick={() => navigate("/shipper/onboarding")} className="w-full" data-testid="button-update-onboarding">
                   <FileText className="h-4 w-4 mr-2" />
                   {t("postLoad.updateOnboarding")}

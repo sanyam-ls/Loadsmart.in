@@ -859,11 +859,18 @@
     "completeOnboarding": "Complete Verification",
     "updateOnboarding": "Update Application",
     "continueOnboarding": "Continue Verification",
+    "startApplication": "Start Your Application",
     "autoSaving": "Auto-saving...",
     "autoSaved": "Changes saved",
     "approvalCongrats": "Congratulations! You're Approved!",
     "approvalMessage": "Your business verification has been approved. You can now post loads and connect with carriers on FreightFlow.",
-    "continueToApplication": "Continue to Application"
+    "continueToApplication": "Continue to Application",
+    "onHoldTitle": "Application On Hold",
+    "onHoldDesc": "We require more information from your end. Please contact us at the number below to proceed with your verification.",
+    "rejectedTitle": "Application Not Approved",
+    "rejectedDesc": "Your application is on hold. Please contact the administrator at the number below to get more information.",
+    "contactPhone": "+91-1800-123-4567",
+    "contactUs": "Contact Us"
   },
   "solo": {
     "title": "Solo Driver Portal",

@@ -6721,12 +6721,42 @@ export async function registerRoutes(
       // Also mark the user as verified
       await storage.updateUser(verification.carrierId, { isVerified: true });
 
+      // Get verification documents and update their status to approved
+      const verificationDocs = await storage.getVerificationDocuments(req.params.id);
+      
+      // Get existing carrier documents to avoid duplicates
+      const existingDocs = await storage.getDocumentsByUser(verification.carrierId);
+      const existingFileUrls = new Set(existingDocs.map(d => d.fileUrl));
+      
+      // Update each verification document to approved and copy to carrier's general documents
+      for (const doc of verificationDocs) {
+        // Update verification document status to approved
+        await storage.updateVerificationDocument(doc.id, {
+          status: "approved",
+          reviewedBy: user.id,
+          reviewedAt: new Date(),
+        });
+        
+        // Only copy to carrier's general documents if not already exists (idempotency)
+        if (!existingFileUrls.has(doc.fileUrl)) {
+          await storage.createDocument({
+            userId: verification.carrierId,
+            documentType: doc.documentType,
+            fileName: doc.fileName,
+            fileUrl: doc.fileUrl,
+            fileSize: doc.fileSize || undefined,
+            expiryDate: doc.expiryDate || undefined,
+            isVerified: true,
+          });
+        }
+      }
+
       // Create audit log
       await storage.createAuditLog({
         adminId: user.id,
         userId: verification.carrierId,
         actionType: "approve_verification",
-        actionDescription: `Approved carrier verification for ${verification.carrierId}`,
+        actionDescription: `Approved carrier verification for ${verification.carrierId} with ${verificationDocs.length} documents`,
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
       });

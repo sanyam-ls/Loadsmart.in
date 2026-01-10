@@ -645,11 +645,11 @@ export default function CarrierDashboard() {
               ) : (
                 <ShieldAlert className="h-5 w-5 text-yellow-600" />
               )}
-              Verification Status
+              {verification?.status === "approved" ? "Welcome Aboard! You are Verified!" : "Verification Status"}
             </DialogTitle>
             <DialogDescription>
               {verification?.status === "approved" 
-                ? "Your carrier account has been verified and you can now bid on loads."
+                ? "Congratulations! Your carrier account has been verified. You can now bid on loads and start earning."
                 : verification?.status === "rejected"
                 ? "Your verification was rejected. Please review the details below and resubmit."
                 : "Your verification is pending review by our team."}

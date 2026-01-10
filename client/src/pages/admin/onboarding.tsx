@@ -61,6 +61,14 @@ interface OnboardingWithUser {
   user: User;
 }
 
+const businessTypeLabels: Record<string, string> = {
+  proprietorship: "onboarding.proprietorship",
+  partnership: "onboarding.partnership",
+  pvt_ltd: "onboarding.pvtLtd",
+  public_ltd: "onboarding.publicLtd",
+  llp: "onboarding.llp",
+};
+
 export default function AdminOnboardingPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -286,7 +294,7 @@ export default function AdminOnboardingPage() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(item.request.status || "draft")}</TableCell>
-                    <TableCell>{item.request.businessType}</TableCell>
+                    <TableCell>{item.request.businessType ? t(businessTypeLabels[item.request.businessType] || item.request.businessType) : "-"}</TableCell>
                     <TableCell>
                       {item.request.submittedAt
                         ? formatDistanceToNow(new Date(item.request.submittedAt), { addSuffix: true })
@@ -341,7 +349,7 @@ export default function AdminOnboardingPage() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.businessType")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.businessType}</p>
+                    <p className="font-medium">{selectedRequest?.request.businessType ? t(businessTypeLabels[selectedRequest.request.businessType] || selectedRequest.request.businessType) : "-"}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.incorporationDate")}</Label>

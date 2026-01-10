@@ -15,12 +15,30 @@ export function parseDocumentValue(value: string): DocumentMetadata | null {
   if (!value) return null;
   try {
     const parsed = JSON.parse(value);
-    if (parsed.path) return parsed as DocumentMetadata;
+    if (parsed.path) {
+      // If name is empty, extract filename from path
+      const name = parsed.name || extractFilename(parsed.path);
+      return { path: parsed.path, name };
+    }
   } catch {
-    // Legacy plain URL - show "View Document" for old uploads without stored filename
-    return { path: value, name: "View Document" };
+    // Legacy plain URL - extract filename from path
+    return { path: value, name: extractFilename(value) };
   }
   return null;
+}
+
+// Extract a clean filename from a path or URL
+function extractFilename(path: string): string {
+  if (!path) return "Document";
+  // Remove query params and get the last segment
+  const cleanPath = path.split("?")[0];
+  const segments = cleanPath.split("/");
+  const filename = segments[segments.length - 1];
+  // If it's a UUID-like string, return a generic name
+  if (/^[a-f0-9-]{36}/.test(filename)) {
+    return "Uploaded Document";
+  }
+  return filename || "Document";
 }
 
 interface DocumentUploadProps {
@@ -75,7 +93,7 @@ export function DocumentUpload({
 
   const hasUploadedFile = !!value;
   const parsedDoc = parseDocumentValue(value);
-  const displayName = parsedDoc?.name || (value ? value.split("/").pop() : "");
+  const displayName = parsedDoc?.name || "Uploaded Document";
 
   return (
     <div className="space-y-2">

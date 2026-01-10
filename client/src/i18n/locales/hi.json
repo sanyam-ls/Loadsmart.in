@@ -857,7 +857,10 @@
     "updateOnboarding": "आवेदन अपडेट करें",
     "continueOnboarding": "सत्यापन जारी रखें",
     "autoSaving": "ऑटो-सेविंग...",
-    "autoSaved": "परिवर्तन सहेजे गए"
+    "autoSaved": "परिवर्तन सहेजे गए",
+    "approvalCongrats": "बधाई हो! आप स्वीकृत हैं!",
+    "approvalMessage": "आपका व्यापार सत्यापन स्वीकृत हो गया है। अब आप FreightFlow पर लोड पोस्ट कर सकते हैं और वाहकों से जुड़ सकते हैं।",
+    "continueToApplication": "एप्लिकेशन पर जारी रखें"
   },
   "solo": {
     "title": "सोलो ड्राइवर पोर्टल",

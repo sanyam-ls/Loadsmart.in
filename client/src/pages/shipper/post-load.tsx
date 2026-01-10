@@ -36,6 +36,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Popover,
@@ -575,12 +583,25 @@ export default function PostLoadPage() {
     suggestedTruck: string;
     nearbyTrucks: number;
   } | null>(null);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
 
   // Check shipper onboarding status - only verified shippers can post loads
   const { data: onboardingStatus, isLoading: isLoadingOnboarding } = useQuery<any>({
     queryKey: ["/api/shipper/onboarding"],
     enabled: user?.role === "shipper",
   });
+
+  // Show approval celebration dialog when shipper has been approved
+  useEffect(() => {
+    if (onboardingStatus?.status === "approved" && user?.id) {
+      const seenKey = `approval_seen_${user.id}`;
+      const hasSeen = localStorage.getItem(seenKey);
+      if (!hasSeen) {
+        setShowApprovalDialog(true);
+        localStorage.setItem(seenKey, "true");
+      }
+    }
+  }, [onboardingStatus?.status, user?.id]);
 
   const form = useForm<LoadFormData>({
     resolver: zodResolver(loadFormSchema),
@@ -911,6 +932,31 @@ export default function PostLoadPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="text-center">
+            <div className="mx-auto w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+            </div>
+            <DialogTitle className="text-xl text-center" data-testid="text-approval-title">
+              {t("postLoad.approvalCongrats")}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {t("postLoad.approvalMessage")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button 
+              onClick={() => setShowApprovalDialog(false)} 
+              className="w-full"
+              data-testid="button-continue-application"
+            >
+              {t("postLoad.continueToApplication")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold" data-testid="text-page-title">Submit New Load</h1>
         <p className="text-muted-foreground">Fill in the details below. We will evaluate and price your load - you'll be notified when it's posted.</p>

@@ -860,7 +860,10 @@
     "updateOnboarding": "Update Application",
     "continueOnboarding": "Continue Verification",
     "autoSaving": "Auto-saving...",
-    "autoSaved": "Changes saved"
+    "autoSaved": "Changes saved",
+    "approvalCongrats": "Congratulations! You're Approved!",
+    "approvalMessage": "Your business verification has been approved. You can now post loads and connect with carriers on FreightFlow.",
+    "continueToApplication": "Continue to Application"
   },
   "solo": {
     "title": "Solo Driver Portal",

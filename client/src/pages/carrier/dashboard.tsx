@@ -180,19 +180,8 @@ export default function CarrierDashboard() {
     );
   }
 
-  // Onboarding gate: redirect unverified carriers to onboarding page
-  const isVerified = user?.isVerified === true;
-  const onboardingApproved = onboardingStatus?.status === "approved";
-  const onboardingComplete = isVerified || onboardingApproved;
-  
-  // Block ALL non-approved carriers - redirect to onboarding
-  const needsOnboarding = !onboardingComplete;
-  const pendingReview = onboardingStatus?.status === "pending" || onboardingStatus?.status === "under_review";
-
-  // Redirect carriers who need to complete onboarding (even pending review)
-  if (needsOnboarding) {
-    return <Redirect to="/carrier/onboarding" />;
-  }
+  // Note: Onboarding gate is now applied at the router level in App.tsx
+  // This component will only render for approved/verified carriers
 
   // Use stats from the API endpoint
   const activeTruckCount = dashboardStats?.activeTruckCount || 0;

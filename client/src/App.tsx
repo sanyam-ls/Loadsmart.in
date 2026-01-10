@@ -136,7 +136,7 @@ function AppContent() {
               <Route path="/shipper/invoices" component={ShipperInvoicesPage} />
               <Route path="/shipper/onboarding" component={ShipperOnboardingPage} />
                             
-              <Route path="/carrier" component={CarrierDashboard} />
+              <Route path="/carrier" component={() => <CarrierOnboardingGate><CarrierDashboard /></CarrierOnboardingGate>} />
               <Route path="/carrier/add-truck" component={() => <CarrierOnboardingGate><AddTruckPage /></CarrierOnboardingGate>} />
               <Route path="/carrier/fleet" component={() => <CarrierOnboardingGate><FleetPage /></CarrierOnboardingGate>} />
               <Route path="/carrier/loads" component={() => <CarrierOnboardingGate><CarrierLoadsPage /></CarrierOnboardingGate>} />

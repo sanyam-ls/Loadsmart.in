@@ -61,6 +61,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   pan: "PAN Card",
   gst: "GST Certificate",
   aadhar: "Aadhaar Card",
+  aadhaar: "Aadhaar Card",
   fleet_proof: "Fleet Ownership Proof",
   aadhaar_card: "Aadhaar Card",
   driver_license: "Driver License",

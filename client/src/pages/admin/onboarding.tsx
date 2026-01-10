@@ -69,6 +69,21 @@ const businessTypeLabels: Record<string, string> = {
   llp: "onboarding.llp",
 };
 
+// Helper function to extract file name from URL
+function getFileNameFromUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    const fileName = pathname.split('/').pop() || 'Document';
+    // Decode URL encoding and clean up the file name
+    return decodeURIComponent(fileName);
+  } catch {
+    // If URL parsing fails, try to extract from the end of the string
+    const parts = url.split('/');
+    return decodeURIComponent(parts[parts.length - 1] || 'Document');
+  }
+}
+
 export default function AdminOnboardingPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -437,7 +452,7 @@ export default function AdminOnboardingPage() {
                         className="text-primary hover:underline flex items-center gap-1"
                       >
                         <FileText className="h-4 w-4" />
-                        {t("common.viewDocument")}
+                        {getFileNameFromUrl(selectedRequest.request.gstCertificateUrl)}
                       </a>
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
@@ -453,7 +468,7 @@ export default function AdminOnboardingPage() {
                         className="text-primary hover:underline flex items-center gap-1"
                       >
                         <FileText className="h-4 w-4" />
-                        {t("common.viewDocument")}
+                        {getFileNameFromUrl(selectedRequest.request.panCardUrl)}
                       </a>
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
@@ -469,7 +484,7 @@ export default function AdminOnboardingPage() {
                         className="text-primary hover:underline flex items-center gap-1"
                       >
                         <FileText className="h-4 w-4" />
-                        {t("common.viewDocument")}
+                        {getFileNameFromUrl(selectedRequest.request.incorporationCertificateUrl)}
                       </a>
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
@@ -485,7 +500,7 @@ export default function AdminOnboardingPage() {
                         className="text-primary hover:underline flex items-center gap-1"
                       >
                         <FileText className="h-4 w-4" />
-                        {t("common.viewDocument")}
+                        {getFileNameFromUrl(selectedRequest.request.businessAddressProofUrl)}
                       </a>
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
@@ -535,7 +550,7 @@ export default function AdminOnboardingPage() {
                       className="text-primary hover:underline flex items-center gap-1"
                     >
                       <FileText className="h-4 w-4" />
-                      {t("common.viewDocument")}
+                      {getFileNameFromUrl(selectedRequest.request.cancelledChequeUrl)}
                     </a>
                   ) : (
                     <p className="text-muted-foreground">{t("common.notProvided")}</p>

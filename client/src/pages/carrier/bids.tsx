@@ -734,7 +734,7 @@ export default function CarrierBidsPage() {
                           {statusInfo.label}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {bid.loadId}
+                          {(bid as any).displayLoadId || `LD-${bid.loadId.slice(0, 6).toUpperCase()}`}
                         </span>
                         <Badge variant="outline">{bid.loadType}</Badge>
                         {bid.bidStatus === "countered" && bid.timeLeftToRespond > 0 && (

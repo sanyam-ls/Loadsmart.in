@@ -458,6 +458,11 @@ export default function LoadQueuePage() {
     adminPrice: load.adminPrice,
     finalPrice: load.finalPrice,
     adminFinalPrice: load.adminFinalPrice,
+    // Shipper's pricing preferences
+    shipperPricePerTon: load.shipperPricePerTon,
+    shipperFixedPrice: load.shipperFixedPrice,
+    rateType: load.rateType,
+    advancePaymentPercent: load.advancePaymentPercent,
   });
 
   const openRealLoadPricingDrawer = (load: RealLoad) => {

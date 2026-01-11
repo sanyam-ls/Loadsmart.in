@@ -45,6 +45,11 @@ import {
   checkTelemetryAlerts,
   getActiveVehicleIds,
 } from "./telemetry-simulator";
+import {
+  calculateFromMargin,
+  calculateFromPayout,
+  validatePricing,
+} from "@shared/pricing";
 
 const hashPassword = async (password: string): Promise<string> => {
   const encoder = new TextEncoder();
@@ -3481,6 +3486,51 @@ export async function registerRoutes(
       });
     } catch (error) {
       console.error("Pricing suggest error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/pricing/calculate - Calculate pricing with two-way binding
+  // Given grossPrice and either platformMarginPercent OR carrierPayout, calculates the other
+  app.post("/api/admin/pricing/calculate", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { grossPrice, platformMarginPercent, carrierPayout, calculateFrom } = req.body;
+
+      // Validate grossPrice is required
+      if (typeof grossPrice !== 'number' || grossPrice <= 0) {
+        return res.status(400).json({ error: "grossPrice is required and must be positive" });
+      }
+
+      let result;
+      if (calculateFrom === 'margin' || (platformMarginPercent !== undefined && carrierPayout === undefined)) {
+        // Calculate carrier payout from margin percent
+        if (typeof platformMarginPercent !== 'number') {
+          return res.status(400).json({ error: "platformMarginPercent is required when calculating from margin" });
+        }
+        result = calculateFromMargin({ grossPrice, platformMarginPercent });
+      } else if (calculateFrom === 'payout' || carrierPayout !== undefined) {
+        // Calculate margin percent from carrier payout
+        if (typeof carrierPayout !== 'number') {
+          return res.status(400).json({ error: "carrierPayout is required when calculating from payout" });
+        }
+        result = calculateFromPayout({ grossPrice, carrierPayout });
+      } else {
+        return res.status(400).json({ 
+          error: "Must provide either platformMarginPercent or carrierPayout, with calculateFrom hint" 
+        });
+      }
+
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      console.error("Pricing calculate error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { calculateFromMargin, calculateFromPayout } from "@shared/pricing";
 import {
   Sheet,
   SheetContent,
@@ -190,21 +191,47 @@ export function PricingDrawer({
     enabled: open && !isCarrierFinalized,
   });
 
-  // Calculate derived values - margin is calculated from gross price
-  const platformMargin = useMemo(() => {
-    return Math.round(grossPrice * (platformMarginPercent / 100));
-  }, [grossPrice, platformMarginPercent]);
+  // Use shared calculator for accurate pricing (two-way binding)
+  const pricingResult = useMemo(() => {
+    if (carrierPayoutOverride !== null) {
+      // Admin manually set carrier payout - derive margin from it
+      return calculateFromPayout({ grossPrice, carrierPayout: carrierPayoutOverride });
+    } else {
+      // Calculate carrier payout from margin percentage
+      return calculateFromMargin({ grossPrice, platformMarginPercent });
+    }
+  }, [grossPrice, platformMarginPercent, carrierPayoutOverride]);
 
-  // Calculated carrier payout = gross price - platform margin
-  const calculatedCarrierPayout = useMemo(() => {
-    return grossPrice - platformMargin;
-  }, [grossPrice, platformMargin]);
-
-  // Final price (carrier payout) - use override if set, otherwise calculated
-  const finalPrice = carrierPayoutOverride !== null ? carrierPayoutOverride : calculatedCarrierPayout;
-
-  // carrierPayout is the same as finalPrice (what carrier receives)
+  // Derived values from calculator
+  const platformMargin = pricingResult.platformMargin;
+  const calculatedCarrierPayout = pricingResult.carrierPayout;
+  const finalPrice = pricingResult.carrierPayout;
   const carrierPayout = finalPrice;
+  
+  // Sync margin percent when payout override is set (two-way binding)
+  useEffect(() => {
+    if (carrierPayoutOverride !== null && pricingResult.isValid) {
+      // Update margin percent to match the calculated value from payout
+      setPlatformMarginPercent(pricingResult.platformMarginPercent);
+    }
+  }, [carrierPayoutOverride, pricingResult]);
+  
+  // Handler for margin percent change (calculates carrier payout)
+  const handleMarginChange = useCallback((newMargin: number) => {
+    setPlatformMarginPercent(newMargin);
+    setCarrierPayoutOverride(null); // Clear override so it calculates from margin
+  }, []);
+  
+  // Handler for carrier payout change (calculates margin percent)
+  const handleCarrierPayoutChange = useCallback((newPayout: number) => {
+    if (grossPrice <= 0) return;
+    // Calculate what margin this payout implies
+    const result = calculateFromPayout({ grossPrice, carrierPayout: newPayout });
+    if (result.isValid) {
+      setPlatformMarginPercent(result.platformMarginPercent);
+      setCarrierPayoutOverride(null); // Clear override since we've synced the margin
+    }
+  }, [grossPrice]);
 
   const priceDeviation = useMemo(() => {
     if (suggestedPrice === 0) return 0;
@@ -891,8 +918,7 @@ export function PricingDrawer({
                               value={platformMarginPercent}
                               onChange={(e) => {
                                 const val = parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || 0;
-                                setPlatformMarginPercent(Math.min(50, Math.max(0, val)));
-                                setCarrierPayoutOverride(null);
+                                handleMarginChange(Math.min(50, Math.max(0, val)));
                               }}
                               className="w-16 text-right"
                               data-testid="input-platform-margin"
@@ -912,26 +938,19 @@ export function PricingDrawer({
                             <Input
                               type="text"
                               inputMode="numeric"
-                              value={carrierPayoutOverride !== null ? carrierPayoutOverride : calculatedCarrierPayout}
+                              value={finalPrice}
                               onChange={(e) => {
                                 const val = parseInt(e.target.value.replace(/\D/g, '')) || 0;
-                                setCarrierPayoutOverride(val);
+                                handleCarrierPayoutChange(val);
                               }}
                               className="w-28 text-right font-bold text-lg text-green-600 dark:text-green-400"
                               data-testid="input-carrier-payout"
                             />
                           </div>
                         </div>
-                        {carrierPayoutOverride !== null && carrierPayoutOverride !== calculatedCarrierPayout && (
-                          <p className="text-xs text-muted-foreground">
-                            Calculated: {formatRupees(calculatedCarrierPayout)} • 
-                            <button 
-                              type="button"
-                              onClick={() => setCarrierPayoutOverride(null)}
-                              className="ml-1 text-primary hover:underline"
-                            >
-                              Reset
-                            </button>
+                        {!pricingResult.isValid && pricingResult.error && (
+                          <p className="text-xs text-destructive">
+                            {pricingResult.error}
                           </p>
                         )}
                       </CardContent>

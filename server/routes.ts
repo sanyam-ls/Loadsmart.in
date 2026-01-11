@@ -1124,25 +1124,26 @@ export async function registerRoutes(
       });
 
       await storage.updateLoad(bid.loadId, {
-        status: "awarded",
+        status: "invoice_created",
         assignedCarrierId: user.id,
         awardedBidId: bidId,
         statusChangedAt: new Date(),
       });
 
-      // Create shipment so load appears in tracking
+      // Auto-create invoice when bid is accepted
       try {
-        const existingShipment = await storage.getShipmentByLoad(bid.loadId);
-        if (!existingShipment) {
-          await storage.createShipment({
+        const existingInvoice = await storage.getInvoiceByLoad(bid.loadId);
+        if (!existingInvoice) {
+          await storage.createInvoice({
             loadId: bid.loadId,
+            shipperId: load.shipperId,
             carrierId: user.id,
-            truckId: bid.truckId || null,
-            status: 'pickup_scheduled',
+            amount: String(finalAmount),
+            status: "pending",
           });
         }
-      } catch (shipmentError) {
-        console.error("Failed to create shipment after carrier acceptance:", shipmentError);
+      } catch (invoiceError) {
+        console.error("Failed to create invoice after carrier acceptance:", invoiceError);
       }
 
       // Notify admin

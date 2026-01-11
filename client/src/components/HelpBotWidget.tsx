@@ -178,17 +178,18 @@ export function HelpBotWidget() {
     setIsOpen(false);
   };
 
-  const widgetContent = !isOpen ? (
-    <Button
-      onClick={() => setIsOpen(true)}
-      className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-[9999]"
-      size="icon"
-      data-testid="button-helpbot-open"
-    >
-      <MessageCircle className="h-6 w-6" />
-    </Button>
-  ) : (
-    <div className="fixed bottom-6 right-6 w-96 h-[500px] bg-background border rounded-lg shadow-2xl flex flex-col z-[9999]">
+  const widgetContent = (
+    <div id="helpbot-portal-root">
+      {!isOpen ? (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-[9999] bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+          data-testid="button-helpbot-open"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </button>
+      ) : (
+        <div className="fixed bottom-6 right-6 w-96 h-[500px] bg-background border rounded-lg shadow-2xl flex flex-col z-[9999]">
       <div className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5" />
@@ -356,6 +357,8 @@ export function HelpBotWidget() {
           </Button>
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 

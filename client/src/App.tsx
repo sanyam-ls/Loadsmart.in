@@ -11,7 +11,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationPanel } from "@/components/notification-panel";
 import { GlobalSearch } from "@/components/global-search";
-import { AIConcierge } from "@/components/ai-concierge";
 import { HelpBotWidget } from "@/components/HelpBotWidget";
 import NotFound from "@/pages/not-found";
 
@@ -193,7 +192,6 @@ function AppContent() {
           </main>
         </div>
       </div>
-      <AIConcierge />
       <CarrierOtpNotification />
       <HelpBotWidget />
     </SidebarProvider>

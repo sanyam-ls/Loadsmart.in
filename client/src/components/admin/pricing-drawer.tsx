@@ -206,12 +206,14 @@ export function PricingDrawer({
   // Track which field the user is actively editing
   const [editingField, setEditingField] = useState<'margin' | 'payout' | null>(null);
   
-  // Sync payout display when margin changes (only if user is editing margin, not payout)
+  // Sync payout display when margin changes OR on initial load (not when editing payout)
   useEffect(() => {
-    if (editingField === 'margin' || editingField === null) {
+    if (editingField !== 'payout') {
       setPayoutInputStr(calculatedPayout.toString());
     }
-  }, [calculatedPayout, editingField]);
+  }, [calculatedPayout]);
+  
+  // When editing payout, DON'T let margin changes affect the input (prevents overwrite while typing)
   
   // Handle margin input - instant update, syncs payout
   const handleMarginChange = (inputStr: string) => {

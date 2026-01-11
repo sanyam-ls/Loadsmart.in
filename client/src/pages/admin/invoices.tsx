@@ -930,23 +930,17 @@ export default function AdminInvoicesPage() {
                         )}
                       </div>
                     </div>
-                    {/* Cargo Info */}
-                    {(selectedInvoice.cargoDescription || selectedInvoice.weight) && (
-                      <div className="mt-4 pt-3 border-t flex items-center gap-6 text-sm">
-                        {selectedInvoice.cargoDescription && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">Cargo:</span>
-                            <span className="font-medium">{selectedInvoice.cargoDescription}</span>
-                          </div>
-                        )}
-                        {selectedInvoice.weight && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">Weight:</span>
-                            <span className="font-medium">{selectedInvoice.weight}</span>
-                          </div>
-                        )}
+                    {/* Commodity & Weight Info */}
+                    <div className="mt-4 pt-3 border-t flex items-center gap-6 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Commodity:</span>
+                        <span className="font-medium">{selectedInvoice.cargoDescription || selectedInvoice.load?.cargoDescription || "N/A"}</span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Weight:</span>
+                        <span className="font-medium">{selectedInvoice.weight || selectedInvoice.load?.weight || "N/A"}</span>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
 

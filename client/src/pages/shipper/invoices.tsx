@@ -93,7 +93,11 @@ interface Invoice {
   adminReferenceNumber?: number | null;
   loadRoute?: string;
   pickupCity?: string;
+  pickupAddress?: string;
   dropoffCity?: string;
+  dropoffAddress?: string;
+  cargoDescription?: string;
+  weight?: string;
   loadStatus?: string;
   shipperId: string;
   subtotal: string;
@@ -786,6 +790,18 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                           </p>
                         </div>
                       )}
+                      
+                      {/* Commodity & Weight */}
+                      <div className="pt-2 border-t flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Commodity:</span>
+                          <span className="font-medium">{selectedInvoice.cargoDescription || "N/A"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Weight:</span>
+                          <span className="font-medium">{selectedInvoice.weight || "N/A"}</span>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 )}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { MessageCircle, X, Send, Phone, Mail, Loader2, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,21 +178,17 @@ export function HelpBotWidget() {
     setIsOpen(false);
   };
 
-  if (!isOpen) {
-    return (
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
-        size="icon"
-        data-testid="button-helpbot-open"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </Button>
-    );
-  }
-
-  return (
-    <div className="fixed bottom-6 right-6 w-96 h-[500px] bg-background border rounded-lg shadow-2xl flex flex-col z-50">
+  const widgetContent = !isOpen ? (
+    <Button
+      onClick={() => setIsOpen(true)}
+      className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-[9999]"
+      size="icon"
+      data-testid="button-helpbot-open"
+    >
+      <MessageCircle className="h-6 w-6" />
+    </Button>
+  ) : (
+    <div className="fixed bottom-6 right-6 w-96 h-[500px] bg-background border rounded-lg shadow-2xl flex flex-col z-[9999]">
       <div className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5" />
@@ -361,4 +358,6 @@ export function HelpBotWidget() {
       </div>
     </div>
   );
+
+  return createPortal(widgetContent, document.body);
 }

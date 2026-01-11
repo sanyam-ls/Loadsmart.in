@@ -4244,6 +4244,30 @@ export async function registerRoutes(
           type: "success",
           relatedLoadId: load.id,
         });
+
+        // Create shipment now that shipper has acknowledged the invoice
+        try {
+          const existingShipment = await storage.getShipmentByLoad(load.id);
+          if (!existingShipment) {
+            // Get truck from awarded bid if available
+            let truckId = load.assignedTruckId;
+            if (!truckId && load.awardedBidId) {
+              const awardedBid = await storage.getBid(load.awardedBidId);
+              if (awardedBid?.truckId) {
+                truckId = awardedBid.truckId;
+              }
+            }
+
+            await storage.createShipment({
+              loadId: load.id,
+              carrierId: load.assignedCarrierId,
+              truckId: truckId || null,
+              status: 'pickup_scheduled',
+            });
+          }
+        } catch (shipmentError) {
+          console.error("Failed to create shipment after invoice acknowledgment:", shipmentError);
+        }
       }
 
       // Notify admins

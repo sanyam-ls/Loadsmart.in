@@ -194,14 +194,17 @@ export function PricingDrawer({
   // Platform margin amount = grossPrice * (marginPercent / 100)
   const platformMargin = Math.round(grossPrice * (platformMarginPercent / 100));
   
-  // Carrier payout = grossPrice - platform margin
-  const finalPrice = grossPrice - platformMargin;
+  // Carrier payout = grossPrice - platform margin  
+  const calculatedPayout = grossPrice - platformMargin;
+  const finalPrice = calculatedPayout;
   const carrierPayout = finalPrice;
   
-  // Local string for margin input (allows typing "10." for decimals)
+  // Local string states for inputs (allows typing without being overwritten)
   const [marginInputStr, setMarginInputStr] = useState<string>(platformMarginPercent.toString());
+  const [payoutInputStr, setPayoutInputStr] = useState<string>(calculatedPayout.toString());
+  const [isEditingPayout, setIsEditingPayout] = useState(false);
   
-  // Sync margin input string when margin changes from carrier payout adjustment
+  // Sync margin input when margin changes (from payout adjustment)
   useEffect(() => {
     const currentVal = parseFloat(marginInputStr) || 0;
     if (Math.abs(currentVal - platformMarginPercent) > 0.01) {
@@ -209,9 +212,16 @@ export function PricingDrawer({
     }
   }, [platformMarginPercent]);
   
+  // Sync payout input when payout changes (from margin adjustment) - but not while editing
+  useEffect(() => {
+    if (!isEditingPayout) {
+      setPayoutInputStr(calculatedPayout.toString());
+    }
+  }, [calculatedPayout, isEditingPayout]);
+  
   // Handle margin input - instant update, supports decimals
   const handleMarginChange = (inputStr: string) => {
-    setMarginInputStr(inputStr); // Allow typing decimals like "10."
+    setMarginInputStr(inputStr);
     const val = parseFloat(inputStr) || 0;
     const clamped = Math.min(50, Math.max(0, val));
     if (!isNaN(parseFloat(inputStr)) || inputStr === '' || inputStr.endsWith('.')) {
@@ -219,13 +229,19 @@ export function PricingDrawer({
     }
   };
   
-  // Handle carrier payout input - instant reverse calculation to update margin
+  // Handle carrier payout input - track editing state and update margin on blur
   const handlePayoutChange = (payoutStr: string) => {
-    const payout = parseInt(payoutStr.replace(/\D/g, '')) || 0;
+    setIsEditingPayout(true);
+    setPayoutInputStr(payoutStr);
+  };
+  
+  // On blur, calculate and set the margin from the entered payout
+  const handlePayoutBlur = () => {
+    setIsEditingPayout(false);
+    const payout = parseInt(payoutInputStr.replace(/\D/g, '')) || 0;
     if (grossPrice > 0) {
-      // Reverse: margin% = ((gross - payout) / gross) * 100
       const newMargin = ((grossPrice - payout) / grossPrice) * 100;
-      const roundedMargin = Math.round(newMargin * 10) / 10; // 1 decimal place
+      const roundedMargin = Math.round(newMargin * 10) / 10;
       const clampedMargin = Math.min(50, Math.max(0, roundedMargin));
       setPlatformMarginPercent(clampedMargin);
       setMarginInputStr(clampedMargin.toString());
@@ -934,8 +950,9 @@ export function PricingDrawer({
                             <Input
                               type="text"
                               inputMode="numeric"
-                              value={finalPrice}
+                              value={payoutInputStr}
                               onChange={(e) => handlePayoutChange(e.target.value)}
+                              onBlur={handlePayoutBlur}
                               className="w-28 text-right font-bold text-lg text-green-600 dark:text-green-400"
                               data-testid="input-carrier-payout"
                             />

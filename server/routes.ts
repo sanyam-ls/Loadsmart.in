@@ -4036,23 +4036,36 @@ export async function registerRoutes(
           let carrier = null;
           let driver = null;
           let truck = null;
+          let winningBidAmount = null;
+          let winningBid = null;
           
-          if (shipment?.carrierId) {
+          // Get winning bid first (needed for carrier fallback)
+          if (load?.awardedBidId) {
+            winningBid = await storage.getBid(load.awardedBidId);
+            if (winningBid) {
+              winningBidAmount = winningBid.amount;
+            }
+          }
+          
+          // Try to get carrier from shipment first, then fall back to load's assigned carrier or winning bid
+          let carrierId = shipment?.carrierId || load?.assignedCarrierId || winningBid?.carrierId;
+          
+          if (carrierId) {
             // Get carrier user info
-            const carrierUser = await storage.getUser(shipment.carrierId);
-            const carrierProfile = await storage.getCarrierProfile(shipment.carrierId);
+            const carrierUser = await storage.getUser(carrierId);
+            const carrierProfile = await storage.getCarrierProfile(carrierId);
             
             // Count carrier's completed trips
-            const carrierShipments = await storage.getShipmentsByCarrier(shipment.carrierId);
+            const carrierShipments = await storage.getShipmentsByCarrier(carrierId);
             const tripsCompleted = carrierShipments.filter(s => s.status === 'delivered').length;
             
             if (carrierUser) {
               carrier = {
                 id: carrierUser.id,
-                name: carrierUser.name || carrierUser.username,
-                companyName: carrierProfile?.companyName || carrierUser.company,
+                name: carrierUser.username,
+                companyName: carrierProfile?.companyName || carrierUser.companyName,
                 phone: carrierUser.phone,
-                carrierType: carrierProfile?.carrierType || 'enterprise',
+                carrierType: carrierProfile?.carrierType || 'solo',
                 tripsCompleted,
               };
             }
@@ -4071,9 +4084,11 @@ export async function registerRoutes(
             }
           }
           
-          // Get truck details
-          if (shipment?.truckId) {
-            const truckData = await storage.getTruck(shipment.truckId);
+          // Get truck details from shipment or winning bid
+          let truckId = shipment?.truckId || winningBid?.truckId;
+          
+          if (truckId) {
+            const truckData = await storage.getTruck(truckId);
             if (truckData) {
               truck = {
                 id: truckData.id,
@@ -4081,15 +4096,6 @@ export async function registerRoutes(
                 truckType: truckData.truckType,
                 capacity: truckData.capacity,
               };
-            }
-          }
-          
-          // Get winning bid amount for financial breakdown
-          let winningBidAmount = null;
-          if (load?.awardedBidId) {
-            const winningBid = await storage.getBid(load.awardedBidId);
-            if (winningBid) {
-              winningBidAmount = winningBid.amount;
             }
           }
           
@@ -4177,23 +4183,32 @@ export async function registerRoutes(
           let carrier = null;
           let driver = null;
           let truck = null;
+          let winningBid = null;
           
-          if (shipment?.carrierId) {
+          // Get winning bid first (needed for carrier fallback)
+          if (load?.awardedBidId) {
+            winningBid = await storage.getBid(load.awardedBidId);
+          }
+          
+          // Try to get carrier from shipment first, then fall back to load's assigned carrier or winning bid
+          let carrierId = shipment?.carrierId || load?.assignedCarrierId || winningBid?.carrierId;
+          
+          if (carrierId) {
             // Get carrier user info
-            const carrierUser = await storage.getUser(shipment.carrierId);
-            const carrierProfile = await storage.getCarrierProfile(shipment.carrierId);
+            const carrierUser = await storage.getUser(carrierId);
+            const carrierProfile = await storage.getCarrierProfile(carrierId);
             
             // Count carrier's completed trips
-            const carrierShipments = await storage.getShipmentsByCarrier(shipment.carrierId);
+            const carrierShipments = await storage.getShipmentsByCarrier(carrierId);
             const tripsCompleted = carrierShipments.filter(s => s.status === 'delivered').length;
             
             if (carrierUser) {
               carrier = {
                 id: carrierUser.id,
-                name: carrierUser.name || carrierUser.username,
-                companyName: carrierProfile?.companyName || carrierUser.company,
+                name: carrierUser.username,
+                companyName: carrierProfile?.companyName || carrierUser.companyName,
                 phone: carrierUser.phone,
-                carrierType: carrierProfile?.carrierType || 'enterprise',
+                carrierType: carrierProfile?.carrierType || 'solo',
                 tripsCompleted,
               };
             }
@@ -4212,9 +4227,11 @@ export async function registerRoutes(
             }
           }
           
-          // Get truck details
-          if (shipment?.truckId) {
-            const truckData = await storage.getTruck(shipment.truckId);
+          // Get truck details from shipment or winning bid
+          let truckId = shipment?.truckId || winningBid?.truckId;
+          
+          if (truckId) {
+            const truckData = await storage.getTruck(truckId);
             if (truckData) {
               truck = {
                 id: truckData.id,
@@ -4228,10 +4245,14 @@ export async function registerRoutes(
           return {
             ...invoice,
             pickupCity: load?.pickupCity,
+            pickupAddress: load?.pickupAddress,
             dropoffCity: load?.dropoffCity,
-            loadRoute: load ? `${load.pickupCity} to ${load.dropoffCity}` : invoice.loadRoute,
+            dropoffAddress: load?.dropoffAddress,
+            loadRoute: `${load?.pickupCity || ''} to ${load?.dropoffCity || ''}`,
             shipperLoadNumber: load?.shipperLoadNumber || null,
             adminReferenceNumber: load?.adminReferenceNumber || null,
+            cargoDescription: load?.cargoDescription,
+            weight: load?.weight,
             carrier,
             driver,
             truck,

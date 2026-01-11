@@ -208,7 +208,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
-          Negotiation - {bid.loadId}
+          Negotiation - {(bid as any).displayLoadId || bid.loadId.slice(0, 8).toUpperCase()}
         </DialogTitle>
         <DialogDescription>
           {bid.pickup} to {bid.dropoff}
@@ -245,10 +245,6 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Distance</span>
               <span className="font-medium">{bid.distance} km</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Original Rate</span>
-              <span className="font-medium">{formatCurrency(bid.proposedRate)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Your Offer</span>
@@ -439,11 +435,19 @@ export default function CarrierBidsPage() {
   
   // Convert real bids to CarrierBid format and merge with mock data
   const bids = useMemo(() => {
-    const realBids: CarrierBid[] = realBidsData.map((bid) => ({
+    const realBids: CarrierBid[] = realBidsData.map((bid) => {
+      const load = bid.load as any;
+      const displayLoadId = load?.adminReferenceNumber 
+        ? `LD-${load.adminReferenceNumber}` 
+        : load?.shipperLoadNumber 
+          ? `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`
+          : bid.loadId.slice(0, 8).toUpperCase();
+      return {
       bidId: bid.id,
       loadId: bid.loadId,
+      displayLoadId,
       shipperName: "Shipper",
-      shipperCompany: bid.load?.shipperId || "Unknown Shipper",
+      shipperCompany: load?.shipperCompanyName || load?.shipperContactName || "Unknown Shipper",
       shipperRating: 4.5,
       pickup: bid.load?.pickupCity || bid.load?.pickupAddress || "Origin",
       dropoff: bid.load?.dropoffCity || bid.load?.dropoffAddress || "Destination",
@@ -467,7 +471,8 @@ export default function CarrierBidsPage() {
         amount: Number(bid.amount),
         timestamp: new Date(bid.createdAt || Date.now()),
       }],
-    }));
+    };
+    });
     
     // Merge real bids with mock bids, prioritizing real bids
     const realBidIds = new Set(realBids.map(b => b.bidId));

@@ -2535,13 +2535,63 @@ export async function registerRoutes(
       // Update thread to accepted
       await storage.acceptBidInThread(loadId, bidId, bid.carrierId, finalAmount);
 
-      // Update load status to awarded (CARRIER_FINALIZED)
+      // Generate unique 4-digit pickup ID for carrier verification
+      const pickupId = await storage.generateUniquePickupId();
+
+      // Update load status to invoice_created - shipment created after shipper acknowledges
       await storage.updateLoad(loadId, { 
-        status: "awarded",
+        status: "invoice_created",
         assignedCarrierId: bid.carrierId,
         finalPrice: finalAmount,
         awardedBidId: bidId,
+        pickupId: pickupId,
       });
+
+      // Auto-create invoice when bid is accepted
+      try {
+        const existingInvoice = await storage.getInvoiceByLoad(loadId);
+        if (!existingInvoice) {
+          const invoiceNumber = await storage.generateInvoiceNumber();
+          const totalWithTax = (parseFloat(finalAmount) * 1.18).toFixed(2);
+          
+          // Calculate advance payment from load
+          const advancePercent = load.advancePaymentPercent || 0;
+          const advanceAmount = advancePercent > 0 ? (parseFloat(totalWithTax) * (advancePercent / 100)).toFixed(2) : null;
+          const balanceOnDelivery = advancePercent > 0 ? (parseFloat(totalWithTax) - parseFloat(advanceAmount || "0")).toFixed(2) : null;
+          
+          await storage.createInvoice({
+            invoiceNumber,
+            loadId: loadId,
+            shipperId: load.shipperId,
+            adminId: user.id,
+            subtotal: finalAmount,
+            fuelSurcharge: "0",
+            tollCharges: "0",
+            handlingFee: "0",
+            insuranceFee: "0",
+            discountAmount: "0",
+            discountReason: null,
+            taxPercent: "18",
+            taxAmount: (parseFloat(finalAmount) * 0.18).toFixed(2),
+            totalAmount: totalWithTax,
+            advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
+            advancePaymentAmount: advanceAmount,
+            balanceOnDelivery: balanceOnDelivery,
+            paymentTerms: "Net 30",
+            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            notes: `Invoice generated for load ${loadId} after carrier finalization`,
+            lineItems: [{
+              description: `Freight services: ${load.pickupCity} to ${load.dropoffCity}`,
+              quantity: 1,
+              rate: finalAmount,
+              amount: finalAmount
+            }],
+            status: "draft",
+          });
+        }
+      } catch (invoiceError) {
+        console.error("Failed to create invoice after admin acceptance:", invoiceError);
+      }
 
       // Notify winning carrier
       await storage.createNotification({

@@ -274,10 +274,11 @@ export async function acceptBid(
     }
   }
 
-  // Transition load to awarded state and create invoice
+  // Transition load to invoice_created state and create invoice
+  // Shipment will be created later when shipper acknowledges the invoice
   const load = await storage.getLoad(bid.loadId);
   if (load) {
-    await transitionLoadState(bid.loadId, "awarded", acceptedBy, `Bid ${bidId} accepted at Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
+    await transitionLoadState(bid.loadId, "invoice_created", acceptedBy, `Bid ${bidId} accepted at Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
     
     // Generate unique 4-digit pickup ID for carrier verification
     const pickupId = await storage.generateUniquePickupId();
@@ -290,20 +291,7 @@ export async function acceptBid(
       pickupId: pickupId,  // Unique 4-digit code for carrier pickup
     });
 
-    // Create shipment for carrier execution (if not already exists)
-    try {
-      const existingShipment = await storage.getShipmentByLoad(load.id);
-      if (!existingShipment) {
-        await storage.createShipment({
-          loadId: load.id,
-          carrierId: bid.carrierId,
-          truckId: bid.truckId || null,
-          status: 'pickup_scheduled',
-        });
-      }
-    } catch (shipmentError) {
-      console.error("Failed to create shipment after bid acceptance:", shipmentError);
-    }
+    // Note: Shipment is NOT created here - it will be created when shipper acknowledges invoice
 
     // Create invoice now that carrier is finalized (if not already exists)
     try {

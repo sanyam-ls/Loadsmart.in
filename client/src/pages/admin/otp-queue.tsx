@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useOtpRequests, useApproveOtpRequest, useRejectOtpRequest, type OtpRequest, invalidateOtpRequests } from "@/lib/api-hooks";
+import { useOtpRequests, useApproveOtpRequest, useRejectOtpRequest, useRegenerateOtpRequest, type OtpRequest, invalidateOtpRequests } from "@/lib/api-hooks";
 import { formatDistanceToNow, format } from "date-fns";
 
 function formatLoadId(load?: { adminReferenceNumber?: number | null }): string {
@@ -298,9 +298,10 @@ function OtpRequestCard({ request, onApprove, onReject }: OtpRequestCardProps) {
 
 interface ApprovedRequestCardProps {
   request: OtpRequest;
+  onRegenerate: (id: string) => void;
 }
 
-function ApprovedRequestCard({ request }: ApprovedRequestCardProps) {
+function ApprovedRequestCard({ request, onRegenerate }: ApprovedRequestCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const typeLabels: Record<string, string> = {
@@ -537,24 +538,35 @@ function ApprovedRequestCard({ request }: ApprovedRequestCardProps) {
               <Separator className="my-2" />
             </CollapsibleContent>
             
-            <div className="flex flex-wrap gap-4 pt-2 text-xs text-muted-foreground border-t">
-              <div>
-                <span className="font-medium">Requested:</span>{" "}
-                {request.requestedAt 
-                  ? format(new Date(request.requestedAt), "MMM d, yyyy 'at' h:mm a")
-                  : "—"}
-              </div>
-              <div>
-                <span className="font-medium">Approved:</span>{" "}
-                {request.processedAt 
-                  ? format(new Date(request.processedAt), "MMM d, yyyy 'at' h:mm a")
-                  : "—"}
-              </div>
-              {request.approvedBy && (
+            <div className="flex items-center justify-between pt-2 border-t gap-4 flex-wrap">
+              <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                 <div>
-                  <span className="font-medium">By:</span> {request.approvedBy.username}
+                  <span className="font-medium">Requested:</span>{" "}
+                  {request.requestedAt 
+                    ? format(new Date(request.requestedAt), "MMM d, yyyy 'at' h:mm a")
+                    : "—"}
                 </div>
-              )}
+                <div>
+                  <span className="font-medium">Approved:</span>{" "}
+                  {request.processedAt 
+                    ? format(new Date(request.processedAt), "MMM d, yyyy 'at' h:mm a")
+                    : "—"}
+                </div>
+                {request.approvedBy && (
+                  <div>
+                    <span className="font-medium">By:</span> {request.approvedBy.username}
+                  </div>
+                )}
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => onRegenerate(request.id)}
+                data-testid={`button-regenerate-${request.id}`}
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Regenerate OTP
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -578,6 +590,7 @@ export default function AdminOtpQueue() {
   const { data: requests, isLoading, refetch } = useOtpRequests();
   const approveMutation = useApproveOtpRequest();
   const rejectMutation = useRejectOtpRequest();
+  const regenerateMutation = useRegenerateOtpRequest();
 
   const pendingRequests = (requests || []).filter(r => r.status === "pending");
   const approvedRequests = (requests || []).filter(r => r.status === "approved");
@@ -644,6 +657,32 @@ export default function AdminOtpQueue() {
       toast({
         title: "Error",
         description: error.message || "Failed to reject request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRegenerateClick = async (id: string) => {
+    const request = requests?.find(r => r.id === id);
+    if (!request) return;
+    
+    try {
+      const result = await regenerateMutation.mutateAsync({
+        requestId: id,
+        validityMinutes: 10,
+      });
+      
+      setGeneratedOtp(result.otp.code);
+      setShowOtpDialog(true);
+      
+      toast({
+        title: "OTP Regenerated",
+        description: "A new OTP has been generated. Share it with the carrier.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to regenerate OTP",
         variant: "destructive",
       });
     }
@@ -743,7 +782,7 @@ export default function AdminOtpQueue() {
                 Showing {approvedRequests.length} approved request{approvedRequests.length !== 1 ? 's' : ''}
               </p>
               {approvedRequests.map(request => (
-                <ApprovedRequestCard key={request.id} request={request} />
+                <ApprovedRequestCard key={request.id} request={request} onRegenerate={handleRegenerateClick} />
               ))}
             </div>
           )}

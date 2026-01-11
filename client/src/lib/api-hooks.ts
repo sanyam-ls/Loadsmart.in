@@ -601,6 +601,21 @@ export function useRejectOtpRequest() {
   });
 }
 
+export function useRegenerateOtpRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requestId, validityMinutes = 10 }: { requestId: string; validityMinutes?: number }) => {
+      const res = await apiRequest('POST', `/api/otp/regenerate/${requestId}`, { validityMinutes });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/otp/shipper-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
+    },
+  });
+}
+
 export function useRequestTripStartOtp() {
   const queryClient = useQueryClient();
   return useMutation({

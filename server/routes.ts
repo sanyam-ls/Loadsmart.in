@@ -10373,6 +10373,76 @@ export async function registerRoutes(
     }
   });
 
+  // Admin regenerates OTP for an approved request
+  app.post("/api/otp/regenerate/:requestId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "admin" && user.role !== "shipper")) {
+        return res.status(403).json({ error: "Admin or Shipper access required" });
+      }
+
+      const { requestId } = req.params;
+      const { validityMinutes = 10 } = req.body;
+
+      // For shippers, verify this OTP request is for their load
+      const otpRequest = await storage.getOtpRequest(requestId);
+      if (!otpRequest) {
+        return res.status(404).json({ error: "OTP request not found" });
+      }
+      
+      if (user.role === "shipper") {
+        const load = await storage.getLoad(otpRequest.loadId);
+        if (!load || load.shipperId !== user.id) {
+          return res.status(403).json({ error: "You can only regenerate OTP for your own loads" });
+        }
+      }
+
+      const result = await storage.regenerateOtpRequest(requestId, user.id, validityMinutes);
+
+      // Broadcast regenerated OTP event with new OTP code to carrier
+      broadcastMarketplaceEvent("otp_regenerated", {
+        requestId,
+        type: result.request.requestType,
+        carrierId: result.request.carrierId,
+        shipmentId: result.request.shipmentId,
+        expiresAt: result.otp.expiresAt,
+        otpCode: result.otp.otpCode,
+        validityMinutes,
+      });
+
+      // Create notification for carrier with new OTP code
+      const typeLabel = result.request.requestType === "trip_start" 
+        ? "Trip Start" 
+        : result.request.requestType === "route_start"
+        ? "Route Start"
+        : "Trip End";
+      
+      await storage.createNotification({
+        userId: result.request.carrierId,
+        title: `New ${typeLabel} OTP Generated`,
+        message: `Your new OTP code is: ${result.otp.otpCode}. Valid for ${validityMinutes} minutes. Previous codes are now invalid.`,
+        type: "info",
+        isRead: false,
+        contextType: "shipment",
+        relatedLoadId: result.request.loadId,
+      });
+
+      res.json({ 
+        success: true, 
+        message: "OTP regenerated successfully",
+        otp: {
+          id: result.otp.id,
+          code: result.otp.otpCode,
+          expiresAt: result.otp.expiresAt,
+          validityMinutes,
+        }
+      });
+    } catch (error: any) {
+      console.error("Regenerate OTP request error:", error);
+      res.status(400).json({ error: error.message || "Failed to regenerate OTP" });
+    }
+  });
+
   // Admin or Shipper rejects OTP request
   app.post("/api/otp/reject/:requestId", requireAuth, async (req, res) => {
     try {

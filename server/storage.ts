@@ -1586,6 +1586,52 @@ export class DatabaseStorage implements IStorage {
     return updated!;
   }
 
+  // Regenerate OTP for an already-approved request
+  async regenerateOtpRequest(requestId: string, adminId: string, validityMinutes: number = 10): Promise<{ request: OtpRequest; otp: OtpVerification }> {
+    const request = await this.getOtpRequest(requestId);
+    if (!request) {
+      throw new Error("OTP request not found");
+    }
+    if (request.status !== "approved") {
+      throw new Error("Can only regenerate OTP for approved requests");
+    }
+
+    // Invalidate the old OTP if it exists
+    if (request.otpId) {
+      await db.update(otpVerifications)
+        .set({ 
+          status: "expired",
+          expiresAt: new Date()
+        })
+        .where(eq(otpVerifications.id, request.otpId));
+    }
+
+    // Generate new OTP
+    const otpCode = this.generateOtpCode();
+    const expiresAt = new Date(Date.now() + validityMinutes * 60 * 1000);
+
+    const otp = await this.createOtpVerification({
+      otpType: request.requestType,
+      otpCode,
+      carrierId: request.carrierId,
+      shipmentId: request.shipmentId,
+      loadId: request.loadId,
+      generatedBy: adminId,
+      validityMinutes,
+      expiresAt,
+      status: "pending",
+    });
+
+    // Update request with new OTP
+    const updatedRequest = await this.updateOtpRequest(requestId, {
+      processedAt: new Date(),
+      processedBy: adminId,
+      otpId: otp.id,
+    });
+
+    return { request: updatedRequest!, otp };
+  }
+
   // Startup migration to fix missing shipperLoadNumber and pickupId values
   async runDataMigration(): Promise<void> {
     console.log("[Migration] Starting data migration check...");

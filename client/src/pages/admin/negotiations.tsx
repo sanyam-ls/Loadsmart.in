@@ -138,6 +138,8 @@ export default function AdminNegotiationsPage() {
   
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [chatBid, setChatBid] = useState<Bid | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailBid, setDetailBid] = useState<Bid | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -433,8 +435,17 @@ export default function AdminNegotiationsPage() {
     return carrier.companyName || carrier.username || "Unknown Carrier";
   };
 
+  const openBidDetail = (bid: Bid) => {
+    setDetailBid(bid);
+    setDetailDialogOpen(true);
+  };
+
   const BidCard = ({ bid }: { bid: Bid }) => (
-    <Card className="hover-elevate" data-testid={`card-bid-${bid.id}`}>
+    <Card 
+      className="hover-elevate cursor-pointer" 
+      data-testid={`card-bid-${bid.id}`}
+      onClick={() => openBidDetail(bid)}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-2 flex-1 min-w-0">
@@ -479,7 +490,7 @@ export default function AdminNegotiationsPage() {
             </div>
           </div>
           
-          <div className="flex gap-2 flex-shrink-0 flex-wrap">
+          <div className="flex gap-2 flex-shrink-0 flex-wrap" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
               variant="outline"
@@ -791,6 +802,139 @@ export default function AdminNegotiationsPage() {
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      {/* Bid Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Bid Details
+            </DialogTitle>
+            <DialogDescription>
+              {detailBid?.load && formatLoadId(detailBid.load)} - Complete bid information
+            </DialogDescription>
+          </DialogHeader>
+          {detailBid && (
+            <div className="space-y-4 py-4">
+              {/* Carrier Info */}
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <h4 className="font-semibold flex items-center gap-2">
+                  {detailBid.carrier?.carrierType === "solo" ? <User className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+                  Carrier Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Name:</span>
+                    <p className="font-medium">{getCarrierDisplayName(detailBid.carrier)}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Type:</span>
+                    <p className="font-medium">{detailBid.carrier?.carrierType === "solo" ? "Solo Driver" : "Enterprise"}</p>
+                  </div>
+                  {detailBid.truck && (
+                    <>
+                      <div>
+                        <span className="text-muted-foreground">Truck:</span>
+                        <p className="font-medium">{detailBid.truck.licensePlate}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Type:</span>
+                        <p className="font-medium">{detailBid.truck.truckType}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Load Info */}
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Load Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Route:</span>
+                    <p className="font-medium">
+                      {detailBid.load?.pickupCity} <ArrowRight className="h-3 w-3 inline mx-1" /> {detailBid.load?.dropoffCity}
+                    </p>
+                  </div>
+                  {detailBid.load?.weight && (
+                    <div>
+                      <span className="text-muted-foreground">Weight:</span>
+                      <p className="font-medium">{detailBid.load.weight} Tons</p>
+                    </div>
+                  )}
+                  {detailBid.load?.requiredTruckType && (
+                    <div>
+                      <span className="text-muted-foreground">Truck Type:</span>
+                      <p className="font-medium">{detailBid.load.requiredTruckType}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bid Info */}
+              <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800 space-y-3">
+                <h4 className="font-semibold flex items-center gap-2 text-green-700 dark:text-green-300">
+                  <IndianRupee className="h-4 w-4" />
+                  Bid Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Bid Amount:</span>
+                    <p className="font-bold text-lg text-green-600">Rs. {parseFloat(detailBid.amount).toLocaleString("en-IN")}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>
+                    <div className="mt-1">{getStatusBadge(detailBid.status)}</div>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Submitted:</span>
+                    <p className="font-medium">{format(new Date(detailBid.createdAt), "MMM d, yyyy h:mm a")}</p>
+                  </div>
+                  {detailBid.notes && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Notes:</span>
+                      <p className="font-medium">{detailBid.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+              Close
+            </Button>
+            {detailBid?.status === "pending" && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDetailDialogOpen(false);
+                    openChatDialog(detailBid);
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  Negotiate
+                </Button>
+                <Button
+                  onClick={() => {
+                    setDetailDialogOpen(false);
+                    setSelectedBid(detailBid);
+                    setAcceptDialogOpen(true);
+                  }}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Accept Bid
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={acceptDialogOpen} onOpenChange={setAcceptDialogOpen}>
         <DialogContent>

@@ -2913,14 +2913,71 @@ export async function registerRoutes(
           statusChangedAt: new Date(),
         });
       } else if (bid_type === 'admin_posted_acceptance') {
-        // First acceptance - move to bidding phase (admin will finalize)
-        if (load.status === 'posted_to_carriers') {
-          await storage.updateLoad(load_id, {
-            status: 'open_for_bid',
-            previousStatus: load.status,
-            openForBidAt: new Date(),
-            statusChangedAt: new Date(),
-          });
+        // Carrier accepted the posted price - award load and create invoice
+        // Update bid status to accepted
+        await storage.updateBid(bid.id, { status: 'accepted' });
+        
+        // Generate unique 4-digit pickup ID for carrier verification
+        const pickupId = await storage.generateUniquePickupId();
+        
+        // Award the load to this carrier
+        await storage.updateLoad(load_id, {
+          status: 'awarded',
+          previousStatus: load.status,
+          assignedCarrierId: user.id,
+          assignedTruckId: truck_id || null,
+          awardedAt: new Date(),
+          statusChangedAt: new Date(),
+          pickupId: pickupId,
+        });
+        
+        // Reject all other pending bids for this load
+        const allBids = await storage.getBidsByLoad(load_id);
+        for (const otherBid of allBids) {
+          if (otherBid.id !== bid.id && otherBid.status === 'pending') {
+            await storage.updateBid(otherBid.id, { status: 'rejected' });
+          }
+        }
+        
+        // Auto-create invoice in draft status (without GST/tax per project requirements)
+        try {
+          const existingInvoice = await storage.getInvoiceByLoad(load_id);
+          if (!existingInvoice) {
+            const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
+            const invoiceAmount = String(finalAmount);
+            
+            const invoice = await storage.createInvoice({
+              invoiceNumber,
+              loadId: load_id,
+              shipperId: load.shipperId,
+              carrierId: user.id,
+              adminId: load.adminId || null,
+              subtotal: invoiceAmount,
+              fuelSurcharge: "0",
+              tollCharges: "0",
+              handlingFee: "0",
+              insuranceFee: "0",
+              discountAmount: "0",
+              discountReason: null,
+              taxPercent: "0",
+              taxAmount: "0",
+              totalAmount: invoiceAmount,
+              paymentTerms: "Net 30",
+              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              notes: `Invoice auto-generated when carrier accepted posted price`,
+              status: "draft",
+            });
+            
+            // Link invoice to load
+            await storage.updateLoad(load_id, {
+              invoiceId: invoice.id,
+              status: 'invoice_created',
+            });
+            
+            console.log(`Invoice ${invoiceNumber} created for load ${load_id} after carrier acceptance`);
+          }
+        } catch (invoiceError) {
+          console.error("Failed to create invoice after carrier acceptance:", invoiceError);
         }
       }
 

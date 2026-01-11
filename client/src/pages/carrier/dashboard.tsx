@@ -1,6 +1,6 @@
 import { useLocation, Redirect } from "wouter";
 import { useEffect, useState } from "react";
-import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2, CheckCircle, XCircle, FileText, ShieldCheck, ShieldX, ShieldAlert, Eye, Bell, AlertTriangle } from "lucide-react";
+import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2, CheckCircle, XCircle, FileText, ShieldCheck, ShieldX, ShieldAlert, Eye, Bell, AlertTriangle, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +72,16 @@ export default function CarrierDashboard() {
   const { t } = useTranslation();
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
   const [hasNewVerificationUpdate, setHasNewVerificationUpdate] = useState(false);
+  const [welcomeBannerDismissed, setWelcomeBannerDismissed] = useState(() => {
+    return localStorage.getItem(`welcomeBannerDismissed_${user?.id}`) === "true";
+  });
+
+  const dismissWelcomeBanner = () => {
+    setWelcomeBannerDismissed(true);
+    if (user?.id) {
+      localStorage.setItem(`welcomeBannerDismissed_${user.id}`, "true");
+    }
+  };
   
   // Fetch onboarding status for gating
   const { data: onboardingStatus, isLoading: isLoadingOnboarding } = useQuery<{
@@ -274,11 +284,20 @@ export default function CarrierDashboard() {
       </div>
 
       {/* Welcome Box for Verified Carriers */}
-      {verification?.status === "approved" && (
+      {verification?.status === "approved" && !welcomeBannerDismissed && (
         <Card 
-          className="border-green-500/50 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30"
+          className="border-green-500/50 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 relative"
           data-testid="card-welcome-verified"
         >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 h-8 w-8 text-green-600 hover:bg-green-200/50 dark:hover:bg-green-800/50"
+            onClick={dismissWelcomeBanner}
+            data-testid="button-dismiss-welcome"
+          >
+            <X className="h-4 w-4" />
+          </Button>
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="flex-shrink-0">

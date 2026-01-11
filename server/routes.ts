@@ -2945,6 +2945,12 @@ export async function registerRoutes(
           if (!existingInvoice) {
             const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
             const invoiceAmount = String(finalAmount);
+            const totalAmountNum = parseFloat(invoiceAmount) || 0;
+            
+            // Calculate advance payment from load settings
+            const advancePercent = load.advancePaymentPercent || 0;
+            const advanceAmount = advancePercent > 0 ? (totalAmountNum * (advancePercent / 100)).toFixed(2) : null;
+            const balanceOnDelivery = advancePercent > 0 ? (totalAmountNum - parseFloat(advanceAmount || "0")).toFixed(2) : null;
             
             const invoice = await storage.createInvoice({
               invoiceNumber,
@@ -2961,6 +2967,9 @@ export async function registerRoutes(
               taxPercent: "0",
               taxAmount: "0",
               totalAmount: invoiceAmount,
+              advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
+              advancePaymentAmount: advanceAmount,
+              balanceOnDelivery: balanceOnDelivery,
               paymentTerms: "Net 30",
               dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               notes: `Invoice auto-generated when carrier accepted posted price`,

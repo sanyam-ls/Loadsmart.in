@@ -96,12 +96,7 @@ function AppContent() {
   }
 
   if (location === "/auth") {
-    return (
-      <>
-        <AuthPage />
-        <HelpBotWidget />
-      </>
-    );
+    return <AuthPage />;
   }
 
   const style = {
@@ -193,7 +188,6 @@ function AppContent() {
         </div>
       </div>
       <CarrierOtpNotification />
-      <HelpBotWidget />
     </SidebarProvider>
   );
 }
@@ -210,6 +204,7 @@ function App() {
                   <TooltipProvider>
                     <AppContent />
                     <Toaster />
+                    <HelpBotWidget />
                   </TooltipProvider>
                 </CarrierDataProvider>
               </AdminDataProvider>

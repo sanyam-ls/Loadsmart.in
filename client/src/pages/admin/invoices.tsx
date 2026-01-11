@@ -901,30 +901,52 @@ export default function AdminInvoicesPage() {
                   </div>
                 </div>
 
-                {/* Route Card */}
+                {/* Route Card - Full Address Details */}
                 <Card className="border-2 border-blue-100 dark:border-blue-900/50">
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 text-green-600 mb-1">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <div className="flex items-center gap-2 text-green-600 mb-2">
                           <MapPin className="h-4 w-4" />
-                          <span className="text-xs uppercase tracking-wide font-medium">Origin</span>
+                          <span className="text-xs uppercase tracking-wide font-semibold">Pickup Location</span>
                         </div>
-                        <p className="font-semibold">{selectedInvoice.load?.pickupCity || selectedInvoice.pickupCity || "N/A"}</p>
+                        <p className="font-semibold text-lg">{selectedInvoice.pickupCity || selectedInvoice.load?.pickupCity || "N/A"}</p>
+                        {(selectedInvoice.pickupAddress || selectedInvoice.load?.pickupAddress) && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {selectedInvoice.pickupAddress || selectedInvoice.load?.pickupAddress}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <div className="h-px w-8 bg-slate-300"></div>
-                        <Truck className="h-5 w-5" />
-                        <div className="h-px w-8 bg-slate-300"></div>
-                      </div>
-                      <div className="flex-1 text-right">
-                        <div className="flex items-center justify-end gap-2 text-red-600 mb-1">
-                          <span className="text-xs uppercase tracking-wide font-medium">Destination</span>
+                      <div className="text-right">
+                        <div className="flex items-center justify-end gap-2 text-red-600 mb-2">
+                          <span className="text-xs uppercase tracking-wide font-semibold">Drop Location</span>
                           <MapPin className="h-4 w-4" />
                         </div>
-                        <p className="font-semibold">{selectedInvoice.load?.dropoffCity || selectedInvoice.dropoffCity || "N/A"}</p>
+                        <p className="font-semibold text-lg">{selectedInvoice.dropoffCity || selectedInvoice.load?.dropoffCity || "N/A"}</p>
+                        {(selectedInvoice.dropoffAddress || selectedInvoice.load?.dropoffAddress) && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {selectedInvoice.dropoffAddress || selectedInvoice.load?.dropoffAddress}
+                          </p>
+                        )}
                       </div>
                     </div>
+                    {/* Cargo Info */}
+                    {(selectedInvoice.cargoDescription || selectedInvoice.weight) && (
+                      <div className="mt-4 pt-3 border-t flex items-center gap-6 text-sm">
+                        {selectedInvoice.cargoDescription && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Cargo:</span>
+                            <span className="font-medium">{selectedInvoice.cargoDescription}</span>
+                          </div>
+                        )}
+                        {selectedInvoice.weight && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Weight:</span>
+                            <span className="font-medium">{selectedInvoice.weight}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -941,8 +963,27 @@ export default function AdminInvoicesPage() {
                     <CardContent className="pt-3 space-y-3">
                       <div>
                         <Label className="text-xs text-muted-foreground">Company Name</Label>
-                        <p className="font-semibold">{selectedInvoice.shipper?.companyName || selectedInvoice.shipper?.username || "N/A"}</p>
+                        <p className="font-semibold text-lg">{selectedInvoice.shipper?.companyName || "N/A"}</p>
                       </div>
+                      {selectedInvoice.shipper?.name && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Contact Person</Label>
+                          <p className="font-medium">{selectedInvoice.shipper.name}</p>
+                        </div>
+                      )}
+                      {selectedInvoice.shipper?.email && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Email</Label>
+                          <p className="text-sm">{selectedInvoice.shipper.email}</p>
+                        </div>
+                      )}
+                      {selectedInvoice.shipper?.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm">{selectedInvoice.shipper.phone}</span>
+                        </div>
+                      )}
+                      <Separator />
                       <div>
                         <Label className="text-xs text-muted-foreground">Response Status</Label>
                         <div className="mt-1">{getShipperStatusBadge(selectedInvoice.shipperStatus)}</div>
@@ -956,7 +997,7 @@ export default function AdminInvoicesPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Carrier Summary */}
+                  {/* Carrier Section */}
                   <Card className="border-blue-200 dark:border-blue-700/50">
                     <CardHeader className="pb-2 bg-blue-50 dark:bg-blue-900/20 rounded-t-lg">
                       <CardTitle className="text-sm flex items-center gap-2">
@@ -967,29 +1008,77 @@ export default function AdminInvoicesPage() {
                     <CardContent className="pt-3 space-y-3">
                       {selectedInvoice.carrier ? (
                         <>
+                          {/* Carrier Type Badge */}
+                          <div className="flex items-center gap-2">
+                            <Badge variant={selectedInvoice.carrier.carrierType === 'solo' ? 'secondary' : 'default'} className="text-xs">
+                              {selectedInvoice.carrier.carrierType === 'solo' ? (
+                                <><User className="h-3 w-3 mr-1" /> Solo Driver</>
+                              ) : (
+                                <><Building2 className="h-3 w-3 mr-1" /> Enterprise</>
+                              )}
+                            </Badge>
+                          </div>
+                          
+                          {/* Carrier/Company Name */}
                           <div>
                             <Label className="text-xs text-muted-foreground">
                               {selectedInvoice.carrier.carrierType === 'solo' ? 'Driver Name' : 'Company Name'}
                             </Label>
-                            <p className="font-semibold">
+                            <p className="font-semibold text-lg">
                               {selectedInvoice.carrier.carrierType === 'solo' 
                                 ? selectedInvoice.carrier.name 
                                 : (selectedInvoice.carrier.companyName || selectedInvoice.carrier.name)}
                             </p>
                           </div>
-                          {selectedInvoice.truck && (
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Vehicle</Label>
-                              <p className="font-medium text-sm">{selectedInvoice.truck.registrationNumber}</p>
+                          
+                          {/* Phone */}
+                          {selectedInvoice.carrier.phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-sm">{selectedInvoice.carrier.phone}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 text-xs bg-blue-50 dark:bg-blue-900/20 rounded p-2">
-                            <Award className="h-3 w-3 text-blue-600" />
-                            <span>{selectedInvoice.carrier.tripsCompleted || 0} trips completed</span>
+                          
+                          <Separator />
+                          
+                          {/* Vehicle Info */}
+                          {selectedInvoice.truck && (
+                            <div className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-3 space-y-2">
+                              <Label className="text-xs text-muted-foreground font-semibold">Vehicle Information</Label>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Truck Number</span>
+                                  <p className="font-semibold">{selectedInvoice.truck.registrationNumber}</p>
+                                </div>
+                                {selectedInvoice.truck.truckType && (
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Truck Type</span>
+                                    <p className="font-medium">{selectedInvoice.truck.truckType}</p>
+                                  </div>
+                                )}
+                                {selectedInvoice.truck.capacity && (
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Capacity</span>
+                                    <p className="font-medium">{selectedInvoice.truck.capacity} MT</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Trips completed */}
+                          <div className="flex items-center gap-2 text-xs bg-green-50 dark:bg-green-900/20 rounded p-2">
+                            <Award className="h-3 w-3 text-green-600" />
+                            <span className="text-green-700 dark:text-green-400 font-medium">
+                              {selectedInvoice.carrier.tripsCompleted || 0} trips completed
+                            </span>
                           </div>
                         </>
                       ) : (
-                        <p className="text-muted-foreground text-sm">Carrier not assigned</p>
+                        <div className="text-center py-6">
+                          <Truck className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                          <p className="text-muted-foreground text-sm">Carrier not yet assigned</p>
+                        </div>
                       )}
                     </CardContent>
                   </Card>

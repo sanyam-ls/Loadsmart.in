@@ -4093,26 +4093,49 @@ export async function registerRoutes(
             }
           }
           
+          // Get shipper details
+          let shipper = null;
+          if (invoice.shipperId) {
+            const shipperUser = await storage.getUser(invoice.shipperId);
+            if (shipperUser) {
+              shipper = {
+                id: shipperUser.id,
+                name: shipperUser.username,
+                companyName: shipperUser.companyName,
+                email: shipperUser.email,
+                phone: shipperUser.phone,
+              };
+            }
+          }
+
           return {
             ...invoice,
             pickupCity: load?.pickupCity,
+            pickupAddress: load?.pickupAddress,
             dropoffCity: load?.dropoffCity,
-            loadRoute: load ? `${load.pickupCity} to ${load.dropoffCity}` : invoice.loadRoute,
+            dropoffAddress: load?.dropoffAddress,
+            loadRoute: `${load?.pickupCity || ''} to ${load?.dropoffCity || ''}`,
             shipperLoadNumber: load?.shipperLoadNumber || null,
             adminReferenceNumber: load?.adminReferenceNumber || null,
+            cargoDescription: load?.cargoDescription,
+            weight: load?.weight,
             carrier,
             driver,
             truck,
+            shipper,
             // Financial breakdown fields for admin view
             adminPostedPrice: load?.adminFinalPrice || load?.finalPrice,
             winningBidAmount,
             load: load ? {
               pickupCity: load.pickupCity,
+              pickupAddress: load.pickupAddress,
               dropoffCity: load.dropoffCity,
+              dropoffAddress: load.dropoffAddress,
               status: load.status,
               adminFinalPrice: load.adminFinalPrice,
               finalPrice: load.finalPrice,
               weight: load.weight,
+              cargoDescription: load.cargoDescription,
             } : null,
           };
         } catch (err) {

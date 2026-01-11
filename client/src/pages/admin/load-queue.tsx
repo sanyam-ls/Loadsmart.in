@@ -334,43 +334,11 @@ export default function LoadQueuePage() {
   const [detailsLoad, setDetailsLoad] = useState<RealLoad | null>(null);
 
   const { user } = useAuth();
-  const [resendingLoadId, setResendingLoadId] = useState<string | null>(null);
   
   const openLoadDetails = (load: RealLoad) => {
     setDetailsLoad(load);
     setDetailsDialogOpen(true);
   };
-
-  // Mutation to resend invoice for a load
-  const resendInvoiceMutation = useMutation({
-    mutationFn: async (loadId: string) => {
-      setResendingLoadId(loadId);
-      // First get the invoice for this load
-      const invoiceRes = await apiRequest("GET", `/api/admin/invoices/load/${loadId}`);
-      const invoiceData = await invoiceRes.json();
-      if (!invoiceData || !invoiceData.id) {
-        throw new Error("Invoice not found for this load");
-      }
-      // Resend the invoice
-      return apiRequest("POST", `/api/admin/invoices/${invoiceData.id}/send`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Invoice Resent",
-        description: "The invoice has been resent to the shipper.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
-      setResendingLoadId(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Resend Failed",
-        description: error.message || "Failed to resend invoice",
-        variant: "destructive",
-      });
-      setResendingLoadId(null);
-    },
-  });
 
   const { data: realLoads = [], isLoading: isLoadingReal } = useQuery<RealLoad[]>({
     queryKey: ["/api/admin/queue"],
@@ -654,111 +622,6 @@ export default function LoadQueuePage() {
                         >
                           <Send className="h-3 w-3 mr-1" />
                           {t('invoices.send')}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })()}
-
-      {/* Invoice Tracking - Loads with invoice already sent */}
-      {(() => {
-        const sentLoads = realLoads
-          .filter(l => l.status === 'invoice_sent' || l.status === 'invoice_created' || l.status === 'invoice_acknowledged')
-          .sort((a, b) => {
-            const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
-            const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
-            return dateB - dateA;
-          });
-        if (sentLoads.length === 0) return null;
-        return (
-          <Card className="border-blue-500/30">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-blue-500" />
-                {t('admin.invoiceTracking')} ({sentLoads.length})
-              </CardTitle>
-              <CardDescription>
-                {t('admin.invoiceTrackingDescription')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {sentLoads.map((load) => {
-                  // For invoices, use adminFinalPrice (shipper total) first, not finalPrice (carrier negotiated)
-                  const price = load.adminFinalPrice || load.shipperFixedPrice || load.adminPrice;
-                  const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
-                  
-                  return (
-                    <div 
-                      key={load.id} 
-                      className="border rounded-lg p-3 bg-card hover-elevate"
-                      data-testid={`card-sent-invoice-${load.id.slice(0, 8)}`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className="font-mono text-sm font-medium">{formatLoadId(load)}</span>
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-xs ${
-                            load.status === 'invoice_acknowledged' 
-                              ? 'bg-green-500/20 text-green-700 dark:text-green-400'
-                              : 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
-                          }`}
-                        >
-                          {load.status === 'invoice_acknowledged' ? t('invoices.acknowledged') : t('invoices.sent')}
-                        </Badge>
-                      </div>
-                      
-                      <div className="space-y-1 mb-3">
-                        <div className="flex items-center gap-1 text-sm">
-                          <MapPin className="h-3 w-3 text-green-500 shrink-0" />
-                          <span className="truncate">{load.pickupCity}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm">
-                          <MapPin className="h-3 w-3 text-red-500 shrink-0" />
-                          <span className="truncate">{load.dropoffCity}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm mb-3">
-                        <span className="text-muted-foreground">{load.shipperName || t('loads.shipper')}</span>
-                        <span className="font-medium">{load.weight} {load.weightUnit || "MT"}</span>
-                      </div>
-                      
-                      <div className="border-t pt-2 mb-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">{t('common.total')}</span>
-                          <span className="font-bold text-blue-600 dark:text-blue-400">
-                            Rs. {priceNum.toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => openLoadDetails(load)}
-                          data-testid={`button-view-sent-details-${load.id.slice(0, 8)}`}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          {t('common.view')}
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => resendInvoiceMutation.mutate(load.id)}
-                          disabled={resendingLoadId === load.id || resendInvoiceMutation.isPending}
-                          data-testid={`button-resend-invoice-${load.id.slice(0, 8)}`}
-                        >
-                          <RefreshCw className={`h-3 w-3 mr-1 ${resendingLoadId === load.id ? 'animate-spin' : ''}`} />
-                          {t('invoices.resend')}
                         </Button>
                       </div>
                     </div>

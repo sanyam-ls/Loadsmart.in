@@ -374,6 +374,27 @@ export default function AdminInvoicesPage() {
     },
   });
 
+  const [resendingInvoiceId, setResendingInvoiceId] = useState<string | null>(null);
+
+  const resendMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      setResendingInvoiceId(invoiceId);
+      return apiRequest("POST", `/api/admin/invoices/${invoiceId}/send`, {});
+    },
+    onSuccess: () => {
+      toast({ title: "Invoice Resent", description: "Invoice has been resent to the shipper." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
+      setResendingInvoiceId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Resend Failed", description: error.message || "Failed to resend invoice", variant: "destructive" });
+      setResendingInvoiceId(null);
+    },
+  });
+
   const filteredInvoices = invoices.filter((inv) => {
     const matchesSearch = searchQuery === "" ||
       inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -605,6 +626,18 @@ export default function AdminInvoicesPage() {
                               >
                                 <Send className="h-4 w-4 mr-1" />
                                 Send
+                              </Button>
+                            )}
+                            {["sent", "approved", "acknowledged", "overdue"].includes(invoice.status) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => resendMutation.mutate(invoice.id)}
+                                disabled={resendingInvoiceId === invoice.id || resendMutation.isPending}
+                                data-testid={`button-resend-${invoice.id}`}
+                              >
+                                <RefreshCw className={`h-4 w-4 mr-1 ${resendingInvoiceId === invoice.id ? 'animate-spin' : ''}`} />
+                                Resend
                               </Button>
                             )}
                             {(invoice.shipperStatus === "acknowledged" || invoice.acknowledgedAt) && invoice.status !== "paid" && (

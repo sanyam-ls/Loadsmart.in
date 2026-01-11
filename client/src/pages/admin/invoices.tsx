@@ -863,258 +863,244 @@ export default function AdminInvoicesPage() {
       </Card>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              {selectedInvoice?.invoiceNumber}
-            </DialogTitle>
-            <DialogDescription>
-              Invoice details and shipper response history
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          {/* Invoice Header - Professional Look */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="h-6 w-6" />
+                  <span className="text-2xl font-bold">{selectedInvoice?.invoiceNumber}</span>
+                </div>
+                <p className="text-blue-100 text-sm">Freight Invoice</p>
+              </div>
+              <div className="text-right">
+                {selectedInvoice && getStatusBadge(selectedInvoice.status)}
+              </div>
+            </div>
+          </div>
+          
           {selectedInvoice && (
-            <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: 'calc(80vh - 140px)' }}>
+            <div className="flex-1 overflow-y-auto p-6" style={{ maxHeight: 'calc(85vh - 180px)' }}>
               <div className="space-y-6">
-                {/* Header Info Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Route</Label>
-                    <p className="font-medium">{selectedInvoice.loadRoute || (selectedInvoice.load ? `${selectedInvoice.load.pickupCity} to ${selectedInvoice.load.dropoffCity}` : "N/A")}</p>
+                {/* Key Details Grid */}
+                <div className="grid grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
+                  <div className="text-center border-r border-slate-200 dark:border-slate-700">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Load ID</Label>
+                    <p className="font-bold text-lg font-mono mt-1">{formatLoadId(selectedInvoice)}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Status</Label>
-                    <p className="mt-1">{getStatusBadge(selectedInvoice.status)}</p>
+                  <div className="text-center border-r border-slate-200 dark:border-slate-700">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Created</Label>
+                    <p className="font-semibold mt-1">{format(new Date(selectedInvoice.createdAt), "d MMM yyyy")}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Load ID</Label>
-                    <p className="font-medium font-mono">{formatLoadId(selectedInvoice)}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Created</Label>
-                    <p className="font-medium">{format(new Date(selectedInvoice.createdAt), "d MMM yyyy")}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Due Date</Label>
-                    <p className="font-medium">
+                  <div className="text-center">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Due Date</Label>
+                    <p className="font-semibold mt-1 text-orange-600 dark:text-orange-400">
                       {selectedInvoice.dueDate ? format(new Date(selectedInvoice.dueDate), "d MMM yyyy") : "-"}
                     </p>
                   </div>
                 </div>
 
-                {/* Shipper Section */}
-                <Card className="border-slate-200 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-900/10">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-slate-600" />
-                      Shipper
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="grid grid-cols-2 gap-3">
+                {/* Route Card */}
+                <Card className="border-2 border-blue-100 dark:border-blue-900/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 text-green-600 mb-1">
+                          <MapPin className="h-4 w-4" />
+                          <span className="text-xs uppercase tracking-wide font-medium">Origin</span>
+                        </div>
+                        <p className="font-semibold">{selectedInvoice.load?.pickupCity || selectedInvoice.pickupCity || "N/A"}</p>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="h-px w-8 bg-slate-300"></div>
+                        <Truck className="h-5 w-5" />
+                        <div className="h-px w-8 bg-slate-300"></div>
+                      </div>
+                      <div className="flex-1 text-right">
+                        <div className="flex items-center justify-end gap-2 text-red-600 mb-1">
+                          <span className="text-xs uppercase tracking-wide font-medium">Destination</span>
+                          <MapPin className="h-4 w-4" />
+                        </div>
+                        <p className="font-semibold">{selectedInvoice.load?.dropoffCity || selectedInvoice.dropoffCity || "N/A"}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Shipper & Carrier Info - Side by Side */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Shipper Section */}
+                  <Card className="border-slate-200 dark:border-slate-700/50">
+                    <CardHeader className="pb-2 bg-slate-50 dark:bg-slate-900/30 rounded-t-lg">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-slate-600" />
+                        Shipper Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-3 space-y-3">
                       <div>
                         <Label className="text-xs text-muted-foreground">Company Name</Label>
-                        <p className="font-medium text-sm">{selectedInvoice.shipper?.companyName || selectedInvoice.shipper?.username}</p>
+                        <p className="font-semibold">{selectedInvoice.shipper?.companyName || selectedInvoice.shipper?.username || "N/A"}</p>
                       </div>
                       <div>
                         <Label className="text-xs text-muted-foreground">Response Status</Label>
-                        <p className="mt-1">{getShipperStatusBadge(selectedInvoice.shipperStatus)}</p>
+                        <div className="mt-1">{getShipperStatusBadge(selectedInvoice.shipperStatus)}</div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                      {selectedInvoice.acknowledgedAt && (
+                        <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 dark:bg-green-900/20 rounded p-2">
+                          <CheckCircle className="h-3 w-3" />
+                          Acknowledged on {format(new Date(selectedInvoice.acknowledgedAt), "MMM d, yyyy")}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
 
-                {/* Carrier Details Section */}
-                {selectedInvoice.carrier && (
-                  <Card className="border-blue-200 dark:border-blue-700/50 bg-blue-50/30 dark:bg-blue-900/10">
-                    <CardHeader className="pb-2">
+                  {/* Carrier Summary */}
+                  <Card className="border-blue-200 dark:border-blue-700/50">
+                    <CardHeader className="pb-2 bg-blue-50 dark:bg-blue-900/20 rounded-t-lg">
                       <CardTitle className="text-sm flex items-center gap-2">
-                        {selectedInvoice.carrier.carrierType === 'solo' ? (
-                          <User className="h-4 w-4 text-blue-600" />
-                        ) : (
-                          <Building2 className="h-4 w-4 text-blue-600" />
-                        )}
-                        {selectedInvoice.carrier.carrierType === 'solo' ? 'Solo Driver' : 'Enterprise Carrier'}
+                        <Truck className="h-4 w-4 text-blue-600" />
+                        Carrier Details
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      {selectedInvoice.carrier.carrierType === 'solo' ? (
+                    <CardContent className="pt-3 space-y-3">
+                      {selectedInvoice.carrier ? (
                         <>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Driver Name</Label>
-                              <p className="font-medium text-sm" data-testid="text-carrier-name">
-                                {selectedInvoice.carrier.name}
-                              </p>
-                            </div>
-                            {selectedInvoice.carrier.phone && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Phone</Label>
-                                <p className="text-sm flex items-center gap-1">
-                                  <Phone className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.carrier.phone}
-                                </p>
-                              </div>
-                            )}
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              {selectedInvoice.carrier.carrierType === 'solo' ? 'Driver Name' : 'Company Name'}
+                            </Label>
+                            <p className="font-semibold">
+                              {selectedInvoice.carrier.carrierType === 'solo' 
+                                ? selectedInvoice.carrier.name 
+                                : (selectedInvoice.carrier.companyName || selectedInvoice.carrier.name)}
+                            </p>
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            {selectedInvoice.truck && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Truck Number</Label>
-                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-truck-number">
-                                  <Truck className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.truck.registrationNumber}
-                                </p>
-                              </div>
-                            )}
+                          {selectedInvoice.truck && (
                             <div>
-                              <Label className="text-xs text-muted-foreground">Trips Completed</Label>
-                              <p className="text-sm flex items-center gap-1" data-testid="text-trips-completed">
-                                <Award className="h-3 w-3 text-green-600" />
-                                {selectedInvoice.carrier.tripsCompleted} trips
-                              </p>
+                              <Label className="text-xs text-muted-foreground">Vehicle</Label>
+                              <p className="font-medium text-sm">{selectedInvoice.truck.registrationNumber}</p>
                             </div>
+                          )}
+                          <div className="flex items-center gap-2 text-xs bg-blue-50 dark:bg-blue-900/20 rounded p-2">
+                            <Award className="h-3 w-3 text-blue-600" />
+                            <span>{selectedInvoice.carrier.tripsCompleted || 0} trips completed</span>
                           </div>
                         </>
                       ) : (
-                        <>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Company Name</Label>
-                              <p className="font-medium text-sm" data-testid="text-company-name">
-                                {selectedInvoice.carrier.companyName || selectedInvoice.carrier.name}
-                              </p>
-                            </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Trips Completed</Label>
-                              <p className="text-sm flex items-center gap-1" data-testid="text-trips-completed">
-                                <Award className="h-3 w-3 text-green-600" />
-                                {selectedInvoice.carrier.tripsCompleted} trips
-                              </p>
-                            </div>
-                          </div>
-                          {selectedInvoice.driver && (
-                            <div className="bg-background/50 rounded-md p-2">
-                              <Label className="text-xs text-muted-foreground">Assigned Driver</Label>
-                              <div className="flex items-center gap-3 mt-1">
-                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-driver-name">
-                                  <User className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.driver.name}
-                                </p>
-                                {selectedInvoice.driver.phone && (
-                                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                    <Phone className="h-3 w-3" />
-                                    {selectedInvoice.driver.phone}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          <div className="grid grid-cols-2 gap-3">
-                            {selectedInvoice.truck && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Truck Number</Label>
-                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-truck-number">
-                                  <Truck className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.truck.registrationNumber}
-                                </p>
-                              </div>
-                            )}
-                            {selectedInvoice.truck?.truckType && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Truck Type</Label>
-                                <p className="text-sm">{selectedInvoice.truck.truckType}</p>
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Route Display */}
-                      {(selectedInvoice.pickupCity || selectedInvoice.load?.pickupCity) && (
-                        <div className="pt-2 border-t">
-                          <Label className="text-xs text-muted-foreground">Route</Label>
-                          <p className="text-sm font-medium flex items-center gap-2 mt-1">
-                            <MapPin className="h-3 w-3 text-green-600" />
-                            {selectedInvoice.pickupCity || selectedInvoice.load?.pickupCity}
-                            <span className="text-muted-foreground">to</span>
-                            <MapPin className="h-3 w-3 text-red-600" />
-                            {selectedInvoice.dropoffCity || selectedInvoice.load?.dropoffCity}
-                          </p>
-                        </div>
+                        <p className="text-muted-foreground text-sm">Carrier not assigned</p>
                       )}
                     </CardContent>
                   </Card>
-                )}
+                </div>
 
-                {/* Line Items */}
-                <Card>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-sm">Line Items</CardTitle>
+                {/* Invoice Amount Section - Professional Layout */}
+                <Card className="border-2">
+                  <CardHeader className="pb-2 bg-slate-50 dark:bg-slate-900/30">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Invoice Details
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 space-y-2">
-                    {selectedInvoice.lineItems && selectedInvoice.lineItems.length > 0 ? (
-                      selectedInvoice.lineItems.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{item.description}</span>
-                          <span>Rs. {parseFloat(item.amount || '0').toLocaleString('en-IN')}</span>
+                  <CardContent className="pt-4">
+                    {/* Line Items Table */}
+                    <div className="border rounded-lg overflow-hidden mb-4">
+                      <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 grid grid-cols-12 gap-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <div className="col-span-8">Description</div>
+                        <div className="col-span-4 text-right">Amount</div>
+                      </div>
+                      {selectedInvoice.lineItems && selectedInvoice.lineItems.length > 0 ? (
+                        selectedInvoice.lineItems.map((item, idx) => (
+                          <div key={idx} className="px-4 py-3 grid grid-cols-12 gap-4 border-t text-sm">
+                            <div className="col-span-8">{item.description}</div>
+                            <div className="col-span-4 text-right font-medium">Rs. {parseFloat(item.amount || '0').toLocaleString('en-IN')}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 grid grid-cols-12 gap-4 border-t text-sm">
+                          <div className="col-span-8">
+                            <span className="flex items-center gap-2">
+                              <Truck className="h-4 w-4 text-muted-foreground" />
+                              Freight services: {selectedInvoice.load?.pickupCity || "Origin"} to {selectedInvoice.load?.dropoffCity || "Destination"}
+                            </span>
+                          </div>
+                          <div className="col-span-4 text-right font-medium">Rs. {parseFloat(selectedInvoice.subtotal || '0').toLocaleString('en-IN')}</div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Freight services: {selectedInvoice.loadRoute || (selectedInvoice.load ? `${selectedInvoice.load.pickupCity} to ${selectedInvoice.load.dropoffCity}` : "Load transport")}</span>
-                        <span>Rs. {parseFloat(selectedInvoice.subtotal || '0').toLocaleString('en-IN')}</span>
+                      )}
+                    </div>
+
+                    {/* Total Amount */}
+                    <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                      <span className="text-lg font-semibold">Total Amount</span>
+                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        Rs. {parseFloat(selectedInvoice.totalAmount || '0').toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {/* Advance Payment Info */}
+                    {selectedInvoice.advancePaymentPercent && selectedInvoice.advancePaymentPercent > 0 && (
+                      <div className="mt-4 grid grid-cols-2 gap-4">
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                          <div className="flex items-center gap-2 text-green-600 mb-1">
+                            <Star className="h-4 w-4" />
+                            <span className="text-xs font-medium uppercase">Advance Payment</span>
+                          </div>
+                          <p className="text-lg font-bold text-green-700 dark:text-green-400">
+                            {selectedInvoice.advancePaymentPercent}%
+                          </p>
+                        </div>
+                        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+                          <div className="flex items-center gap-2 text-amber-600 mb-1">
+                            <DollarSign className="h-4 w-4" />
+                            <span className="text-xs font-medium uppercase">Balance on Delivery</span>
+                          </div>
+                          <p className="text-lg font-bold text-amber-700 dark:text-amber-400">
+                            {100 - selectedInvoice.advancePaymentPercent}%
+                          </p>
+                        </div>
                       </div>
                     )}
-                    <Separator />
-                    <div className="flex justify-between border-t pt-2">
-                      <span className="font-semibold">Total Amount</span>
-                      <span className="text-xl font-bold">Rs. {parseFloat(selectedInvoice.totalAmount || '0').toLocaleString('en-IN')}</span>
-                    </div>
                   </CardContent>
                 </Card>
 
-                {/* Advance Payment Section */}
-                {selectedInvoice.advancePaymentPercent !== undefined && selectedInvoice.advancePaymentPercent !== null && selectedInvoice.advancePaymentPercent > 0 && (
-                  <Card className="border-green-200 dark:border-green-700/50 bg-green-50/50 dark:bg-green-900/10">
-                    <CardContent className="pt-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-green-600" />
-                        <span className="font-medium text-green-700 dark:text-green-400">Carrier Advance Payment</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Advance Payment:</span>
-                        <span className="font-bold text-green-600 dark:text-green-400">{selectedInvoice.advancePaymentPercent}%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Balance on Delivery:</span>
-                        <span className="font-medium">{100 - selectedInvoice.advancePaymentPercent}%</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {selectedInvoice.acknowledgedAt && (
+                {/* Payment History Timeline */}
+                {(selectedInvoice.acknowledgedAt || selectedInvoice.paidAt) && (
                   <Card>
-                    <CardContent className="pt-4">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm">
-                          Acknowledged by shipper on {format(new Date(selectedInvoice.acknowledgedAt), "MMM d, yyyy 'at' h:mm a")}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {selectedInvoice.paidAt && (
-                  <Card>
-                    <CardContent className="pt-4">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        <span className="text-sm">
-                          Payment received on {format(new Date(selectedInvoice.paidAt), "MMM d, yyyy 'at' h:mm a")}
-                        </span>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Payment History
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      <div className="space-y-3">
+                        {selectedInvoice.acknowledgedAt && (
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">Invoice Acknowledged</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(selectedInvoice.acknowledgedAt), "MMM d, yyyy 'at' h:mm a")}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        {selectedInvoice.paidAt && (
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                              <DollarSign className="h-4 w-4 text-green-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">Payment Received</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(selectedInvoice.paidAt), "MMM d, yyyy 'at' h:mm a")}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

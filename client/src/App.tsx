@@ -97,7 +97,12 @@ function AppContent() {
   }
 
   if (location === "/auth") {
-    return <AuthPage />;
+    return (
+      <>
+        <AuthPage />
+        <HelpBotWidget />
+      </>
+    );
   }
 
   const style = {

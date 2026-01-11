@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Phone, Mail, Loader2, Minimize2 } from "lucide-react";
+import { MessageCircle, X, Send, Phone, Mail, Loader2, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,6 +10,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  isError?: boolean;
 }
 
 export function HelpBotWidget() {
@@ -19,6 +20,7 @@ export function HelpBotWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [showContactInfo, setShowContactInfo] = useState(false);
+  const [streamError, setStreamError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +42,10 @@ export function HelpBotWidget() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setStreamError(false);
+
+    const assistantId = `assistant-${Date.now()}`;
+    let assistantContent = "";
 
     try {
       const response = await fetch("/api/helpbot/chat", {
@@ -57,8 +63,6 @@ export function HelpBotWidget() {
       if (!reader) throw new Error("No response body");
 
       const decoder = new TextDecoder();
-      let assistantContent = "";
-      const assistantId = `assistant-${Date.now()}`;
 
       setMessages((prev) => [
         ...prev,
@@ -81,6 +85,18 @@ export function HelpBotWidget() {
                 setConversationId(data.conversationId);
               }
               
+              if (data.error) {
+                setStreamError(true);
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId 
+                      ? { ...m, content: data.error, isError: true } 
+                      : m
+                  )
+                );
+                break;
+              }
+              
               if (data.content) {
                 assistantContent += data.content;
                 setMessages((prev) =>
@@ -99,21 +115,44 @@ export function HelpBotWidget() {
           }
         }
       }
+
+      // Handle case where stream ends with empty content
+      if (!assistantContent && !streamError) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: "Sorry, I couldn't generate a response. Please try again.", isError: true }
+              : m
+          )
+        );
+      }
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again or contact our support team.",
-          timestamp: new Date(),
-        },
-      ]);
+      // If we already added an assistant message placeholder, update it with error
+      setMessages((prev) => {
+        const hasPlaceholder = prev.some(m => m.id === assistantId);
+        if (hasPlaceholder) {
+          return prev.map(m =>
+            m.id === assistantId
+              ? { ...m, content: "Sorry, I encountered an error. Please try again or contact our support team.", isError: true }
+              : m
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: `error-${Date.now()}`,
+            role: "assistant" as const,
+            content: "Sorry, I encountered an error. Please try again or contact our support team.",
+            timestamp: new Date(),
+            isError: true,
+          },
+        ];
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, conversationId]);
+  }, [input, isLoading, conversationId, streamError]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -126,6 +165,16 @@ export function HelpBotWidget() {
     setMessages([]);
     setConversationId(null);
     setShowContactInfo(false);
+    setStreamError(false);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    startNewConversation();
+  };
+
+  const handleMinimize = () => {
+    setIsOpen(false);
   };
 
   if (!isOpen) {
@@ -153,16 +202,18 @@ export function HelpBotWidget() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            onClick={() => setIsOpen(false)}
+            onClick={handleMinimize}
+            title="Minimize chat"
             data-testid="button-helpbot-minimize"
           >
-            <Minimize2 className="h-4 w-4" />
+            <Minus className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
+            title="Close and end chat"
             data-testid="button-helpbot-close"
           >
             <X className="h-4 w-4" />
@@ -222,10 +273,14 @@ export function HelpBotWidget() {
                     "max-w-[80%] rounded-lg px-4 py-2",
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                      : message.isError
+                        ? "bg-destructive/10 text-destructive border border-destructive/20"
+                        : "bg-muted"
                   )}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content || (isLoading && message.role === "assistant" ? "Thinking..." : "")}</p>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {message.content || (isLoading && message.role === "assistant" ? "Thinking..." : "")}
+                  </p>
                 </div>
               </div>
             ))}

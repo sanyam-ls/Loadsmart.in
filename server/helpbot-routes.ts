@@ -187,6 +187,7 @@ export function registerHelpBotRoutes(app: Express): void {
 
   app.get("/api/helpbot/conversations/:id", async (req: Request, res: Response) => {
     try {
+      const userId = req.session?.userId;
       const convId = parseInt(req.params.id);
       
       const [conversation] = await db.select()
@@ -195,6 +196,12 @@ export function registerHelpBotRoutes(app: Express): void {
       
       if (!conversation) {
         return res.status(404).json({ error: "Conversation not found" });
+      }
+
+      // Authorization check: ensure user owns this conversation
+      // Allow access only if conversation belongs to this user, or if it was a guest conversation (null userId) and current user is the same guest session
+      if (conversation.userId && conversation.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
       }
 
       const msgs = await db.select()

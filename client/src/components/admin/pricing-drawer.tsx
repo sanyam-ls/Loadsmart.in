@@ -936,14 +936,13 @@ export function PricingDrawer({
                           <Label className="text-sm">Custom:</Label>
                           <div className="flex items-center gap-2">
                             <Input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
                               value={advancePaymentPercent}
                               onChange={(e) => {
-                                const val = parseInt(e.target.value) || 0;
+                                const val = parseInt(e.target.value.replace(/\D/g, '')) || 0;
                                 setAdvancePaymentPercent(Math.min(100, Math.max(0, val)));
                               }}
-                              min={0}
-                              max={100}
                               className="w-20 text-right"
                               data-testid="input-advance-payment"
                             />

@@ -1185,69 +1185,37 @@ export default function CarrierLoadsPage() {
                 </CardContent>
               </Card>
               
-              {selectedLoad.priceFixed ? (
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    This load has a fixed price set by the admin. Click "Accept" to confirm this load at the displayed rate.
+              <div className="p-4 bg-muted/50 rounded-lg border">
+                <label className="text-sm font-medium mb-2 block">Your Bid Amount (Rs.)</label>
+                <Input
+                  type="number"
+                  placeholder={t("bids.enterBidAmount")}
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(e.target.value)}
+                  className="mb-3"
+                  data-testid="input-bid-amount"
+                />
+                <Button 
+                  className="w-full"
+                  onClick={() => {
+                    if (parseFloat(bidAmount) === getCarrierPrice(selectedLoad)) {
+                      handleAccept();
+                    } else {
+                      submitBid();
+                    }
+                  }}
+                  disabled={!bidAmount || bidMutation.isPending}
+                  data-testid="button-place-bid"
+                >
+                  {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Place Bid
+                </Button>
+                {parseFloat(bidAmount) !== getCarrierPrice(selectedLoad) && bidAmount && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Different price will go through admin negotiation.
                   </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-green-700 dark:text-green-400">Accept Admin Price</span>
-                      <span className="text-lg font-bold text-green-600">{formatCurrency(getCarrierPrice(selectedLoad))}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Accept the price and proceed directly to invoice generation - no negotiation required.
-                    </p>
-                    <Button 
-                      className="w-full bg-green-600 hover:bg-green-700"
-                      onClick={handleAccept}
-                      disabled={bidMutation.isPending}
-                      data-testid="button-accept-price"
-                    >
-                      {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Accept Price
-                    </Button>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">Or submit a counter offer</span>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-muted/50 rounded-lg border">
-                    <label className="text-sm font-medium mb-2 block">Your Counter Offer (Rs.)</label>
-                    <Input
-                      type="number"
-                      placeholder={t("bids.enterBidAmount")}
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
-                      className="mb-3"
-                      data-testid="input-bid-amount"
-                    />
-                    <Button 
-                      variant="outline"
-                      className="w-full"
-                      onClick={submitBid}
-                      disabled={!bidAmount || bidMutation.isPending || parseFloat(bidAmount) === getCarrierPrice(selectedLoad)}
-                      data-testid="button-submit-counter"
-                    >
-                      {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      Submit Counter Offer
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Counter offers go through admin negotiation before approval.
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
           
@@ -1255,16 +1223,6 @@ export default function CarrierLoadsPage() {
             <Button variant="outline" onClick={() => setBidDialogOpen(false)} data-testid="button-cancel-bid">
               Cancel
             </Button>
-            {selectedLoad?.priceFixed && (
-              <Button 
-                onClick={handleAccept} 
-                disabled={bidMutation.isPending}
-                data-testid="button-confirm-accept"
-              >
-                {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Accept Load
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

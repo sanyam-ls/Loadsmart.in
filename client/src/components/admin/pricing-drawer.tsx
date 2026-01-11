@@ -208,11 +208,31 @@ export function PricingDrawer({
   const finalPrice = pricingResult.carrierPayout;
   const carrierPayout = finalPrice;
   
-  // Handler for margin percent change (calculates carrier payout)
-  const handleMarginChange = useCallback((newMargin: number) => {
-    setPlatformMarginPercent(newMargin);
-    setCarrierPayoutOverride(null); // Clear override so it calculates from margin
+  // Local state for margin input (to allow typing decimals like "10.")
+  const [marginInputValue, setMarginInputValue] = useState<string>(platformMarginPercent.toString());
+  
+  // Sync margin input value when platformMarginPercent changes externally
+  useEffect(() => {
+    // Only update if the value is different (to not interfere with typing)
+    const parsedInput = parseFloat(marginInputValue) || 0;
+    if (Math.abs(parsedInput - platformMarginPercent) > 0.01) {
+      setMarginInputValue(platformMarginPercent.toString());
+    }
+  }, [platformMarginPercent]);
+  
+  // Handler for margin percent input change (allows typing)
+  const handleMarginInput = useCallback((inputValue: string) => {
+    setMarginInputValue(inputValue);
   }, []);
+  
+  // Handler for margin percent blur (syncs carrier payout when user finishes typing)
+  const handleMarginBlur = useCallback(() => {
+    const val = parseFloat(marginInputValue.replace(/[^0-9.]/g, '')) || 0;
+    const clampedVal = Math.min(50, Math.max(0, val));
+    setPlatformMarginPercent(clampedVal);
+    setCarrierPayoutOverride(null); // Clear override so it calculates from margin
+    setMarginInputValue(clampedVal.toString());
+  }, [marginInputValue]);
   
   // Handler for carrier payout input change (stores value while typing)
   const handleCarrierPayoutInput = useCallback((newPayout: number) => {
@@ -227,6 +247,7 @@ export function PricingDrawer({
     const result = calculateFromPayout({ grossPrice, carrierPayout: carrierPayoutOverride });
     if (result.isValid) {
       setPlatformMarginPercent(result.platformMarginPercent);
+      setMarginInputValue(result.platformMarginPercent.toString());
     }
   }, [grossPrice, carrierPayoutOverride]);
 
@@ -912,11 +933,9 @@ export function PricingDrawer({
                             <Input
                               type="text"
                               inputMode="decimal"
-                              value={platformMarginPercent}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || 0;
-                                handleMarginChange(Math.min(50, Math.max(0, val)));
-                              }}
+                              value={marginInputValue}
+                              onChange={(e) => handleMarginInput(e.target.value)}
+                              onBlur={handleMarginBlur}
                               className="w-16 text-right"
                               data-testid="input-platform-margin"
                             />

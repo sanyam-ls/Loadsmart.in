@@ -67,19 +67,8 @@ type ChatMessage = {
   message: string;
   amount?: string;
   timestamp: Date;
-  isSimulated?: boolean;
 };
 
-const SIMULATED_CARRIER_RESPONSES = [
-  "I can consider that rate, but could you go slightly higher?",
-  "That's a bit lower than my costs. Can we meet in the middle?",
-  "I appreciate the offer. Let me check my schedule and get back to you.",
-  "I can do this load if you can increase the rate by 5%.",
-  "Fair enough, I'll accept this if it's the final offer.",
-  "I've done similar routes before. Your rate seems reasonable.",
-  "Can you guarantee quick loading/unloading times?",
-  "I'm interested but my truck is available in 2 days. Would that work?",
-];
 
 type Bid = {
   id: string;
@@ -146,7 +135,6 @@ export default function AdminNegotiationsPage() {
   const [detailBid, setDetailBid] = useState<Bid | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const [finalNegotiatedPrice, setFinalNegotiatedPrice] = useState<number | null>(null);
 
@@ -168,9 +156,8 @@ export default function AdminNegotiationsPage() {
             id: data.negotiation?.id || `msg-${Date.now()}`,
             sender: data.negotiation?.senderRole === "admin" ? "admin" : "carrier",
             message: data.negotiation?.message || "",
-            amount: data.negotiation?.counterAmount,
+            amount: data.negotiation?.amount || data.negotiation?.counterAmount,
             timestamp: new Date(data.negotiation?.createdAt || Date.now()),
-            isSimulated: false,
           };
           setChatMessages(prev => {
             const exists = prev.some(m => m.id === newMessage.id);
@@ -203,7 +190,6 @@ export default function AdminNegotiationsPage() {
       message: `Hi, I'm interested in this load from ${bid.load?.pickupCity} to ${bid.load?.dropoffCity}. My initial offer is Rs. ${parseFloat(bid.amount).toLocaleString("en-IN")}.`,
       amount: bid.amount,
       timestamp: new Date(bid.createdAt),
-      isSimulated: false,
     };
     
     try {
@@ -217,9 +203,8 @@ export default function AdminNegotiationsPage() {
               id: n.id,
               sender: n.senderRole === "admin" ? "admin" as const : "carrier" as const,
               message: n.message || "",
-              amount: n.counterAmount,
+              amount: n.amount || n.counterAmount,
               timestamp: new Date(n.createdAt),
-              isSimulated: false,
             }));
           setChatMessages([initialMessage, ...historyMessages]);
         } else {
@@ -270,20 +255,6 @@ export default function AdminNegotiationsPage() {
         variant: "destructive",
       });
     }
-
-    setIsTyping(true);
-    setTimeout(() => {
-      const response = SIMULATED_CARRIER_RESPONSES[Math.floor(Math.random() * SIMULATED_CARRIER_RESPONSES.length)];
-      const carrierResponse: ChatMessage = {
-        id: `carrier-${Date.now()}`,
-        sender: "carrier",
-        message: response,
-        timestamp: new Date(),
-        isSimulated: true,
-      };
-      setChatMessages(prev => [...prev, carrierResponse]);
-      setIsTyping(false);
-    }, 1500 + Math.random() * 2000);
   }, [chatBid, toast]);
 
   const { data: bids = [], isLoading, refetch } = useQuery<Bid[]>({
@@ -1125,9 +1096,6 @@ export default function AdminNegotiationsPage() {
                     <span className="text-xs font-medium">
                       {msg.sender === "admin" ? "You (Admin)" : getCarrierDisplayName(chatBid?.carrier)}
                     </span>
-                    {msg.isSimulated && (
-                      <Badge variant="outline" className="text-xs">Simulated</Badge>
-                    )}
                   </div>
                   <p className="text-sm">{msg.message}</p>
                   {msg.amount && (
@@ -1141,17 +1109,6 @@ export default function AdminNegotiationsPage() {
                 </div>
               </div>
             ))}
-            
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-card border rounded-lg px-4 py-2">
-                  <div className="flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span className="text-xs text-muted-foreground">Carrier is typing...</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="flex gap-2">
@@ -1165,13 +1122,12 @@ export default function AdminNegotiationsPage() {
                   sendChatMessage(chatInput);
                 }
               }}
-              disabled={isTyping}
               data-testid="input-chat-message"
             />
             <Button
               size="icon"
               onClick={() => sendChatMessage(chatInput)}
-              disabled={!chatInput.trim() || isTyping}
+              disabled={!chatInput.trim()}
               data-testid="button-send-chat"
             >
               <Send className="h-4 w-4" />

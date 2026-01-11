@@ -60,7 +60,6 @@ interface ChatMessage {
   message: string;
   amount?: number;
   timestamp: Date;
-  isSimulated?: boolean;
 }
 
 function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: { 
@@ -106,23 +105,13 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
               message: msg.message || (msg.messageType === "counter_offer" ? "Counter offer" : "Message"),
               amount: msg.amount ? parseFloat(msg.amount) : undefined,
               timestamp: new Date(msg.createdAt),
-              isSimulated: false,
             }));
           setChatMessages(messages);
         })
         .catch(() => setChatMessages([]))
         .finally(() => setIsLoading(false));
     } else {
-      setChatMessages(
-        bid.negotiationHistory.slice(1).map((msg) => ({
-          id: msg.id,
-          sender: msg.sender as "carrier" | "admin",
-          message: msg.message,
-          amount: msg.amount,
-          timestamp: new Date(msg.timestamp),
-          isSimulated: true,
-        }))
-      );
+      setChatMessages([]);
     }
   }, [isOpen, bid.bidId, isRealBid, bid.negotiationHistory]);
 
@@ -137,7 +126,6 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
           message: data.negotiation?.message || "Counter offer",
           amount: data.negotiation?.counterAmount ? parseFloat(data.negotiation.counterAmount) : undefined,
           timestamp: new Date(data.negotiation?.createdAt || Date.now()),
-          isSimulated: false,
         };
         setChatMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
@@ -177,8 +165,8 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
         queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
         toast({ title: "Counter Sent", description: `Your counter offer of ${formatCurrency(parseInt(counterAmount))} has been sent.` });
       } else {
-        // For regular messages, use the existing negotiations endpoint
-        await apiRequest("POST", `/api/bids/${bid.bidId}/negotiations`, {
+        // For regular messages, use the negotiate endpoint
+        await apiRequest("POST", `/api/bids/${bid.bidId}/negotiate`, {
           messageType,
           message: newMessage,
         });

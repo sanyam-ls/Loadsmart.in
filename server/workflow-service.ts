@@ -306,7 +306,7 @@ export async function acceptBid(
         const advanceAmount = advancePercent > 0 ? (parseFloat(totalWithTax) * (advancePercent / 100)).toFixed(2) : null;
         const balanceOnDelivery = advancePercent > 0 ? (parseFloat(totalWithTax) - parseFloat(advanceAmount || "0")).toFixed(2) : null;
         
-        await storage.createInvoice({
+        const newInvoice = await storage.createInvoice({
           invoiceNumber,
           loadId: load.id,
           shipperId: load.shipperId,
@@ -334,6 +334,11 @@ export async function acceptBid(
             amount: finalAmount
           }],
           status: "draft",
+        });
+        
+        // Link the invoice to the load
+        await storage.updateLoad(bid.loadId, {
+          invoiceId: newInvoice.id,
         });
       }
     } catch (invoiceError) {

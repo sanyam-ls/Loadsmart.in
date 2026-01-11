@@ -299,12 +299,11 @@ export async function acceptBid(
       if (!existingInvoice) {
         const invoiceNumber = await storage.generateInvoiceNumber();
         const finalAmount = acceptedAmount || load.adminFinalPrice || "0";  // Use negotiated price
-        const totalWithTax = (parseFloat(finalAmount) * 1.18).toFixed(2);
         
-        // Calculate advance payment from load
+        // Calculate advance payment from load (no GST applied - total equals subtotal)
         const advancePercent = load.advancePaymentPercent || 0;
-        const advanceAmount = advancePercent > 0 ? (parseFloat(totalWithTax) * (advancePercent / 100)).toFixed(2) : null;
-        const balanceOnDelivery = advancePercent > 0 ? (parseFloat(totalWithTax) - parseFloat(advanceAmount || "0")).toFixed(2) : null;
+        const advanceAmount = advancePercent > 0 ? (parseFloat(finalAmount) * (advancePercent / 100)).toFixed(2) : null;
+        const balanceOnDelivery = advancePercent > 0 ? (parseFloat(finalAmount) - parseFloat(advanceAmount || "0")).toFixed(2) : null;
         
         const newInvoice = await storage.createInvoice({
           invoiceNumber,
@@ -318,9 +317,9 @@ export async function acceptBid(
           insuranceFee: "0",
           discountAmount: "0",
           discountReason: null,
-          taxPercent: "18",
-          taxAmount: (parseFloat(finalAmount) * 0.18).toFixed(2),
-          totalAmount: totalWithTax,
+          taxPercent: "0",
+          taxAmount: "0",
+          totalAmount: finalAmount,
           advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
           advancePaymentAmount: advanceAmount,
           balanceOnDelivery: balanceOnDelivery,

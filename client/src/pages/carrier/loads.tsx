@@ -62,9 +62,9 @@ interface CarrierLoad {
   postedAt?: string | null;
 }
 
-// Helper to get carrier display price (finalPrice = carrier payout, fallback to adminFinalPrice)
+// Helper to get carrier display price (finalPrice = carrier payout price)
 function getCarrierPrice(load: CarrierLoad): number {
-  return parseFloat(load.adminFinalPrice || load.finalPrice || "0");
+  return parseFloat(load.finalPrice || load.adminFinalPrice || "0");
 }
 
 // Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)

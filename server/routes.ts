@@ -4796,6 +4796,33 @@ export async function registerRoutes(
         type: "invoice",
         relatedLoadId: invoice.loadId,
       });
+      
+      // Create shipment when invoice is first sent (not on resend)
+      if (!isResend && load && load.assignedCarrierId) {
+        try {
+          const existingShipment = await storage.getShipmentByLoad(invoice.loadId);
+          if (!existingShipment) {
+            const shipment = await storage.createShipment({
+              loadId: invoice.loadId,
+              carrierId: load.assignedCarrierId,
+              truckId: load.assignedTruckId || null,
+              status: 'pickup_scheduled',
+            });
+            console.log(`[Invoice] Created shipment ${shipment.id} for load ${invoice.loadId} when invoice sent`);
+            
+            // Notify carrier about the shipment
+            await storage.createNotification({
+              userId: load.assignedCarrierId,
+              title: "New Shipment Assigned",
+              message: `You have a new shipment from ${load.pickupCity} to ${load.dropoffCity}. Check My Shipments for details.`,
+              type: "success",
+              relatedLoadId: invoice.loadId,
+            });
+          }
+        } catch (shipmentError) {
+          console.error("Failed to create shipment when sending invoice:", shipmentError);
+        }
+      }
 
       console.log(`[Invoice] Broadcasting invoice_sent event to shipper ${invoice.shipperId}`);
       broadcastInvoiceEvent(invoice.shipperId, invoice.id, "invoice_sent", updated);

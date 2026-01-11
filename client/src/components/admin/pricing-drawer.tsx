@@ -149,6 +149,7 @@ export function PricingDrawer({
   const [fixedFee, setFixedFee] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [platformMarginPercent, setPlatformMarginPercent] = useState(10);
+  const [carrierPayoutOverride, setCarrierPayoutOverride] = useState<number | null>(null);
   const [advancePaymentPercent, setAdvancePaymentPercent] = useState(0);
   const [notes, setNotes] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
@@ -194,10 +195,13 @@ export function PricingDrawer({
     return Math.round(grossPrice * (platformMarginPercent / 100));
   }, [grossPrice, platformMarginPercent]);
 
-  // Final price (carrier payout) = gross price - platform margin
-  const finalPrice = useMemo(() => {
+  // Calculated carrier payout = gross price - platform margin
+  const calculatedCarrierPayout = useMemo(() => {
     return grossPrice - platformMargin;
   }, [grossPrice, platformMargin]);
+
+  // Final price (carrier payout) - use override if set, otherwise calculated
+  const finalPrice = carrierPayoutOverride !== null ? carrierPayoutOverride : calculatedCarrierPayout;
 
   // carrierPayout is the same as finalPrice (what carrier receives)
   const carrierPayout = finalPrice;
@@ -243,6 +247,7 @@ export function PricingDrawer({
       setUsePerTonRate(false);
       setRatePerTon(0);
       setCustomTonnage(null);
+      setCarrierPayoutOverride(null);
     }
   }, [open]);
 
@@ -251,6 +256,7 @@ export function PricingDrawer({
     setUsePerTonRate(false);
     setRatePerTon(0);
     setCustomTonnage(null);
+    setCarrierPayoutOverride(null);
   }, [load?.id]);
 
   // Auto-populate pricing from shipper's requested rate
@@ -879,16 +885,19 @@ export function PricingDrawer({
                             <Label className="text-sm">Platform Margin</Label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Slider
-                              value={[platformMarginPercent]}
-                              onValueChange={([val]) => setPlatformMarginPercent(val)}
-                              min={5}
-                              max={25}
-                              step={1}
-                              className="w-24"
-                              data-testid="slider-platform-margin"
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              value={platformMarginPercent}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || 0;
+                                setPlatformMarginPercent(Math.min(50, Math.max(0, val)));
+                                setCarrierPayoutOverride(null);
+                              }}
+                              className="w-16 text-right"
+                              data-testid="input-platform-margin"
                             />
-                            <span className="text-sm font-medium w-10">{platformMarginPercent}%</span>
+                            <span className="text-sm font-medium">%</span>
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-sm">
@@ -898,8 +907,33 @@ export function PricingDrawer({
                         <Separator />
                         <div className="flex items-center justify-between">
                           <span className="font-medium">Final Price (Carrier Payout):</span>
-                          <span className="font-bold text-lg text-green-600 dark:text-green-400">{formatRupees(finalPrice)}</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm text-muted-foreground">Rs.</span>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              value={carrierPayoutOverride !== null ? carrierPayoutOverride : calculatedCarrierPayout}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                                setCarrierPayoutOverride(val);
+                              }}
+                              className="w-28 text-right font-bold text-lg text-green-600 dark:text-green-400"
+                              data-testid="input-carrier-payout"
+                            />
+                          </div>
                         </div>
+                        {carrierPayoutOverride !== null && carrierPayoutOverride !== calculatedCarrierPayout && (
+                          <p className="text-xs text-muted-foreground">
+                            Calculated: {formatRupees(calculatedCarrierPayout)} • 
+                            <button 
+                              type="button"
+                              onClick={() => setCarrierPayoutOverride(null)}
+                              className="ml-1 text-primary hover:underline"
+                            >
+                              Reset
+                            </button>
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
 

@@ -1868,3 +1868,6 @@ export interface EtaPrediction {
   betterRouteAvailable: boolean;
   betterRouteSavingsMinutes?: number;
 }
+
+// Help Bot Chat exports
+export * from "./models/chat";

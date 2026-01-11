@@ -50,6 +50,7 @@ import {
   calculateFromPayout,
   validatePricing,
 } from "@shared/pricing";
+import { registerHelpBotRoutes } from "./helpbot-routes";
 
 const hashPassword = async (password: string): Promise<string> => {
   const encoder = new TextEncoder();
@@ -106,6 +107,8 @@ export async function registerRoutes(
       },
     })
   );
+
+  registerHelpBotRoutes(app);
 
   app.post("/api/auth/register", async (req, res) => {
     try {

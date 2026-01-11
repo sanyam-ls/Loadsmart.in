@@ -12,6 +12,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationPanel } from "@/components/notification-panel";
 import { GlobalSearch } from "@/components/global-search";
 import { AIConcierge } from "@/components/ai-concierge";
+import { HelpBotWidget } from "@/components/HelpBotWidget";
 import NotFound from "@/pages/not-found";
 
 import AuthPage from "@/pages/auth";
@@ -189,6 +190,7 @@ function AppContent() {
       </div>
       <AIConcierge />
       <CarrierOtpNotification />
+      <HelpBotWidget />
     </SidebarProvider>
   );
 }

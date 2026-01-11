@@ -2950,7 +2950,6 @@ export async function registerRoutes(
               invoiceNumber,
               loadId: load_id,
               shipperId: load.shipperId,
-              carrierId: user.id,
               adminId: load.adminId || null,
               subtotal: invoiceAmount,
               fuelSurcharge: "0",

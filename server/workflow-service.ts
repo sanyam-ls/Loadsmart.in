@@ -346,9 +346,10 @@ export async function acceptBid(
       loadId: load.id,
     });
 
-    broadcastLoadUpdated(load.id, load.shipperId, "awarded", "bid_accepted", {
+    // Broadcast invoice_created status - shipment created after shipper acknowledges
+    broadcastLoadUpdated(load.id, load.shipperId, "invoice_created", "invoice_created", {
       id: load.id,
-      status: "awarded",
+      status: "invoice_created",
       pickupCity: load.pickupCity,
       dropoffCity: load.dropoffCity,
     });

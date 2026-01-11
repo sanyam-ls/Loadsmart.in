@@ -37,10 +37,7 @@ import { format, subMonths, isAfter } from "date-fns";
 import type { Shipment, Load, Driver, Truck as DbTruck } from "@shared/schema";
 
 function formatCurrency(amount: number): string {
-  if (amount >= 100000) {
-    return `Rs. ${(amount / 100000).toFixed(1)}L`;
-  }
-  return `Rs. ${amount.toLocaleString()}`;
+  return `Rs. ${amount.toLocaleString("en-IN")}`;
 }
 
 function convertShipmentToCompletedTrip(

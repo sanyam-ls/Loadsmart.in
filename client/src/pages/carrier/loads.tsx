@@ -248,10 +248,7 @@ const simulatedLoads: CarrierLoad[] = [
 ];
 
 function formatCurrency(amount: number): string {
-  if (amount >= 100000) {
-    return `Rs. ${(amount / 100000).toFixed(1)}L`;
-  }
-  return `Rs. ${amount.toLocaleString()}`;
+  return `Rs. ${amount.toLocaleString("en-IN")}`;
 }
 
 function getMatchScoreBadge(score: number) {

@@ -27,13 +27,7 @@ import {
 import type { Truck as TruckType, Load, Shipment } from "@shared/schema";
 
 const formatCurrency = (amount: number): string => {
-  if (amount >= 10000000) {
-    return `Rs. ${(amount / 10000000).toFixed(2)} Cr`;
-  } else if (amount >= 100000) {
-    return `Rs. ${(amount / 100000).toFixed(2)} L`;
-  } else {
-    return `Rs. ${amount.toLocaleString("en-IN")}`;
-  }
+  return `Rs. ${amount.toLocaleString("en-IN")}`;
 };
 
 const formatEta = (eta: Date | string): string => {

@@ -43,10 +43,7 @@ import { format } from "date-fns";
 import type { Bid, Load } from "@shared/schema";
 
 function formatCurrency(amount: number): string {
-  if (amount >= 100000) {
-    return `Rs. ${(amount / 100000).toFixed(1)}L`;
-  }
-  return `Rs. ${amount.toLocaleString()}`;
+  return `Rs. ${amount.toLocaleString("en-IN")}`;
 }
 
 const statusConfig: Record<CarrierBid["bidStatus"], { label: string; icon: typeof CheckCircle; color: string }> = {

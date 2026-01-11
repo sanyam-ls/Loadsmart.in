@@ -74,10 +74,7 @@ interface RealShipment {
 
 function formatCurrency(amount: number | undefined | null): string {
   const value = amount ?? 0;
-  if (value >= 100000) {
-    return `Rs. ${(value / 100000).toFixed(1)}L`;
-  }
-  return `Rs. ${value.toLocaleString()}`;
+  return `Rs. ${value.toLocaleString("en-IN")}`;
 }
 
 const statusConfig: Record<CarrierTrip["status"], { label: string; color: string }> = {

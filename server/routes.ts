@@ -4123,7 +4123,7 @@ export async function registerRoutes(
             loadRoute: `${load?.pickupCity || ''} to ${load?.dropoffCity || ''}`,
             shipperLoadNumber: load?.shipperLoadNumber || null,
             adminReferenceNumber: load?.adminReferenceNumber || null,
-            cargoDescription: load?.cargoDescription,
+            cargoDescription: load?.goodsToBeCarried || load?.cargoDescription,
             weight: load?.weight,
             carrier,
             driver,
@@ -4141,7 +4141,7 @@ export async function registerRoutes(
               adminFinalPrice: load.adminFinalPrice,
               finalPrice: load.finalPrice,
               weight: load.weight,
-              cargoDescription: load.cargoDescription,
+              cargoDescription: load.goodsToBeCarried || load.cargoDescription,
             } : null,
           };
         } catch (err) {
@@ -4251,7 +4251,7 @@ export async function registerRoutes(
             loadRoute: `${load?.pickupCity || ''} to ${load?.dropoffCity || ''}`,
             shipperLoadNumber: load?.shipperLoadNumber || null,
             adminReferenceNumber: load?.adminReferenceNumber || null,
-            cargoDescription: load?.cargoDescription,
+            cargoDescription: load?.goodsToBeCarried || load?.cargoDescription,
             weight: load?.weight,
             carrier,
             driver,

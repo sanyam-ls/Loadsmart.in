@@ -835,6 +835,11 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                   </CardContent>
                 </Card>
                 
+                {/* Thank You Message */}
+                <p className="text-center text-lg font-semibold text-primary">
+                  Thank you for your business.
+                </p>
+                
                 {/* Payment Instructions */}
                 <Card className="border-blue-200 dark:border-blue-700/50 bg-blue-50/50 dark:bg-blue-900/10">
                   <CardHeader className="py-3">
@@ -866,7 +871,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                         <span className="font-mono font-medium">freightflow@hdfcbank</span>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground pt-2 border-t">
+                    <p className="text-base font-medium pt-2 border-t">
                       Please include your Invoice Number ({selectedInvoice.invoiceNumber}) as payment reference.
                     </p>
                   </CardContent>

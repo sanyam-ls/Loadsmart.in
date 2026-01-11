@@ -1126,8 +1126,24 @@ export async function registerRoutes(
       await storage.updateLoad(bid.loadId, {
         status: "awarded",
         assignedCarrierId: user.id,
+        awardedBidId: bidId,
         statusChangedAt: new Date(),
       });
+
+      // Create shipment so load appears in tracking
+      try {
+        const existingShipment = await storage.getShipmentByLoad(bid.loadId);
+        if (!existingShipment) {
+          await storage.createShipment({
+            loadId: bid.loadId,
+            carrierId: user.id,
+            truckId: bid.truckId || null,
+            status: 'pickup_scheduled',
+          });
+        }
+      } catch (shipmentError) {
+        console.error("Failed to create shipment after carrier acceptance:", shipmentError);
+      }
 
       // Notify admin
       const admins = await storage.getAdmins();

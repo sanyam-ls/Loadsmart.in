@@ -931,7 +931,14 @@ export default function AdminNegotiationsPage() {
               Negotiate with {getCarrierDisplayName(chatBid?.carrier)}
             </DialogTitle>
             <DialogDescription>
-              {chatBid?.load?.pickupCity} to {chatBid?.load?.dropoffCity} - Current bid: Rs. {parseFloat(chatBid?.amount || "0").toLocaleString("en-IN")}
+              <span className="font-semibold">
+                {chatBid?.load?.adminReferenceNumber 
+                  ? `LD-${String(chatBid.load.adminReferenceNumber).padStart(3, '0')}`
+                  : chatBid?.load?.shipperLoadNumber 
+                    ? `LD-${String(chatBid.load.shipperLoadNumber).padStart(3, '0')}`
+                    : chatBid?.loadId?.slice(0, 8)?.toUpperCase()}
+              </span>
+              {" "}{chatBid?.load?.pickupCity} to {chatBid?.load?.dropoffCity} - Current bid: Rs. {parseFloat(chatBid?.amount || "0").toLocaleString("en-IN")}
             </DialogDescription>
           </DialogHeader>
           

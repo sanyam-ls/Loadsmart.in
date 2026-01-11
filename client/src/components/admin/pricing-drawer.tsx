@@ -64,6 +64,10 @@ interface LoadData {
   adminPrice?: number;
   finalPrice?: string;
   adminFinalPrice?: string;
+  // Shipper's requested pricing
+  shipperPricePerTon?: string | number | null;
+  shipperFixedPrice?: string | number | null;
+  rateType?: string | null; // "per_ton" or "fixed_price"
 }
 
 interface CarrierOption {
@@ -247,6 +251,35 @@ export function PricingDrawer({
     setRatePerTon(0);
     setCustomTonnage(null);
   }, [load?.id]);
+
+  // Auto-populate pricing from shipper's requested rate
+  useEffect(() => {
+    if (open && load && !isCarrierFinalized) {
+      // Check if shipper provided pricing
+      const shipperRate = load.rateType;
+      const shipperPerTon = load.shipperPricePerTon;
+      const shipperFixed = load.shipperFixedPrice;
+      
+      if (shipperRate === "per_ton" && shipperPerTon) {
+        // Shipper provided per-ton rate
+        const perTonValue = typeof shipperPerTon === 'string' ? parseFloat(shipperPerTon) : shipperPerTon;
+        if (perTonValue > 0) {
+          setUsePerTonRate(true);
+          setRatePerTon(perTonValue);
+          // Calculate gross price from per-ton rate
+          const calculatedPrice = Math.round(perTonValue * loadWeightInTons);
+          setGrossPrice(calculatedPrice);
+        }
+      } else if (shipperFixed) {
+        // Shipper provided fixed price
+        const fixedValue = typeof shipperFixed === 'string' ? parseFloat(shipperFixed) : shipperFixed;
+        if (fixedValue > 0) {
+          setUsePerTonRate(false);
+          setGrossPrice(Math.round(fixedValue));
+        }
+      }
+    }
+  }, [open, load?.id, load?.rateType, load?.shipperPricePerTon, load?.shipperFixedPrice, isCarrierFinalized, loadWeightInTons]);
 
   // Fetch suggested price when load changes (only for non-finalized loads)
   useEffect(() => {
@@ -596,6 +629,37 @@ export function PricingDrawer({
                   </div>
                 ) : (
                   <>
+                    {/* Shipper Requested Price Indicator */}
+                    {(load.shipperFixedPrice || load.shipperPricePerTon) && (
+                      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                        <CardContent className="pt-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Users className="h-4 w-4 text-amber-600" />
+                            <span className="font-medium text-amber-700 dark:text-amber-400">Shipper's Requested Price</span>
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 text-xs">
+                              Pre-filled
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">
+                              {load.rateType === "per_ton" ? "Per Tonne Rate" : "Fixed Price"}
+                            </span>
+                            <span className="font-bold text-lg text-amber-700 dark:text-amber-400" data-testid="text-shipper-requested-price">
+                              {load.rateType === "per_ton" && load.shipperPricePerTon
+                                ? `Rs. ${parseFloat(load.shipperPricePerTon.toString()).toLocaleString("en-IN")}/MT`
+                                : load.shipperFixedPrice
+                                  ? formatRupees(parseFloat(load.shipperFixedPrice.toString()))
+                                  : "-"
+                              }
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            The pricing fields below have been pre-filled with the shipper's requested rate. You can adjust as needed.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+
                     {/* Template Selection */}
                     <div className="space-y-2">
                       <Label>Pricing Template (Optional)</Label>

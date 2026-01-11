@@ -208,30 +208,27 @@ export function PricingDrawer({
   const finalPrice = pricingResult.carrierPayout;
   const carrierPayout = finalPrice;
   
-  // Sync margin percent when payout override is set (two-way binding)
-  useEffect(() => {
-    if (carrierPayoutOverride !== null && pricingResult.isValid) {
-      // Update margin percent to match the calculated value from payout
-      setPlatformMarginPercent(pricingResult.platformMarginPercent);
-    }
-  }, [carrierPayoutOverride, pricingResult]);
-  
   // Handler for margin percent change (calculates carrier payout)
   const handleMarginChange = useCallback((newMargin: number) => {
     setPlatformMarginPercent(newMargin);
     setCarrierPayoutOverride(null); // Clear override so it calculates from margin
   }, []);
   
-  // Handler for carrier payout change (calculates margin percent)
-  const handleCarrierPayoutChange = useCallback((newPayout: number) => {
-    if (grossPrice <= 0) return;
-    // Calculate what margin this payout implies
-    const result = calculateFromPayout({ grossPrice, carrierPayout: newPayout });
+  // Handler for carrier payout input change (stores value while typing)
+  const handleCarrierPayoutInput = useCallback((newPayout: number) => {
+    // Store the override value while user is typing
+    setCarrierPayoutOverride(newPayout);
+  }, []);
+  
+  // Handler for carrier payout blur (syncs margin when user finishes typing)
+  const handleCarrierPayoutBlur = useCallback(() => {
+    if (carrierPayoutOverride === null || grossPrice <= 0) return;
+    // Calculate what margin this payout implies and sync it
+    const result = calculateFromPayout({ grossPrice, carrierPayout: carrierPayoutOverride });
     if (result.isValid) {
       setPlatformMarginPercent(result.platformMarginPercent);
-      setCarrierPayoutOverride(null); // Clear override since we've synced the margin
     }
-  }, [grossPrice]);
+  }, [grossPrice, carrierPayoutOverride]);
 
   const priceDeviation = useMemo(() => {
     if (suggestedPrice === 0) return 0;
@@ -938,11 +935,12 @@ export function PricingDrawer({
                             <Input
                               type="text"
                               inputMode="numeric"
-                              value={finalPrice}
+                              value={carrierPayoutOverride !== null ? carrierPayoutOverride : finalPrice}
                               onChange={(e) => {
                                 const val = parseInt(e.target.value.replace(/\D/g, '')) || 0;
-                                handleCarrierPayoutChange(val);
+                                handleCarrierPayoutInput(val);
                               }}
+                              onBlur={handleCarrierPayoutBlur}
                               className="w-28 text-right font-bold text-lg text-green-600 dark:text-green-400"
                               data-testid="input-carrier-payout"
                             />

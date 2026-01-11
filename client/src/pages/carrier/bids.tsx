@@ -5,7 +5,7 @@ import {
   Search, Filter, Gavel, Clock, CheckCircle, XCircle, RefreshCw, 
   MapPin, Truck, Package, Building2, Star, MessageSquare, Send,
   TrendingUp, AlertTriangle, Timer, ArrowRight, ChevronDown, ChevronRight,
-  Loader2
+  Loader2, Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,10 +76,19 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [adminPhone, setAdminPhone] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const isRealBid = bid.bidId && !bid.bidId.startsWith("bid-");
+  
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch("/api/admin/contact", { credentials: "include" })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setAdminPhone(data?.phone || null))
+      .catch(() => setAdminPhone(null));
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -206,10 +215,24 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
   return (
     <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Negotiation - {(bid as any).displayLoadId || bid.loadId.slice(0, 8).toUpperCase()}
-        </DialogTitle>
+        <div className="flex items-center justify-between gap-2">
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Negotiation - {(bid as any).displayLoadId || bid.loadId.slice(0, 8).toUpperCase()}
+          </DialogTitle>
+          {adminPhone && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.open(`tel:${adminPhone}`, '_self')}
+              className="flex items-center gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
+              data-testid="button-call-admin"
+            >
+              <Phone className="h-4 w-4" />
+              Call Admin
+            </Button>
+          )}
+        </div>
         <DialogDescription>
           {bid.pickup} to {bid.dropoff}
         </DialogDescription>

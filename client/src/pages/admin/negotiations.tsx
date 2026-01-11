@@ -43,6 +43,7 @@ import {
   Package,
   Send,
   Loader2,
+  Phone,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -94,6 +95,7 @@ type Bid = {
     username: string;
     companyName?: string;
     carrierType?: string;
+    phone?: string;
   };
   load?: {
     id: string;
@@ -102,6 +104,8 @@ type Bid = {
     status: string;
     weight?: number;
     requiredTruckType?: string;
+    adminReferenceNumber?: number;
+    shipperLoadNumber?: number;
   };
   truck?: {
     id: string;
@@ -1070,10 +1074,24 @@ export default function AdminNegotiationsPage() {
       <Dialog open={chatDialogOpen} onOpenChange={setChatDialogOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Negotiate with {getCarrierDisplayName(chatBid?.carrier)}
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Negotiate with {getCarrierDisplayName(chatBid?.carrier)}
+              </DialogTitle>
+              {chatBid?.carrier?.phone && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.open(`tel:${chatBid.carrier?.phone}`, '_self')}
+                  className="flex items-center gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
+                  data-testid="button-call-carrier"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call
+                </Button>
+              )}
+            </div>
             <DialogDescription>
               <span className="font-semibold">
                 {chatBid?.load?.adminReferenceNumber 

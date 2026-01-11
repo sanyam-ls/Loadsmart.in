@@ -1606,6 +1606,26 @@ export async function registerRoutes(
     }
   });
 
+  // Get admin contact info (for carriers to call)
+  app.get("/api/admin/contact", requireAuth, async (req, res) => {
+    try {
+      const admins = await storage.getAdmins();
+      if (admins.length === 0) {
+        return res.status(404).json({ error: "No admin found" });
+      }
+      // Return first admin's contact info
+      const admin = admins[0];
+      res.json({
+        phone: admin.phone || admin.companyPhone || null,
+        email: admin.email || null,
+        name: admin.companyName || admin.username || "FreightFlow Admin",
+      });
+    } catch (error) {
+      console.error("Get admin contact error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Admin: Update user
   app.patch("/api/admin/users/:id", requireAuth, async (req, res) => {
     try {

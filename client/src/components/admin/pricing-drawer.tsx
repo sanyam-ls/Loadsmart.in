@@ -68,6 +68,7 @@ interface LoadData {
   shipperPricePerTon?: string | number | null;
   shipperFixedPrice?: string | number | null;
   rateType?: string | null; // "per_ton" or "fixed_price"
+  advancePaymentPercent?: number | null; // Shipper's preferred advance payment percentage
 }
 
 interface CarrierOption {
@@ -259,6 +260,12 @@ export function PricingDrawer({
       const shipperRate = load.rateType;
       const shipperPerTon = load.shipperPricePerTon;
       const shipperFixed = load.shipperFixedPrice;
+      const shipperAdvance = load.advancePaymentPercent;
+      
+      // Auto-populate advance payment percentage if provided
+      if (shipperAdvance !== null && shipperAdvance !== undefined && shipperAdvance > 0) {
+        setAdvancePaymentPercent(shipperAdvance);
+      }
       
       if (shipperRate === "per_ton" && shipperPerTon) {
         // Shipper provided per-ton rate
@@ -270,8 +277,15 @@ export function PricingDrawer({
           const calculatedPrice = Math.round(perTonValue * loadWeightInTons);
           setGrossPrice(calculatedPrice);
         }
+      } else if (shipperRate === "fixed_price" && shipperFixed) {
+        // Shipper provided fixed price - explicitly set Fixed Price mode
+        const fixedValue = typeof shipperFixed === 'string' ? parseFloat(shipperFixed) : shipperFixed;
+        if (fixedValue > 0) {
+          setUsePerTonRate(false);
+          setGrossPrice(Math.round(fixedValue));
+        }
       } else if (shipperFixed) {
-        // Shipper provided fixed price
+        // Fallback: Shipper provided fixed price without explicit rateType
         const fixedValue = typeof shipperFixed === 'string' ? parseFloat(shipperFixed) : shipperFixed;
         if (fixedValue > 0) {
           setUsePerTonRate(false);
@@ -279,7 +293,7 @@ export function PricingDrawer({
         }
       }
     }
-  }, [open, load?.id, load?.rateType, load?.shipperPricePerTon, load?.shipperFixedPrice, isCarrierFinalized, loadWeightInTons]);
+  }, [open, load?.id, load?.rateType, load?.shipperPricePerTon, load?.shipperFixedPrice, load?.advancePaymentPercent, isCarrierFinalized, loadWeightInTons]);
 
   // Fetch suggested price when load changes (only for non-finalized loads)
   useEffect(() => {
@@ -288,13 +302,17 @@ export function PricingDrawer({
     }
   }, [open, load?.id, isCarrierFinalized]);
 
-  // Update gross price when adjustments change (only when not using per-ton rate)
+  // Update gross price when adjustments change (only when not using per-ton rate and no shipper price)
   useEffect(() => {
-    if (!usePerTonRate && suggestedPrice > 0) {
+    // Don't auto-adjust if shipper provided their own pricing
+    const hasShipperPrice = (load?.rateType === "fixed_price" && load?.shipperFixedPrice) || 
+                            (load?.rateType === "per_ton" && load?.shipperPricePerTon);
+    
+    if (!usePerTonRate && suggestedPrice > 0 && !hasShipperPrice) {
       const adjusted = suggestedPrice * (1 + markupPercent / 100) + fixedFee - discountAmount;
       setGrossPrice(Math.round(Math.max(0, adjusted)));
     }
-  }, [suggestedPrice, markupPercent, fixedFee, discountAmount, usePerTonRate]);
+  }, [suggestedPrice, markupPercent, fixedFee, discountAmount, usePerTonRate, load?.rateType, load?.shipperFixedPrice, load?.shipperPricePerTon]);
 
   // Update gross price when per-ton rate changes
   useEffect(() => {
@@ -318,6 +336,11 @@ export function PricingDrawer({
   const fetchSuggestedPrice = async () => {
     if (!load?.id) return;
     setIsLoading(true);
+    
+    // Check if shipper already provided pricing - don't overwrite with suggestions
+    const hasShipperPrice = (load.rateType === "fixed_price" && load.shipperFixedPrice) || 
+                            (load.rateType === "per_ton" && load.shipperPricePerTon);
+    
     try {
       const response = await apiRequest("POST", "/api/admin/pricing/suggest", {
         load_id: load.id,
@@ -329,7 +352,10 @@ export function PricingDrawer({
       const data: PricingSuggestion = await response.json();
 
       setSuggestedPrice(data.suggested_price);
-      setGrossPrice(data.suggested_price);
+      // Only set gross price if shipper didn't provide their own price
+      if (!hasShipperPrice) {
+        setGrossPrice(data.suggested_price);
+      }
       setBreakdown(data.breakdown);
       setParams(data.params);
       setConfidenceScore(data.confidence_score);
@@ -341,7 +367,10 @@ export function PricingDrawer({
       const basePrice = distance * 45 * (1 + Math.max(0, weight - 5) * 0.02);
       const estimated = Math.round(basePrice * 1.2 + 500);
       setSuggestedPrice(estimated);
-      setGrossPrice(estimated);
+      // Only set gross price if shipper didn't provide their own price
+      if (!hasShipperPrice) {
+        setGrossPrice(estimated);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -630,31 +659,43 @@ export function PricingDrawer({
                 ) : (
                   <>
                     {/* Shipper Requested Price Indicator */}
-                    {(load.shipperFixedPrice || load.shipperPricePerTon) && (
+                    {(load.shipperFixedPrice || load.shipperPricePerTon || load.advancePaymentPercent) && (
                       <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
                         <CardContent className="pt-4">
                           <div className="flex items-center gap-2 mb-2">
                             <Users className="h-4 w-4 text-amber-600" />
-                            <span className="font-medium text-amber-700 dark:text-amber-400">Shipper's Requested Price</span>
+                            <span className="font-medium text-amber-700 dark:text-amber-400">Shipper's Pricing Preference</span>
                             <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 text-xs">
                               Pre-filled
                             </Badge>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">
-                              {load.rateType === "per_ton" ? "Per Tonne Rate" : "Fixed Price"}
-                            </span>
-                            <span className="font-bold text-lg text-amber-700 dark:text-amber-400" data-testid="text-shipper-requested-price">
-                              {load.rateType === "per_ton" && load.shipperPricePerTon
-                                ? `Rs. ${parseFloat(load.shipperPricePerTon.toString()).toLocaleString("en-IN")}/MT`
-                                : load.shipperFixedPrice
-                                  ? formatRupees(parseFloat(load.shipperFixedPrice.toString()))
-                                  : "-"
-                              }
-                            </span>
+                          <div className="space-y-2">
+                            {(load.shipperFixedPrice || load.shipperPricePerTon) && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">
+                                  {load.rateType === "per_ton" ? "Per Tonne Rate" : "Fixed Price"}
+                                </span>
+                                <span className="font-bold text-lg text-amber-700 dark:text-amber-400" data-testid="text-shipper-requested-price">
+                                  {load.rateType === "per_ton" && load.shipperPricePerTon
+                                    ? `Rs. ${parseFloat(load.shipperPricePerTon.toString()).toLocaleString("en-IN")}/MT`
+                                    : load.shipperFixedPrice
+                                      ? formatRupees(parseFloat(load.shipperFixedPrice.toString()))
+                                      : "-"
+                                  }
+                                </span>
+                              </div>
+                            )}
+                            {load.advancePaymentPercent && load.advancePaymentPercent > 0 && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Preferred Advance</span>
+                                <span className="font-bold text-lg text-amber-700 dark:text-amber-400" data-testid="text-shipper-advance">
+                                  {load.advancePaymentPercent}%
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
-                            The pricing fields below have been pre-filled with the shipper's requested rate. You can adjust as needed.
+                            The pricing fields below have been pre-filled with the shipper's preferences. You can adjust as needed.
                           </p>
                         </CardContent>
                       </Card>

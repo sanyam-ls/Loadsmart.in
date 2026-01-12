@@ -316,7 +316,87 @@ export default function CarrierOnboarding() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Validate form before submitting
+    if (carrierType === "solo") {
+      const values = soloForm.getValues();
+      const missingFields: string[] = [];
+      
+      // Check Identity tab fields
+      if (!values.aadhaarNumber || values.aadhaarNumber.length < 12) {
+        missingFields.push("Aadhaar Number (Identity tab)");
+      }
+      if (!values.driverLicenseNumber) {
+        missingFields.push("Driver License Number (Identity tab)");
+      }
+      if (!values.permitType) {
+        missingFields.push("Permit Type (Identity tab)");
+      }
+      
+      // Check Vehicle tab fields
+      if (!values.licensePlateNumber) {
+        missingFields.push("License Plate Number (Vehicle tab)");
+      }
+      if (!values.chassisNumber) {
+        missingFields.push("Chassis Number (Vehicle tab)");
+      }
+      
+      if (missingFields.length > 0) {
+        toast({
+          variant: "destructive",
+          title: t("common.error"),
+          description: `Please fill in the following required fields: ${missingFields.join(", ")}`,
+        });
+        // Navigate to the appropriate tab
+        if (missingFields.some(f => f.includes("Identity"))) {
+          setActiveTab("identity");
+        } else if (missingFields.some(f => f.includes("Vehicle"))) {
+          setActiveTab("vehicle");
+        }
+        return;
+      }
+    } else {
+      const values = fleetForm.getValues();
+      const missingFields: string[] = [];
+      
+      // Check Business tab fields
+      if (!values.incorporationType) {
+        missingFields.push("Incorporation Type (Business tab)");
+      }
+      if (!values.businessRegistrationNumber) {
+        missingFields.push("Business Registration Number (Business tab)");
+      }
+      if (!values.businessAddress) {
+        missingFields.push("Business Address (Business tab)");
+      }
+      
+      // Check Compliance tab fields
+      if (!values.panNumber || values.panNumber.length < 10) {
+        missingFields.push("PAN Number (Compliance tab)");
+      }
+      if (!values.gstinNumber || values.gstinNumber.length < 15) {
+        missingFields.push("GSTIN Number (Compliance tab)");
+      }
+      if (!values.tanNumber || values.tanNumber.length < 10) {
+        missingFields.push("TAN Number (Compliance tab)");
+      }
+      
+      if (missingFields.length > 0) {
+        toast({
+          variant: "destructive",
+          title: t("common.error"),
+          description: `Please fill in the following required fields: ${missingFields.join(", ")}`,
+        });
+        // Navigate to the appropriate tab
+        if (missingFields.some(f => f.includes("Business"))) {
+          setActiveTab("identity");
+        } else if (missingFields.some(f => f.includes("Compliance"))) {
+          setActiveTab("vehicle");
+        }
+        return;
+      }
+    }
+    
     submitMutation.mutate();
   };
 

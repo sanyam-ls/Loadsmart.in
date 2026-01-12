@@ -1,19 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { 
   MapPin, Truck, Package, Phone, Mail, Building2, User, 
-  Navigation, Clock, RefreshCw, Loader2, ChevronRight,
-  Radio, CheckCircle, AlertCircle, ArrowRight
+  Navigation, Clock, RefreshCw, Loader2,
+  Radio, CheckCircle, AlertCircle, ArrowRight, X, ChevronLeft, List
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
@@ -102,12 +103,68 @@ const stageBadgeColors: Record<string, string> = {
   delivered: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
+// Create custom truck icon
+const createTruckIcon = (isLive: boolean, isSelected: boolean) => {
+  const color = isLive ? "#22c55e" : "#6b7280";
+  const size = isSelected ? 40 : 32;
+  return L.divIcon({
+    html: `<div style="
+      background: ${color};
+      width: ${size}px;
+      height: ${size}px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      ${isSelected ? 'transform: scale(1.2);' : ''}
+    ">
+      <svg width="${size * 0.5}" height="${size * 0.5}" viewBox="0 0 24 24" fill="white">
+        <path d="M18 18.5a1.5 1.5 0 1 1-1.5-1.5 1.5 1.5 0 0 1 1.5 1.5zm-12 0A1.5 1.5 0 1 1 4.5 17 1.5 1.5 0 0 1 6 18.5zM21 12v4a1 1 0 0 1-1 1h-1a3 3 0 0 0-6 0H9a3 3 0 0 0-6 0H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v4h2l3 4h2z"/>
+      </svg>
+    </div>`,
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+};
+
+// Component to fit map bounds to markers on initial load only
+function FitBoundsToMarkers({ positions }: { positions: [number, number][] }) {
+  const map = useMap();
+  const [hasFitBounds, setHasFitBounds] = useState(false);
+  
+  useEffect(() => {
+    if (!hasFitBounds && positions.length > 0) {
+      const bounds = L.latLngBounds(positions.map(p => L.latLng(p[0], p[1])));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+      setHasFitBounds(true);
+    }
+  }, [map, positions, hasFitBounds]);
+  
+  return null;
+}
+
+// Component to center map on selected shipment
+function CenterOnShipment({ position }: { position: [number, number] | null }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (position) {
+      map.flyTo(position, 12, { duration: 0.5 });
+    }
+  }, [position?.[0], position?.[1]]);
+  
+  return null;
+}
+
 export default function AdminLiveTrackingPage() {
   const [selectedShipment, setSelectedShipment] = useState<TrackedShipment | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [telemetryData, setTelemetryData] = useState<Record<string, { lat: number; lng: number; speed?: number }>>({});
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
 
   const { data: shipments = [], isLoading, refetch, isRefetching } = useQuery<TrackedShipment[]>({
     queryKey: ["/api/admin/live-tracking"],
@@ -183,13 +240,34 @@ export default function AdminLiveTrackingPage() {
 
   const handleSelectShipment = useCallback((shipment: TrackedShipment) => {
     setSelectedShipment(shipment);
-    setIsDetailOpen(true);
   }, []);
+
+  // Get position for a shipment (from telemetry or fallback)
+  const getShipmentPosition = useCallback((shipment: TrackedShipment): [number, number] | null => {
+    const telemetry = telemetryData[shipment.truck?.registrationNumber || ""];
+    if (telemetry) {
+      return [telemetry.lat, telemetry.lng];
+    }
+    if (shipment.currentLocation?.lat && shipment.currentLocation?.lng) {
+      return [shipment.currentLocation.lat, shipment.currentLocation.lng];
+    }
+    return null;
+  }, [telemetryData]);
+
+  // Get all marker positions for bounds fitting
+  const markerPositions = useMemo(() => {
+    return filteredShipments
+      .map(s => getShipmentPosition(s))
+      .filter((p): p is [number, number] => p !== null);
+  }, [filteredShipments, getShipmentPosition]);
+
+  // Selected shipment position for centering
+  const selectedPosition = selectedShipment ? getShipmentPosition(selectedShipment) : null;
 
   const getLocationDisplay = (shipment: TrackedShipment) => {
     const telemetry = telemetryData[shipment.truck?.registrationNumber || ""];
     if (telemetry) {
-      return `${telemetry.lat.toFixed(4)}, ${telemetry.lng.toFixed(4)}`;
+      return `${telemetry.lat.toFixed(4)}, ${telemetry.lng.toFixed(4)}${telemetry.speed ? ` @ ${telemetry.speed.toFixed(0)} km/h` : ""}`;
     }
     if (shipment.currentLocation?.address) {
       return shipment.currentLocation.address;
@@ -200,439 +278,515 @@ export default function AdminLiveTrackingPage() {
     return "Location updating...";
   };
 
+  // India center for default view
+  const defaultCenter: [number, number] = [20.5937, 78.9629];
+
   return (
-    <div className="flex flex-col h-full p-6 gap-6" data-testid="page-admin-live-tracking">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Live Shipment Tracking</h1>
-          <p className="text-muted-foreground">Monitor all active shipments across carriers in real-time</p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isRefetching}
-          data-testid="button-refresh"
-        >
-          {isRefetching ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
-          )}
-          Refresh
-        </Button>
-      </div>
+    <div className="flex h-full relative" data-testid="page-admin-live-tracking">
+      {/* Collapsible Side Panel */}
+      <div 
+        className={`
+          absolute top-0 left-0 h-full z-[1000] bg-background border-r shadow-lg
+          transition-transform duration-300 ease-in-out
+          ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'}
+          w-[400px]
+        `}
+      >
+        <div className="flex flex-col h-full">
+          {/* Panel Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div>
+              <h1 className="text-lg font-bold">Live Tracking</h1>
+              <p className="text-xs text-muted-foreground">{stats.total} active shipments</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => refetch()}
+                disabled={isRefetching}
+                data-testid="button-refresh"
+              >
+                {isRefetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsPanelOpen(false)}
+                data-testid="button-close-panel"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Package className="h-5 w-5 text-primary" />
+          {/* Stats Row */}
+          <div className="grid grid-cols-4 gap-2 p-3 border-b bg-muted/30">
+            <div className="text-center">
+              <p className="text-lg font-bold">{stats.total}</p>
+              <p className="text-[10px] text-muted-foreground">Total</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Active</p>
-              <p className="text-2xl font-bold">{stats.total}</p>
+            <div className="text-center">
+              <p className="text-lg font-bold text-green-600">{stats.inTransit}</p>
+              <p className="text-[10px] text-muted-foreground">In Transit</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30">
-              <Navigation className="h-5 w-5 text-green-600" />
+            <div className="text-center">
+              <p className="text-lg font-bold text-blue-600">{stats.atPickup}</p>
+              <p className="text-[10px] text-muted-foreground">At Pickup</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">In Transit</p>
-              <p className="text-2xl font-bold text-green-600">{stats.inTransit}</p>
+            <div className="text-center">
+              <p className="text-lg font-bold text-yellow-600">{stats.awaiting}</p>
+              <p className="text-[10px] text-muted-foreground">Awaiting</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
-              <MapPin className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">At Pickup</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.atPickup}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
-              <Clock className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Awaiting Pickup</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.awaiting}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      <div className="flex items-center gap-4">
-        <Input
-          placeholder="Search by load #, city, shipper, carrier, or truck..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-md"
-          data-testid="input-search"
-        />
-        <Select value={stageFilter} onValueChange={setStageFilter}>
-          <SelectTrigger className="w-[180px]" data-testid="select-stage-filter">
-            <SelectValue placeholder="Filter by stage" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Stages</SelectItem>
-            <SelectItem value="pickup_scheduled">Awaiting Pickup</SelectItem>
-            <SelectItem value="at_pickup">At Pickup</SelectItem>
-            <SelectItem value="in_transit">In Transit</SelectItem>
-            <SelectItem value="delivered">Delivered</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          {/* Filters */}
+          <div className="flex items-center gap-2 p-3 border-b">
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 text-sm"
+              data-testid="input-search"
+            />
+            <Select value={stageFilter} onValueChange={setStageFilter}>
+              <SelectTrigger className="w-[130px] h-8" data-testid="select-stage-filter">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="pickup_scheduled">Awaiting</SelectItem>
+                <SelectItem value="at_pickup">At Pickup</SelectItem>
+                <SelectItem value="in_transit">In Transit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <Card className="flex-1">
-        <CardHeader className="pb-3">
-          <CardTitle>Active Shipments ({filteredShipments.length})</CardTitle>
-          <CardDescription>Click on a shipment to view full details</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredShipments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Truck className="h-12 w-12 mb-4 opacity-50" />
-              <p>No active shipments found</p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[500px]">
+          {/* Shipment List */}
+          <ScrollArea className="flex-1">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredShipments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Truck className="h-12 w-12 mb-4 opacity-50" />
+                <p>No active shipments</p>
+              </div>
+            ) : (
               <div className="divide-y">
-                {filteredShipments.map((shipment) => (
-                  <div
-                    key={shipment.id}
-                    className="p-4 hover-elevate cursor-pointer"
-                    onClick={() => handleSelectShipment(shipment)}
-                    data-testid={`shipment-row-${shipment.id}`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="font-semibold">
-                            LD-{shipment.load?.referenceNumber ? String(shipment.load.referenceNumber).padStart(3, "0") : "???"}
-                          </span>
-                          <Badge className={stageBadgeColors[shipment.currentStage] || ""}>
-                            {stageLabels[shipment.currentStage] || shipment.currentStage}
-                          </Badge>
-                          {telemetryData[shipment.truck?.registrationNumber || ""] && (
-                            <Badge variant="outline" className="gap-1">
-                              <Radio className="h-3 w-3 text-green-500 animate-pulse" />
-                              Live
+                {filteredShipments.map((shipment) => {
+                  const isSelected = selectedShipment?.id === shipment.id;
+                  const hasLive = !!telemetryData[shipment.truck?.registrationNumber || ""];
+                  
+                  return (
+                    <div
+                      key={shipment.id}
+                      className={`p-3 cursor-pointer transition-colors ${
+                        isSelected ? 'bg-primary/10 border-l-4 border-l-primary' : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => handleSelectShipment(shipment)}
+                      data-testid={`shipment-row-${shipment.id}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`
+                          w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
+                          ${hasLive ? 'bg-green-100 dark:bg-green-900/30' : 'bg-muted'}
+                        `}>
+                          <Truck className={`h-4 w-4 ${hasLive ? 'text-green-600' : 'text-muted-foreground'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-sm">
+                              LD-{shipment.load?.referenceNumber ? String(shipment.load.referenceNumber).padStart(3, "0") : "???"}
+                            </span>
+                            <Badge className={`text-[10px] px-1.5 py-0 ${stageBadgeColors[shipment.currentStage] || ""}`}>
+                              {stageLabels[shipment.currentStage]?.split(" ")[0] || shipment.currentStage}
                             </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                          <span>{shipment.load?.pickupCity}</span>
-                          <ArrowRight className="h-3 w-3" />
-                          <span>{shipment.load?.dropoffCity}</span>
-                        </div>
+                            {hasLive && (
+                              <Radio className="h-3 w-3 text-green-500 animate-pulse" />
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                            <span className="truncate">{shipment.load?.pickupCity}</span>
+                            <ArrowRight className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{shipment.load?.dropoffCity}</span>
+                          </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            <span className="truncate">
-                              <span className="text-muted-foreground">Shipper:</span>{" "}
-                              {shipment.shipper?.companyName || "N/A"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Truck className="h-4 w-4 text-muted-foreground" />
-                            <span className="truncate">
-                              <span className="text-muted-foreground">Truck:</span>{" "}
-                              {shipment.truck?.registrationNumber || "N/A"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span className="truncate">
-                              {getLocationDisplay(shipment)}
-                            </span>
+                          <div className="text-[11px] text-muted-foreground">
+                            {shipment.truck?.registrationNumber || "No truck"} • {shipment.carrier?.companyName?.substring(0, 20) || "N/A"}
                           </div>
                         </div>
-
-                        <Progress value={shipment.progress} className="h-1.5 mt-3" />
                       </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      </div>
+
+      {/* Toggle Panel Button (when closed) */}
+      {!isPanelOpen && (
+        <Button
+          variant="default"
+          size="sm"
+          className="absolute top-4 left-4 z-[1000] shadow-lg"
+          onClick={() => setIsPanelOpen(true)}
+          data-testid="button-open-panel"
+        >
+          <List className="h-4 w-4 mr-2" />
+          Shipments ({stats.total})
+        </Button>
+      )}
+
+      {/* Map Container - Full Screen */}
+      <div className="flex-1 h-full">
+        <MapContainer
+          center={defaultCenter}
+          zoom={5}
+          className="h-full w-full"
+          style={{ zIndex: 1 }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          {/* Fit bounds on initial load */}
+          {markerPositions.length > 0 && (
+            <FitBoundsToMarkers positions={markerPositions} />
+          )}
+          
+          {/* Center on selected shipment */}
+          {selectedPosition && (
+            <CenterOnShipment position={selectedPosition} />
+          )}
+          
+          {/* Truck Markers */}
+          {filteredShipments.map((shipment) => {
+            const position = getShipmentPosition(shipment);
+            if (!position) return null;
+            
+            const isLive = !!telemetryData[shipment.truck?.registrationNumber || ""];
+            const isSelected = selectedShipment?.id === shipment.id;
+            
+            return (
+              <Marker
+                key={shipment.id}
+                position={position}
+                icon={createTruckIcon(isLive, isSelected)}
+                eventHandlers={{
+                  click: () => handleSelectShipment(shipment),
+                }}
+              >
+                <Popup>
+                  <div className="min-w-[200px]">
+                    <div className="font-bold mb-1">
+                      LD-{shipment.load?.referenceNumber?.toString().padStart(3, "0") || "???"}
+                    </div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      {shipment.load?.pickupCity} → {shipment.load?.dropoffCity}
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <p><strong>Truck:</strong> {shipment.truck?.registrationNumber}</p>
+                      <p><strong>Carrier:</strong> {shipment.carrier?.companyName}</p>
+                      <p><strong>Status:</strong> {stageLabels[shipment.currentStage]}</p>
+                      {isLive && telemetryData[shipment.truck?.registrationNumber || ""]?.speed && (
+                        <p><strong>Speed:</strong> {telemetryData[shipment.truck?.registrationNumber || ""]?.speed?.toFixed(0)} km/h</p>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+      </div>
 
-      <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          {selectedShipment && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Load LD-{selectedShipment.load?.referenceNumber?.toString().padStart(3, "0") || "???"}
-                </SheetTitle>
-                <SheetDescription>
+      {/* Selected Shipment Detail Panel */}
+      {selectedShipment && (
+        <div className="absolute top-0 right-0 h-full w-[420px] bg-background border-l shadow-lg z-[1000] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-3">
+              <Package className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="font-bold">
+                  LD-{selectedShipment.load?.referenceNumber?.toString().padStart(3, "0") || "???"}
+                </h2>
+                <p className="text-xs text-muted-foreground">
                   {selectedShipment.load?.pickupCity} → {selectedShipment.load?.dropoffCity}
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="mt-6 space-y-6">
-                <div className="flex items-center gap-3">
-                  <Badge className={stageBadgeColors[selectedShipment.currentStage] || ""}>
-                    {stageLabels[selectedShipment.currentStage] || selectedShipment.currentStage}
-                  </Badge>
-                  <Progress value={selectedShipment.progress} className="flex-1 h-2" />
-                  <span className="text-sm font-medium">{selectedShipment.progress}%</span>
-                </div>
-
-                <Tabs defaultValue="route" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="route">Route</TabsTrigger>
-                    <TabsTrigger value="shipper">Shipper</TabsTrigger>
-                    <TabsTrigger value="receiver">Receiver</TabsTrigger>
-                    <TabsTrigger value="carrier">Carrier</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="route" className="space-y-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-green-600" />
-                          Pickup Location
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="font-medium">{selectedShipment.load?.pickupCity}</p>
-                        <p className="text-sm text-muted-foreground">{selectedShipment.load?.pickupAddress}</p>
-                        {selectedShipment.load?.pickupDate && (
-                          <p className="text-sm mt-1">
-                            <Clock className="h-3 w-3 inline mr-1" />
-                            {format(new Date(selectedShipment.load.pickupDate), "PPp")}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-red-600" />
-                          Delivery Location
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="font-medium">{selectedShipment.load?.dropoffCity}</p>
-                        <p className="text-sm text-muted-foreground">{selectedShipment.load?.dropoffAddress}</p>
-                        {selectedShipment.eta && (
-                          <p className="text-sm mt-1">
-                            <Clock className="h-3 w-3 inline mr-1" />
-                            ETA: {format(new Date(selectedShipment.eta), "PPp")}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Current Location</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-2">
-                          <Navigation className="h-4 w-4 text-primary" />
-                          <span>{getLocationDisplay(selectedShipment)}</span>
-                          {telemetryData[selectedShipment.truck?.registrationNumber || ""] && (
-                            <Badge variant="outline" className="gap-1 ml-auto">
-                              <Radio className="h-3 w-3 text-green-500 animate-pulse" />
-                              Live
-                            </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Cargo Details</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-1 text-sm">
-                        <p><span className="text-muted-foreground">Material:</span> {selectedShipment.load?.materialType || "N/A"}</p>
-                        <p><span className="text-muted-foreground">Weight:</span> {selectedShipment.load?.weight} MT</p>
-                        <p><span className="text-muted-foreground">Truck Type:</span> {selectedShipment.load?.requiredTruckType || "N/A"}</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">OTP Verification Status</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="flex items-center gap-2">
-                            {selectedShipment.otp.startVerified ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : selectedShipment.otp.startRequested ? (
-                              <AlertCircle className="h-4 w-4 text-yellow-600" />
-                            ) : (
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            <span>Pickup OTP</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {selectedShipment.otp.endVerified ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : selectedShipment.otp.endRequested ? (
-                              <AlertCircle className="h-4 w-4 text-yellow-600" />
-                            ) : (
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            <span>Delivery OTP</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="shipper" className="space-y-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Building2 className="h-4 w-4" />
-                          Shipper Details
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div>
-                          <p className="font-medium text-lg">{selectedShipment.shipper?.companyName || "N/A"}</p>
-                          <p className="text-sm text-muted-foreground">{selectedShipment.shipper?.contactName}</p>
-                        </div>
-                        <Separator />
-                        <div className="space-y-2 text-sm">
-                          {selectedShipment.shipper?.phone && (
-                            <a href={`tel:${selectedShipment.shipper.phone}`} className="flex items-center gap-2 hover:text-primary">
-                              <Phone className="h-4 w-4" />
-                              {selectedShipment.shipper.phone}
-                            </a>
-                          )}
-                          {selectedShipment.shipper?.email && (
-                            <a href={`mailto:${selectedShipment.shipper.email}`} className="flex items-center gap-2 hover:text-primary">
-                              <Mail className="h-4 w-4" />
-                              {selectedShipment.shipper.email}
-                            </a>
-                          )}
-                          {selectedShipment.shipper?.address && (
-                            <div className="flex items-start gap-2">
-                              <MapPin className="h-4 w-4 mt-0.5" />
-                              <span>{selectedShipment.shipper.address}</span>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="receiver" className="space-y-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Receiver Details
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div>
-                          <p className="font-medium text-lg">{selectedShipment.receiver?.name || "N/A"}</p>
-                          {selectedShipment.receiver?.businessName && (
-                            <p className="text-sm text-muted-foreground">{selectedShipment.receiver.businessName}</p>
-                          )}
-                        </div>
-                        <Separator />
-                        <div className="space-y-2 text-sm">
-                          {selectedShipment.receiver?.phone && (
-                            <a href={`tel:${selectedShipment.receiver.phone}`} className="flex items-center gap-2 hover:text-primary">
-                              <Phone className="h-4 w-4" />
-                              {selectedShipment.receiver.phone}
-                            </a>
-                          )}
-                          {selectedShipment.receiver?.email && (
-                            <a href={`mailto:${selectedShipment.receiver.email}`} className="flex items-center gap-2 hover:text-primary">
-                              <Mail className="h-4 w-4" />
-                              {selectedShipment.receiver.email}
-                            </a>
-                          )}
-                          {selectedShipment.receiver?.address && (
-                            <div className="flex items-start gap-2">
-                              <MapPin className="h-4 w-4 mt-0.5" />
-                              <span>{selectedShipment.receiver.address}, {selectedShipment.receiver.city}</span>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="carrier" className="space-y-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Truck className="h-4 w-4" />
-                          Carrier & Driver
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <p className="font-medium">{selectedShipment.carrier?.companyName || "N/A"}</p>
-                          <Badge variant="outline" className="mt-1">
-                            {selectedShipment.carrier?.carrierType === "solo" ? "Solo Driver" : "Fleet Carrier"}
-                          </Badge>
-                        </div>
-                        <Separator />
-                        <div className="space-y-2 text-sm">
-                          <p className="font-medium">Driver: {selectedShipment.driver?.name || "N/A"}</p>
-                          {selectedShipment.driver?.phone && (
-                            <a href={`tel:${selectedShipment.driver.phone}`} className="flex items-center gap-2 hover:text-primary">
-                              <Phone className="h-4 w-4" />
-                              {selectedShipment.driver.phone}
-                            </a>
-                          )}
-                          {selectedShipment.carrier?.phone && (
-                            <a href={`tel:${selectedShipment.carrier.phone}`} className="flex items-center gap-2 hover:text-primary">
-                              <Phone className="h-4 w-4" />
-                              Carrier: {selectedShipment.carrier.phone}
-                            </a>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Vehicle Details</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-1 text-sm">
-                        <p><span className="text-muted-foreground">Registration:</span> {selectedShipment.truck?.registrationNumber || "N/A"}</p>
-                        <p><span className="text-muted-foreground">Type:</span> {selectedShipment.truck?.truckType || "N/A"}</p>
-                        <p><span className="text-muted-foreground">Capacity:</span> {selectedShipment.truck?.capacity || "N/A"} MT</p>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
+                </p>
               </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSelectedShipment(null)}
+              data-testid="button-close-detail"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Status Bar */}
+          <div className="flex items-center gap-3 p-4 border-b bg-muted/30">
+            <Badge className={stageBadgeColors[selectedShipment.currentStage] || ""}>
+              {stageLabels[selectedShipment.currentStage] || selectedShipment.currentStage}
+            </Badge>
+            <Progress value={selectedShipment.progress} className="flex-1 h-2" />
+            <span className="text-sm font-medium">{selectedShipment.progress}%</span>
+          </div>
+
+          {/* Tabs */}
+          <Tabs defaultValue="route" className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid w-full grid-cols-4 m-2 mx-4">
+              <TabsTrigger value="route">Route</TabsTrigger>
+              <TabsTrigger value="shipper">Shipper</TabsTrigger>
+              <TabsTrigger value="receiver">Receiver</TabsTrigger>
+              <TabsTrigger value="carrier">Carrier</TabsTrigger>
+            </TabsList>
+
+            <ScrollArea className="flex-1">
+              <TabsContent value="route" className="p-4 space-y-4 mt-0">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-green-600" />
+                      Pickup Location
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="font-medium">{selectedShipment.load?.pickupCity}, {selectedShipment.load?.pickupState}</p>
+                    <p className="text-sm text-muted-foreground">{selectedShipment.load?.pickupAddress}</p>
+                    {selectedShipment.load?.pickupDate && (
+                      <p className="text-sm mt-1">
+                        <Clock className="h-3 w-3 inline mr-1" />
+                        {format(new Date(selectedShipment.load.pickupDate), "PPp")}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-red-600" />
+                      Delivery Location
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="font-medium">{selectedShipment.load?.dropoffCity}, {selectedShipment.load?.dropoffState}</p>
+                    <p className="text-sm text-muted-foreground">{selectedShipment.load?.dropoffAddress}</p>
+                    {selectedShipment.eta && (
+                      <p className="text-sm mt-1">
+                        <Clock className="h-3 w-3 inline mr-1" />
+                        ETA: {format(new Date(selectedShipment.eta), "PPp")}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Current Location</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Navigation className="h-4 w-4 text-primary" />
+                      <span>{getLocationDisplay(selectedShipment)}</span>
+                      {telemetryData[selectedShipment.truck?.registrationNumber || ""] && (
+                        <Badge variant="outline" className="gap-1 ml-auto">
+                          <Radio className="h-3 w-3 text-green-500 animate-pulse" />
+                          Live
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Cargo Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1 text-sm">
+                    <p><span className="text-muted-foreground">Material:</span> {selectedShipment.load?.materialType || "Not specified"}</p>
+                    <p><span className="text-muted-foreground">Weight:</span> {selectedShipment.load?.weight ? `${selectedShipment.load.weight} MT` : "Not specified"}</p>
+                    <p><span className="text-muted-foreground">Truck Type:</span> {selectedShipment.load?.requiredTruckType?.replace(/_/g, " ") || "Not specified"}</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">OTP Verification Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        {selectedShipment.otp.startVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : selectedShipment.otp.startRequested ? (
+                          <AlertCircle className="h-4 w-4 text-yellow-600" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>Pickup OTP</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {selectedShipment.otp.endVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : selectedShipment.otp.endRequested ? (
+                          <AlertCircle className="h-4 w-4 text-yellow-600" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>Delivery OTP</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="shipper" className="p-4 space-y-4 mt-0">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Company Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <p className="font-medium text-base">{selectedShipment.shipper?.companyName || "N/A"}</p>
+                    <p><span className="text-muted-foreground">Contact:</span> {selectedShipment.shipper?.contactName || "N/A"}</p>
+                    {selectedShipment.shipper?.phone && (
+                      <p className="flex items-center gap-2">
+                        <Phone className="h-3 w-3" />
+                        {selectedShipment.shipper.phone}
+                      </p>
+                    )}
+                    {selectedShipment.shipper?.email && (
+                      <p className="flex items-center gap-2">
+                        <Mail className="h-3 w-3" />
+                        {selectedShipment.shipper.email}
+                      </p>
+                    )}
+                    {selectedShipment.shipper?.address && (
+                      <p className="flex items-start gap-2">
+                        <MapPin className="h-3 w-3 mt-0.5" />
+                        {selectedShipment.shipper.address}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="receiver" className="p-4 space-y-4 mt-0">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Receiver Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <p className="font-medium text-base">{selectedShipment.receiver?.name || selectedShipment.receiver?.businessName || "N/A"}</p>
+                    {selectedShipment.receiver?.businessName && selectedShipment.receiver?.name && (
+                      <p><span className="text-muted-foreground">Business:</span> {selectedShipment.receiver.businessName}</p>
+                    )}
+                    {selectedShipment.receiver?.phone && (
+                      <p className="flex items-center gap-2">
+                        <Phone className="h-3 w-3" />
+                        {selectedShipment.receiver.phone}
+                      </p>
+                    )}
+                    {selectedShipment.receiver?.email && (
+                      <p className="flex items-center gap-2">
+                        <Mail className="h-3 w-3" />
+                        {selectedShipment.receiver.email}
+                      </p>
+                    )}
+                    {(selectedShipment.receiver?.address || selectedShipment.receiver?.city) && (
+                      <p className="flex items-start gap-2">
+                        <MapPin className="h-3 w-3 mt-0.5" />
+                        {[selectedShipment.receiver?.address, selectedShipment.receiver?.city].filter(Boolean).join(", ")}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="carrier" className="p-4 space-y-4 mt-0">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Carrier Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <p className="font-medium text-base">{selectedShipment.carrier?.companyName || "N/A"}</p>
+                    <p>
+                      <span className="text-muted-foreground">Type:</span>{" "}
+                      <Badge variant="outline" className="ml-1">
+                        {selectedShipment.carrier?.carrierType === "solo" ? "Solo Operator" : "Fleet/Company"}
+                      </Badge>
+                    </p>
+                    {selectedShipment.carrier?.phone && (
+                      <p className="flex items-center gap-2">
+                        <Phone className="h-3 w-3" />
+                        {selectedShipment.carrier.phone}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {selectedShipment.driver && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Driver Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <p className="font-medium">{selectedShipment.driver.name}</p>
+                      {selectedShipment.driver.phone && (
+                        <p className="flex items-center gap-2">
+                          <Phone className="h-3 w-3" />
+                          {selectedShipment.driver.phone}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {selectedShipment.truck && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Truck className="h-4 w-4" />
+                        Truck Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1 text-sm">
+                      <p><span className="text-muted-foreground">Registration:</span> {selectedShipment.truck.registrationNumber}</p>
+                      <p><span className="text-muted-foreground">Type:</span> {selectedShipment.truck.truckType?.replace(/_/g, " ") || "N/A"}</p>
+                      <p><span className="text-muted-foreground">Capacity:</span> {selectedShipment.truck.capacity} MT</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </ScrollArea>
+          </Tabs>
+        </div>
+      )}
     </div>
   );
 }

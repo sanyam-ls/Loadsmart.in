@@ -86,6 +86,7 @@ const adminItems: NavItem[] = [
   { titleKey: "nav.loadQueue", url: "/admin/queue", icon: ClipboardList },
   { titleKey: "nav.bidsNegotiations", url: "/admin/negotiations", icon: Gavel },
   { titleKey: "nav.otpVerification", url: "/admin/otp-queue", icon: Key },
+  { titleKey: "nav.liveTracking", url: "/admin/live-tracking", icon: Radio },
   { titleKey: "nav.shipperOnboarding", url: "/admin/onboarding", icon: UserCheck },
   { titleKey: "nav.invoices", url: "/admin/invoices", icon: FileText },
   { titleKey: "nav.users", url: "/admin/users", icon: Users },

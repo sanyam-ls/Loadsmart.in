@@ -122,6 +122,7 @@
     "activeTrips": "Active Trips",
     "tripHistory": "Trip History",
     "otpVerification": "OTP Verification",
+    "liveTracking": "Live Tracking",
     "shipperOnboarding": "Shipper Onboarding",
     "carrierOnboarding": "Carrier Verification",
     "loadQueue": "Load Queue",

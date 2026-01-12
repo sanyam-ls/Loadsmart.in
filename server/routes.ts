@@ -1609,6 +1609,163 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/admin/live-tracking - Get all active shipments with full details for admin tracking
+  app.get("/api/admin/live-tracking", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get all shipments
+      const allShipments = await storage.getAllShipments();
+      
+      // Filter to active shipments: exclude fully completed ones (delivered with OTP verified)
+      const activeShipments = allShipments.filter(s => 
+        !(s.status === "delivered" && s.endOtpVerified === true)
+      );
+
+      // Enrich each shipment with full details
+      const enrichedShipments = await Promise.all(
+        activeShipments.map(async (shipment) => {
+          const load = await storage.getLoad(shipment.loadId);
+          const shipper = load ? await storage.getUser(load.shipperId) : null;
+          const carrier = await storage.getUser(shipment.carrierId);
+          const carrierProfile = carrier ? await storage.getCarrierProfile(carrier.id) : null;
+          
+          // Get truck
+          let truck = null;
+          if (shipment.truckId) {
+            truck = await storage.getTruck(shipment.truckId);
+          } else if (load?.assignedTruckId) {
+            truck = await storage.getTruck(load.assignedTruckId);
+          } else if (load?.awardedBidId) {
+            const bid = await storage.getBid(load.awardedBidId);
+            if (bid?.truckId) {
+              truck = await storage.getTruck(bid.truckId);
+            }
+          }
+          if (!truck && carrier) {
+            const carrierTrucks = await storage.getTrucksByCarrier(carrier.id);
+            if (carrierTrucks.length > 0) {
+              truck = carrierTrucks[0];
+            }
+          }
+          
+          // Get driver info
+          const carrierType = carrierProfile?.carrierType || 'solo';
+          let driverInfo: { name: string; phone: string | null } | null = null;
+          
+          if (carrierType === 'solo') {
+            driverInfo = {
+              name: carrier?.username || 'Unknown',
+              phone: carrier?.phone || null,
+            };
+          } else if (shipment.driverId) {
+            const driver = await storage.getDriver(shipment.driverId);
+            if (driver) {
+              driverInfo = {
+                name: driver.name,
+                phone: driver.phone || null,
+              };
+            }
+          }
+          
+          // Calculate progress
+          let progress = 0;
+          let currentStage = "pickup_scheduled";
+          
+          if (shipment.endOtpVerified) {
+            progress = 100;
+            currentStage = "delivered";
+          } else if (shipment.startOtpVerified) {
+            progress = 60;
+            currentStage = "in_transit";
+          } else if (shipment.startOtpRequested) {
+            progress = 40;
+            currentStage = "at_pickup";
+          } else {
+            progress = 20;
+            currentStage = "pickup_scheduled";
+          }
+
+          return {
+            id: shipment.id,
+            loadId: shipment.loadId,
+            status: shipment.status,
+            progress,
+            currentStage,
+            createdAt: shipment.createdAt,
+            startedAt: shipment.startedAt,
+            eta: shipment.eta,
+            currentLocation: {
+              lat: shipment.currentLat ? parseFloat(shipment.currentLat.toString()) : null,
+              lng: shipment.currentLng ? parseFloat(shipment.currentLng.toString()) : null,
+              address: shipment.currentLocation,
+            },
+            otp: {
+              startRequested: shipment.startOtpRequested,
+              startVerified: shipment.startOtpVerified,
+              endRequested: shipment.endOtpRequested,
+              endVerified: shipment.endOtpVerified,
+            },
+            load: load ? {
+              id: load.id,
+              referenceNumber: load.shipperLoadNumber || load.adminReferenceNumber,
+              pickupCity: load.pickupCity,
+              pickupAddress: load.pickupAddress,
+              pickupState: load.pickupLocality,
+              dropoffCity: load.dropoffCity,
+              dropoffAddress: load.dropoffAddress,
+              dropoffState: load.dropoffLocality,
+              materialType: load.materialType,
+              weight: load.weight,
+              requiredTruckType: load.requiredTruckType,
+              pickupDate: load.pickupDate,
+              deliveryDate: load.deliveryDate,
+            } : null,
+            shipper: shipper ? {
+              id: shipper.id,
+              username: shipper.username,
+              companyName: load?.shipperCompanyName || shipper.companyName || shipper.username,
+              contactName: load?.shipperContactName || shipper.username,
+              phone: load?.shipperPhone || shipper.phone,
+              email: shipper.email,
+              address: load?.shipperCompanyAddress,
+            } : null,
+            receiver: load ? {
+              name: load.receiverName,
+              phone: load.receiverPhone,
+              email: load.receiverEmail,
+              businessName: load.dropoffBusinessName,
+              address: load.dropoffAddress,
+              city: load.dropoffCity,
+            } : null,
+            carrier: carrier ? {
+              id: carrier.id,
+              username: carrier.username,
+              companyName: carrierProfile?.companyName || carrier.companyName || carrier.username,
+              phone: carrier.phone,
+              carrierType: carrierType,
+            } : null,
+            driver: driverInfo,
+            truck: truck ? {
+              id: truck.id,
+              registrationNumber: truck.licensePlate,
+              truckType: truck.truckType,
+              capacity: truck.capacity,
+            } : null,
+          };
+        })
+      );
+
+      res.json(enrichedShipments);
+    } catch (error) {
+      console.error("Get admin live tracking error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Get admin contact info (for carriers to call)
   app.get("/api/admin/contact", requireAuth, async (req, res) => {
     try {

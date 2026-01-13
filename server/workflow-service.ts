@@ -470,7 +470,8 @@ export async function canUserBidOnLoad(userId: string, loadId: string): Promise<
   }
 
   // Check load is in biddable state
-  const biddableStates: LoadStatus[] = ["posted_to_carriers", "open_for_bid"];
+  // Include "counter_received" to allow simultaneous bids from multiple carriers
+  const biddableStates: LoadStatus[] = ["posted_to_carriers", "open_for_bid", "counter_received"];
   if (!biddableStates.includes((load.status || "draft") as LoadStatus)) {
     return { allowed: false, reason: `Load not open for bidding (status: ${load.status})` };
   }

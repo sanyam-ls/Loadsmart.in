@@ -3144,8 +3144,7 @@ export async function registerRoutes(
       });
 
       // Update load status based on bid type - use canonical states
-      // DUAL MARKETPLACE: All bids remain PENDING until admin explicitly accepts one
-      // This enables multiple carriers to bid on the same load simultaneously
+      // SPLIT WORKFLOW: Fixed-price loads auto-award, negotiable loads go to admin review
       if (bid_type === 'counter') {
         // Counter-bid submitted, needs admin review - load remains open for other bids
         await storage.updateLoad(load_id, {
@@ -3153,19 +3152,95 @@ export async function registerRoutes(
           previousStatus: load.status,
           statusChangedAt: new Date(),
         });
+        console.log(`Counter bid ${bid.id} created for load ${load_id} - awaiting admin review`);
       } else if (bid_type === 'admin_posted_acceptance') {
-        // Carrier accepted the posted price - bid stays PENDING until admin approves
-        // DO NOT auto-award - this allows multiple carriers to accept/bid on same load
-        // Admin will review all bids and explicitly accept one
-        await storage.updateLoad(load_id, {
-          status: 'open_for_bid',
-          previousStatus: load.status,
-          statusChangedAt: new Date(),
-        });
-        
-        // Bid remains in 'pending' status (already set at creation)
-        // Invoice creation happens ONLY when admin accepts a bid via acceptBid()
-        console.log(`Bid ${bid.id} created for load ${load_id} - awaiting admin approval`);
+        // Check if this is a fixed-price load or negotiable load
+        if (!load.allowCounterBids) {
+          // FIXED-PRICE LOAD: Auto-award to first carrier who accepts
+          // This creates immediate invoice and enables fast processing
+          await storage.updateBid(bid.id, { status: 'accepted' });
+          
+          // Generate unique 4-digit pickup ID for carrier verification
+          const pickupId = await storage.generateUniquePickupId();
+          
+          // Award the load to this carrier
+          await storage.updateLoad(load_id, {
+            status: 'awarded',
+            previousStatus: load.status,
+            assignedCarrierId: user.id,
+            assignedTruckId: truck_id || null,
+            awardedAt: new Date(),
+            awardedBidId: bid.id,
+            statusChangedAt: new Date(),
+            pickupId: pickupId,
+          });
+          
+          // Reject all other pending bids for this load (if any)
+          const allBids = await storage.getBidsByLoad(load_id);
+          for (const otherBid of allBids) {
+            if (otherBid.id !== bid.id && otherBid.status === 'pending') {
+              await storage.updateBid(otherBid.id, { status: 'rejected' });
+            }
+          }
+          
+          // Auto-create invoice in draft status
+          try {
+            const existingInvoice = await storage.getInvoiceByLoad(load_id);
+            if (!existingInvoice) {
+              const invoiceNumber = await storage.generateInvoiceNumber();
+              const invoiceAmount = String(finalAmount);
+              const totalAmountNum = parseFloat(invoiceAmount) || 0;
+              
+              // Calculate advance payment from load settings
+              const advancePercent = load.advancePaymentPercent || 0;
+              const advanceAmount = advancePercent > 0 ? (totalAmountNum * (advancePercent / 100)).toFixed(2) : null;
+              const balanceOnDelivery = advancePercent > 0 ? (totalAmountNum - parseFloat(advanceAmount || "0")).toFixed(2) : null;
+              
+              const invoice = await storage.createInvoice({
+                invoiceNumber,
+                loadId: load_id,
+                shipperId: load.shipperId,
+                adminId: load.adminId || null,
+                subtotal: invoiceAmount,
+                fuelSurcharge: "0",
+                tollCharges: "0",
+                handlingFee: "0",
+                insuranceFee: "0",
+                discountAmount: "0",
+                discountReason: null,
+                taxPercent: "0",
+                taxAmount: "0",
+                totalAmount: invoiceAmount,
+                advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
+                advancePaymentAmount: advanceAmount,
+                balanceOnDelivery: balanceOnDelivery,
+                paymentTerms: "Net 30",
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                notes: `Invoice auto-generated when carrier accepted fixed-price load`,
+                status: "draft",
+              });
+              
+              // Link invoice to load and update status to invoice_created
+              await storage.updateLoad(load_id, {
+                invoiceId: invoice.id,
+                status: 'invoice_created',
+              });
+              
+              console.log(`Invoice ${invoiceNumber} created for fixed-price load ${load_id} - carrier ${user.username} accepted`);
+            }
+          } catch (invoiceError) {
+            console.error("Failed to create invoice after carrier acceptance:", invoiceError);
+          }
+        } else {
+          // NEGOTIABLE LOAD: Bids stay pending for admin to pick winner
+          // This enables dual marketplace with multiple competing bids
+          await storage.updateLoad(load_id, {
+            status: 'open_for_bid',
+            previousStatus: load.status,
+            statusChangedAt: new Date(),
+          });
+          console.log(`Bid ${bid.id} created for negotiable load ${load_id} - awaiting admin review`);
+        }
       }
 
       // Notify shipper and admin

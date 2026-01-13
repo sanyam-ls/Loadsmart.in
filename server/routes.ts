@@ -3126,8 +3126,9 @@ export async function registerRoutes(
         finalBidType = 'admin_posted_acceptance';
       }
 
-      // Get carrier type from request or default to enterprise
-      const finalCarrierType = carrier_type || 'enterprise';
+      // Get carrier type from carrier profile (authoritative source), not request
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      const finalCarrierType = carrierProfile?.carrierType || carrier_type || 'enterprise';
 
       const bid = await storage.createBid({
         loadId: load_id,

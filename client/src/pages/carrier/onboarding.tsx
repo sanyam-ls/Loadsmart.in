@@ -317,6 +317,11 @@ export default function CarrierOnboarding() {
   };
 
   const handleSubmit = async () => {
+    // Cancel any pending debounced auto-save
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
     // Validate form before submitting
     if (carrierType === "solo") {
       const values = soloForm.getValues();
@@ -354,6 +359,14 @@ export default function CarrierOnboarding() {
           setActiveTab("vehicle");
         }
         return;
+      }
+      
+      // Save form data immediately before submit
+      try {
+        setAutoSaveStatus("saving");
+        await apiRequest("PATCH", "/api/carrier/onboarding/draft", values);
+      } catch (error) {
+        // Continue with submit even if save fails - server will validate
       }
     } else {
       const values = fleetForm.getValues();
@@ -394,6 +407,14 @@ export default function CarrierOnboarding() {
           setActiveTab("vehicle");
         }
         return;
+      }
+      
+      // Save form data immediately before submit
+      try {
+        setAutoSaveStatus("saving");
+        await apiRequest("PATCH", "/api/carrier/onboarding/draft", values);
+      } catch (error) {
+        // Continue with submit even if save fails - server will validate
       }
     }
     

@@ -65,11 +65,17 @@ export default function SettingsPage() {
       }) as unknown as { uploadURL: string; objectPath: string };
       const { uploadURL, objectPath } = response;
 
-      await fetch(uploadURL, {
+      const uploadResponse = await fetch(uploadURL, {
         method: "PUT",
         body: file,
         headers: { "Content-Type": file.type },
       });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error("Storage upload failed:", uploadResponse.status, errorText);
+        throw new Error(`Storage upload failed: ${uploadResponse.status}`);
+      }
 
       await apiRequest("PATCH", "/api/user/profile", { avatar: objectPath });
       

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AuthenticatedAvatar } from "@/components/authenticated-avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-provider";
@@ -14,7 +14,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useUpload } from "@/hooks/use-upload";
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,6 +41,7 @@ export default function SettingsPage() {
         }
         
         queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        await refreshUser();
         toast({
           title: "Photo updated",
           description: "Your profile photo has been updated successfully.",
@@ -125,12 +126,13 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
             <div className="flex items-center gap-6">
               <div className="relative">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={user?.avatar || undefined} alt={user?.username} />
-                  <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                    {getInitials(user?.companyName || user?.username)}
-                  </AvatarFallback>
-                </Avatar>
+                <AuthenticatedAvatar
+                  src={user?.avatar}
+                  alt={user?.username}
+                  fallback={getInitials(user?.companyName || user?.username)}
+                  className="h-20 w-20"
+                  fallbackClassName="text-lg bg-primary/10 text-primary"
+                />
                 <input
                   ref={fileInputRef}
                   type="file"

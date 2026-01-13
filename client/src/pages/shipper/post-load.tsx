@@ -1521,11 +1521,18 @@ export default function PostLoadPage() {
                         <FormControl>
                           <div className="relative">
                             <Input
-                              type="number"
-                              min="0"
-                              max="100"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               placeholder="e.g. 30"
                               {...field}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[^0-9]/g, '');
+                                const numValue = parseInt(value);
+                                if (value === '' || (numValue >= 0 && numValue <= 100)) {
+                                  field.onChange(value);
+                                }
+                              }}
                               data-testid="input-advance-percent"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">%</span>

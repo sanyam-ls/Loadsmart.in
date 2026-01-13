@@ -59,19 +59,19 @@ export default function SettingsPage() {
     setIsUploading(true);
     try {
       const response = await apiRequest("POST", "/api/uploads/request-url", {
-        fileName: file.name,
-        fileType: file.type,
-        category: "profile",
-      }) as unknown as { uploadUrl: string; fileUrl: string };
-      const { uploadUrl, fileUrl } = response;
+        name: file.name,
+        size: file.size,
+        contentType: file.type,
+      }) as unknown as { uploadURL: string; objectPath: string };
+      const { uploadURL, objectPath } = response;
 
-      await fetch(uploadUrl, {
+      await fetch(uploadURL, {
         method: "PUT",
         body: file,
         headers: { "Content-Type": file.type },
       });
 
-      await apiRequest("PATCH", "/api/user/profile", { avatar: fileUrl });
+      await apiRequest("PATCH", "/api/user/profile", { avatar: objectPath });
       
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
 

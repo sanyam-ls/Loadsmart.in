@@ -6,7 +6,8 @@ import { useAuth } from "@/lib/auth-context";
 import { 
   ChevronLeft, MapPin, Calendar, 
   Users, Copy, X, CheckCircle, AlertCircle, Star, FileText, Loader2,
-  Building2, User as UserIcon, Phone, IndianRupee, Package, Truck, StickyNote
+  Building2, User as UserIcon, Phone, IndianRupee, Package, Truck, StickyNote,
+  Mail, Landmark, Navigation, Percent, Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -242,8 +243,14 @@ export default function LoadDetailPage() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">PICKUP</p>
                     <p className="font-semibold" data-testid="text-pickup">
-                      {load.pickupAddress}, {load.pickupCity}
+                      {load.pickupAddress}{load.pickupLocality ? `, ${load.pickupLocality}` : ''}, {load.pickupCity}
                     </p>
+                    {load.pickupLandmark && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                        <Landmark className="h-3.5 w-3.5" />
+                        Landmark: {load.pickupLandmark}
+                      </p>
+                    )}
                     <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
@@ -254,8 +261,14 @@ export default function LoadDetailPage() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">DELIVERY</p>
                     <p className="font-semibold" data-testid="text-drop">
-                      {load.dropoffAddress}, {load.dropoffCity}
+                      {load.dropoffBusinessName ? `${load.dropoffBusinessName}, ` : ''}{load.dropoffAddress}{load.dropoffLocality ? `, ${load.dropoffLocality}` : ''}, {load.dropoffCity}
                     </p>
+                    {load.dropoffLandmark && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                        <Landmark className="h-3.5 w-3.5" />
+                        Landmark: {load.dropoffLandmark}
+                      </p>
+                    )}
                     {load.deliveryDate && (
                       <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
@@ -321,7 +334,49 @@ export default function LoadDetailPage() {
             </Card>
           )}
 
-          {(load.goodsToBeCarried || load.specialNotes || load.shipperPricePerTon) && (
+          {(load.receiverName || load.receiverPhone || load.receiverEmail) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <UserIcon className="h-5 w-5" />
+                  Receiver Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {load.receiverName && (
+                    <div className="flex items-start gap-3">
+                      <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Receiver Name</p>
+                        <p className="font-medium" data-testid="text-receiver-name">{load.receiverName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {load.receiverPhone && (
+                    <div className="flex items-start gap-3">
+                      <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Receiver Phone</p>
+                        <p className="font-medium" data-testid="text-receiver-phone">{load.receiverPhone}</p>
+                      </div>
+                    </div>
+                  )}
+                  {load.receiverEmail && (
+                    <div className="flex items-start gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Receiver Email</p>
+                        <p className="font-medium" data-testid="text-receiver-email">{load.receiverEmail}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {(load.goodsToBeCarried || load.specialNotes || load.shipperPricePerTon || load.shipperFixedPrice || load.advancePaymentPercent) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -339,6 +394,20 @@ export default function LoadDetailPage() {
                     </div>
                   </div>
                 )}
+                {load.rateType && (
+                  <>
+                    <Separator />
+                    <div className="flex items-start gap-3">
+                      <Receipt className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Rate Type</p>
+                        <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate mt-1">
+                          {load.rateType === "per_ton" ? "Per Ton" : "Fixed Price"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </>
+                )}
                 {load.shipperPricePerTon && (
                   <>
                     <Separator />
@@ -354,6 +423,34 @@ export default function LoadDetailPage() {
                             Estimated total: Rs. {(parseFloat(load.shipperPricePerTon) * parseFloat(load.weight)).toLocaleString("en-IN")}
                           </p>
                         )}
+                      </div>
+                    </div>
+                  </>
+                )}
+                {load.shipperFixedPrice && (
+                  <>
+                    <Separator />
+                    <div className="flex items-start gap-3">
+                      <IndianRupee className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Your Suggested Fixed Price</p>
+                        <p className="font-medium text-lg" data-testid="text-fixed-price">
+                          Rs. {parseFloat(load.shipperFixedPrice).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {load.advancePaymentPercent && (
+                  <>
+                    <Separator />
+                    <div className="flex items-start gap-3">
+                      <Percent className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Advance Payment</p>
+                        <p className="font-medium" data-testid="text-advance-payment">
+                          {load.advancePaymentPercent}%
+                        </p>
                       </div>
                     </div>
                   </>

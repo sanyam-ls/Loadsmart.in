@@ -32,7 +32,14 @@ A specialized portal for owner-operators with simplified navigation ("My Truck,"
 
 ### Dual Marketplace Bidding System
 
-Supports simultaneous bidding from Solo Drivers and Enterprise Carriers on the same loads. API responses differentiate between `soloBids` and `enterpriseBids`, and the admin interface provides separate views for each. Accepting a bid from one type automatically rejects all other pending bids across both types.
+Supports simultaneous bidding from Solo Drivers and Enterprise Carriers on the same loads with NO carrier type filtering:
+- **Universal Load Visibility**: When admin posts a load with `post_mode: "open"` (default), ALL carriers see it regardless of carrier type
+- **Simultaneous Bidding**: Both solo drivers and enterprise carriers can bid on the same load at the same time
+- **Biddable States**: Loads in `posted_to_carriers`, `open_for_bid`, or `counter_received` status are visible for bidding
+- **Counter-Offer Transparency**: When admin counters one carrier's bid, other carriers can still see and bid on the load
+- **Bid Categorization**: API responses differentiate between `soloBids` and `enterpriseBids` for admin review
+- **Bid Acceptance**: Accepting a bid from any carrier automatically rejects all other pending bids across both types
+- **No Type Filtering**: The `checkCarrierEligibility` function does NOT filter by carrier type - eligibility is based on load status, posting mode, and carrier compliance only
 
 ### Real-time Updates
 

@@ -2,10 +2,10 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
-  MapPin, Truck, Clock, CheckCircle, Upload, Navigation, Fuel, User, 
-  AlertTriangle, TrendingUp, Route, Calendar, Timer, Shield, Gauge,
-  ArrowRight, Package, Building2, PlayCircle, PauseCircle, Coffee,
-  FileText, Eye, Download, Key, Lock, Unlock, RefreshCw, Plus, Check, X, Loader2
+  MapPin, Truck, Clock, CheckCircle, Upload,
+  Route, Calendar, TrendingUp, ArrowRight,
+  Package, Building2,
+  FileText, Eye, Download, Check, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,7 +22,6 @@ import { StatCard } from "@/components/stat-card";
 import { useToast } from "@/hooks/use-toast";
 import { type CarrierTrip } from "@/lib/carrier-data-store";
 import { format, addHours } from "date-fns";
-import { OtpTripActions } from "@/components/otp-trip-actions";
 import { useAuth } from "@/lib/auth-context";
 import { useShipments, useLoads } from "@/lib/api-hooks";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -477,11 +476,7 @@ export default function TripsPage() {
                 <Tabs value={detailTab} onValueChange={setDetailTab}>
                   <TabsList className="w-full justify-start rounded-none border-b px-4 flex-wrap">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="security">Security</TabsTrigger>
                     <TabsTrigger value="documents">Documents</TabsTrigger>
-                    <TabsTrigger value="fuel">Fuel</TabsTrigger>
-                    <TabsTrigger value="driver">Driver</TabsTrigger>
-                    <TabsTrigger value="timeline">Timeline</TabsTrigger>
                   </TabsList>
                   
                   <div className="p-4">
@@ -559,54 +554,6 @@ export default function TripsPage() {
                           ))}
                         </div>
                       </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="security" className="mt-0 space-y-4">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Key className="h-5 w-5 text-primary" />
-                            OTP Security Gate
-                          </CardTitle>
-                          <CardDescription>
-                            Secure your trip with OTP verification at pickup and delivery
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {matchedShipment ? (
-                            <OtpTripActions 
-                              shipment={matchedShipment as any} 
-                              onStateChange={() => refetchShipments()}
-                            />
-                          ) : (
-                            <div className="space-y-4">
-                              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                                <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                                  <Lock className="h-5 w-5 text-amber-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-medium">Trip Start</p>
-                                  <p className="text-sm text-muted-foreground">Verify OTP at pickup location</p>
-                                </div>
-                                <Badge variant="outline">Pending</Badge>
-                              </div>
-                              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                                  <Lock className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-medium">Trip End</p>
-                                  <p className="text-sm text-muted-foreground">Verify OTP at delivery location</p>
-                                </div>
-                                <Badge variant="outline" className="text-muted-foreground">Locked</Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground text-center">
-                                OTP data will sync when shipment is connected
-                              </p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
                     </TabsContent>
                     
                     <TabsContent value="documents" className="mt-0 space-y-4">
@@ -699,179 +646,6 @@ export default function TripsPage() {
                           )}
                         </CardContent>
                       </Card>
-                    </TabsContent>
-                    
-                    <TabsContent value="fuel" className="mt-0 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <Card>
-                          <CardContent className="pt-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Fuel className="h-5 w-5 text-amber-500" />
-                              <span className="font-medium">Fuel Consumed</span>
-                            </div>
-                            <p className="text-2xl font-bold">{selectedTrip.fuel.fuelConsumed} L</p>
-                            <p className="text-sm text-muted-foreground">
-                              @ Rs. {selectedTrip.fuel.costPerLiter}/L
-                            </p>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card>
-                          <CardContent className="pt-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <TrendingUp className="h-5 w-5 text-green-500" />
-                              <span className="font-medium">Fuel Cost</span>
-                            </div>
-                            <p className="text-2xl font-bold">{formatCurrency(selectedTrip.fuel.totalFuelCost)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedTrip.fuel.fuelEfficiency} km/L efficiency
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </div>
-                      
-                      {selectedTrip.fuel.costOverrun > 0 && (
-                        <Card className="border-amber-500">
-                          <CardContent className="pt-4">
-                            <div className="flex items-center gap-2 text-amber-600">
-                              <AlertTriangle className="h-5 w-5" />
-                              <span className="font-medium">Cost Overrun Detected</span>
-                            </div>
-                            <p className="text-lg font-bold text-amber-600 mt-1">
-                              +{formatCurrency(selectedTrip.fuel.costOverrun)}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      )}
-                      
-                      {selectedTrip.fuel.refuelAlerts.length > 0 && (
-                        <Card className="border-red-500">
-                          <CardContent className="pt-4">
-                            <div className="flex items-center gap-2 text-red-600 mb-2">
-                              <Fuel className="h-5 w-5" />
-                              <span className="font-medium">Refuel Alerts</span>
-                            </div>
-                            {selectedTrip.fuel.refuelAlerts.map((alert, idx) => (
-                              <p key={idx} className="text-sm text-red-600">{alert}</p>
-                            ))}
-                          </CardContent>
-                        </Card>
-                      )}
-                    </TabsContent>
-                    
-                    <TabsContent value="driver" className="mt-0 space-y-4">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <User className="h-5 w-5" />
-                            {selectedTrip.driverInsights.driverName}
-                          </CardTitle>
-                          <CardDescription>License: {selectedTrip.driverInsights.driverLicense}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Safety Score</span>
-                            <div className="flex items-center gap-2">
-                              <Progress 
-                                value={selectedTrip.driverInsights.safetyScore} 
-                                className="w-24 h-2" 
-                              />
-                              <span className={`font-bold ${
-                                selectedTrip.driverInsights.safetyScore > 80 
-                                  ? "text-green-600" 
-                                  : selectedTrip.driverInsights.safetyScore > 60 
-                                    ? "text-amber-600" 
-                                    : "text-red-600"
-                              }`}>
-                                {selectedTrip.driverInsights.safetyScore}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-3 rounded-md bg-muted/50">
-                              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                <Timer className="h-4 w-4" />
-                                <span className="text-sm">Driving Hours</span>
-                              </div>
-                              <p className="text-lg font-bold">{selectedTrip.driverInsights.drivingHoursToday}h</p>
-                            </div>
-                            
-                            <div className="p-3 rounded-md bg-muted/50">
-                              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                <Coffee className="h-4 w-4" />
-                                <span className="text-sm">Breaks Taken</span>
-                              </div>
-                              <p className="text-lg font-bold">{selectedTrip.driverInsights.breaksTaken}</p>
-                            </div>
-                            
-                            <div className="p-3 rounded-md bg-muted/50">
-                              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                <Gauge className="h-4 w-4" />
-                                <span className="text-sm">Speeding Alerts</span>
-                              </div>
-                              <p className={`text-lg font-bold ${selectedTrip.driverInsights.speedingAlerts > 0 ? "text-red-600" : ""}`}>
-                                {selectedTrip.driverInsights.speedingAlerts}
-                              </p>
-                            </div>
-                            
-                            <div className="p-3 rounded-md bg-muted/50">
-                              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                <AlertTriangle className="h-4 w-4" />
-                                <span className="text-sm">Harsh Braking</span>
-                              </div>
-                              <p className={`text-lg font-bold ${selectedTrip.driverInsights.harshBrakingEvents > 2 ? "text-amber-600" : ""}`}>
-                                {selectedTrip.driverInsights.harshBrakingEvents}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="p-3 rounded-md bg-muted/50">
-                            <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                              <PauseCircle className="h-4 w-4" />
-                              <span className="text-sm">Idle Time Today</span>
-                            </div>
-                            <p className="text-lg font-bold">{selectedTrip.driverInsights.idleTime} min</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
-                    
-                    <TabsContent value="timeline" className="mt-0">
-                      <ScrollArea className="h-64">
-                        <div className="space-y-4">
-                          {selectedTrip.timeline.map((event, index) => {
-                            const isLast = index === selectedTrip.timeline.length - 1;
-                            return (
-                              <div key={event.eventId} className="flex gap-4">
-                                <div className="relative flex flex-col items-center">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                    {event.type === "pickup" && <Package className="h-4 w-4" />}
-                                    {event.type === "loaded" && <CheckCircle className="h-4 w-4" />}
-                                    {event.type === "en_route" && <Truck className="h-4 w-4" />}
-                                    {event.type === "checkpoint" && <MapPin className="h-4 w-4" />}
-                                    {event.type === "delivered" && <CheckCircle className="h-4 w-4" />}
-                                    {event.type === "delay" && <AlertTriangle className="h-4 w-4" />}
-                                  </div>
-                                  {!isLast && (
-                                    <div className="w-0.5 flex-1 mt-2 bg-border" />
-                                  )}
-                                </div>
-                                <div className="flex-1 pt-1 pb-4">
-                                  <p className="font-medium">{event.description}</p>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                    <span>{format(new Date(event.timestamp), "MMM d, h:mm a")}</span>
-                                    <span className="flex items-center gap-1">
-                                      <MapPin className="h-3 w-3" />
-                                      {event.location}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </ScrollArea>
                     </TabsContent>
                   </div>
                 </Tabs>

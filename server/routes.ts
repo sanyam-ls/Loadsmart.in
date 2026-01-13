@@ -3143,88 +3143,28 @@ export async function registerRoutes(
       });
 
       // Update load status based on bid type - use canonical states
+      // DUAL MARKETPLACE: All bids remain PENDING until admin explicitly accepts one
+      // This enables multiple carriers to bid on the same load simultaneously
       if (bid_type === 'counter') {
-        // Counter-bid submitted, needs admin review
+        // Counter-bid submitted, needs admin review - load remains open for other bids
         await storage.updateLoad(load_id, {
-          status: 'counter_received',
+          status: 'open_for_bid',
           previousStatus: load.status,
           statusChangedAt: new Date(),
         });
       } else if (bid_type === 'admin_posted_acceptance') {
-        // Carrier accepted the posted price - award load and create invoice
-        // Update bid status to accepted
-        await storage.updateBid(bid.id, { status: 'accepted' });
-        
-        // Generate unique 4-digit pickup ID for carrier verification
-        const pickupId = await storage.generateUniquePickupId();
-        
-        // Award the load to this carrier
+        // Carrier accepted the posted price - bid stays PENDING until admin approves
+        // DO NOT auto-award - this allows multiple carriers to accept/bid on same load
+        // Admin will review all bids and explicitly accept one
         await storage.updateLoad(load_id, {
-          status: 'awarded',
+          status: 'open_for_bid',
           previousStatus: load.status,
-          assignedCarrierId: user.id,
-          assignedTruckId: truck_id || null,
-          awardedAt: new Date(),
           statusChangedAt: new Date(),
-          pickupId: pickupId,
         });
         
-        // Reject all other pending bids for this load
-        const allBids = await storage.getBidsByLoad(load_id);
-        for (const otherBid of allBids) {
-          if (otherBid.id !== bid.id && otherBid.status === 'pending') {
-            await storage.updateBid(otherBid.id, { status: 'rejected' });
-          }
-        }
-        
-        // Auto-create invoice in draft status (without GST/tax per project requirements)
-        try {
-          const existingInvoice = await storage.getInvoiceByLoad(load_id);
-          if (!existingInvoice) {
-            const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
-            const invoiceAmount = String(finalAmount);
-            const totalAmountNum = parseFloat(invoiceAmount) || 0;
-            
-            // Calculate advance payment from load settings
-            const advancePercent = load.advancePaymentPercent || 0;
-            const advanceAmount = advancePercent > 0 ? (totalAmountNum * (advancePercent / 100)).toFixed(2) : null;
-            const balanceOnDelivery = advancePercent > 0 ? (totalAmountNum - parseFloat(advanceAmount || "0")).toFixed(2) : null;
-            
-            const invoice = await storage.createInvoice({
-              invoiceNumber,
-              loadId: load_id,
-              shipperId: load.shipperId,
-              adminId: load.adminId || null,
-              subtotal: invoiceAmount,
-              fuelSurcharge: "0",
-              tollCharges: "0",
-              handlingFee: "0",
-              insuranceFee: "0",
-              discountAmount: "0",
-              discountReason: null,
-              taxPercent: "0",
-              taxAmount: "0",
-              totalAmount: invoiceAmount,
-              advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
-              advancePaymentAmount: advanceAmount,
-              balanceOnDelivery: balanceOnDelivery,
-              paymentTerms: "Net 30",
-              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              notes: `Invoice auto-generated when carrier accepted posted price`,
-              status: "draft",
-            });
-            
-            // Link invoice to load
-            await storage.updateLoad(load_id, {
-              invoiceId: invoice.id,
-              status: 'invoice_created',
-            });
-            
-            console.log(`Invoice ${invoiceNumber} created for load ${load_id} after carrier acceptance`);
-          }
-        } catch (invoiceError) {
-          console.error("Failed to create invoice after carrier acceptance:", invoiceError);
-        }
+        // Bid remains in 'pending' status (already set at creation)
+        // Invoice creation happens ONLY when admin accepts a bid via acceptBid()
+        console.log(`Bid ${bid.id} created for load ${load_id} - awaiting admin approval`);
       }
 
       // Notify shipper and admin

@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   MapPin, Truck, Clock, CheckCircle, Upload,
-  Route, Calendar, TrendingUp, ArrowRight,
+  Route, Calendar, TrendingUp, ArrowRight, Map as MapIcon, Lock,
   Package, Building2,
   FileText, Eye, Download, Check, Loader2
 } from "lucide-react";
@@ -26,6 +26,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useShipments, useLoads } from "@/lib/api-hooks";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import type { Shipment, Load, Driver, Truck as DbTruck } from "@shared/schema";
+import { OtpTripActions } from "@/components/otp-trip-actions";
+import { ShipmentMap } from "@/components/shipment-map";
 
 const documentTypeToLabel: Record<string, string> = {
   lr_consignment: "LR / Consignment Note",
@@ -474,8 +476,20 @@ export default function TripsPage() {
               
               <CardContent className="p-0">
                 <Tabs value={detailTab} onValueChange={setDetailTab}>
-                  <TabsList className="w-full justify-start rounded-none border-b px-4 flex-wrap">
+                  <TabsList className="w-full justify-start rounded-none border-b px-4 flex-wrap gap-1">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger 
+                      value="map" 
+                      disabled={!matchedShipment?.startOtpVerified}
+                      className="flex items-center gap-1"
+                    >
+                      {matchedShipment?.startOtpVerified ? (
+                        <MapIcon className="h-3 w-3" />
+                      ) : (
+                        <Lock className="h-3 w-3" />
+                      )}
+                      Map
+                    </TabsTrigger>
                     <TabsTrigger value="documents">Documents</TabsTrigger>
                   </TabsList>
                   
@@ -554,6 +568,117 @@ export default function TripsPage() {
                           ))}
                         </div>
                       </div>
+                      
+                      {matchedShipment && (
+                        <OtpTripActions 
+                          shipment={matchedShipment} 
+                          onStateChange={() => {
+                            refetchShipments();
+                            if (matchedShipment.startOtpVerified && detailTab === "overview") {
+                              setDetailTab("map");
+                            }
+                          }} 
+                        />
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="map" className="mt-0 space-y-4">
+                      {matchedShipment?.startOtpVerified ? (
+                        <>
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-base flex items-center gap-2">
+                                <MapIcon className="h-5 w-5 text-primary" />
+                                Live Shipment Tracking
+                              </CardTitle>
+                              <CardDescription>
+                                {(matchedShipment as any)?.routeStartOtpVerified 
+                                  ? "Truck is on the way to destination" 
+                                  : "Route ready - verify Route Start OTP to begin transit"
+                                }
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <ShipmentMap
+                                pickupCity={selectedTrip.pickup}
+                                dropoffCity={selectedTrip.dropoff}
+                                showTruck={(matchedShipment as any)?.routeStartOtpVerified || false}
+                                truckAtPickup={!(matchedShipment as any)?.routeStartOtpVerified}
+                                progress={selectedTrip.progress}
+                                className="h-[350px]"
+                              />
+                            </CardContent>
+                          </Card>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <Card className={`${matchedShipment.startOtpVerified ? "border-green-200 dark:border-green-800" : ""}`}>
+                              <CardContent className="pt-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                    matchedShipment.startOtpVerified 
+                                      ? "bg-green-100 dark:bg-green-900/30" 
+                                      : "bg-muted"
+                                  }`}>
+                                    <CheckCircle className={`h-5 w-5 ${
+                                      matchedShipment.startOtpVerified 
+                                        ? "text-green-600 dark:text-green-400" 
+                                        : "text-muted-foreground"
+                                    }`} />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-sm">Trip Start OTP</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {matchedShipment.startOtpVerified ? "Verified" : "Pending"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            
+                            <Card className={`${(matchedShipment as any)?.routeStartOtpVerified ? "border-green-200 dark:border-green-800" : ""}`}>
+                              <CardContent className="pt-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                    (matchedShipment as any)?.routeStartOtpVerified 
+                                      ? "bg-green-100 dark:bg-green-900/30" 
+                                      : "bg-amber-100 dark:bg-amber-900/30"
+                                  }`}>
+                                    {(matchedShipment as any)?.routeStartOtpVerified ? (
+                                      <Truck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                    ) : (
+                                      <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-sm">Route Start OTP</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {(matchedShipment as any)?.routeStartOtpVerified 
+                                        ? "Truck on route" 
+                                        : "Enter to show truck"
+                                      }
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                          
+                          {matchedShipment && (
+                            <OtpTripActions 
+                              shipment={matchedShipment} 
+                              onStateChange={() => refetchShipments()} 
+                            />
+                          )}
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <Lock className="h-12 w-12 text-muted-foreground mb-4" />
+                          <h4 className="font-medium mb-2">Map View Locked</h4>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Complete the Trip Start OTP verification to unlock map tracking
+                          </p>
+                        </div>
+                      )}
                     </TabsContent>
                     
                     <TabsContent value="documents" className="mt-0 space-y-4">

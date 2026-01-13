@@ -96,8 +96,11 @@ interface TrackedShipment {
   documents: {
     id: string;
     documentType: string;
+    fileName: string;
     fileUrl: string | null;
-    status: string | null;
+    fileSize: number | null;
+    isVerified: boolean | null;
+    createdAt: string | null;
   }[];
 }
 
@@ -750,6 +753,8 @@ export default function AdminLiveTrackingPage() {
                       { key: "eway_bill", label: "E-way Bill" },
                       { key: "loading_photos", label: "Loading Photos" },
                       { key: "pod", label: "Proof of Delivery (POD)" },
+                      { key: "invoice", label: "Invoice" },
+                      { key: "other", label: "Other Document" },
                     ].map((docItem) => {
                       const doc = (selectedShipment.documents || []).find(d => 
                         d.documentType === docItem.key
@@ -765,7 +770,7 @@ export default function AdminLiveTrackingPage() {
                             <span className="text-sm">{docItem.label}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            {doc?.status === "verified" ? (
+                            {doc?.isVerified ? (
                               <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                                 <CheckCircle className="h-3 w-3 mr-1" />
                                 Verified

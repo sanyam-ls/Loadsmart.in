@@ -1799,7 +1799,15 @@ export async function registerRoutes(
                 location: load?.dropoffCity || "Delivered",
               },
             ],
-            documents: await storage.getDocumentsByShipment(shipment.id),
+            documents: (await storage.getDocumentsByShipment(shipment.id)).map(doc => ({
+              id: doc.id,
+              documentType: doc.documentType,
+              fileName: doc.fileName,
+              fileUrl: doc.fileUrl,
+              fileSize: doc.fileSize,
+              isVerified: doc.isVerified,
+              createdAt: doc.createdAt,
+            })),
           };
         })
       );

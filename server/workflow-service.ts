@@ -111,7 +111,9 @@ export async function checkCarrierEligibility(
   }
 
   // 0. Check load is in carrier-visible state for bidding
-  const carrierBiddableStates: LoadStatus[] = ["posted_to_carriers", "open_for_bid"];
+  // Include "counter_received" to allow simultaneous bids from multiple carriers
+  // (both solo drivers and enterprise carriers can bid on the same load)
+  const carrierBiddableStates: LoadStatus[] = ["posted_to_carriers", "open_for_bid", "counter_received"];
   if (!carrierBiddableStates.includes(loadStatus)) {
     reasons.push(`Load not open for bidding (status: ${loadStatus})`);
   }

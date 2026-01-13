@@ -10,20 +10,58 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-provider";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { useUpload } from "@/hooks/use-upload";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
     bids: true,
     shipments: true,
     documents: false,
+  });
+
+  const { uploadFile, isUploading, error: uploadError } = useUpload({
+    onSuccess: async (response) => {
+      try {
+        const updateResponse = await fetch("/api/user/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ avatar: response.objectPath }),
+        });
+        
+        if (!updateResponse.ok) {
+          throw new Error("Failed to update profile");
+        }
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        toast({
+          title: "Photo updated",
+          description: "Your profile photo has been updated successfully.",
+        });
+      } catch (err) {
+        console.error("Profile update error:", err);
+        toast({
+          title: "Update failed",
+          description: "Photo uploaded but failed to save. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (err) => {
+      console.error("Upload error:", err);
+      toast({
+        title: "Upload failed",
+        description: err.message || "Failed to upload your profile photo. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleSave = () => {
@@ -56,47 +94,10 @@ export default function SettingsPage() {
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const response = await apiRequest("POST", "/api/uploads/request-url", {
-        name: file.name,
-        size: file.size,
-        contentType: file.type,
-      }) as unknown as { uploadURL: string; objectPath: string };
-      const { uploadURL, objectPath } = response;
-
-      const uploadResponse = await fetch(uploadURL, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
-      });
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error("Storage upload failed:", uploadResponse.status, errorText);
-        throw new Error(`Storage upload failed: ${uploadResponse.status}`);
-      }
-
-      await apiRequest("PATCH", "/api/user/profile", { avatar: objectPath });
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-
-      toast({
-        title: "Photo updated",
-        description: "Your profile photo has been updated successfully.",
-      });
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload your profile photo. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+    await uploadFile(file);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 

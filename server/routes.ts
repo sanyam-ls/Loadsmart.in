@@ -2094,6 +2094,64 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Backfill carrier types from verification records
+  app.post("/api/admin/carriers/backfill-types", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get all carriers
+      const carriers = await storage.getAllCarriers();
+      let updated = 0;
+      let skipped = 0;
+
+      for (const carrier of carriers) {
+        // Get verification record
+        const verification = await storage.getCarrierVerificationByCarrier(carrier.id);
+        if (!verification || !verification.carrierType) {
+          skipped++;
+          continue;
+        }
+
+        // Get carrier profile
+        const profile = await storage.getCarrierProfile(carrier.id);
+        if (!profile) {
+          skipped++;
+          continue;
+        }
+
+        // Sync carrier type from verification to profile if different
+        if (profile.carrierType !== verification.carrierType) {
+          // Properly parse fleetSize - solo drivers always have 1, enterprise use existing or 0
+          const newFleetSize = verification.carrierType === "solo" 
+            ? 1 
+            : (typeof verification.fleetSize === 'number' 
+                ? verification.fleetSize 
+                : (typeof profile.fleetSize === 'number' ? profile.fleetSize : 0));
+          await storage.updateCarrierProfile(carrier.id, {
+            carrierType: verification.carrierType,
+            fleetSize: newFleetSize
+          });
+          updated++;
+        } else {
+          skipped++;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Backfill complete: ${updated} carriers updated, ${skipped} skipped`,
+        updated,
+        skipped
+      });
+    } catch (error) {
+      console.error("Backfill carrier types error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Admin: Verify/reject a document
   app.patch("/api/admin/documents/:id/verify", requireAuth, async (req, res) => {
     try {
@@ -7198,6 +7256,23 @@ export async function registerRoutes(
       // Also mark the user as verified
       await storage.updateUser(verification.carrierId, { isVerified: true });
 
+      // Sync carrierType from verification to carrierProfiles on approval
+      if (verification.carrierType) {
+        const profile = await storage.getCarrierProfile(verification.carrierId);
+        if (profile) {
+          // Properly parse fleetSize - solo drivers always have 1, enterprise use existing or 0
+          const newFleetSize = verification.carrierType === "solo" 
+            ? 1 
+            : (typeof verification.fleetSize === 'number' 
+                ? verification.fleetSize 
+                : (typeof profile.fleetSize === 'number' ? profile.fleetSize : 0));
+          await storage.updateCarrierProfile(verification.carrierId, { 
+            carrierType: verification.carrierType,
+            fleetSize: newFleetSize
+          });
+        }
+      }
+
       // Get verification documents and update their status to approved
       const verificationDocs = await storage.getVerificationDocuments(req.params.id);
       
@@ -8265,6 +8340,23 @@ export async function registerRoutes(
       const updates = updateSchema.parse(req.body);
       const updated = await storage.updateCarrierVerification(onboarding.id, updates);
       
+      // Sync carrierType to carrierProfiles table if provided
+      if (updates.carrierType) {
+        const profile = await storage.getCarrierProfile(user.id);
+        if (profile) {
+          // Properly parse fleetSize - solo drivers always have 1, enterprise use existing or 0
+          const newFleetSize = updates.carrierType === "solo" 
+            ? 1 
+            : (typeof updates.fleetSize === 'number' 
+                ? updates.fleetSize 
+                : (typeof profile.fleetSize === 'number' ? profile.fleetSize : 0));
+          await storage.updateCarrierProfile(user.id, { 
+            carrierType: updates.carrierType,
+            fleetSize: newFleetSize
+          });
+        }
+      }
+      
       const documents = await storage.getVerificationDocuments(onboarding.id);
       res.json({ ...updated, documents });
     } catch (error) {
@@ -8332,6 +8424,23 @@ export async function registerRoutes(
         status: "pending",
         submittedAt: new Date(),
       });
+
+      // Ensure carrierType is synced to carrierProfiles on submission
+      if (onboarding.carrierType) {
+        const profile = await storage.getCarrierProfile(user.id);
+        if (profile) {
+          // Properly parse fleetSize - solo drivers always have 1, enterprise use existing or 0
+          const newFleetSize = onboarding.carrierType === "solo" 
+            ? 1 
+            : (typeof onboarding.fleetSize === 'number' 
+                ? onboarding.fleetSize 
+                : (typeof profile.fleetSize === 'number' ? profile.fleetSize : 0));
+          await storage.updateCarrierProfile(user.id, { 
+            carrierType: onboarding.carrierType,
+            fleetSize: newFleetSize
+          });
+        }
+      }
 
       const updatedDocs = await storage.getVerificationDocuments(onboarding.id);
       res.json({ ...updated, documents: updatedDocs });

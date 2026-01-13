@@ -1755,6 +1755,51 @@ export async function registerRoutes(
               truckType: truck.truckType,
               capacity: truck.capacity,
             } : null,
+            timeline: [
+              {
+                stage: "load_created",
+                completed: true,
+                timestamp: load?.createdAt || shipment.createdAt,
+                location: load?.pickupCity || "Origin",
+              },
+              {
+                stage: "carrier_assigned",
+                completed: true,
+                timestamp: shipment.createdAt,
+                location: load?.pickupCity || "Origin",
+              },
+              {
+                stage: "reached_pickup",
+                completed: !!(shipment.startOtpRequestedAt || shipment.startOtpRequested),
+                timestamp: shipment.startOtpRequestedAt || null,
+                location: load?.pickupCity || "Pickup Location",
+              },
+              {
+                stage: "loaded",
+                completed: !!(shipment.startOtpVerifiedAt || shipment.startOtpVerified),
+                timestamp: shipment.startOtpVerifiedAt || null,
+                location: load?.pickupCity || "Pickup Location",
+              },
+              {
+                stage: "in_transit",
+                completed: !!(shipment.startedAt || shipment.startOtpVerified),
+                timestamp: shipment.startedAt || shipment.startOtpVerifiedAt || null,
+                location: "En Route",
+              },
+              {
+                stage: "arrived_at_drop",
+                completed: !!(shipment.endOtpRequestedAt || shipment.endOtpRequested),
+                timestamp: shipment.endOtpRequestedAt || null,
+                location: load?.dropoffCity || "Delivery Location",
+              },
+              {
+                stage: "delivered",
+                completed: !!(shipment.completedAt || shipment.endOtpVerified),
+                timestamp: shipment.completedAt || shipment.endOtpVerifiedAt || null,
+                location: load?.dropoffCity || "Delivered",
+              },
+            ],
+            documents: await storage.getDocumentsByShipment(shipment.id),
           };
         })
       );
@@ -10697,15 +10742,16 @@ export async function registerRoutes(
       const result = await storage.rejectOtpRequest(requestId, user.id, notes);
 
       // Reset the OTP request flags on the shipment so carrier can retry
+      // NOTE: We preserve the timestamp fields for timeline history - only reset the boolean flag
       if (result.requestType === "trip_start") {
         await storage.updateShipment(result.shipmentId, {
           startOtpRequested: false,
-          startOtpRequestedAt: null,
+          // Keep startOtpRequestedAt for timeline history
         });
       } else if (result.requestType === "trip_end") {
         await storage.updateShipment(result.shipmentId, {
           endOtpRequested: false,
-          endOtpRequestedAt: null,
+          // Keep endOtpRequestedAt for timeline history
         });
       }
 

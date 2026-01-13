@@ -880,24 +880,6 @@ export default function TripsPage() {
                   <h4 className="font-medium mb-3">Quick Actions</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <Button 
-                      variant="outline"
-                      onClick={() => handleStatusUpdate("at_checkpoint")}
-                      disabled={selectedTrip.status === "delivered"}
-                      data-testid="button-update-checkpoint"
-                    >
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Check-in
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleStatusUpdate("out_for_delivery")}
-                      disabled={selectedTrip.status === "delivered"}
-                      data-testid="button-update-delivery"
-                    >
-                      <Truck className="h-4 w-4 mr-2" />
-                      Out for Delivery
-                    </Button>
-                    <Button 
                       onClick={() => handleStatusUpdate("delivered")}
                       disabled={selectedTrip.status === "delivered"}
                       data-testid="button-mark-delivered"

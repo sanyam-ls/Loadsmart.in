@@ -87,6 +87,18 @@ interface TrackedShipment {
     truckType: string;
     capacity: number;
   } | null;
+  timeline: {
+    stage: string;
+    completed: boolean;
+    timestamp: string | null;
+    location: string;
+  }[];
+  documents: {
+    id: string;
+    documentType: string;
+    fileUrl: string | null;
+    status: string | null;
+  }[];
 }
 
 const stageLabels: Record<string, string> = {
@@ -94,6 +106,25 @@ const stageLabels: Record<string, string> = {
   at_pickup: "At Pickup Location",
   in_transit: "In Transit",
   delivered: "Delivered",
+};
+
+const timelineStageLabels: Record<string, string> = {
+  load_created: "Load Created",
+  carrier_assigned: "Carrier Assigned",
+  reached_pickup: "Reached Pickup",
+  loaded: "Loaded",
+  in_transit: "In Transit",
+  arrived_at_drop: "Arrived at Drop",
+  delivered: "Delivered",
+};
+
+const documentTypeLabels: Record<string, string> = {
+  lr_consignment: "LR / Consignment Note",
+  eway_bill: "E-way Bill",
+  loading_photos: "Loading Photos",
+  pod: "Proof of Delivery (POD)",
+  invoice: "Invoice",
+  other: "Other Document",
 };
 
 const stageBadgeColors: Record<string, string> = {
@@ -546,8 +577,9 @@ export default function AdminLiveTrackingPage() {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="route" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid w-full grid-cols-4 m-2 mx-4">
+          <Tabs defaultValue="timeline" className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid w-full grid-cols-5 m-2 mx-4">
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
               <TabsTrigger value="route">Route</TabsTrigger>
               <TabsTrigger value="shipper">Shipper</TabsTrigger>
               <TabsTrigger value="receiver">Receiver</TabsTrigger>
@@ -650,6 +682,108 @@ export default function AdminLiveTrackingPage() {
                         <span>Delivery OTP</span>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="timeline" className="p-4 space-y-4 mt-0">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Driver Activity Timeline</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="relative">
+                      {(selectedShipment.timeline || []).map((event, index) => {
+                        const isLast = index === (selectedShipment.timeline?.length || 0) - 1;
+                        return (
+                          <div key={event.stage} className="flex gap-4 pb-4 last:pb-0">
+                            <div className="relative flex flex-col items-center">
+                              <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                                event.completed 
+                                  ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" 
+                                  : "bg-muted text-muted-foreground"
+                              }`}>
+                                {event.stage === "load_created" && <Package className="h-4 w-4" />}
+                                {event.stage === "carrier_assigned" && <Truck className="h-4 w-4" />}
+                                {event.stage === "reached_pickup" && <Building2 className="h-4 w-4" />}
+                                {event.stage === "loaded" && <Package className="h-4 w-4" />}
+                                {event.stage === "in_transit" && <Navigation className="h-4 w-4" />}
+                                {event.stage === "arrived_at_drop" && <MapPin className="h-4 w-4" />}
+                                {event.stage === "delivered" && <CheckCircle className="h-4 w-4" />}
+                              </div>
+                              {!isLast && (
+                                <div className={`w-0.5 flex-1 mt-2 ${
+                                  event.completed ? "bg-green-200 dark:bg-green-800" : "bg-border"
+                                }`} />
+                              )}
+                            </div>
+                            <div className="flex-1 pt-1">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <p className={`font-medium text-sm ${!event.completed && "text-muted-foreground"}`}>
+                                  {timelineStageLabels[event.stage] || event.stage}
+                                </p>
+                                {event.completed && (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">{event.location}</p>
+                              {event.timestamp && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {format(new Date(event.timestamp), "MMM d 'at' h:mm a")}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Documents</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {[
+                      { key: "lr_consignment", label: "LR / Consignment Note" },
+                      { key: "eway_bill", label: "E-way Bill" },
+                      { key: "loading_photos", label: "Loading Photos" },
+                      { key: "pod", label: "Proof of Delivery (POD)" },
+                    ].map((docItem) => {
+                      const doc = (selectedShipment.documents || []).find(d => 
+                        d.documentType === docItem.key
+                      );
+                      return (
+                        <div 
+                          key={docItem.key} 
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                          data-testid={`admin-document-${docItem.key}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{docItem.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {doc?.status === "verified" ? (
+                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Verified
+                              </Badge>
+                            ) : doc?.fileUrl ? (
+                              <Badge variant="secondary">
+                                <ArrowRight className="h-3 w-3 mr-1" />
+                                Uploaded
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                Pending
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </CardContent>
                 </Card>
               </TabsContent>

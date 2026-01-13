@@ -1,19 +1,23 @@
-import { useState } from "react";
-import { User, Bell, Shield, Moon, Sun, LogOut } from "lucide-react";
+import { useState, useRef } from "react";
+import { User, Bell, Shield, Moon, Sun, LogOut, Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-provider";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -27,6 +31,72 @@ export default function SettingsPage() {
       title: "Settings saved",
       description: "Your preferences have been updated successfully.",
     });
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a JPEG, PNG, GIF, or WebP image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const response = await apiRequest("POST", "/api/uploads/request-url", {
+        fileName: file.name,
+        fileType: file.type,
+        category: "profile",
+      }) as unknown as { uploadUrl: string; fileUrl: string };
+      const { uploadUrl, fileUrl } = response;
+
+      await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      await apiRequest("PATCH", "/api/user/profile", { avatar: fileUrl });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+
+      toast({
+        title: "Photo updated",
+        description: "Your profile photo has been updated successfully.",
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload your profile photo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   return (
@@ -45,7 +115,49 @@ export default function SettingsPage() {
             </CardTitle>
             <CardDescription>Update your account details.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={user?.avatar || undefined} alt={user?.username} />
+                  <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                    {getInitials(user?.companyName || user?.username)}
+                  </AvatarFallback>
+                </Avatar>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  data-testid="input-profile-photo"
+                />
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-md"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  data-testid="button-upload-photo"
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <div>
+                <p className="font-medium">Profile Photo</p>
+                <p className="text-sm text-muted-foreground">
+                  Click the camera icon to upload a new photo
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Max 5MB. JPG, PNG, GIF, or WebP
+                </p>
+              </div>
+            </div>
+            <Separator />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>

@@ -564,6 +564,40 @@ export async function registerRoutes(
     });
   });
 
+  // PATCH /api/user/profile - Update user profile (avatar, etc.)
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { avatar, companyName, phone } = req.body;
+      const updates: Partial<{ avatar: string; companyName: string; phone: string }> = {};
+      
+      if (avatar !== undefined) updates.avatar = avatar;
+      if (companyName !== undefined) updates.companyName = companyName;
+      if (phone !== undefined) updates.phone = phone;
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
+      }
+
+      await storage.updateUser(user.id, updates);
+      
+      const updatedUser = await storage.getUser(user.id);
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json({ success: true, user: userWithoutPassword });
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   // GET /api/loads - Role-based load visibility (enforced at API level)
   app.get("/api/loads", requireAuth, async (req, res) => {
     try {

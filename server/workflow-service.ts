@@ -118,8 +118,12 @@ export async function checkCarrierEligibility(
     reasons.push(`Load not open for bidding (status: ${loadStatus})`);
   }
 
-  // 0b. Skip if already awarded to another carrier
-  if (load.assignedCarrierId && load.assignedCarrierId !== carrierId) {
+  // 0b. Skip if already awarded to another carrier (ONLY for post-awarded states)
+  // During bidding states (posted_to_carriers, open_for_bid, counter_received),
+  // ALL carriers can still see and bid on the load even if assignedCarrierId is set
+  // This enables dual marketplace simultaneous bidding
+  const postAwardedStates: LoadStatus[] = ["awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "in_transit", "delivered", "closed"];
+  if (load.assignedCarrierId && load.assignedCarrierId !== carrierId && postAwardedStates.includes(loadStatus)) {
     reasons.push("Load already assigned to another carrier");
   }
   

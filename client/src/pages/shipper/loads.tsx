@@ -354,7 +354,6 @@ export default function ShipperLoadsPage() {
                 <TableHead>{t('invoices.route')}</TableHead>
                 <TableHead>{t('loads.weight')}</TableHead>
                 <TableHead>{t('common.status')}</TableHead>
-                <TableHead>{t('bids.title')}</TableHead>
                 <TableHead>{t('common.price')}</TableHead>
                 <TableHead>{t('loads.pickupDate')}</TableHead>
                 <TableHead className="w-10"></TableHead>
@@ -388,15 +387,6 @@ export default function ShipperLoadsPage() {
                     <Badge className={`${getStatusColor(load.status)} no-default-hover-elevate no-default-active-elevate`}>
                       {formatStatus(load.status)}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {load.bidCount > 0 ? (
-                      <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                        {load.bidCount} bid{load.bidCount !== 1 ? 's' : ''}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
                   </TableCell>
                   <TableCell className="font-medium">
                     Rs. {parseFloat(load.adminFinalPrice || load.finalPrice || '0').toLocaleString('en-IN')}

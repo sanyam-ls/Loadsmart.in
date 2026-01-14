@@ -7820,9 +7820,10 @@ export async function registerRoutes(
 
       // Check for existing onboarding request
       const existing = await storage.getShipperOnboardingRequest(user.id);
-      if (existing && (existing.status === "pending" || existing.status === "under_review" || existing.status === "approved")) {
+      // Only block if already approved (verified) - security gate
+      if (existing && existing.status === "approved") {
         return res.status(400).json({ 
-          error: "You already have an active onboarding request",
+          error: "Your business is already verified. Contact support if you need to update your information.",
           status: existing.status 
         });
       }
@@ -7880,8 +7881,8 @@ export async function registerRoutes(
 
       let onboardingRequest;
       
-      // If there's an existing draft, update it instead of creating a new one
-      if (existing && (existing.status === "draft" || existing.status === "on_hold" || existing.status === "rejected")) {
+      // If there's an existing request (any non-approved status), update it
+      if (existing) {
         onboardingRequest = await storage.updateShipperOnboardingRequest(existing.id, {
           status: "pending",
           ...validatedData,

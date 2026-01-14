@@ -1804,6 +1804,15 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   followUpDate: timestamp("follow_up_date"), // For on_hold cases
   creditAssessmentId: varchar("credit_assessment_id"), // Link to credit evaluation if conducted
   
+  // Admin Credit Limit Proposal
+  proposedCreditLimit: decimal("proposed_credit_limit", { precision: 12, scale: 2 }), // Admin's proposed credit limit
+  proposedPaymentTerms: text("proposed_payment_terms"), // Admin's proposed payment terms
+  
+  // Shipper Credit Limit Response
+  creditLimitAccepted: boolean("credit_limit_accepted"), // Whether shipper accepted the proposed limit
+  creditLimitAcceptedAt: timestamp("credit_limit_accepted_at"), // When they accepted
+  creditLimitResponse: text("credit_limit_response"), // 'accepted', 'contact_support'
+  
   // Timestamps
   submittedAt: timestamp("submitted_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

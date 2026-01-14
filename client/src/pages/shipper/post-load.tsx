@@ -825,6 +825,14 @@ export default function PostLoadPage() {
         ? customCommodity
         : data.goodsToBeCarried || "";
       
+      // Use custom city values when "__other__" is selected
+      const finalPickupCity = data.pickupCity === "__other__" && data.pickupCityCustom
+        ? data.pickupCityCustom
+        : data.pickupCity;
+      const finalDropoffCity = data.dropoffCity === "__other__" && data.dropoffCityCustom
+        ? data.dropoffCityCustom
+        : data.dropoffCity;
+      
       const response = await apiRequest("POST", "/api/loads/submit", {
         shipperCompanyName: data.shipperCompanyName,
         shipperContactName: data.shipperContactName,
@@ -833,12 +841,12 @@ export default function PostLoadPage() {
         pickupAddress: data.pickupAddress,
         pickupLocality: data.pickupLocality || null,
         pickupLandmark: data.pickupLandmark || null,
-        pickupCity: data.pickupCity,
+        pickupCity: finalPickupCity,
         dropoffAddress: data.dropoffAddress,
         dropoffLocality: data.dropoffLocality || null,
         dropoffLandmark: data.dropoffLandmark || null,
         dropoffBusinessName: data.dropoffBusinessName || null,
-        dropoffCity: data.dropoffCity,
+        dropoffCity: finalDropoffCity,
         receiverName: data.receiverName,
         receiverPhone: data.receiverPhone,
         receiverEmail: data.receiverEmail || null,
@@ -861,9 +869,9 @@ export default function PostLoadPage() {
       const pickupStateName = indianStates.find(s => s.code === data.pickupState)?.name || data.pickupState;
       const dropoffStateName = indianStates.find(s => s.code === data.dropoffState)?.name || data.dropoffState;
       setSubmittedLoadDetails({
-        pickupCity: data.pickupCity,
+        pickupCity: finalPickupCity,
         pickupState: pickupStateName,
-        dropoffCity: data.dropoffCity,
+        dropoffCity: finalDropoffCity,
         dropoffState: dropoffStateName,
         weight: data.weight,
         goods: finalGoodsDescription,

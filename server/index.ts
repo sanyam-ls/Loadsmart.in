@@ -112,6 +112,38 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
+  
+  // Handle port in use errors gracefully
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      log(`Port ${port} is in use, waiting for it to become available...`);
+      setTimeout(() => {
+        httpServer.close();
+        httpServer.listen({ port, host: "0.0.0.0", reusePort: true });
+      }, 1000);
+    } else {
+      console.error('Server error:', err);
+      process.exit(1);
+    }
+  });
+
+  // Graceful shutdown handler
+  const shutdown = () => {
+    log('Shutting down gracefully...');
+    httpServer.close(() => {
+      log('Server closed');
+      process.exit(0);
+    });
+    // Force exit after 5 seconds if graceful shutdown fails
+    setTimeout(() => {
+      log('Forcing shutdown');
+      process.exit(1);
+    }, 5000);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+
   httpServer.listen(
     {
       port,

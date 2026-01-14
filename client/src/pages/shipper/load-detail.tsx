@@ -7,7 +7,7 @@ import {
   ChevronLeft, MapPin, Calendar, 
   Users, Copy, X, CheckCircle, AlertCircle, Star, FileText, Loader2,
   Building2, User as UserIcon, Phone, IndianRupee, Package, Truck, StickyNote,
-  Mail, Landmark, Navigation, Percent, Receipt
+  Mail, Landmark, Navigation, Percent, Receipt, EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,7 @@ function getStatusColor(status: string | null) {
     case "delivered": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
     case "closed": return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400";
     case "cancelled": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+    case "unavailable": return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400";
     default: return "bg-muted text-muted-foreground";
   }
 }
@@ -62,6 +63,7 @@ function getStatusLabel(status: string | null) {
     case "delivered": return "Delivered";
     case "closed": return "Completed";
     case "cancelled": return "Cancelled";
+    case "unavailable": return "Unavailable";
     default: return status || "Unknown";
   }
 }
@@ -109,6 +111,7 @@ export default function LoadDetailPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [cancelDialog, setCancelDialog] = useState(false);
+  const [unavailableDialog, setUnavailableDialog] = useState(false);
 
   const { data: load, isLoading, error } = useQuery<LoadWithCarrier>({
     queryKey: ["/api/loads", params.id],
@@ -157,8 +160,26 @@ export default function LoadDetailPage() {
     },
   });
 
+  const unavailableMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", `/api/loads/${params.id}`, { status: "unavailable" });
+    },
+    onSuccess: () => {
+      toast({ title: "Load marked unavailable", description: "The load is now hidden from admins and carriers." });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+      setUnavailableDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleCancel = () => {
     cancelMutation.mutate();
+  };
+
+  const handleMakeUnavailable = () => {
+    unavailableMutation.mutate();
   };
 
   const handleDuplicate = () => {
@@ -188,7 +209,8 @@ export default function LoadDetailPage() {
     );
   }
 
-  const canCancel = !["cancelled", "delivered", "closed", "in_transit"].includes(load.status || "");
+  const canCancel = !["cancelled", "delivered", "closed", "in_transit", "unavailable"].includes(load.status || "");
+  const canMakeUnavailable = !["cancelled", "delivered", "closed", "in_transit", "awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "unavailable"].includes(load.status || "");
   const isFinalized = ["awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "in_transit", "delivered", "closed"].includes(load.status || "");
 
   return (
@@ -213,6 +235,12 @@ export default function LoadDetailPage() {
             <Copy className="h-4 w-4 mr-2" />
             Duplicate
           </Button>
+          {canMakeUnavailable && (
+            <Button variant="outline" size="sm" onClick={() => setUnavailableDialog(true)} data-testid="button-make-unavailable">
+              <EyeOff className="h-4 w-4 mr-2" />
+              Make Unavailable
+            </Button>
+          )}
           {canCancel && (
             <Button variant="destructive" size="sm" onClick={() => setCancelDialog(true)} data-testid="button-cancel-load">
               <X className="h-4 w-4 mr-2" />
@@ -619,6 +647,29 @@ export default function LoadDetailPage() {
               data-testid="button-confirm-cancel"
             >
               {cancelMutation.isPending ? "Cancelling..." : "Cancel Load"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={unavailableDialog} onOpenChange={setUnavailableDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Make Load Unavailable</DialogTitle>
+            <DialogDescription>
+              This will hide the load from admins and carriers. You can make it available again later by submitting it for review.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUnavailableDialog(false)}>
+              Keep Available
+            </Button>
+            <Button 
+              onClick={handleMakeUnavailable} 
+              disabled={unavailableMutation.isPending}
+              data-testid="button-confirm-unavailable"
+            >
+              {unavailableMutation.isPending ? "Processing..." : "Make Unavailable"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -26,19 +26,20 @@ export const loadStatuses = [
   "in_transit",                 // 11. IN_TRANSIT - Shipment underway
   "delivered",                  // 12. COMPLETED - Delivery confirmed
   "closed",                     // Terminal state (completed)
-  "cancelled"                   // Terminal state (cancelled)
+  "cancelled",                  // Terminal state (cancelled)
+  "unavailable"                 // Shipper-controlled - load temporarily unavailable
 ] as const;
 export type LoadStatus = typeof loadStatuses[number];
 
 // Valid state transitions map - Admin-Managed Freight Exchange workflow
 // CRITICAL: Invoice comes AFTER carrier finalization per business rules
 export const validStateTransitions: Record<LoadStatus, LoadStatus[]> = {
-  draft: ["pending", "cancelled"],
-  pending: ["priced", "cancelled"],
-  priced: ["posted_to_carriers", "pending", "cancelled"],
-  posted_to_carriers: ["open_for_bid", "awarded", "cancelled"],
-  open_for_bid: ["counter_received", "awarded", "cancelled"],
-  counter_received: ["open_for_bid", "awarded", "cancelled"],
+  draft: ["pending", "cancelled", "unavailable"],
+  pending: ["priced", "cancelled", "unavailable"],
+  priced: ["posted_to_carriers", "pending", "cancelled", "unavailable"],
+  posted_to_carriers: ["open_for_bid", "awarded", "cancelled", "unavailable"],
+  open_for_bid: ["counter_received", "awarded", "cancelled", "unavailable"],
+  counter_received: ["open_for_bid", "awarded", "cancelled", "unavailable"],
   awarded: ["invoice_created", "invoice_sent", "open_for_bid", "cancelled"],
   invoice_created: ["invoice_sent", "awarded", "cancelled"],
   invoice_sent: ["invoice_acknowledged", "invoice_created", "cancelled"],
@@ -48,6 +49,7 @@ export const validStateTransitions: Record<LoadStatus, LoadStatus[]> = {
   delivered: ["closed"],
   closed: [],
   cancelled: [],
+  unavailable: ["pending"],
 };
 
 // Admin post mode enum

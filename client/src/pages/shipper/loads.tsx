@@ -70,6 +70,8 @@ function getStatusColor(status: string | null) {
       return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
     case "cancelled":
       return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+    case "unavailable":
+      return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400";
     default: 
       return "bg-muted text-muted-foreground";
   }
@@ -214,6 +216,7 @@ export default function ShipperLoadsPage() {
     in_transit: ['in_transit'],
     delivered: ['delivered', 'closed'],
     cancelled: ['cancelled'],
+    unavailable: ['unavailable'],
   };
 
   const filteredLoads = loadsWithBids.filter((load) => {
@@ -242,6 +245,7 @@ export default function ShipperLoadsPage() {
     in_transit: loads.filter((l: Load) => statusMappings.in_transit.includes(l.status || '')).length,
     delivered: loads.filter((l: Load) => statusMappings.delivered.includes(l.status || '')).length,
     cancelled: loads.filter((l: Load) => statusMappings.cancelled.includes(l.status || '')).length,
+    unavailable: loads.filter((l: Load) => statusMappings.unavailable.includes(l.status || '')).length,
   };
 
   if (loadsLoading) {
@@ -289,6 +293,7 @@ export default function ShipperLoadsPage() {
             <SelectItem value="in_transit">{t('loads.inTransit')} ({statusCounts.in_transit})</SelectItem>
             <SelectItem value="delivered">{t('loads.delivered')} ({statusCounts.delivered})</SelectItem>
             <SelectItem value="cancelled">{t('loads.cancelled')} ({statusCounts.cancelled})</SelectItem>
+            <SelectItem value="unavailable">Unavailable ({statusCounts.unavailable})</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex">

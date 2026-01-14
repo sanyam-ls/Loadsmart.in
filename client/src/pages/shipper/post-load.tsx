@@ -73,12 +73,14 @@ const loadFormSchema = z.object({
   pickupLandmark: z.string().optional(),
   pickupState: z.string().min(1, "Pickup state is required"),
   pickupCity: z.string().min(2, "Pickup city is required"),
+  pickupCityCustom: z.string().optional(),
   dropoffAddress: z.string().min(5, "Dropoff address is required"),
   dropoffLocality: z.string().optional(),
   dropoffLandmark: z.string().optional(),
   dropoffBusinessName: z.string().optional(),
   dropoffState: z.string().min(1, "Dropoff state is required"),
   dropoffCity: z.string().min(2, "Dropoff city is required"),
+  dropoffCityCustom: z.string().optional(),
   receiverName: z.string().min(2, "Receiver name is required"),
   receiverPhone: z.string().min(10, "Valid receiver phone number is required"),
   receiverEmail: z.string().email("Valid email is required").optional().or(z.literal("")),
@@ -630,12 +632,14 @@ export default function PostLoadPage() {
       pickupLandmark: "",
       pickupState: "",
       pickupCity: "",
+      pickupCityCustom: "",
       dropoffAddress: "",
       dropoffLocality: "",
       dropoffLandmark: "",
       dropoffBusinessName: "",
       dropoffState: "",
       dropoffCity: "",
+      dropoffCityCustom: "",
       receiverName: "",
       receiverPhone: "",
       receiverEmail: "",
@@ -1278,7 +1282,12 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>City</FormLabel>
                           <Select 
-                            onValueChange={field.onChange} 
+                            onValueChange={(val) => {
+                              field.onChange(val);
+                              if (val !== "__other__") {
+                                form.setValue("pickupCityCustom", "");
+                              }
+                            }} 
                             value={field.value}
                             disabled={!pickupState}
                           >
@@ -1294,6 +1303,9 @@ export default function PostLoadPage() {
                                     {city.name} {city.isMetro && <Badge variant="secondary" className="ml-2 text-xs">Metro</Badge>}
                                   </SelectItem>
                                 ))}
+                                <SelectItem value="__other__" className="text-muted-foreground">
+                                  Other (Enter manually)
+                                </SelectItem>
                               </ScrollArea>
                             </SelectContent>
                           </Select>
@@ -1302,6 +1314,21 @@ export default function PostLoadPage() {
                       )}
                     />
                   </div>
+                  {form.watch("pickupCity") === "__other__" && (
+                    <FormField
+                      control={form.control}
+                      name="pickupCityCustom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Enter City Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your city name" {...field} data-testid="input-pickup-city-custom" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
@@ -1407,7 +1434,12 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>City</FormLabel>
                           <Select 
-                            onValueChange={field.onChange} 
+                            onValueChange={(val) => {
+                              field.onChange(val);
+                              if (val !== "__other__") {
+                                form.setValue("dropoffCityCustom", "");
+                              }
+                            }} 
                             value={field.value}
                             disabled={!dropoffState}
                           >
@@ -1423,6 +1455,9 @@ export default function PostLoadPage() {
                                     {city.name} {city.isMetro && <Badge variant="secondary" className="ml-2 text-xs">Metro</Badge>}
                                   </SelectItem>
                                 ))}
+                                <SelectItem value="__other__" className="text-muted-foreground">
+                                  Other (Enter manually)
+                                </SelectItem>
                               </ScrollArea>
                             </SelectContent>
                           </Select>
@@ -1431,6 +1466,21 @@ export default function PostLoadPage() {
                       )}
                     />
                   </div>
+                  {form.watch("dropoffCity") === "__other__" && (
+                    <FormField
+                      control={form.control}
+                      name="dropoffCityCustom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Enter City Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your city name" {...field} data-testid="input-dropoff-city-custom" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 

@@ -5,7 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { 
   MapPin, Truck, Package, Phone, Mail, Building2, User, 
-  Navigation, Clock, RefreshCw, Loader2,
+  Navigation, Clock, RefreshCw, Loader2, Eye,
   Radio, CheckCircle, AlertCircle, ArrowRight, X, ChevronLeft, List
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -759,10 +759,16 @@ export default function AdminLiveTrackingPage() {
                       const doc = (selectedShipment.documents || []).find(d => 
                         d.documentType === docItem.key
                       );
+                      const hasDocument = doc?.fileUrl;
                       return (
                         <div 
                           key={docItem.key} 
-                          className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                          className={`flex items-center justify-between p-2 bg-muted/50 rounded-lg ${hasDocument ? 'cursor-pointer hover-elevate' : ''}`}
+                          onClick={() => {
+                            if (hasDocument && doc.fileUrl) {
+                              window.open(doc.fileUrl, '_blank');
+                            }
+                          }}
                           data-testid={`admin-document-${docItem.key}`}
                         >
                           <div className="flex items-center gap-2">
@@ -771,14 +777,14 @@ export default function AdminLiveTrackingPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             {doc?.isVerified ? (
-                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-pointer">
                                 <CheckCircle className="h-3 w-3 mr-1" />
-                                Verified
+                                View
                               </Badge>
                             ) : doc?.fileUrl ? (
-                              <Badge variant="secondary">
-                                <ArrowRight className="h-3 w-3 mr-1" />
-                                Uploaded
+                              <Badge variant="secondary" className="cursor-pointer">
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-muted-foreground">

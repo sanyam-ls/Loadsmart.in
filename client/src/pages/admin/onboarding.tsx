@@ -97,9 +97,6 @@ export default function AdminOnboardingPage() {
   const [reviewData, setReviewData] = useState({
     decision: "" as "" | "approved" | "rejected" | "on_hold" | "under_review",
     decisionNote: "",
-    creditLimit: "500000",
-    paymentTerms: 30,
-    riskLevel: "medium" as "low" | "medium" | "high" | "critical",
   });
 
   const { data: requests, isLoading, refetch } = useQuery<OnboardingWithUser[]>({
@@ -173,9 +170,6 @@ export default function AdminOnboardingPage() {
     setReviewData({
       decision: "",
       decisionNote: item.request.decisionNote || "",
-      creditLimit: item.request.requestedCreditLimit?.toString() || "500000",
-      paymentTerms: 30,
-      riskLevel: "medium",
     });
     setIsReviewDialogOpen(true);
   };
@@ -348,11 +342,10 @@ export default function AdminOnboardingPage() {
 
           <ScrollArea className="flex-1 min-h-0 pr-4 overflow-y-auto">
             <Tabs defaultValue="business" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="business">{t("onboarding.tabBusiness")}</TabsTrigger>
                 <TabsTrigger value="contact">{t("onboarding.tabContact")}</TabsTrigger>
                 <TabsTrigger value="documents">{t("onboarding.tabDocuments")}</TabsTrigger>
-                <TabsTrigger value="banking">{t("onboarding.tabBanking")}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="business" className="space-y-4 mt-4">
@@ -480,50 +473,6 @@ export default function AdminOnboardingPage() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="banking" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">{t("onboarding.bankName")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.bankName || "-"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">{t("onboarding.branchName")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.bankBranchName || "-"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">{t("onboarding.accountNumber")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.bankAccountNumber || "-"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">{t("onboarding.ifscCode")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.bankIfscCode || "-"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">{t("onboarding.paymentTerms")}</Label>
-                    <p className="font-medium">
-                      {selectedRequest?.request.preferredPaymentTerms 
-                        ? `${selectedRequest.request.preferredPaymentTerms.replace('net_', '')} ${t("creditAssessment.days")}`
-                        : "-"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">{t("onboarding.requestedCreditLimit")}</Label>
-                    <p className="font-medium">
-                      {selectedRequest?.request.requestedCreditLimit
-                        ? `₹${Number(selectedRequest.request.requestedCreditLimit).toLocaleString()}`
-                        : "-"}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">{t("onboarding.cancelledCheque")}</Label>
-                  {selectedRequest?.request.cancelledChequeUrl ? (
-                    <DocumentLink value={selectedRequest.request.cancelledChequeUrl} />
-                  ) : (
-                    <p className="text-muted-foreground">{t("common.notProvided")}</p>
-                  )}
-                </div>
-              </TabsContent>
             </Tabs>
 
             <Separator className="my-6" />
@@ -548,56 +497,6 @@ export default function AdminOnboardingPage() {
                   </SelectContent>
                 </Select>
               </div>
-
-              {reviewData.decision === "approved" && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg border">
-                  <div className="space-y-2">
-                    <Label>{t("adminOnboarding.proposedCreditLimit")}</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
-                      <Input
-                        type="number"
-                        value={reviewData.creditLimit}
-                        onChange={(e) => setReviewData({ ...reviewData, creditLimit: e.target.value })}
-                        data-testid="input-credit-limit"
-                        className="pl-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                    {selectedRequest?.request.requestedCreditLimit && (
-                      <p className="text-xs text-muted-foreground">
-                        {t("adminOnboarding.requestedAmount")}: ₹{Number(selectedRequest.request.requestedCreditLimit).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("creditAssessment.paymentTerms")} ({t("creditAssessment.days")})</Label>
-                    <Input
-                      type="number"
-                      value={reviewData.paymentTerms || ""}
-                      onChange={(e) => setReviewData({ ...reviewData, paymentTerms: e.target.value ? parseInt(e.target.value) : 30 })}
-                      data-testid="input-payment-terms"
-                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("creditAssessment.riskLevel")}</Label>
-                    <Select
-                      value={reviewData.riskLevel}
-                      onValueChange={(value) => setReviewData({ ...reviewData, riskLevel: value as typeof reviewData.riskLevel })}
-                    >
-                      <SelectTrigger data-testid="select-risk-level">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">{t("creditAssessment.lowRisk")}</SelectItem>
-                        <SelectItem value="medium">{t("creditAssessment.mediumRisk")}</SelectItem>
-                        <SelectItem value="high">{t("creditAssessment.highRisk")}</SelectItem>
-                        <SelectItem value="critical">{t("creditAssessment.criticalRisk")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
 
               <div className="space-y-2">
                 <Label>{t("adminOnboarding.decisionNote")}</Label>

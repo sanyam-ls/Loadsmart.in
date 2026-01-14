@@ -54,17 +54,16 @@ Carriers can upload documents (LR, E-way Bill, Photos, POD, Invoice, Other) to R
 
 The Shipper Portal integrates a CAN-Bus GPS + Telematics system for real-time tracking, diagnostics (speed, RPM, fuel), AI-driven ETA predictions, and driver behavior insights. The AI Concierge can answer queries using telematics data.
 
-### Shipper Onboarding Workflow (Phase 0)
+### Shipper Onboarding Workflow (Verification-Only)
 
-New shippers must complete a business onboarding process before posting loads. The workflow includes:
+New shippers must complete a business verification process before posting loads. The workflow is simplified to verification-only without credit limit or banking features:
 - **Auto-Draft Creation**: When a new shipper registers, a draft onboarding request is automatically created. The admin page shows these as "Awaiting Submission" in the Draft status filter.
 - **Draft Auto-Save**: Shippers with draft status can continue filling out their verification form with automatic saving. Changes are debounced (1.5s delay) and saved via `PATCH /api/shipper/onboarding/draft`. A visual indicator shows "Auto-saving..." and "Changes saved" status. Form fields are pre-populated when returning to continue a draft.
-- **Shipper Form**: Multi-tab form at `/shipper/onboarding` capturing business identity (legal name, PAN, GST, CIN), contact details, trade references, compliance documents (GST certificate, PAN card, incorporation certificate, cancelled cheque, address proof), and banking information.
+- **Shipper Form**: Multi-tab form at `/shipper/onboarding` with 3 tabs: Business (legal name, PAN, GST, CIN, incorporation details), Contact (contact person details, trade references), and Documents (GST certificate, PAN card, incorporation certificate, address proof).
 - **Document Upload**: The Documents tab uses `DocumentUpload` component (`client/src/components/DocumentUpload.tsx`) for direct file uploads to Replit Object Storage. Uploads use presigned URLs via `/api/uploads/request-url`, supporting images (JPEG, PNG, GIF, WebP) and PDF files up to 10MB. Uploaded file paths auto-save via the draft mechanism.
 - **Admin Review Queue**: Admin page at `/admin/onboarding` with status-based filtering (Draft, Pending, Under Review, Approved, Rejected, On Hold), search, and detailed review dialog showing all onboarding data across tabs.
 - **Status Flow**: `draft → pending → under_review → (approved | rejected | on_hold)`. Draft represents newly registered shippers who haven't submitted. Shippers can update if status is `on_hold` or `rejected`.
-- **Merged Credit Assessment**: The approval dialog integrates credit assessment fields (credit limit, payment terms, risk level) directly into the onboarding workflow, eliminating the need for a separate credit assessment page.
-- **Approval Integration**: When approved, sets `user.isVerified=true`, creates/updates `shipperCreditProfile` with admin-specified credit limit/payment terms/risk level.
+- **Approval Integration**: When approved, sets `user.isVerified=true` to enable platform access.
 - **Gate Enforcement**: Shippers must be verified (`isVerified=true`) before posting loads.
 - **Full i18n**: All onboarding strings translated in English, Hindi, Punjabi, Marathi, and Tamil.
 
@@ -80,30 +79,6 @@ New carriers must complete a verification process before accessing the marketpla
 - **Approval Integration**: When approved, sets `user.isVerified=true`, enabling marketplace access.
 - **Gate Enforcement**: Carriers must be verified (`isVerified=true`) before accessing loads or placing bids.
 - **Full i18n**: All onboarding strings translated in English (other languages pending).
-
-### Credit Assessment System
-
-The platform includes both manual admin review and automated credit scoring for shippers. The automated system calculates scores based on weighted factors: payment history (±250 points from on-time rate), credit utilization (±150, optimal at ≤30%), load volume (±100 from recent 90-day activity), and tenure (±50 from account age). Base score is 500, with final scores ranging 0-1000. Risk thresholds: ≥750 low, ≥600 medium, ≥450 high, <450 critical. Default credit limits: low 1M, medium 500K, high 200K, critical 50K INR. Admins can run auto-assessment individually or in bulk, and manual overrides lock profiles from future auto-updates. The credit engine is in `server/services/credit-engine.ts`.
-
-### Credit Limit Proposal & Acceptance Workflow
-
-When approving a shipper's onboarding request, the admin proposes a credit limit that the shipper must accept before using the platform:
-- **Admin Proposal**: During approval, admin enters `proposedCreditLimit` and `proposedPaymentTerms` along with credit limit, payment terms, and risk level.
-- **Shipper Notification**: Upon approval, the shipper sees a congratulations dialog on their dashboard showing the proposed credit limit with two options:
-  - Accept the limit (proceeds with assigned credit)
-  - Contact support (for negotiation)
-- **Contextual Messaging**: The dialog shows different messages based on whether the proposed amount matches the shipper's requested amount.
-- **Credit Wallet**: Once accepted (`creditLimitAccepted: "accepted"`), the shipper's dashboard displays a Credit Wallet card showing:
-  - Available credit (creditLimit - outstandingBalance)
-  - Outstanding balance (unpaid invoice totals)
-  - Credit limit
-  - Payment terms (days)
-  - Risk level indicator
-  - Visual progress bar for credit utilization
-- **API Endpoints**: 
-  - `POST /api/shipper/onboarding/accept-credit` - Accept or request support
-  - `GET /api/shipper/credit` - Get wallet data (creditLimit, availableCredit, outstandingBalance, paymentTerms, riskLevel)
-- **Database Fields**: `proposedCreditLimit`, `proposedPaymentTerms`, `creditLimitAccepted`, `creditLimitAcceptedAt`, `creditLimitResponse` in shipperOnboardingRequests table.
 
 ## External Dependencies
 

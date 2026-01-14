@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
-  Building2, User, Phone, Mail, MapPin, FileText, CreditCard,
+  Building2, User, Phone, Mail, MapPin, FileText,
   Upload, Check, Clock, AlertCircle, ChevronRight, Loader2, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,6 @@ const onboardingFormSchema = z.object({
   gstCertificateUrl: z.string().optional(),
   panCardUrl: z.string().optional(),
   incorporationCertificateUrl: z.string().optional(),
-  cancelledChequeUrl: z.string().optional(),
   businessAddressProofUrl: z.string().optional(),
   tradeReference1Company: z.string().optional(),
   tradeReference1Contact: z.string().optional(),
@@ -68,12 +67,6 @@ const onboardingFormSchema = z.object({
   tradeReference2Company: z.string().optional(),
   tradeReference2Contact: z.string().optional(),
   tradeReference2Phone: z.string().optional(),
-  bankName: z.string().optional(),
-  bankAccountNumber: z.string().optional(),
-  bankIfscCode: z.string().optional(),
-  bankBranchName: z.string().optional(),
-  preferredPaymentTerms: z.enum(["cod", "net_7", "net_15", "net_30", "net_45"]).optional(),
-  requestedCreditLimit: z.string().optional(),
 });
 
 type OnboardingFormData = z.infer<typeof onboardingFormSchema>;
@@ -119,7 +112,6 @@ export default function ShipperOnboarding() {
       gstCertificateUrl: "",
       panCardUrl: "",
       incorporationCertificateUrl: "",
-      cancelledChequeUrl: "",
       businessAddressProofUrl: "",
       tradeReference1Company: "",
       tradeReference1Contact: "",
@@ -127,12 +119,6 @@ export default function ShipperOnboarding() {
       tradeReference2Company: "",
       tradeReference2Contact: "",
       tradeReference2Phone: "",
-      bankName: "",
-      bankAccountNumber: "",
-      bankIfscCode: "",
-      bankBranchName: "",
-      preferredPaymentTerms: "net_30",
-      requestedCreditLimit: "",
     },
   });
 
@@ -164,7 +150,6 @@ export default function ShipperOnboarding() {
         gstCertificateUrl: onboardingStatus.gstCertificateUrl || "",
         panCardUrl: onboardingStatus.panCardUrl || "",
         incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || "",
-        cancelledChequeUrl: onboardingStatus.cancelledChequeUrl || "",
         businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || "",
         tradeReference1Company: onboardingStatus.tradeReference1Company || "",
         tradeReference1Contact: onboardingStatus.tradeReference1Contact || "",
@@ -172,12 +157,6 @@ export default function ShipperOnboarding() {
         tradeReference2Company: onboardingStatus.tradeReference2Company || "",
         tradeReference2Contact: onboardingStatus.tradeReference2Contact || "",
         tradeReference2Phone: onboardingStatus.tradeReference2Phone || "",
-        bankName: onboardingStatus.bankName || "",
-        bankAccountNumber: onboardingStatus.bankAccountNumber || "",
-        bankIfscCode: onboardingStatus.bankIfscCode || "",
-        bankBranchName: onboardingStatus.bankBranchName || "",
-        preferredPaymentTerms: onboardingStatus.preferredPaymentTerms || "net_30",
-        requestedCreditLimit: onboardingStatus.requestedCreditLimit || "",
       };
 
       form.reset(draftData);
@@ -288,14 +267,12 @@ export default function ShipperOnboarding() {
   const getTabWithError = (errors: any): string | null => {
     const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
-    const documentFields = ["gstCertificateUrl", "panCardUrl", "incorporationCertificateUrl", "cancelledChequeUrl", "businessAddressProofUrl"];
-    const bankingFields = ["bankName", "bankAccountNumber", "bankIfscCode", "bankBranchName", "preferredPaymentTerms", "requestedCreditLimit"];
+    const documentFields = ["gstCertificateUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl"];
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.some(key => businessFields.includes(key))) return "business";
     if (errorKeys.some(key => contactFields.includes(key))) return "contact";
     if (errorKeys.some(key => documentFields.includes(key))) return "documents";
-    if (errorKeys.some(key => bankingFields.includes(key))) return "banking";
     return null;
   };
 
@@ -573,7 +550,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="business" className="gap-1" data-testid="tab-business">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">{t("onboarding.tabBusiness")}</span>
@@ -585,10 +562,6 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
             <TabsTrigger value="documents" className="gap-1" data-testid="tab-documents">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">{t("onboarding.tabDocuments")}</span>
-            </TabsTrigger>
-            <TabsTrigger value="banking" className="gap-1" data-testid="tab-banking">
-              <CreditCard className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("onboarding.tabBanking")}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1186,167 +1159,6 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
 
                 <div className="flex justify-between gap-4">
                   <Button type="button" variant="outline" onClick={() => setActiveTab("contact")} data-testid="button-back-contact">
-                    {t("onboarding.back")}
-                  </Button>
-                  <Button type="button" onClick={() => setActiveTab("banking")} data-testid="button-next-banking">
-                    {t("onboarding.next")}
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="banking">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("onboarding.bankingDetails")}</CardTitle>
-                <CardDescription>{t("onboarding.bankingDetailsDesc")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="bankName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("onboarding.bankName")}</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder={t("onboarding.bankNamePlaceholder")} 
-                            {...field} 
-                            data-testid="input-bank-name"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bankBranchName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("onboarding.branchName")}</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder={t("onboarding.branchNamePlaceholder")} 
-                            {...field} 
-                            data-testid="input-branch-name"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="bankAccountNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("onboarding.accountNumber")}</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder={t("onboarding.accountNumberPlaceholder")} 
-                            {...field} 
-                            data-testid="input-account-number"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bankIfscCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("onboarding.ifscCode")}</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="SBIN0001234" 
-                            className="uppercase"
-                            {...field} 
-                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                            data-testid="input-ifsc"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="cancelledChequeUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("onboarding.cancelledCheque")}</FormLabel>
-                      <FormControl>
-                        <DocumentUploadWithCamera
-                          value={field.value || ""}
-                          onChange={field.onChange}
-                          placeholder={t("onboarding.noFileSelected")}
-                          testId="upload-cancelled-cheque"
-                          documentType="cancelled_cheque"
-                        />
-                      </FormControl>
-                      <FormDescription>{t("onboarding.cancelledChequeDesc")}</FormDescription>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="preferredPaymentTerms"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("onboarding.paymentTerms")}</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-payment-terms">
-                              <SelectValue placeholder={t("onboarding.selectPaymentTerms")} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="cod">{t("onboarding.cod")}</SelectItem>
-                            <SelectItem value="net_7">{t("onboarding.net7")}</SelectItem>
-                            <SelectItem value="net_15">{t("onboarding.net15")}</SelectItem>
-                            <SelectItem value="net_30">{t("onboarding.net30")}</SelectItem>
-                            <SelectItem value="net_45">{t("onboarding.net45")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="requestedCreditLimit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("onboarding.requestedCreditLimit")}</FormLabel>
-                        <FormControl>
-                          <div className="flex">
-                            <span className="inline-flex items-center px-3 bg-muted border border-r-0 rounded-l-md text-muted-foreground">
-                              INR
-                            </span>
-                            <Input 
-                              placeholder="500000" 
-                              className="rounded-l-none"
-                              {...field} 
-                              data-testid="input-credit-limit"
-                            />
-                          </div>
-                        </FormControl>
-                        <FormDescription>{t("onboarding.creditLimitDesc")}</FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="flex justify-between gap-4">
-                  <Button type="button" variant="outline" onClick={() => setActiveTab("documents")} data-testid="button-back-documents">
                     {t("onboarding.back")}
                   </Button>
                   <Button type="submit" disabled={isSubmitting} data-testid="button-submit-onboarding">

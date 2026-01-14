@@ -71,11 +71,13 @@ const loadFormSchema = z.object({
   pickupAddress: z.string().min(5, "Pickup address is required"),
   pickupLocality: z.string().optional(),
   pickupLandmark: z.string().optional(),
+  pickupState: z.string().min(1, "Pickup state is required"),
   pickupCity: z.string().min(2, "Pickup city is required"),
   dropoffAddress: z.string().min(5, "Dropoff address is required"),
   dropoffLocality: z.string().optional(),
   dropoffLandmark: z.string().optional(),
   dropoffBusinessName: z.string().optional(),
+  dropoffState: z.string().min(1, "Dropoff state is required"),
   dropoffCity: z.string().min(2, "Dropoff city is required"),
   receiverName: z.string().min(2, "Receiver name is required"),
   receiverPhone: z.string().min(10, "Valid receiver phone number is required"),
@@ -99,6 +101,7 @@ const loadFormSchema = z.object({
 type LoadFormData = z.infer<typeof loadFormSchema>;
 
 import { indianTruckTypes, truckBodyCategories } from "@shared/schema";
+import { indianStates } from "@shared/indian-locations";
 
 // Comprehensive commodity categories for Indian freight logistics
 const commodityCategories = [
@@ -625,11 +628,13 @@ export default function PostLoadPage() {
       pickupAddress: "",
       pickupLocality: "",
       pickupLandmark: "",
+      pickupState: "",
       pickupCity: "",
       dropoffAddress: "",
       dropoffLocality: "",
       dropoffLandmark: "",
       dropoffBusinessName: "",
+      dropoffState: "",
       dropoffCity: "",
       receiverName: "",
       receiverPhone: "",
@@ -651,8 +656,21 @@ export default function PostLoadPage() {
     },
   });
 
-  const watchedFields = form.watch(["pickupCity", "dropoffCity", "weight", "weightUnit", "goodsToBeCarried", "requiredTruckType"]);
-  const [pickupCity, dropoffCity, weight, weightUnit, goodsDescription, truckType] = watchedFields;
+  const watchedFields = form.watch(["pickupState", "pickupCity", "dropoffState", "dropoffCity", "weight", "weightUnit", "goodsToBeCarried", "requiredTruckType"]);
+  const [pickupState, pickupCity, dropoffState, dropoffCity, weight, weightUnit, goodsDescription, truckType] = watchedFields;
+  
+  // Get cities for selected states
+  const pickupCities = useMemo(() => {
+    if (!pickupState) return [];
+    const state = indianStates.find(s => s.code === pickupState);
+    return state?.cities || [];
+  }, [pickupState]);
+  
+  const dropoffCities = useMemo(() => {
+    if (!dropoffState) return [];
+    const state = indianStates.find(s => s.code === dropoffState);
+    return state?.cities || [];
+  }, [dropoffState]);
 
   // Auto-populate shipper details from user profile
   useEffect(() => {
@@ -1220,24 +1238,70 @@ export default function PostLoadPage() {
                       )}
                     />
                   </div>
-                  <FormField
-                    control={form.control}
-                    name="pickupCity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City, State</FormLabel>
-                        <FormControl>
-                          <AddressAutocomplete
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="pickupState"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>State</FormLabel>
+                          <Select 
+                            onValueChange={(val) => {
+                              field.onChange(val);
+                              form.setValue("pickupCity", "");
+                            }} 
                             value={field.value}
-                            onChange={(val) => { field.onChange(val); updateEstimation(); }}
-                            placeholder="Mumbai, MH"
-                            testId="input-pickup-city"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-pickup-state">
+                                <SelectValue placeholder="Select state" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <ScrollArea className="h-[300px]">
+                                {indianStates.map((state) => (
+                                  <SelectItem key={state.code} value={state.code}>
+                                    {state.name}
+                                  </SelectItem>
+                                ))}
+                              </ScrollArea>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="pickupCity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                            disabled={!pickupState}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-pickup-city">
+                                <SelectValue placeholder={pickupState ? "Select city" : "Select state first"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <ScrollArea className="h-[300px]">
+                                {pickupCities.map((city) => (
+                                  <SelectItem key={city.name} value={city.name}>
+                                    {city.name} {city.isMetro && <Badge variant="secondary" className="ml-2 text-xs">Metro</Badge>}
+                                  </SelectItem>
+                                ))}
+                              </ScrollArea>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1303,24 +1367,70 @@ export default function PostLoadPage() {
                       )}
                     />
                   </div>
-                  <FormField
-                    control={form.control}
-                    name="dropoffCity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City, State</FormLabel>
-                        <FormControl>
-                          <AddressAutocomplete
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="dropoffState"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>State</FormLabel>
+                          <Select 
+                            onValueChange={(val) => {
+                              field.onChange(val);
+                              form.setValue("dropoffCity", "");
+                            }} 
                             value={field.value}
-                            onChange={(val) => { field.onChange(val); updateEstimation(); }}
-                            placeholder="Delhi, DL"
-                            testId="input-dropoff-city"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-dropoff-state">
+                                <SelectValue placeholder="Select state" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <ScrollArea className="h-[300px]">
+                                {indianStates.map((state) => (
+                                  <SelectItem key={state.code} value={state.code}>
+                                    {state.name}
+                                  </SelectItem>
+                                ))}
+                              </ScrollArea>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dropoffCity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                            disabled={!dropoffState}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-dropoff-city">
+                                <SelectValue placeholder={dropoffState ? "Select city" : "Select state first"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <ScrollArea className="h-[300px]">
+                                {dropoffCities.map((city) => (
+                                  <SelectItem key={city.name} value={city.name}>
+                                    {city.name} {city.isMetro && <Badge variant="secondary" className="ml-2 text-xs">Metro</Badge>}
+                                  </SelectItem>
+                                ))}
+                              </ScrollArea>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 

@@ -1197,11 +1197,12 @@ export async function registerRoutes(
         return res.status(400).json({ error: transitionResult.error || "Failed to transition load status" });
       }
       
-      // Update load with carrier assignment info (separate from status transition)
+      // Update load with carrier assignment info and negotiated price
       await storage.updateLoad(bid.loadId, {
         assignedCarrierId: user.id,
         awardedBidId: bidId,
         awardedAt: new Date(),
+        finalPrice: String(finalAmount), // Update carrier payout to the negotiated price
       });
 
       // Notify admin - they need to create invoice for this awarded load

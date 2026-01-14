@@ -110,6 +110,13 @@ export default function ShipperDashboard() {
         });
       }
     },
+    onError: () => {
+      toast({
+        title: t("common.error"),
+        description: t("common.tryAgainLater"),
+        variant: "destructive",
+      });
+    },
   });
   
   // Check if we need to show the credit acceptance dialog
@@ -245,10 +252,10 @@ export default function ShipperDashboard() {
             <div className="mt-4">
               <div className="flex justify-between text-sm text-muted-foreground mb-2">
                 <span>{t("creditWallet.availableCredit")}</span>
-                <span>{Math.round((Number(creditWallet.availableCredit) / Number(creditWallet.creditLimit)) * 100)}%</span>
+                <span>{Number(creditWallet.creditLimit) > 0 ? Math.round((Number(creditWallet.availableCredit) / Number(creditWallet.creditLimit)) * 100) : 0}%</span>
               </div>
               <Progress 
-                value={(Number(creditWallet.availableCredit) / Number(creditWallet.creditLimit)) * 100} 
+                value={Number(creditWallet.creditLimit) > 0 ? (Number(creditWallet.availableCredit) / Number(creditWallet.creditLimit)) * 100 : 0} 
                 className="h-2"
               />
             </div>

@@ -648,7 +648,7 @@ export default function AdminLoadsPage() {
                         <div className="text-sm space-y-1">
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Weight className="h-3 w-3" />
-                            {load.weight?.toLocaleString()} {load.weightUnit}
+                            {load.weight?.toLocaleString()} tonnes
                           </div>
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Truck className="h-3 w-3" />

@@ -352,7 +352,6 @@ export default function ShipperLoadsPage() {
                 <TableHead>{t('loads.loadId')}</TableHead>
                 <TableHead>Pickup ID</TableHead>
                 <TableHead>{t('invoices.route')}</TableHead>
-                <TableHead>{t('common.type')}</TableHead>
                 <TableHead>{t('loads.weight')}</TableHead>
                 <TableHead>{t('common.status')}</TableHead>
                 <TableHead>{t('bids.title')}</TableHead>
@@ -384,12 +383,7 @@ export default function ShipperLoadsPage() {
                       <span className="truncate max-w-24">{load.dropoffCity}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate">
-                      {load.truckType || "Any"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{load.weight ? `${parseFloat(load.weight).toLocaleString()} kg` : 'N/A'}</TableCell>
+                  <TableCell>{load.weight ? `${parseFloat(load.weight).toLocaleString()} tonnes` : 'N/A'}</TableCell>
                   <TableCell>
                     <Badge className={`${getStatusColor(load.status)} no-default-hover-elevate no-default-active-elevate`}>
                       {formatStatus(load.status)}
@@ -507,7 +501,7 @@ export default function ShipperLoadsPage() {
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border text-sm flex-wrap">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Package className="h-3.5 w-3.5" />
-                    <span>{load.weight ? `${parseFloat(load.weight).toLocaleString()} kg` : 'N/A'}</span>
+                    <span>{load.weight ? `${parseFloat(load.weight).toLocaleString()} tonnes` : 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />

@@ -839,11 +839,13 @@ export default function PostLoadPage() {
 
       setSubmittedLoadId(result.load_id);
       setSubmittedLoadNumber(result.load_number);
+      const pickupStateName = indianStates.find(s => s.code === data.pickupState)?.name || data.pickupState;
+      const dropoffStateName = indianStates.find(s => s.code === data.dropoffState)?.name || data.dropoffState;
       setSubmittedLoadDetails({
         pickupCity: data.pickupCity,
-        pickupState: data.pickupState,
+        pickupState: pickupStateName,
         dropoffCity: data.dropoffCity,
-        dropoffState: data.dropoffState,
+        dropoffState: dropoffStateName,
         weight: data.weight,
         goods: finalGoodsDescription,
         truckType: truckType || '',

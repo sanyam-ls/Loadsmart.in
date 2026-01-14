@@ -115,6 +115,22 @@ const loadFormSchema = z.object({
 }, {
   message: "Fixed price is required",
   path: ["shipperFixedPrice"],
+}).refine((data) => {
+  if (data.pickupCity === "__other__") {
+    return data.pickupCityCustom && data.pickupCityCustom.trim() !== "";
+  }
+  return true;
+}, {
+  message: "Please enter the city name",
+  path: ["pickupCityCustom"],
+}).refine((data) => {
+  if (data.dropoffCity === "__other__") {
+    return data.dropoffCityCustom && data.dropoffCityCustom.trim() !== "";
+  }
+  return true;
+}, {
+  message: "Please enter the city name",
+  path: ["dropoffCityCustom"],
 });
 
 type LoadFormData = z.infer<typeof loadFormSchema>;

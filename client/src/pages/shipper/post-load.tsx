@@ -99,6 +99,22 @@ const loadFormSchema = z.object({
   isTemplate: z.boolean().default(false),
   templateName: z.string().optional(),
   preferredCarriers: z.boolean().default(false),
+}).refine((data) => {
+  if (data.rateType === "per_ton") {
+    return data.shipperPricePerTon && data.shipperPricePerTon.trim() !== "";
+  }
+  return true;
+}, {
+  message: "Price per tonne is required",
+  path: ["shipperPricePerTon"],
+}).refine((data) => {
+  if (data.rateType === "fixed_price") {
+    return data.shipperFixedPrice && data.shipperFixedPrice.trim() !== "";
+  }
+  return true;
+}, {
+  message: "Fixed price is required",
+  path: ["shipperFixedPrice"],
 });
 
 type LoadFormData = z.infer<typeof loadFormSchema>;
@@ -1811,14 +1827,14 @@ export default function PostLoadPage() {
                       name="shipperPricePerTon"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Price per Tonne (Optional)</FormLabel>
+                          <FormLabel>Price per Tonne</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
                                 type="number"
                                 placeholder="Enter your preferred rate per tonne"
-                                className="pl-10"
+                                className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 {...field}
                                 data-testid="input-price-per-ton"
                               />
@@ -1838,14 +1854,14 @@ export default function PostLoadPage() {
                       name="shipperFixedPrice"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Fixed Price (Optional)</FormLabel>
+                          <FormLabel>Fixed Price</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
                                 type="number"
                                 placeholder="Enter your preferred fixed price"
-                                className="pl-10"
+                                className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 {...field}
                                 data-testid="input-fixed-price"
                               />

@@ -20,8 +20,8 @@ import { CarrierDataProvider } from "@/lib/carrier-data-store";
 import { CarrierOtpNotification } from "@/components/carrier-otp-notification";
 import { CarrierOnboardingGate } from "@/hooks/use-carrier-onboarding-gate";
 
+import AuthPage from "@/pages/auth";
 const NotFound = lazy(() => import("@/pages/not-found"));
-const AuthPage = lazy(() => import("@/pages/auth"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 
 const ShipperDashboard = lazy(() => import("@/pages/shipper/dashboard"));
@@ -108,11 +108,7 @@ function AppContent() {
   }
 
   if (location === "/auth") {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <AuthPage />
-      </Suspense>
-    );
+    return <AuthPage />;
   }
 
   const style = {

@@ -83,31 +83,39 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
   // Get the latest agreed price from chat messages
   // Parse amounts from message text if no explicit amount field
   const latestAgreedPrice = useMemo(() => {
-    // Extract amount from message text (e.g., "85600", "85,600", "Rs. 85600")
+    // Extract amount from message text (handles: "85600", "85,600", "Rs. 85600", "Rs 85,600")
     const extractAmount = (text: string): number | null => {
-      const match = text.match(/(\d{1,3}(?:,?\d{3})*(?:\.\d{2})?)/g);
+      // Match any sequence of digits, optionally with commas
+      const match = text.match(/\d[\d,]*/g);
       if (match) {
-        const num = parseFloat(match[match.length - 1].replace(/,/g, ''));
-        if (!isNaN(num) && num > 1000) return num; // Reasonable freight amount
+        // Take the last number mentioned (usually the agreed price)
+        const lastMatch = match[match.length - 1];
+        const num = parseFloat(lastMatch.replace(/,/g, ''));
+        if (!isNaN(num) && num >= 10000) return num; // Freight amounts are typically 10k+
       }
       return null;
     };
     
-    // Sort messages by time (newest first)
-    const sortedMessages = [...chatMessages].sort(
-      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
-    );
+    // Process messages in reverse order (last message first - API returns chronologically)
+    // This finds the most recent mentioned amount
+    let lastAmount: number | null = null;
     
-    // Look through messages for the last mentioned amount
-    for (const msg of sortedMessages) {
-      // First check explicit amount field
-      if (msg.amount) return msg.amount;
-      // Then try to extract from message text
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
+      const msg = chatMessages[i];
+      // Check explicit amount field first
+      if (msg.amount && msg.amount >= 10000) {
+        lastAmount = msg.amount;
+        break;
+      }
+      // Try to extract from message text
       const extracted = extractAmount(msg.message);
-      if (extracted) return extracted;
+      if (extracted) {
+        lastAmount = extracted;
+        break;
+      }
     }
     
-    return bid.shipperCounterRate || bid.currentRate;
+    return lastAmount || bid.shipperCounterRate || bid.currentRate;
   }, [chatMessages, bid.shipperCounterRate, bid.currentRate]);
 
   const isRealBid = bid.bidId && !bid.bidId.startsWith("bid-");

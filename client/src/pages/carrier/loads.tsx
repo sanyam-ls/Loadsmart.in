@@ -288,7 +288,7 @@ export default function CarrierLoadsPage() {
       const unsubscribe = onMarketplaceEvent("load_posted", (loadData) => {
         toast({
           title: t("carrier.newLoadAvailable"),
-          description: `${loadData.pickupCity} ${t("common.to")} ${loadData.dropoffCity} - Rs. ${parseFloat(loadData.adminFinalPrice || "0").toLocaleString("en-IN")}`,
+          description: `${loadData.pickupCity} ${t("common.to")} ${loadData.dropoffCity} - Rs. ${parseFloat(loadData.finalPrice || loadData.adminFinalPrice || "0").toLocaleString("en-IN")}`,
         });
       });
 

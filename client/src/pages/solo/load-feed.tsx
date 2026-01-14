@@ -30,7 +30,7 @@ interface LoadCard {
   loadType: string | null;
   weight: string | null;
   estimatedDistance: number | null;
-  adminFinalPrice: string | null;
+  finalPrice: string | null;
   allowCounterBids: boolean | null;
   shipperName: string | null;
   bidCount: number;
@@ -80,7 +80,7 @@ export default function SoloLoadFeed() {
     setIsAccepting(true);
     submitBidMutation.mutate({
       load_id: load.id,
-      amount: load.adminFinalPrice || "0",
+      amount: load.finalPrice || "0",
       bid_type: "admin_posted_acceptance",
     });
   };
@@ -88,7 +88,7 @@ export default function SoloLoadFeed() {
   const handleCounterBid = (load: LoadCard) => {
     setSelectedLoad(load);
     setIsAccepting(false);
-    setBidAmount(load.adminFinalPrice || "");
+    setBidAmount(load.finalPrice || "");
     setShowBidDialog(true);
   };
 
@@ -178,7 +178,7 @@ export default function SoloLoadFeed() {
                       <div className="text-right flex-shrink-0">
                         <div className="flex items-center gap-1 text-lg font-bold text-primary">
                           <IndianRupee className="h-4 w-4" />
-                          {formatPrice(load.adminFinalPrice)}
+                          {formatPrice(load.finalPrice)}
                         </div>
                         <div className="flex items-center gap-1 justify-end text-xs text-muted-foreground">
                           {load.priceFixed ? (
@@ -276,7 +276,7 @@ export default function SoloLoadFeed() {
             <div>
               <label className="text-sm font-medium mb-2 block">Total Price</label>
               <div className="text-lg font-bold text-muted-foreground">
-                Rs. {formatPrice(selectedLoad?.adminFinalPrice || null)}
+                Rs. {formatPrice(selectedLoad?.finalPrice || null)}
               </div>
             </div>
             <div>

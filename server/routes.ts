@@ -3212,7 +3212,7 @@ export async function registerRoutes(
       let finalAmount = amount;
 
       if (bid_type === 'admin_posted_acceptance') {
-        finalAmount = load.adminFinalPrice;
+        finalAmount = load.finalPrice;
         finalBidType = 'admin_posted_acceptance';
       }
 

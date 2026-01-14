@@ -1,14 +1,26 @@
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Package, DollarSign, Truck, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, FileText, Receipt, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Package, DollarSign, Truck, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, FileText, Receipt, Loader2, Wallet, CheckCircle, Phone, PartyPopper } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { StatCard } from "@/components/stat-card";
 import { useAuth } from "@/lib/auth-context";
 import { useLoads, useInvoices, useNotifications } from "@/lib/api-hooks";
 import { useDocumentVault } from "@/lib/document-vault-store";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { 
   AreaChart, 
   Area, 
@@ -18,7 +30,15 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from "recharts";
-import type { Load, Invoice } from "@shared/schema";
+import type { Load, Invoice, ShipperOnboardingRequest } from "@shared/schema";
+
+interface CreditWalletData {
+  creditLimit: string;
+  availableCredit: string;
+  outstandingBalance: string;
+  paymentTerms: number;
+  riskLevel: string;
+}
 
 function getStatusBadgeStyle(status: string | null | undefined) {
   switch (status) {
@@ -54,11 +74,60 @@ function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceN
 export default function ShipperDashboard() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   const { user } = useAuth();
   const { data: loads, isLoading: loadsLoading } = useLoads();
   const { data: invoices, isLoading: invoicesLoading } = useInvoices();
   const { data: notifications } = useNotifications();
   const { getExpiringDocuments, getExpiredDocuments } = useDocumentVault();
+  
+  // Credit limit acceptance
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
+  
+  // Fetch onboarding status for credit limit acceptance
+  const { data: onboarding } = useQuery<ShipperOnboardingRequest>({
+    queryKey: ["/api/shipper/onboarding"],
+  });
+  
+  // Fetch credit wallet data
+  const { data: creditWallet } = useQuery<CreditWalletData | null>({
+    queryKey: ["/api/shipper/credit"],
+  });
+  
+  // Accept credit limit mutation
+  const acceptCreditMutation = useMutation({
+    mutationFn: async (response: "accepted" | "contact_support") => {
+      return apiRequest("POST", "/api/shipper/onboarding/accept-credit", { response });
+    },
+    onSuccess: (_, response) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/shipper/onboarding"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shipper/credit"] });
+      setShowCreditDialog(false);
+      if (response === "accepted") {
+        toast({
+          title: t("creditWallet.creditAccepted"),
+          description: t("creditWallet.creditAcceptedDesc"),
+        });
+      }
+    },
+  });
+  
+  // Check if we need to show the credit acceptance dialog
+  const needsCreditAcceptance = onboarding?.status === "approved" && 
+    onboarding?.proposedCreditLimit && 
+    onboarding?.creditLimitAccepted === null;
+  
+  // Show dialog when approved but hasn't accepted credit limit
+  useEffect(() => {
+    if (needsCreditAcceptance) {
+      setShowCreditDialog(true);
+    }
+  }, [needsCreditAcceptance]);
+  
+  // Check if proposed amount matches requested amount
+  const proposedAmount = onboarding?.proposedCreditLimit ? Number(onboarding.proposedCreditLimit) : 0;
+  const requestedAmount = onboarding?.requestedCreditLimit ? Number(onboarding.requestedCreditLimit) : 0;
+  const isSameAmount = proposedAmount >= requestedAmount;
 
   const userLoads = (loads || []).filter((load: Load) => load.shipperId === user?.id);
   const activeLoads = userLoads.filter((load: Load) => 
@@ -132,6 +201,75 @@ export default function ShipperDashboard() {
           {t("shipper.postNewLoad")}
         </Button>
       </div>
+
+      {/* Credit Wallet Card - shows when shipper has active credit */}
+      {creditWallet && onboarding?.creditLimitAccepted && (
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Wallet className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{t("creditWallet.title")}</CardTitle>
+                <CardDescription>{t("creditWallet.paymentTerms")}: {creditWallet.paymentTerms} {t("creditWallet.days")}</CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-primary border-primary/30">
+              {creditWallet.riskLevel === "low" ? t("creditAssessment.lowRisk") : 
+               creditWallet.riskLevel === "medium" ? t("creditAssessment.mediumRisk") : 
+               t("creditAssessment.highRisk")}
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">{t("creditWallet.availableCredit")}</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  ₹{Number(creditWallet.availableCredit).toLocaleString('en-IN')}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">{t("creditWallet.outstandingBalance")}</p>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  ₹{Number(creditWallet.outstandingBalance).toLocaleString('en-IN')}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">{t("creditWallet.creditLimit")}</p>
+                <p className="text-2xl font-bold">
+                  ₹{Number(creditWallet.creditLimit).toLocaleString('en-IN')}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                <span>{t("creditWallet.availableCredit")}</span>
+                <span>{Math.round((Number(creditWallet.availableCredit) / Number(creditWallet.creditLimit)) * 100)}%</span>
+              </div>
+              <Progress 
+                value={(Number(creditWallet.availableCredit) / Number(creditWallet.creditLimit)) * 100} 
+                className="h-2"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Pending Credit Acceptance Alert */}
+      {needsCreditAcceptance && (
+        <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="flex items-center justify-between gap-4 p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <p className="text-sm font-medium">{t("creditWallet.pendingAcceptance")}</p>
+            </div>
+            <Button size="sm" onClick={() => setShowCreditDialog(true)} data-testid="button-view-credit-offer">
+              {t("dashboard.viewAll")}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -359,6 +497,78 @@ export default function ShipperDashboard() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Credit Limit Acceptance Dialog */}
+      <Dialog open={showCreditDialog} onOpenChange={setShowCreditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 p-4 rounded-full bg-green-100 dark:bg-green-900/30 w-fit">
+              <PartyPopper className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <DialogTitle className="text-2xl text-center">
+              {t("creditWallet.congratulations")}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {t("creditWallet.approvedMessage")}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {isSameAmount ? (
+              <div className="text-center">
+                <p className="text-muted-foreground mb-2">{t("creditWallet.approvedSameAmount")}</p>
+                <p className="text-3xl font-bold text-primary">
+                  ₹{proposedAmount.toLocaleString('en-IN')}
+                </p>
+              </div>
+            ) : (
+              <div className="text-center space-y-2">
+                <p className="text-muted-foreground">{t("creditWallet.approvedDifferentAmount")}</p>
+                <p className="text-3xl font-bold text-primary">
+                  ₹{proposedAmount.toLocaleString('en-IN')}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  ({t("adminOnboarding.requestedAmount")}: ₹{requestedAmount.toLocaleString('en-IN')})
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">{t("creditWallet.buildCreditMessage")}</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => acceptCreditMutation.mutate("accepted")}
+              disabled={acceptCreditMutation.isPending}
+              className="w-full"
+              data-testid="button-accept-credit"
+            >
+              {acceptCreditMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              )}
+              {t("creditWallet.acceptLimit")}
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => acceptCreditMutation.mutate("contact_support")}
+              disabled={acceptCreditMutation.isPending}
+              className="w-full"
+              data-testid="button-contact-support"
+            >
+              <Phone className="h-4 w-4 mr-2" />
+              {t("creditWallet.contactSupport")}
+            </Button>
+            
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              {t("creditWallet.supportMessage")}
+              <br />
+              <span className="font-medium">{t("creditWallet.supportPhone")}</span>
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

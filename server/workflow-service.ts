@@ -259,8 +259,13 @@ export async function acceptBid(
     };
   }
 
-  // Use the final negotiated price if provided, otherwise use the original bid amount
-  const acceptedAmount = finalPrice != null ? finalPrice.toString() : bid.amount;
+  // Use the final negotiated price if provided, otherwise use counter amount (if countered), otherwise original bid
+  // This ensures negotiated counter offers are properly used when carrier accepted the counter
+  const acceptedAmount = finalPrice != null 
+    ? finalPrice.toString() 
+    : (bid.counterAmount && bid.status === "countered") 
+      ? bid.counterAmount.toString() 
+      : bid.amount;
 
   // Accept this bid (use only existing schema fields)
   const updatedBid = await storage.updateBid(bidId, { 

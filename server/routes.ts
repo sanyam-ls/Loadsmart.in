@@ -1138,11 +1138,12 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Load not found" });
       }
 
-      // Accept the counter offer - use the counter amount as the final amount
+      // Record carrier acceptance but keep bid in "countered" status for admin to finalize
+      // Admin will call acceptBid to complete the workflow and create invoice
       const finalAmount = bid.counterAmount || bid.amount;
       await storage.updateBid(bidId, { 
-        amount: finalAmount,
-        status: "accepted",
+        adminMediated: true,  // Flag that carrier has responded to admin counter
+        notes: `Carrier accepted counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')} at ${new Date().toISOString()}. Awaiting admin confirmation.`,
       });
 
       // Create negotiation message for acceptance
@@ -1159,43 +1160,41 @@ export async function registerRoutes(
         isSimulated: false,
       });
 
-      // Update thread and load status
+      // Update thread status
       await storage.updateNegotiationThread(bid.loadId, {
         status: "accepted",
         lastActivityAt: new Date(),
       });
 
+      // Use workflow-service transitionLoadState for proper lifecycle validation and audit logging
+      // This respects Admin-as-Mediator by keeping invoice creation under admin control
+      const transitionResult = await transitionLoadState(
+        bid.loadId,
+        "awarded",
+        user.id,
+        `Carrier ${user.companyName || user.username} accepted counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')}`
+      );
+      
+      if (!transitionResult.success) {
+        console.error("Failed to transition load to awarded:", transitionResult.error);
+        return res.status(400).json({ error: transitionResult.error || "Failed to transition load status" });
+      }
+      
+      // Update load with carrier assignment info (separate from status transition)
       await storage.updateLoad(bid.loadId, {
-        status: "invoice_created",
         assignedCarrierId: user.id,
         awardedBidId: bidId,
-        statusChangedAt: new Date(),
+        awardedAt: new Date(),
       });
 
-      // Auto-create invoice when bid is accepted
-      try {
-        const existingInvoice = await storage.getInvoiceByLoad(bid.loadId);
-        if (!existingInvoice) {
-          await storage.createInvoice({
-            loadId: bid.loadId,
-            shipperId: load.shipperId,
-            carrierId: user.id,
-            amount: String(finalAmount),
-            status: "pending",
-          });
-        }
-      } catch (invoiceError) {
-        console.error("Failed to create invoice after carrier acceptance:", invoiceError);
-      }
-
-      // Notify admin
+      // Notify admin - they need to create invoice for this awarded load
       const admins = await storage.getAdmins();
       for (const admin of admins) {
         await storage.createNotification({
           userId: admin.id,
-          title: "Carrier Accepted Counter Offer",
-          message: `${user.companyName || user.username} accepted the counter offer for load ${load.pickupCity} to ${load.dropoffCity}`,
-          type: "info",
+          title: "Action Required: Create Invoice for Awarded Load",
+          message: `${user.companyName || user.username} accepted the counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')} for load ${load.pickupCity} to ${load.dropoffCity}. Please create and send the invoice.`,
+          type: "action_required",
           contextType: "bid_accepted",
           relatedLoadId: bid.loadId,
           relatedBidId: bidId,

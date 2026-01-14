@@ -465,7 +465,7 @@ export default function CarrierBidsPage() {
       loadType: bid.load?.requiredTruckType || "General",
       weight: Number(bid.load?.weight) || 10,
       distance: Number(bid.load?.distance) || 500,
-      proposedRate: Number(bid.load?.adminFinalPrice) || Number(bid.amount) || 50000,
+      proposedRate: Number(bid.load?.finalPrice) || Number(bid.load?.adminFinalPrice) || Number(bid.amount) || 50000,
       carrierOffer: Number(bid.amount) || 50000,
       currentRate: Number(bid.counterAmount) || Number(bid.amount) || 50000,
       shipperCounterRate: bid.counterAmount ? Number(bid.counterAmount) : null,

@@ -527,74 +527,72 @@ export default function AdminOnboardingPage() {
             <div className="space-y-4">
               <h3 className="font-semibold">{t("adminOnboarding.decision")}</h3>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t("common.status")}</Label>
-                  <Select
-                    value={reviewData.decision}
-                    onValueChange={(value) => setReviewData({ ...reviewData, decision: value as typeof reviewData.decision })}
-                  >
-                    <SelectTrigger data-testid="select-decision">
-                      <SelectValue placeholder={t("adminOnboarding.selectDecision")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="under_review">{t("onboarding.statusUnderReview")}</SelectItem>
-                      <SelectItem value="approved">{t("onboarding.statusApproved")}</SelectItem>
-                      <SelectItem value="rejected">{t("onboarding.statusRejected")}</SelectItem>
-                      <SelectItem value="on_hold">{t("onboarding.statusOnHold")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>{t("common.status")}</Label>
+                <Select
+                  value={reviewData.decision}
+                  onValueChange={(value) => setReviewData({ ...reviewData, decision: value as typeof reviewData.decision })}
+                >
+                  <SelectTrigger data-testid="select-decision">
+                    <SelectValue placeholder={t("adminOnboarding.selectDecision")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="under_review">{t("onboarding.statusUnderReview")}</SelectItem>
+                    <SelectItem value="approved">{t("onboarding.statusApproved")}</SelectItem>
+                    <SelectItem value="rejected">{t("onboarding.statusRejected")}</SelectItem>
+                    <SelectItem value="on_hold">{t("onboarding.statusOnHold")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {reviewData.decision === "approved" && (
-                  <>
-                    <div className="space-y-2">
-                      <Label>{t("adminOnboarding.proposedCreditLimit")}</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
-                        <Input
-                          type="number"
-                          value={reviewData.creditLimit}
-                          onChange={(e) => setReviewData({ ...reviewData, creditLimit: e.target.value })}
-                          data-testid="input-credit-limit"
-                          className="pl-7"
-                        />
-                      </div>
-                      {selectedRequest?.request.requestedCreditLimit && (
-                        <p className="text-xs text-muted-foreground">
-                          {t("adminOnboarding.requestedAmount")}: ₹{Number(selectedRequest.request.requestedCreditLimit).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("creditAssessment.paymentTerms")} ({t("creditAssessment.days")})</Label>
+              {reviewData.decision === "approved" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg border">
+                  <div className="space-y-2">
+                    <Label>{t("adminOnboarding.proposedCreditLimit")}</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                       <Input
                         type="number"
-                        value={reviewData.paymentTerms}
-                        onChange={(e) => setReviewData({ ...reviewData, paymentTerms: parseInt(e.target.value) })}
-                        data-testid="input-payment-terms"
+                        value={reviewData.creditLimit}
+                        onChange={(e) => setReviewData({ ...reviewData, creditLimit: e.target.value })}
+                        data-testid="input-credit-limit"
+                        className="pl-7"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>{t("creditAssessment.riskLevel")}</Label>
-                      <Select
-                        value={reviewData.riskLevel}
-                        onValueChange={(value) => setReviewData({ ...reviewData, riskLevel: value as typeof reviewData.riskLevel })}
-                      >
-                        <SelectTrigger data-testid="select-risk-level">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">{t("creditAssessment.lowRisk")}</SelectItem>
-                          <SelectItem value="medium">{t("creditAssessment.mediumRisk")}</SelectItem>
-                          <SelectItem value="high">{t("creditAssessment.highRisk")}</SelectItem>
-                          <SelectItem value="critical">{t("creditAssessment.criticalRisk")}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-              </div>
+                    {selectedRequest?.request.requestedCreditLimit && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("adminOnboarding.requestedAmount")}: ₹{Number(selectedRequest.request.requestedCreditLimit).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.paymentTerms")} ({t("creditAssessment.days")})</Label>
+                    <Input
+                      type="number"
+                      value={reviewData.paymentTerms || ""}
+                      onChange={(e) => setReviewData({ ...reviewData, paymentTerms: e.target.value ? parseInt(e.target.value) : 30 })}
+                      data-testid="input-payment-terms"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("creditAssessment.riskLevel")}</Label>
+                    <Select
+                      value={reviewData.riskLevel}
+                      onValueChange={(value) => setReviewData({ ...reviewData, riskLevel: value as typeof reviewData.riskLevel })}
+                    >
+                      <SelectTrigger data-testid="select-risk-level">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">{t("creditAssessment.lowRisk")}</SelectItem>
+                        <SelectItem value="medium">{t("creditAssessment.mediumRisk")}</SelectItem>
+                        <SelectItem value="high">{t("creditAssessment.highRisk")}</SelectItem>
+                        <SelectItem value="critical">{t("creditAssessment.criticalRisk")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>{t("adminOnboarding.decisionNote")}</Label>

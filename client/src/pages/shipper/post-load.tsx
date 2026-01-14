@@ -1133,12 +1133,16 @@ export default function PostLoadPage() {
                     const pickupDate = submittedLoadDetails?.pickupDate 
                       ? new Date(submittedLoadDetails.pickupDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                       : '';
+                    const truckLabel = submittedLoadDetails?.truckType 
+                      ? submittedLoadDetails.truckType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                      : '';
                     let message = `New Load Available!\n`;
                     message += `Load #: ${loadNum}\n`;
                     message += `From: ${submittedLoadDetails?.pickupCity || ''}, ${submittedLoadDetails?.pickupState || ''}\n`;
                     message += `To: ${submittedLoadDetails?.dropoffCity || ''}, ${submittedLoadDetails?.dropoffState || ''}\n`;
                     message += `Weight: ${submittedLoadDetails?.weight || ''} Tons\n`;
                     message += `Cargo: ${submittedLoadDetails?.goods || ''}\n`;
+                    if (truckLabel) message += `Truck: ${truckLabel}\n`;
                     if (pickupDate) message += `Pickup: ${pickupDate}\n`;
                     message += `\nView & Bid: https://loalink.com`;
                     window.open(`sms:?body=${encodeURIComponent(message)}`, '_blank');

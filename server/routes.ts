@@ -7837,7 +7837,9 @@ export async function registerRoutes(
         gstinNumber: z.string().optional(),
         registeredAddress: z.string().min(1, "Address is required"),
         registeredCity: z.string().min(1, "City is required"),
+        registeredCityCustom: z.string().optional(),
         registeredState: z.string().min(1, "State is required"),
+        registeredCountry: z.string().min(1, "Country is required"),
         registeredPincode: z.string().min(6).max(6, "Pincode must be 6 digits"),
         operatingRegions: z.array(z.string()).optional(),
         primaryCommodities: z.array(z.string()).optional(),
@@ -7925,6 +7927,139 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/shipper/profile - Get shipper's business profile (for consistent data across platform)
+  app.get("/api/shipper/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const onboarding = await storage.getShipperOnboardingRequest(user.id);
+      
+      if (!onboarding || onboarding.status !== "approved") {
+        return res.status(404).json({ error: "No approved profile found" });
+      }
+
+      // Return structured profile data from onboarding
+      const profile = {
+        id: user.id,
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        isVerified: user.isVerified,
+        business: {
+          legalCompanyName: onboarding.legalCompanyName,
+          tradeName: onboarding.tradeName,
+          businessType: onboarding.businessType,
+          incorporationDate: onboarding.incorporationDate,
+          cinNumber: onboarding.cinNumber,
+          panNumber: onboarding.panNumber,
+          gstinNumber: onboarding.gstinNumber,
+        },
+        address: {
+          addressLine: onboarding.registeredAddress,
+          city: onboarding.registeredCity === "other" ? onboarding.registeredCityCustom : onboarding.registeredCity,
+          cityCustom: onboarding.registeredCityCustom,
+          state: onboarding.registeredState,
+          country: onboarding.registeredCountry || "India",
+          pincode: onboarding.registeredPincode,
+        },
+        contact: {
+          name: onboarding.contactPersonName,
+          designation: onboarding.contactPersonDesignation,
+          phone: onboarding.contactPersonPhone,
+          email: onboarding.contactPersonEmail,
+        },
+        banking: {
+          bankName: onboarding.bankName,
+          accountNumber: onboarding.bankAccountNumber,
+          ifscCode: onboarding.bankIfscCode,
+          branchName: onboarding.bankBranchName,
+        },
+        operations: {
+          operatingRegions: onboarding.operatingRegions,
+          primaryCommodities: onboarding.primaryCommodities,
+          estimatedMonthlyLoads: onboarding.estimatedMonthlyLoads,
+          avgLoadValueInr: onboarding.avgLoadValueInr,
+        },
+        onboardingStatus: onboarding.status,
+        approvedAt: onboarding.reviewedAt,
+      };
+
+      res.json(profile);
+    } catch (error) {
+      console.error("Get shipper profile error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/shipper/:id/profile - Get any shipper's profile (for admin/carrier use)
+  app.get("/api/shipper/:id/profile", requireAuth, async (req, res) => {
+    try {
+      const shipperId = req.params.id;
+      const shipper = await storage.getUser(shipperId);
+      
+      if (!shipper || shipper.role !== "shipper") {
+        return res.status(404).json({ error: "Shipper not found" });
+      }
+
+      const onboarding = await storage.getShipperOnboardingRequest(shipperId);
+      
+      if (!onboarding || onboarding.status !== "approved") {
+        // Return basic user info if not approved
+        return res.json({
+          id: shipper.id,
+          username: shipper.username,
+          email: shipper.email,
+          isVerified: shipper.isVerified,
+          companyName: shipper.companyName,
+          business: null,
+          address: null,
+          contact: null,
+        });
+      }
+
+      // Return structured profile data from onboarding
+      const profile = {
+        id: shipper.id,
+        userId: shipper.id,
+        username: shipper.username,
+        email: shipper.email,
+        isVerified: shipper.isVerified,
+        business: {
+          legalCompanyName: onboarding.legalCompanyName,
+          tradeName: onboarding.tradeName,
+          businessType: onboarding.businessType,
+          incorporationDate: onboarding.incorporationDate,
+          cinNumber: onboarding.cinNumber,
+          panNumber: onboarding.panNumber,
+          gstinNumber: onboarding.gstinNumber,
+        },
+        address: {
+          addressLine: onboarding.registeredAddress,
+          city: onboarding.registeredCity === "other" ? onboarding.registeredCityCustom : onboarding.registeredCity,
+          cityCustom: onboarding.registeredCityCustom,
+          state: onboarding.registeredState,
+          country: onboarding.registeredCountry || "India",
+          pincode: onboarding.registeredPincode,
+        },
+        contact: {
+          name: onboarding.contactPersonName,
+          designation: onboarding.contactPersonDesignation,
+          phone: onboarding.contactPersonPhone,
+          email: onboarding.contactPersonEmail,
+        },
+        onboardingStatus: onboarding.status,
+      };
+
+      res.json(profile);
+    } catch (error) {
+      console.error("Get shipper profile by id error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // PATCH /api/shipper/onboarding/draft - Save draft data (auto-save)
   app.patch("/api/shipper/onboarding/draft", requireAuth, async (req, res) => {
     try {
@@ -7955,7 +8090,9 @@ export async function registerRoutes(
         incorporationDate: z.string().optional(),
         registeredAddress: z.string().optional(),
         registeredCity: z.string().optional(),
+        registeredCityCustom: z.string().optional(),
         registeredState: z.string().optional(),
+        registeredCountry: z.string().optional(),
         registeredPincode: z.string().optional(),
         operatingRegions: z.array(z.string()).optional(),
         primaryCommodities: z.array(z.string()).optional(),

@@ -33,7 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { indianStates } from "@shared/indian-locations";
-import { DocumentUpload } from "@/components/DocumentUpload";
+import { DocumentUploadWithCamera } from "@/components/DocumentUploadWithCamera";
 
 const onboardingFormSchema = z.object({
   legalCompanyName: z.string().min(1, "Company name is required"),
@@ -1110,11 +1110,12 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       <FormItem>
                         <FormLabel>{t("onboarding.gstCertificate")}</FormLabel>
                         <FormControl>
-                          <DocumentUpload
+                          <DocumentUploadWithCamera
                             value={field.value || ""}
                             onChange={field.onChange}
                             placeholder={t("onboarding.noFileSelected")}
                             testId="upload-gst-certificate"
+                            documentType="gst_certificate"
                           />
                         </FormControl>
                         <FormDescription>{t("onboarding.gstCertificateDesc")}</FormDescription>
@@ -1128,11 +1129,12 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       <FormItem>
                         <FormLabel>{t("onboarding.panCard")}</FormLabel>
                         <FormControl>
-                          <DocumentUpload
+                          <DocumentUploadWithCamera
                             value={field.value || ""}
                             onChange={field.onChange}
                             placeholder={t("onboarding.noFileSelected")}
                             testId="upload-pan-card"
+                            documentType="pan_card"
                           />
                         </FormControl>
                         <FormDescription>{t("onboarding.panCardDesc")}</FormDescription>
@@ -1149,11 +1151,12 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       <FormItem>
                         <FormLabel>{t("onboarding.incorporationCertificate")}</FormLabel>
                         <FormControl>
-                          <DocumentUpload
+                          <DocumentUploadWithCamera
                             value={field.value || ""}
                             onChange={field.onChange}
                             placeholder={t("onboarding.noFileSelected")}
                             testId="upload-incorporation-certificate"
+                            documentType="incorporation_certificate"
                           />
                         </FormControl>
                         <FormDescription>{t("onboarding.incorporationCertificateDesc")}</FormDescription>
@@ -1167,11 +1170,12 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       <FormItem>
                         <FormLabel>{t("onboarding.addressProof")}</FormLabel>
                         <FormControl>
-                          <DocumentUpload
+                          <DocumentUploadWithCamera
                             value={field.value || ""}
                             onChange={field.onChange}
                             placeholder={t("onboarding.noFileSelected")}
                             testId="upload-address-proof"
+                            documentType="address_proof"
                           />
                         </FormControl>
                         <FormDescription>{t("onboarding.addressProofDesc")}</FormDescription>
@@ -1279,11 +1283,12 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     <FormItem>
                       <FormLabel>{t("onboarding.cancelledCheque")}</FormLabel>
                       <FormControl>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={field.value || ""}
                           onChange={field.onChange}
                           placeholder={t("onboarding.noFileSelected")}
                           testId="upload-cancelled-cheque"
+                          documentType="cancelled_cheque"
                         />
                       </FormControl>
                       <FormDescription>{t("onboarding.cancelledChequeDesc")}</FormDescription>

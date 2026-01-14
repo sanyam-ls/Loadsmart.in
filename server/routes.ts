@@ -6491,18 +6491,18 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Carrier access required" });
       }
 
-      const carrierProfile = await storage.getCarrierProfile(user.id);
-      const trucks = await storage.getTrucksByCarrier(user.id);
+      // Run all queries in parallel for better performance
+      const [carrierProfile, trucks, allDocs, shipments] = await Promise.all([
+        storage.getCarrierProfile(user.id),
+        storage.getTrucksByCarrier(user.id),
+        storage.getDocumentsByUser(user.id),
+        storage.getShipmentsByCarrier(user.id),
+      ]);
+      
       const truck = trucks[0];
-
-      // Get driver-specific documents (license, etc.)
-      const allDocs = await storage.getDocumentsByUser(user.id);
       const driverDocs = allDocs.filter(d => 
         ["license", "pan_card", "aadhar"].includes(d.documentType)
       );
-
-      // Get performance metrics
-      const shipments = await storage.getShipmentsByCarrier(user.id);
       const completedTrips = shipments.filter(s => s.status === "delivered").length;
       const totalTrips = shipments.length;
 

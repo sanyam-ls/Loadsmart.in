@@ -80,12 +80,34 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  // Get the latest admin offer from chat messages
-  const latestAdminOffer = useMemo(() => {
-    const adminMessages = chatMessages
-      .filter(m => m.sender === "admin" && m.amount)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    return adminMessages[0]?.amount || bid.shipperCounterRate || bid.currentRate;
+  // Get the latest agreed price from chat messages
+  // Parse amounts from message text if no explicit amount field
+  const latestAgreedPrice = useMemo(() => {
+    // Extract amount from message text (e.g., "85600", "85,600", "Rs. 85600")
+    const extractAmount = (text: string): number | null => {
+      const match = text.match(/(\d{1,3}(?:,?\d{3})*(?:\.\d{2})?)/g);
+      if (match) {
+        const num = parseFloat(match[match.length - 1].replace(/,/g, ''));
+        if (!isNaN(num) && num > 1000) return num; // Reasonable freight amount
+      }
+      return null;
+    };
+    
+    // Sort messages by time (newest first)
+    const sortedMessages = [...chatMessages].sort(
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+    );
+    
+    // Look through messages for the last mentioned amount
+    for (const msg of sortedMessages) {
+      // First check explicit amount field
+      if (msg.amount) return msg.amount;
+      // Then try to extract from message text
+      const extracted = extractAmount(msg.message);
+      if (extracted) return extracted;
+    }
+    
+    return bid.shipperCounterRate || bid.currentRate;
   }, [chatMessages, bid.shipperCounterRate, bid.currentRate]);
 
   const isRealBid = bid.bidId && !bid.bidId.startsWith("bid-");
@@ -390,7 +412,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Final Agreed Price:</span>
                   <span className="font-bold text-green-600 text-lg">
-                    {formatCurrency(latestAdminOffer)}
+                    {formatCurrency(latestAgreedPrice)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

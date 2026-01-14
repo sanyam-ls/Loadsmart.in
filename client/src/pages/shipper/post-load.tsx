@@ -1116,7 +1116,8 @@ export default function PostLoadPage() {
                     if (truckLabel) message += `🚚 *Truck Type:* ${truckLabel}\n`;
                     if (pickupDate) message += `📅 *Pickup Date:* ${pickupDate}\n`;
                     if (submittedLoadDetails?.specialNotes) message += `📝 *Notes:* ${submittedLoadDetails.specialNotes}\n`;
-                    message += `\n_Posted via FreightFlow_`;
+                    message += `\n🔗 *View & Bid:* https://loalink.com\n`;
+                    message += `_Sign up as a carrier to access the marketplace_`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
                   }}
                   data-testid="button-share-whatsapp"
@@ -1139,7 +1140,7 @@ export default function PostLoadPage() {
                     message += `Weight: ${submittedLoadDetails?.weight || ''} Tons\n`;
                     message += `Cargo: ${submittedLoadDetails?.goods || ''}\n`;
                     if (pickupDate) message += `Pickup: ${pickupDate}\n`;
-                    message += `Via FreightFlow`;
+                    message += `\nView & Bid: https://loalink.com`;
                     window.open(`sms:?body=${encodeURIComponent(message)}`, '_blank');
                   }}
                   data-testid="button-share-sms"

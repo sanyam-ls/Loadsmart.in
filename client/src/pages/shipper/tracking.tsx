@@ -20,6 +20,18 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+// Fix Leaflet default icon issue with bundlers
+import iconUrl from "leaflet/dist/images/marker-icon.png";
+import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
+import shadowUrl from "leaflet/dist/images/marker-shadow.png";
+
+// @ts-ignore
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl,
+  iconRetinaUrl,
+  shadowUrl,
+});
 
 type ShipmentStage = "load_created" | "carrier_assigned" | "reached_pickup" | "loaded" | "in_transit" | "arrived_at_drop" | "delivered";
 
@@ -174,32 +186,38 @@ function getCityCoords(cityName: string): [number, number] | null {
   return null;
 }
 
-const pickupIcon = new L.DivIcon({
-  className: 'custom-marker',
-  html: `<div style="background: #22c55e; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><circle cx="12" cy="12" r="3"/></svg>
-  </div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-});
+function createPickupIcon() {
+  return new L.DivIcon({
+    className: 'custom-marker',
+    html: `<div style="background: #22c55e; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><circle cx="12" cy="12" r="3"/></svg>
+    </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+}
 
-const dropoffIcon = new L.DivIcon({
-  className: 'custom-marker',
-  html: `<div style="background: #ef4444; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
-  </div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 24],
-});
+function createDropoffIcon() {
+  return new L.DivIcon({
+    className: 'custom-marker',
+    html: `<div style="background: #ef4444; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
+    </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+  });
+}
 
-const truckIcon = new L.DivIcon({
-  className: 'truck-marker',
-  html: `<div style="background: #3b82f6; border: 2px solid white; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-  </div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-});
+function createTruckIcon() {
+  return new L.DivIcon({
+    className: 'truck-marker',
+    html: `<div style="background: #3b82f6; border: 2px solid white; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+    </div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
 
 function FitBounds({ bounds }: { bounds: L.LatLngBoundsExpression }) {
   const map = useMap();
@@ -217,6 +235,11 @@ interface ShipmentMapProps {
 
 function ShipmentMap({ shipment, onExpand, isFullscreen = false }: ShipmentMapProps) {
   const load = shipment.load;
+  
+  const pickupIcon = useMemo(() => createPickupIcon(), []);
+  const dropoffIcon = useMemo(() => createDropoffIcon(), []);
+  const truckIcon = useMemo(() => createTruckIcon(), []);
+  
   if (!load) return null;
   
   const pickupCoords = load.pickupLat && load.pickupLng 

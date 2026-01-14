@@ -98,6 +98,16 @@ New carriers must complete a verification process before accessing the marketpla
 
 -   **PostgreSQL**: Accessed via `DATABASE_URL` using `pg.Pool` and `Drizzle Kit`.
 
+### AI Truck Suggestions
+
+The platform includes AI-powered truck type suggestions for shippers when posting loads:
+- **Immediate Suggestions**: When weight is entered, a local calculation provides instant truck type suggestions
+- **AI-Enhanced Insights**: Background API call to `POST /api/loads/suggest-truck` fetches AI-powered recommendations
+- **Market Trend Analysis**: Analyzes historical loads with similar weights to find commonly used truck types
+- **OpenAI Integration**: Generates one-sentence explanations for suggestions when available
+- **Features**: Zod validation, 30-second caching, rate limiting protection, proper error handling
+- **UI Indicators**: Shows "AI Recommended" for market-based suggestions vs "Suggested" for rule-based
+
 ### Shared Data Files
 
 -   **`shared/indian-truck-data.ts`**: Contains Indian truck manufacturers and models for cascading dropdowns.

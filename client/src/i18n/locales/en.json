@@ -1148,7 +1148,29 @@
     "decisionNote": "Decision Notes",
     "reviewSaved": "Review Saved",
     "reviewSavedDesc": "The onboarding review has been updated successfully",
-    "reviewFailed": "Failed to save review. Please try again."
+    "reviewFailed": "Failed to save review. Please try again.",
+    "proposedCreditLimit": "Proposed Credit Limit",
+    "requestedAmount": "Requested"
+  },
+  "creditWallet": {
+    "title": "Credit Wallet",
+    "availableCredit": "Available Credit",
+    "creditLimit": "Credit Limit",
+    "outstandingBalance": "Outstanding Balance",
+    "paymentTerms": "Payment Terms",
+    "days": "days",
+    "congratulations": "Congratulations!",
+    "approvedMessage": "Your business verification has been approved.",
+    "approvedSameAmount": "You have been approved for a credit limit of",
+    "approvedDifferentAmount": "We are unable to provide the full credit limit you requested, but we can offer you",
+    "buildCreditMessage": "You can build up your credit over time with successful transactions.",
+    "acceptLimit": "Accept Credit Limit",
+    "contactSupport": "Contact Support",
+    "supportMessage": "If you have questions about your credit limit, please contact our support team.",
+    "supportPhone": "Customer Service: +91 1800-XXX-XXXX",
+    "creditAccepted": "Credit Limit Accepted",
+    "creditAcceptedDesc": "Your credit wallet is now active",
+    "pendingAcceptance": "Please accept or discuss the proposed credit limit"
   },
   "onboarding": {
     "title": "Business Onboarding",

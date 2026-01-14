@@ -549,13 +549,22 @@ export default function AdminOnboardingPage() {
                 {reviewData.decision === "approved" && (
                   <>
                     <div className="space-y-2">
-                      <Label>{t("creditAssessment.creditLimit")}</Label>
-                      <Input
-                        type="number"
-                        value={reviewData.creditLimit}
-                        onChange={(e) => setReviewData({ ...reviewData, creditLimit: e.target.value })}
-                        data-testid="input-credit-limit"
-                      />
+                      <Label>{t("adminOnboarding.proposedCreditLimit")}</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                        <Input
+                          type="number"
+                          value={reviewData.creditLimit}
+                          onChange={(e) => setReviewData({ ...reviewData, creditLimit: e.target.value })}
+                          data-testid="input-credit-limit"
+                          className="pl-7"
+                        />
+                      </div>
+                      {selectedRequest?.request.requestedCreditLimit && (
+                        <p className="text-xs text-muted-foreground">
+                          {t("adminOnboarding.requestedAmount")}: ₹{Number(selectedRequest.request.requestedCreditLimit).toLocaleString()}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>{t("creditAssessment.paymentTerms")} ({t("creditAssessment.days")})</Label>

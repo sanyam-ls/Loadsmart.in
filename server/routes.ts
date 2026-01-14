@@ -7928,6 +7928,103 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/shipper/onboarding/accept-credit - Shipper accepts/responds to proposed credit limit
+  app.post("/api/shipper/onboarding/accept-credit", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const onboarding = await storage.getShipperOnboardingRequest(user.id);
+      if (!onboarding) {
+        return res.status(404).json({ error: "No onboarding request found" });
+      }
+
+      if (onboarding.status !== "approved") {
+        return res.status(400).json({ error: "Onboarding request is not approved" });
+      }
+
+      if (!onboarding.proposedCreditLimit) {
+        return res.status(400).json({ error: "No credit limit has been proposed" });
+      }
+
+      const responseSchema = z.object({
+        response: z.enum(["accepted", "contact_support"]),
+      });
+
+      const { response } = responseSchema.parse(req.body);
+
+      // Update onboarding with acceptance
+      await storage.updateShipperOnboardingRequest(onboarding.id, {
+        creditLimitAccepted: response === "accepted",
+        creditLimitAcceptedAt: new Date(),
+        creditLimitResponse: response,
+      });
+
+      // If accepted, update or create credit profile with the proposed limit
+      if (response === "accepted") {
+        const existingProfile = await storage.getShipperCreditProfile(user.id);
+        const proposedLimit = onboarding.proposedCreditLimit;
+        const proposedTerms = onboarding.proposedPaymentTerms ? parseInt(onboarding.proposedPaymentTerms) : 30;
+
+        if (existingProfile) {
+          await storage.updateShipperCreditProfile(user.id, {
+            creditLimit: proposedLimit,
+            paymentTerms: proposedTerms,
+            availableCredit: proposedLimit, // Start with full available credit
+            outstandingBalance: "0",
+          });
+        } else {
+          await storage.createShipperCreditProfile({
+            shipperId: user.id,
+            creditLimit: proposedLimit,
+            paymentTerms: proposedTerms,
+            availableCredit: proposedLimit,
+            outstandingBalance: "0",
+            riskLevel: "medium",
+            gstCompliant: !!onboarding.gstinNumber,
+            gstNumber: onboarding.gstinNumber,
+          });
+        }
+      }
+
+      res.json({ success: true, response });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Accept credit limit error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/shipper/credit - Get shipper's credit wallet info
+  app.get("/api/shipper/credit", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      const creditProfile = await storage.getShipperCreditProfile(user.id);
+      if (!creditProfile) {
+        return res.json(null);
+      }
+
+      res.json({
+        creditLimit: creditProfile.creditLimit,
+        availableCredit: creditProfile.availableCredit,
+        outstandingBalance: creditProfile.outstandingBalance,
+        paymentTerms: creditProfile.paymentTerms,
+        riskLevel: creditProfile.riskLevel,
+      });
+    } catch (error) {
+      console.error("Get shipper credit error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // GET /api/shipper/profile - Get shipper's business profile (for consistent data across platform)
   app.get("/api/shipper/profile", requireAuth, async (req, res) => {
     try {
@@ -8285,13 +8382,18 @@ export async function registerRoutes(
 
       const reviewData = reviewSchema.parse(req.body);
 
-      // Update onboarding request
+      // Update onboarding request with proposed credit limit
       const updatedRequest = await storage.updateShipperOnboardingRequest(request.id, {
         status: reviewData.decision,
         reviewedBy: user.id,
         reviewedAt: new Date(),
         decisionNote: reviewData.decisionNote,
         followUpDate: reviewData.followUpDate ? new Date(reviewData.followUpDate) : undefined,
+        proposedCreditLimit: reviewData.decision === "approved" ? reviewData.creditLimit : undefined,
+        proposedPaymentTerms: reviewData.decision === "approved" ? reviewData.paymentTerms?.toString() : undefined,
+        creditLimitAccepted: null, // Reset when admin makes new decision
+        creditLimitAcceptedAt: null,
+        creditLimitResponse: null,
       });
 
       // If approved, update user verification status and create/update credit profile

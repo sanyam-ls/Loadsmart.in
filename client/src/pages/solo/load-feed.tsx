@@ -221,10 +221,10 @@ export default function SoloLoadFeed() {
                     {load.myBid ? (
                       <div className="flex items-center justify-between p-2 bg-muted rounded-md">
                         <span className="text-sm">
-                          Your bid: <span className="font-semibold">Rs. {formatPrice(load.myBid.amount)}</span>
+                          Your bid: <span className="font-semibold">Rs. {formatPrice(load.myBid.counterAmount || load.myBid.amount)}</span>
                         </span>
                         <Badge variant="secondary" className="text-xs">
-                          {load.myBid.status === "pending" ? "Pending" : load.myBid.status}
+                          {load.myBid.status === "pending" ? "Pending" : load.myBid.status === "countered" ? "Countered" : load.myBid.status}
                         </Badge>
                       </div>
                     ) : (

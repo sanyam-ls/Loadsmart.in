@@ -866,7 +866,8 @@ export default function CarrierLoadsPage() {
                 {load.myBid && (
                   <div className="text-xs text-muted-foreground">
                     <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                      Your bid: {formatCurrency(parseFloat(load.myBid.amount))}
+                      Your bid: {formatCurrency(parseFloat(load.myBid.counterAmount || load.myBid.amount))}
+                      {load.myBid.status === "countered" && " (Countered)"}
                     </Badge>
                   </div>
                 )}

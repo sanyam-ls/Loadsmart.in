@@ -1126,6 +1126,8 @@ export default function PostLoadPage() {
                       message += `💰 *Rate:* Rs. ${Number(submittedLoadDetails.pricePerTon).toLocaleString('en-IN')}/Ton\n`;
                     } else if (submittedLoadDetails?.rateType === 'fixed_price' && submittedLoadDetails?.fixedPrice) {
                       message += `💰 *Price:* Rs. ${Number(submittedLoadDetails.fixedPrice).toLocaleString('en-IN')} (Fixed)\n`;
+                    } else {
+                      message += `💰 *Pricing:* Contact for rates\n`;
                     }
                     if (pickupDate) message += `📅 *Pickup Date:* ${pickupDate}\n`;
                     if (submittedLoadDetails?.specialNotes) message += `📝 *Notes:* ${submittedLoadDetails.specialNotes}\n`;
@@ -1160,6 +1162,8 @@ export default function PostLoadPage() {
                       message += `Rate: Rs. ${Number(submittedLoadDetails.pricePerTon).toLocaleString('en-IN')}/Ton\n`;
                     } else if (submittedLoadDetails?.rateType === 'fixed_price' && submittedLoadDetails?.fixedPrice) {
                       message += `Price: Rs. ${Number(submittedLoadDetails.fixedPrice).toLocaleString('en-IN')} (Fixed)\n`;
+                    } else {
+                      message += `Pricing: Contact for rates\n`;
                     }
                     if (pickupDate) message += `Pickup: ${pickupDate}\n`;
                     message += `\nView & Bid: https://loalink.com`;

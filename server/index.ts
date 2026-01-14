@@ -13,8 +13,13 @@ const app = express();
 // Serve AI-generated assets from attached_assets folder (for both dev and prod)
 const assetsPath = path.resolve(process.cwd(), "attached_assets");
 if (fs.existsSync(assetsPath)) {
-  app.use("/assets", express.static(assetsPath));
+  app.use("/assets", express.static(assetsPath, {
+    maxAge: '1d',
+    etag: true,
+    lastModified: true,
+  }));
 }
+
 const httpServer = createServer(app);
 
 setupMarketplaceWebSocket(httpServer);

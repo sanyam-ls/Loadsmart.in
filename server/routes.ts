@@ -1612,8 +1612,12 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const allUsers = await storage.getAllUsers();
-      const allLoads = await storage.getAllLoads();
+      // Run both queries in parallel for better performance
+      const [allUsers, allLoads] = await Promise.all([
+        storage.getAllUsers(),
+        storage.getAllLoads(),
+      ]);
+      
       const carriers = allUsers.filter(u => u.role === "carrier");
       const verifiedCarriers = carriers.filter(u => u.isVerified);
 

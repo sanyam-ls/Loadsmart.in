@@ -648,8 +648,8 @@ export default function PostLoadPage() {
     },
   });
 
-  const watchedFields = form.watch(["pickupCity", "dropoffCity", "weight", "goodsToBeCarried", "requiredTruckType"]);
-  const [pickupCity, dropoffCity, weight, goodsDescription, truckType] = watchedFields;
+  const watchedFields = form.watch(["pickupCity", "dropoffCity", "weight", "weightUnit", "goodsToBeCarried", "requiredTruckType"]);
+  const [pickupCity, dropoffCity, weight, weightUnit, goodsDescription, truckType] = watchedFields;
 
   // Auto-populate shipper details from user profile
   useEffect(() => {
@@ -685,11 +685,13 @@ export default function PostLoadPage() {
   useEffect(() => {
     if (pickupCity && dropoffCity && weight) {
       const distance = calculateDistance(pickupCity, dropoffCity);
-      const suggestedTruck = truckType || suggestTruckType(Number(weight), goodsDescription || "");
+      // Convert weight to tons for truck suggestion (if in kg, divide by 1000)
+      const weightInTons = weightUnit === "kg" ? Number(weight) / 1000 : Number(weight);
+      const suggestedTruck = truckType || suggestTruckType(weightInTons, goodsDescription || "");
       const nearbyTrucks = Math.floor(Math.random() * 15) + 3;
       setEstimation({ distance, suggestedTruck, nearbyTrucks });
     }
-  }, [pickupCity, dropoffCity, weight, goodsDescription, truckType]);
+  }, [pickupCity, dropoffCity, weight, weightUnit, goodsDescription, truckType]);
 
   const updateEstimation = () => {
   };

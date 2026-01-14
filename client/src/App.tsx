@@ -19,6 +19,7 @@ import { AdminDataProvider } from "@/lib/admin-data-store";
 import { CarrierDataProvider } from "@/lib/carrier-data-store";
 import { CarrierOtpNotification } from "@/components/carrier-otp-notification";
 import { CarrierOnboardingGate } from "@/hooks/use-carrier-onboarding-gate";
+import { ShipperOnboardingGate } from "@/hooks/use-shipper-onboarding-gate";
 
 import AuthPage from "@/pages/auth";
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -140,13 +141,13 @@ function AppContent() {
                   return <Redirect to={defaultRoute} />;
                 }} />
                 
-                <Route path="/shipper" component={ShipperDashboard} />
-                <Route path="/shipper/post-load" component={PostLoadPage} />
-                <Route path="/shipper/loads" component={ShipperLoadsPage} />
-                <Route path="/shipper/loads/:id" component={LoadDetailPage} />
-                <Route path="/shipper/tracking" component={TrackingPage} />
-                <Route path="/shipper/documents" component={ShipperDocumentsPage} />
-                <Route path="/shipper/invoices" component={ShipperInvoicesPage} />
+                <Route path="/shipper" component={() => <ShipperOnboardingGate><ShipperDashboard /></ShipperOnboardingGate>} />
+                <Route path="/shipper/post-load" component={() => <ShipperOnboardingGate><PostLoadPage /></ShipperOnboardingGate>} />
+                <Route path="/shipper/loads" component={() => <ShipperOnboardingGate><ShipperLoadsPage /></ShipperOnboardingGate>} />
+                <Route path="/shipper/loads/:id" component={() => <ShipperOnboardingGate><LoadDetailPage /></ShipperOnboardingGate>} />
+                <Route path="/shipper/tracking" component={() => <ShipperOnboardingGate><TrackingPage /></ShipperOnboardingGate>} />
+                <Route path="/shipper/documents" component={() => <ShipperOnboardingGate><ShipperDocumentsPage /></ShipperOnboardingGate>} />
+                <Route path="/shipper/invoices" component={() => <ShipperOnboardingGate><ShipperInvoicesPage /></ShipperOnboardingGate>} />
                 <Route path="/shipper/onboarding" component={ShipperOnboardingPage} />
                               
                 <Route path="/carrier" component={() => <CarrierOnboardingGate><CarrierDashboard /></CarrierOnboardingGate>} />

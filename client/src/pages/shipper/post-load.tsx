@@ -594,6 +594,9 @@ export default function PostLoadPage() {
     truckType: string;
     pickupDate: string;
     specialNotes: string;
+    rateType: string;
+    pricePerTon: string;
+    fixedPrice: string;
   } | null>(null);
   const [customCommodity, setCustomCommodity] = useState("");
   const [estimation, setEstimation] = useState<{
@@ -851,6 +854,9 @@ export default function PostLoadPage() {
         truckType: truckType || '',
         pickupDate: data.pickupDate,
         specialNotes: data.specialNotes || '',
+        rateType: data.rateType,
+        pricePerTon: data.shipperPricePerTon || '',
+        fixedPrice: data.shipperFixedPrice || '',
       });
       setSubmitted(true);
       
@@ -1116,6 +1122,11 @@ export default function PostLoadPage() {
                     message += `⚖️ *Weight:* ${submittedLoadDetails?.weight || ''} Tons\n`;
                     message += `📦 *Cargo:* ${submittedLoadDetails?.goods || ''}\n`;
                     if (truckLabel) message += `🚚 *Truck Type:* ${truckLabel}\n`;
+                    if (submittedLoadDetails?.rateType === 'per_ton' && submittedLoadDetails?.pricePerTon) {
+                      message += `💰 *Rate:* Rs. ${Number(submittedLoadDetails.pricePerTon).toLocaleString('en-IN')}/Ton\n`;
+                    } else if (submittedLoadDetails?.rateType === 'fixed_price' && submittedLoadDetails?.fixedPrice) {
+                      message += `💰 *Price:* Rs. ${Number(submittedLoadDetails.fixedPrice).toLocaleString('en-IN')} (Fixed)\n`;
+                    }
                     if (pickupDate) message += `📅 *Pickup Date:* ${pickupDate}\n`;
                     if (submittedLoadDetails?.specialNotes) message += `📝 *Notes:* ${submittedLoadDetails.specialNotes}\n`;
                     message += `\n🔗 *View & Bid:* https://loalink.com\n`;
@@ -1145,6 +1156,11 @@ export default function PostLoadPage() {
                     message += `Weight: ${submittedLoadDetails?.weight || ''} Tons\n`;
                     message += `Cargo: ${submittedLoadDetails?.goods || ''}\n`;
                     if (truckLabel) message += `Truck: ${truckLabel}\n`;
+                    if (submittedLoadDetails?.rateType === 'per_ton' && submittedLoadDetails?.pricePerTon) {
+                      message += `Rate: Rs. ${Number(submittedLoadDetails.pricePerTon).toLocaleString('en-IN')}/Ton\n`;
+                    } else if (submittedLoadDetails?.rateType === 'fixed_price' && submittedLoadDetails?.fixedPrice) {
+                      message += `Price: Rs. ${Number(submittedLoadDetails.fixedPrice).toLocaleString('en-IN')} (Fixed)\n`;
+                    }
                     if (pickupDate) message += `Pickup: ${pickupDate}\n`;
                     message += `\nView & Bid: https://loalink.com`;
                     window.open(`sms:?body=${encodeURIComponent(message)}`, '_blank');

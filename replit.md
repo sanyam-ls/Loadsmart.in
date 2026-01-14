@@ -40,6 +40,7 @@ Supports simultaneous bidding from Solo Drivers and Enterprise Carriers on the s
 - **Bid Categorization**: API responses differentiate between `soloBids` and `enterpriseBids` for admin review
 - **Bid Acceptance**: Accepting a bid from any carrier automatically rejects all other pending bids across both types
 - **No Type Filtering**: The `checkCarrierEligibility` function does NOT filter by carrier type - eligibility is based on load status, posting mode, and carrier compliance only
+- **Counter-Offer Acceptance Flow**: When carrier accepts admin's counter offer, bid stays "countered" and load transitions to "awarded". Admin must then finalize using acceptBid workflow which creates invoice and rejects competing bids. The negotiated `bid.counterAmount` is automatically used for invoice pricing.
 
 ### Real-time Updates
 

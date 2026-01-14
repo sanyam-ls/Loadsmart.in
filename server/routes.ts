@@ -1138,11 +1138,22 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Load not found" });
       }
 
+      // Get the latest admin counter amount from negotiation history
+      // This handles both formal counter_offers and informal message amounts
+      const negotiations = await storage.getBidNegotiations(bidId);
+      const adminOffers = negotiations
+        .filter(n => n.senderRole === "admin" && n.amount)
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      
+      // Use the most recent admin offer, fallback to bid.counterAmount, then bid.amount
+      const latestAdminOffer = adminOffers[0]?.amount;
+      const finalAmount = latestAdminOffer || bid.counterAmount || bid.amount;
+      
       // Record carrier acceptance but keep bid in "countered" status for admin to finalize
       // Admin will call acceptBid to complete the workflow and create invoice
-      const finalAmount = bid.counterAmount || bid.amount;
       await storage.updateBid(bidId, { 
         adminMediated: true,  // Flag that carrier has responded to admin counter
+        counterAmount: finalAmount, // Ensure counterAmount reflects the accepted price
         notes: `Carrier accepted counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')} at ${new Date().toISOString()}. Awaiting admin confirmation.`,
       });
 

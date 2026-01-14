@@ -1124,6 +1124,8 @@ export async function registerRoutes(
       }
 
       const { bidId } = req.params;
+      const { agreedPrice } = req.body; // Price from frontend negotiation chat
+      
       const bid = await storage.getBid(bidId);
       if (!bid) {
         return res.status(404).json({ error: "Bid not found" });
@@ -1138,16 +1140,20 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Load not found" });
       }
 
-      // Get the latest admin counter amount from negotiation history
-      // This handles both formal counter_offers and informal message amounts
-      const negotiations = await storage.getBidNegotiations(bidId);
-      const adminOffers = negotiations
-        .filter(n => n.senderRole === "admin" && n.amount)
-        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      // Use agreedPrice from frontend if provided (parsed from chat history)
+      // This captures informal prices mentioned in chat messages
+      let finalAmount = agreedPrice;
       
-      // Use the most recent admin offer, fallback to bid.counterAmount, then bid.amount
-      const latestAdminOffer = adminOffers[0]?.amount;
-      const finalAmount = latestAdminOffer || bid.counterAmount || bid.amount;
+      if (!finalAmount) {
+        // Fallback: Get the latest counter amount from negotiation history
+        const negotiations = await storage.getBidNegotiations(bidId);
+        const adminOffers = negotiations
+          .filter(n => n.senderRole === "admin" && n.amount)
+          .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        
+        const latestAdminOffer = adminOffers[0]?.amount;
+        finalAmount = latestAdminOffer || bid.counterAmount || bid.amount;
+      }
       
       // Record carrier acceptance but keep bid in "countered" status for admin to finalize
       // Admin will call acceptBid to complete the workflow and create invoice

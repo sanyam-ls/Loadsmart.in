@@ -227,10 +227,16 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
 
     setIsSending(true);
     try {
-      await apiRequest("POST", `/api/carrier/bids/${bid.bidId}/accept`, {});
+      // Send the negotiated price to be recorded
+      await apiRequest("POST", `/api/carrier/bids/${bid.bidId}/accept`, {
+        agreedPrice: latestAgreedPrice
+      });
       // Invalidate carrier bids cache
       queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
-      toast({ title: "Offer Accepted", description: "You have accepted the counter offer." });
+      toast({ 
+        title: "Offer Accepted", 
+        description: `You have accepted the offer at Rs. ${latestAgreedPrice.toLocaleString("en-IN")}` 
+      });
       onAccept();
     } catch {
       toast({ title: "Error", description: "Failed to accept offer", variant: "destructive" });

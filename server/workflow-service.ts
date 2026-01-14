@@ -57,16 +57,18 @@ export async function getLoadsForRole(
 
   switch (user.role) {
     case "admin":
-      // Admin sees ALL loads, ALL states
-      return allLoads;
+      // Admin sees ALL loads except unavailable (shippers hide those from admin/carriers)
+      return allLoads.filter(load => 
+        (load.status || "draft") !== "unavailable"
+      );
 
     case "shipper":
       // Shipper sees only their own loads across the full lifecycle
-      // From submission through delivery
+      // From submission through delivery, including unavailable loads they've hidden
       const shipperVisibleStates: LoadStatus[] = [
         "pending", "priced", "posted_to_carriers", "open_for_bid", "counter_received",
         "awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", 
-        "in_transit", "delivered", "closed"
+        "in_transit", "delivered", "closed", "unavailable"
       ];
       return allLoads.filter(load => 
         load.shipperId === user.id && 

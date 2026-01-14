@@ -85,6 +85,26 @@ New carriers must complete a verification process before accessing the marketpla
 
 The platform includes both manual admin review and automated credit scoring for shippers. The automated system calculates scores based on weighted factors: payment history (±250 points from on-time rate), credit utilization (±150, optimal at ≤30%), load volume (±100 from recent 90-day activity), and tenure (±50 from account age). Base score is 500, with final scores ranging 0-1000. Risk thresholds: ≥750 low, ≥600 medium, ≥450 high, <450 critical. Default credit limits: low 1M, medium 500K, high 200K, critical 50K INR. Admins can run auto-assessment individually or in bulk, and manual overrides lock profiles from future auto-updates. The credit engine is in `server/services/credit-engine.ts`.
 
+### Credit Limit Proposal & Acceptance Workflow
+
+When approving a shipper's onboarding request, the admin proposes a credit limit that the shipper must accept before using the platform:
+- **Admin Proposal**: During approval, admin enters `proposedCreditLimit` and `proposedPaymentTerms` along with credit limit, payment terms, and risk level.
+- **Shipper Notification**: Upon approval, the shipper sees a congratulations dialog on their dashboard showing the proposed credit limit with two options:
+  - Accept the limit (proceeds with assigned credit)
+  - Contact support (for negotiation)
+- **Contextual Messaging**: The dialog shows different messages based on whether the proposed amount matches the shipper's requested amount.
+- **Credit Wallet**: Once accepted (`creditLimitAccepted: "accepted"`), the shipper's dashboard displays a Credit Wallet card showing:
+  - Available credit (creditLimit - outstandingBalance)
+  - Outstanding balance (unpaid invoice totals)
+  - Credit limit
+  - Payment terms (days)
+  - Risk level indicator
+  - Visual progress bar for credit utilization
+- **API Endpoints**: 
+  - `POST /api/shipper/onboarding/accept-credit` - Accept or request support
+  - `GET /api/shipper/credit` - Get wallet data (creditLimit, availableCredit, outstandingBalance, paymentTerms, riskLevel)
+- **Database Fields**: `proposedCreditLimit`, `proposedPaymentTerms`, `creditLimitAccepted`, `creditLimitAcceptedAt`, `creditLimitResponse` in shipperOnboardingRequests table.
+
 ## External Dependencies
 
 ### Frontend Libraries

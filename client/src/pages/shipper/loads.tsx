@@ -334,6 +334,9 @@ export default function ShipperLoadsPage() {
           <TabsTrigger value="delivered" className="gap-2">
             {t('loads.delivered')} <Badge variant="secondary" className="ml-1">{statusCounts.delivered}</Badge>
           </TabsTrigger>
+          <TabsTrigger value="unavailable" className="gap-2">
+            Unavailable <Badge variant="secondary" className="ml-1">{statusCounts.unavailable}</Badge>
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 

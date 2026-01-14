@@ -500,7 +500,11 @@ export default function AdminOnboardingPage() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.paymentTerms")}</Label>
-                    <p className="font-medium">{selectedRequest?.request.preferredPaymentTerms}</p>
+                    <p className="font-medium">
+                      {selectedRequest?.request.preferredPaymentTerms 
+                        ? `${selectedRequest.request.preferredPaymentTerms.replace('net_', '')} ${t("creditAssessment.days")}`
+                        : "-"}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">{t("onboarding.requestedCreditLimit")}</Label>

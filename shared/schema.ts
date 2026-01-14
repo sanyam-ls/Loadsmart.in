@@ -120,9 +120,16 @@ export const truckBodyCategories = [
     icon: "truck"
   },
   { 
+    id: "closed", 
+    name: "Closed Body", 
+    description: "Fully enclosed trucks for weather protection",
+    tonnageRange: "7.5-25 Ton",
+    icon: "box"
+  },
+  { 
     id: "container", 
     name: "Container", 
-    description: "Closed body trucks for protected cargo",
+    description: "Container trucks for protected cargo",
     tonnageRange: "7.5-30 Ton",
     icon: "container"
   },
@@ -196,6 +203,12 @@ export const indianTruckTypes = [
   { value: "open_14_wheeler", label: "Open - 14 Wheeler", category: "open", capacityMin: 25, capacityMax: 35 },
   { value: "open_16_wheeler", label: "Open - 16 Wheeler", category: "open", capacityMin: 30, capacityMax: 40 },
   { value: "open_18_wheeler", label: "Open - 18 Wheeler", category: "open", capacityMin: 35, capacityMax: 43 },
+  { value: "closed_17_feet", label: "Closed Body - 17 Feet", category: "closed", capacityMin: 4, capacityMax: 7 },
+  { value: "closed_19_feet", label: "Closed Body - 19 Feet", category: "closed", capacityMin: 6, capacityMax: 9 },
+  { value: "closed_20_feet", label: "Closed Body - 20 Feet", category: "closed", capacityMin: 7.5, capacityMax: 12 },
+  { value: "closed_22_feet", label: "Closed Body - 22 Feet", category: "closed", capacityMin: 9, capacityMax: 15 },
+  { value: "closed_24_feet", label: "Closed Body - 24 Feet", category: "closed", capacityMin: 12, capacityMax: 18 },
+  { value: "closed_32_feet", label: "Closed Body - 32 Feet", category: "closed", capacityMin: 15, capacityMax: 25 },
   { value: "container_20ft", label: "Container - 20 Ft", category: "container", capacityMin: 7.5, capacityMax: 20 },
   { value: "container_32ft", label: "Container - 32 Ft", category: "container", capacityMin: 15, capacityMax: 30 },
   { value: "container_40ft", label: "Container - 40 Ft", category: "container", capacityMin: 20, capacityMax: 30 },

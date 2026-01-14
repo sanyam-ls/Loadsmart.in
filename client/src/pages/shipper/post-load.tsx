@@ -1341,7 +1341,8 @@ export default function PostLoadPage() {
                                 placeholder="15" 
                                 {...field}
                                 onBlur={(e) => { field.onBlur(); updateEstimation(); }}
-                                data-testid="input-weight" 
+                                data-testid="input-weight"
+                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                               <Select
                                 defaultValue="tons"

@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search, AlertCircle, Loader2, FileText, Phone, Eye } from "lucide-react";
+import { MapPin, Package, Calendar, Truck, Save, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, X, Container, Droplet, Check, ChevronsUpDown, Search, AlertCircle, Loader2, FileText, Phone, Eye, MessageCircle, Share2 } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -583,6 +584,12 @@ export default function PostLoadPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submittedLoadId, setSubmittedLoadId] = useState<string | null>(null);
   const [submittedLoadNumber, setSubmittedLoadNumber] = useState<number | null>(null);
+  const [submittedLoadDetails, setSubmittedLoadDetails] = useState<{
+    pickupCity: string;
+    dropoffCity: string;
+    weight: string;
+    goods: string;
+  } | null>(null);
   const [customCommodity, setCustomCommodity] = useState("");
   const [estimation, setEstimation] = useState<{
     distance: number;
@@ -827,6 +834,12 @@ export default function PostLoadPage() {
 
       setSubmittedLoadId(result.load_id);
       setSubmittedLoadNumber(result.load_number);
+      setSubmittedLoadDetails({
+        pickupCity: data.pickupCity,
+        dropoffCity: data.dropoffCity,
+        weight: data.weight,
+        goods: finalGoodsDescription,
+      });
       setSubmitted(true);
       
       queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
@@ -1063,6 +1076,41 @@ export default function PostLoadPage() {
               <Button variant="outline" onClick={() => { setSubmitted(false); form.reset(); }} data-testid="button-post-another">
                 Post Another Load
               </Button>
+            </div>
+
+            <div className="pt-2 border-t">
+              <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                <Share2 className="h-4 w-4" />
+                Share Load Details
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    const loadNum = `LD-${String(submittedLoadNumber).padStart(3, '0')}`;
+                    const message = `🚛 New Load Posted!\n\nLoad #: ${loadNum}\n📍 From: ${submittedLoadDetails?.pickupCity || ''}\n📍 To: ${submittedLoadDetails?.dropoffCity || ''}\n⚖️ Weight: ${submittedLoadDetails?.weight || ''} Tons\n📦 Cargo: ${submittedLoadDetails?.goods || ''}\n\nPosted via FreightFlow`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                  }}
+                  data-testid="button-share-whatsapp"
+                >
+                  <SiWhatsapp className="h-4 w-4 mr-2 text-green-500" />
+                  WhatsApp
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    const loadNum = `LD-${String(submittedLoadNumber).padStart(3, '0')}`;
+                    const message = `New Load Posted! Load #: ${loadNum}, From: ${submittedLoadDetails?.pickupCity || ''}, To: ${submittedLoadDetails?.dropoffCity || ''}, Weight: ${submittedLoadDetails?.weight || ''} Tons, Cargo: ${submittedLoadDetails?.goods || ''}`;
+                    window.open(`sms:?body=${encodeURIComponent(message)}`, '_blank');
+                  }}
+                  data-testid="button-share-sms"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Text Message
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

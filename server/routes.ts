@@ -2404,6 +2404,152 @@ export async function registerRoutes(
   // ADMIN-AS-MEDIATOR FLOW ENDPOINTS
   // ==========================================
 
+  // AI-powered truck type suggestion based on weight, goods, and market trends
+  // Rate limiting cache to prevent abuse
+  const truckSuggestionCache = new Map<string, { result: any; timestamp: number }>();
+  const CACHE_TTL = 30000; // 30 seconds cache
+  
+  app.post("/api/loads/suggest-truck", requireAuth, async (req, res) => {
+    try {
+      // Validate input
+      const inputSchema = z.object({
+        weight: z.union([z.string(), z.number()]).transform(v => String(v)),
+        weightUnit: z.enum(["tons", "kg"]).default("tons"),
+        goodsDescription: z.string().optional().default(""),
+        pickupCity: z.string().optional().default(""),
+        dropoffCity: z.string().optional().default(""),
+      });
+      
+      const validated = inputSchema.parse(req.body);
+      const numericWeight = parseFloat(validated.weight);
+      
+      if (isNaN(numericWeight) || numericWeight <= 0) {
+        return res.status(400).json({ error: "Valid positive weight is required" });
+      }
+      
+      // Check cache first
+      const cacheKey = `${req.session.userId}-${numericWeight}-${validated.weightUnit}-${validated.goodsDescription}`;
+      const cached = truckSuggestionCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return res.json(cached.result);
+      }
+      
+      // Convert weight to tons
+      const weightInTons = validated.weightUnit === "kg" ? numericWeight / 1000 : numericWeight;
+      
+      // Get historical load data for market trends
+      const allLoads = await storage.getAllLoads();
+      const similarLoads = allLoads.filter(load => {
+        const loadWeight = parseFloat(load.weight || "0");
+        return loadWeight > weightInTons * 0.7 && loadWeight < weightInTons * 1.3;
+      }).slice(0, 50);
+      
+      // Analyze what truck types are commonly used for similar weights
+      const truckTypeUsage: Record<string, number> = {};
+      similarLoads.forEach(load => {
+        if (load.requiredTruckType) {
+          truckTypeUsage[load.requiredTruckType] = (truckTypeUsage[load.requiredTruckType] || 0) + 1;
+        }
+      });
+      
+      // Sort by frequency
+      const popularTrucks = Object.entries(truckTypeUsage)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([type]) => type);
+      
+      // Rule-based suggestion as fallback
+      let suggestedTruck = "open_10_wheeler";
+      const desc = (validated.goodsDescription || "").toLowerCase();
+      
+      if (desc.includes("frozen") || desc.includes("cold") || desc.includes("perishable")) {
+        suggestedTruck = "container_20ft";
+      } else if (desc.includes("liquid") || desc.includes("oil") || desc.includes("fuel")) {
+        suggestedTruck = "tanker_oil";
+      } else if (desc.includes("cement") || desc.includes("powder") || desc.includes("bulk")) {
+        suggestedTruck = "bulker_cement";
+      } else if (desc.includes("sand") || desc.includes("gravel") || desc.includes("stone")) {
+        suggestedTruck = "dumper_hyva";
+      } else if (desc.includes("machine") || desc.includes("equipment") || desc.includes("vehicle")) {
+        suggestedTruck = "trailer_40ft";
+      } else if (weightInTons > 35) {
+        suggestedTruck = "open_18_wheeler";
+      } else if (weightInTons > 25) {
+        suggestedTruck = "open_14_wheeler";
+      } else if (weightInTons > 15) {
+        suggestedTruck = "open_10_wheeler";
+      } else if (weightInTons > 7) {
+        suggestedTruck = "open_20_feet";
+      } else if (weightInTons > 2) {
+        suggestedTruck = "lcv_17ft";
+      } else if (weightInTons > 1) {
+        suggestedTruck = "lcv_tata_ace";
+      } else {
+        suggestedTruck = "mini_pickup";
+      }
+      
+      // Use market data if available, otherwise use rule-based
+      const finalSuggestion = popularTrucks.length > 0 ? popularTrucks[0] : suggestedTruck;
+      
+      // Generate AI insight if OpenAI is available
+      let aiInsight = null;
+      if (process.env.AI_INTEGRATIONS_OPENAI_API_KEY && process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+        try {
+          const OpenAI = (await import("openai")).default;
+          const openai = new OpenAI({
+            apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+            baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+          });
+          
+          const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{
+              role: "system",
+              content: "You are a logistics expert. Provide brief, helpful truck recommendations."
+            }, {
+              role: "user",
+              content: `For a ${weightInTons} ton load${validated.goodsDescription ? ` of "${validated.goodsDescription}"` : ""}${validated.pickupCity && validated.dropoffCity ? ` from ${validated.pickupCity} to ${validated.dropoffCity}` : ""}, I'm suggesting a ${finalSuggestion.replace(/_/g, " ")}. Is this a good choice? Give a one-sentence explanation.`
+            }],
+            max_tokens: 100,
+          });
+          
+          aiInsight = response.choices[0]?.message?.content || null;
+        } catch (aiError) {
+          console.error("AI suggestion error:", aiError);
+        }
+      }
+      
+      const result = {
+        suggestedTruck: finalSuggestion,
+        alternatives: popularTrucks.length > 1 ? popularTrucks.slice(1) : [],
+        basedOnMarketData: popularTrucks.length > 0,
+        marketDataCount: similarLoads.length,
+        aiInsight,
+      };
+      
+      // Cache the result
+      truckSuggestionCache.set(cacheKey, { result, timestamp: Date.now() });
+      
+      // Clean up old cache entries periodically
+      if (truckSuggestionCache.size > 100) {
+        const now = Date.now();
+        for (const [key, value] of truckSuggestionCache.entries()) {
+          if (now - value.timestamp > CACHE_TTL) {
+            truckSuggestionCache.delete(key);
+          }
+        }
+      }
+      
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("Suggest truck error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Shipper submits load to Admin for pricing (no rate required)
   app.post("/api/loads/submit", requireAuth, async (req, res) => {
     try {

@@ -582,8 +582,11 @@ export default function PostLoadPage() {
     distance: number;
     suggestedTruck: string;
     nearbyTrucks: number;
+    aiInsight?: string | null;
+    basedOnMarketData?: boolean;
   } | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [isLoadingAiSuggestion, setIsLoadingAiSuggestion] = useState(false);
 
   // Check shipper onboarding status - only verified shippers can post loads
   // Poll every 5 seconds when status is pending/under_review to detect approval in real-time
@@ -682,14 +685,66 @@ export default function PostLoadPage() {
     }
   }, [user, form]);
 
+  // Show truck suggestion immediately when weight is entered (doesn't require cities)
+  // Only show when no truck type is selected (user hasn't made a choice yet)
   useEffect(() => {
-    if (pickupCity && dropoffCity && weight) {
-      const distance = calculateDistance(pickupCity, dropoffCity);
-      // Convert weight to tons for truck suggestion (if in kg, divide by 1000)
-      const weightInTons = weightUnit === "kg" ? Number(weight) / 1000 : Number(weight);
-      const suggestedTruck = truckType || suggestTruckType(weightInTons, goodsDescription || "");
-      const nearbyTrucks = Math.floor(Math.random() * 15) + 3;
-      setEstimation({ distance, suggestedTruck, nearbyTrucks });
+    // Clear suggestion if no weight
+    if (!weight) {
+      setEstimation(null);
+      return;
+    }
+    
+    // Convert weight to tons for truck suggestion (if in kg, divide by 1000)
+    const weightInTons = weightUnit === "kg" ? Number(weight) / 1000 : Number(weight);
+    const localSuggestion = suggestTruckType(weightInTons, goodsDescription || "");
+    const nearbyTrucks = Math.floor(Math.random() * 15) + 3;
+    
+    // Calculate distance only if both cities are provided
+    const distance = (pickupCity && dropoffCity) 
+      ? calculateDistance(pickupCity, dropoffCity) 
+      : 0;
+    
+    // Set immediate local suggestion (always update, even if truck is selected)
+    setEstimation({ distance, suggestedTruck: localSuggestion, nearbyTrucks });
+    
+    // Only fetch AI suggestion if no truck type is manually selected
+    if (!truckType) {
+      const fetchAiSuggestion = async () => {
+        setIsLoadingAiSuggestion(true);
+        try {
+          const response = await fetch("/api/loads/suggest-truck", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              weight,
+              weightUnit,
+              goodsDescription,
+              pickupCity,
+              dropoffCity,
+            }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setEstimation(prev => ({
+              distance: prev?.distance || distance,
+              suggestedTruck: data.suggestedTruck,
+              nearbyTrucks: prev?.nearbyTrucks || nearbyTrucks,
+              aiInsight: data.aiInsight,
+              basedOnMarketData: data.basedOnMarketData,
+            }));
+          }
+        } catch (error) {
+          console.error("Failed to fetch AI suggestion:", error);
+        } finally {
+          setIsLoadingAiSuggestion(false);
+        }
+      };
+      
+      // Debounce the AI fetch
+      const timeoutId = setTimeout(fetchAiSuggestion, 500);
+      return () => clearTimeout(timeoutId);
     }
   }, [pickupCity, dropoffCity, weight, weightUnit, goodsDescription, truckType]);
 
@@ -1378,10 +1433,26 @@ export default function PostLoadPage() {
                             />
                           </FormControl>
                           {estimation?.suggestedTruck && !field.value && (
-                            <FormDescription className="flex items-center gap-1 text-primary">
-                              <Sparkles className="h-3 w-3" />
-                              Suggested: {getTruckLabel(estimation.suggestedTruck)}
-                            </FormDescription>
+                            <div className="space-y-1">
+                              <FormDescription className="flex items-center gap-1 text-primary font-medium">
+                                {isLoadingAiSuggestion ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Sparkles className="h-3 w-3" />
+                                )}
+                                {estimation.basedOnMarketData ? "AI Recommended" : "Suggested"}: {getTruckLabel(estimation.suggestedTruck)}
+                              </FormDescription>
+                              {estimation.aiInsight && (
+                                <p className="text-xs text-muted-foreground pl-4 italic">
+                                  {estimation.aiInsight}
+                                </p>
+                              )}
+                              {estimation.basedOnMarketData && !estimation.aiInsight && (
+                                <p className="text-xs text-muted-foreground pl-4">
+                                  Based on market trends for similar loads
+                                </p>
+                              )}
+                            </div>
                           )}
                           <FormMessage />
                         </FormItem>

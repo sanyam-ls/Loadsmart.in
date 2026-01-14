@@ -1179,6 +1179,8 @@
     "addressPlaceholder": "ਇਮਾਰਤ, ਸੜਕ, ਖੇਤਰ",
     "city": "ਸ਼ਹਿਰ",
     "cityPlaceholder": "ਮੁੰਬਈ",
+    "selectCity": "ਸ਼ਹਿਰ ਚੁਣੋ",
+    "selectStateFirst": "ਪਹਿਲਾਂ ਰਾਜ ਚੁਣੋ",
     "state": "ਰਾਜ",
     "selectState": "ਰਾਜ ਚੁਣੋ",
     "pincode": "ਪਿਨਕੋਡ",

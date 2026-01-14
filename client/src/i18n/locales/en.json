@@ -1187,6 +1187,8 @@
     "addressPlaceholder": "Building, Street, Area",
     "city": "City",
     "cityPlaceholder": "Mumbai",
+    "selectCity": "Select city",
+    "selectStateFirst": "Select state first",
     "state": "State",
     "selectState": "Select state",
     "pincode": "Pincode",

@@ -1179,6 +1179,8 @@
     "addressPlaceholder": "भवन, सड़क, क्षेत्र",
     "city": "शहर",
     "cityPlaceholder": "मुंबई",
+    "selectCity": "शहर चुनें",
+    "selectStateFirst": "पहले राज्य चुनें",
     "state": "राज्य",
     "selectState": "राज्य चुनें",
     "pincode": "पिनकोड",

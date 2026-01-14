@@ -45,7 +45,9 @@ const onboardingFormSchema = z.object({
   gstinNumber: z.string().optional(),
   registeredAddress: z.string().min(1, "Address is required"),
   registeredCity: z.string().min(1, "City is required"),
+  registeredCityCustom: z.string().optional(),
   registeredState: z.string().min(1, "State is required"),
+  registeredCountry: z.string().min(1, "Country is required"),
   registeredPincode: z.string().min(6).max(6, "Pincode must be 6 digits"),
   operatingRegions: z.array(z.string()).optional(),
   primaryCommodities: z.array(z.string()).optional(),
@@ -102,7 +104,9 @@ export default function ShipperOnboarding() {
       incorporationDate: "",
       registeredAddress: "",
       registeredCity: "",
+      registeredCityCustom: "",
       registeredState: "",
+      registeredCountry: "India",
       registeredPincode: "",
       operatingRegions: [],
       primaryCommodities: [],
@@ -145,7 +149,9 @@ export default function ShipperOnboarding() {
         incorporationDate: onboardingStatus.incorporationDate ? onboardingStatus.incorporationDate.split('T')[0] : "",
         registeredAddress: onboardingStatus.registeredAddress || "",
         registeredCity: onboardingStatus.registeredCity || "",
+        registeredCityCustom: onboardingStatus.registeredCityCustom || "",
         registeredState: onboardingStatus.registeredState || "",
+        registeredCountry: onboardingStatus.registeredCountry || "India",
         registeredPincode: onboardingStatus.registeredPincode || "",
         operatingRegions: onboardingStatus.operatingRegions || [],
         primaryCommodities: onboardingStatus.primaryCommodities || [],
@@ -280,7 +286,7 @@ export default function ShipperOnboarding() {
 
   // Helper to determine which tab has the first error
   const getTabWithError = (errors: any): string | null => {
-    const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredCity", "registeredState", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
+    const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
     const documentFields = ["gstCertificateUrl", "panCardUrl", "incorporationCertificateUrl", "cancelledChequeUrl", "businessAddressProofUrl"];
     const bankingFields = ["bankName", "bankAccountNumber", "bankIfscCode", "bankBranchName", "preferredPaymentTerms", "requestedCreditLimit"];
@@ -755,31 +761,21 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       </FormItem>
                     )}
                   />
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <FormField
-                      control={form.control}
-                      name="registeredCity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("onboarding.city")}</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder={t("onboarding.cityPlaceholder")} 
-                              {...field} 
-                              data-testid="input-city"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="grid gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
                       name="registeredState"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("onboarding.state")}</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              form.setValue("registeredCity", "");
+                              form.setValue("registeredCityCustom", "");
+                            }} 
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-state">
                                 <SelectValue placeholder={t("onboarding.selectState")} />
@@ -791,6 +787,93 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                                   {state.name}
                                 </SelectItem>
                               ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="registeredCity"
+                      render={({ field }) => {
+                        const selectedState = form.watch("registeredState");
+                        const stateData = indianStates.find(s => s.name === selectedState);
+                        const cities = stateData?.cities || [];
+                        
+                        return (
+                          <FormItem>
+                            <FormLabel>{t("onboarding.city")}</FormLabel>
+                            <Select 
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                if (value !== "other") {
+                                  form.setValue("registeredCityCustom", "");
+                                }
+                              }} 
+                              value={field.value}
+                              disabled={!selectedState}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-city">
+                                  <SelectValue placeholder={selectedState ? t("onboarding.selectCity") : t("onboarding.selectStateFirst")} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {cities.map((city) => (
+                                  <SelectItem key={city.name} value={city.name}>
+                                    {city.name}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="other">Other / Custom</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+                  
+                  {form.watch("registeredCity") === "other" && (
+                    <FormField
+                      control={form.control}
+                      name="registeredCityCustom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Custom City Name</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter your city name" 
+                              {...field} 
+                              data-testid="input-city-custom"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="registeredCountry"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-country">
+                                <SelectValue placeholder="Select country" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="India">India</SelectItem>
+                              <SelectItem value="Nepal">Nepal</SelectItem>
+                              <SelectItem value="Bangladesh">Bangladesh</SelectItem>
+                              <SelectItem value="Sri Lanka">Sri Lanka</SelectItem>
+                              <SelectItem value="Bhutan">Bhutan</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

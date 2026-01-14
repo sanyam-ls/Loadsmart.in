@@ -1179,6 +1179,8 @@
     "addressPlaceholder": "इमारत, रस्ता, क्षेत्र",
     "city": "शहर",
     "cityPlaceholder": "मुंबई",
+    "selectCity": "शहर निवडा",
+    "selectStateFirst": "आधी राज्य निवडा",
     "state": "राज्य",
     "selectState": "राज्य निवडा",
     "pincode": "पिनकोड",

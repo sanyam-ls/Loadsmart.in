@@ -1006,7 +1006,7 @@ export default function PostLoadPage() {
           <CardContent className="space-y-6">
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-sm text-muted-foreground mb-2">Load Number</p>
-              <p className="font-mono font-semibold text-lg">LD-{String(submittedLoadNumber).padStart(4, '0')}</p>
+              <p className="font-mono font-semibold text-lg">LD-{String(submittedLoadNumber).padStart(3, '0')}</p>
             </div>
 
             <div className="space-y-4">

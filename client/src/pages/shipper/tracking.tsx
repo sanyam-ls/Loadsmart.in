@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin, Package, Truck, CheckCircle, Clock, FileText, 
   Navigation, Building, ArrowRight, RefreshCw, Loader2,
-  Eye, X, Download, Calendar, Bell
+  Eye, X, Download, Calendar, Bell, Maximize2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, addHours, differenceInHours } from "date-fns";
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 
 type ShipmentStage = "load_created" | "carrier_assigned" | "reached_pickup" | "loaded" | "in_transit" | "arrived_at_drop" | "delivered";
@@ -45,8 +48,14 @@ interface TrackedShipment {
     adminReferenceNumber: number | null;
     pickupCity: string;
     pickupAddress: string;
+    pickupState?: string;
+    pickupLat?: string | null;
+    pickupLng?: string | null;
     dropoffCity: string;
     dropoffAddress: string;
+    dropoffState?: string;
+    dropoffLat?: string | null;
+    dropoffLng?: string | null;
     materialType: string;
     weight: string;
     requiredTruckType: string;
@@ -98,6 +107,204 @@ const stageIcons: Record<ShipmentStage, typeof MapPin> = {
   arrived_at_drop: MapPin,
   delivered: CheckCircle,
 };
+
+const indianCityCoords: Record<string, [number, number]> = {
+  "Mumbai": [19.0760, 72.8777],
+  "Delhi": [28.6139, 77.2090],
+  "Bangalore": [12.9716, 77.5946],
+  "Hyderabad": [17.3850, 78.4867],
+  "Chennai": [13.0827, 80.2707],
+  "Kolkata": [22.5726, 88.3639],
+  "Pune": [18.5204, 73.8567],
+  "Ahmedabad": [23.0225, 72.5714],
+  "Jaipur": [26.9124, 75.7873],
+  "Lucknow": [26.8467, 80.9462],
+  "Indore": [22.7196, 75.8577],
+  "Bhopal": [23.2599, 77.4126],
+  "Nagpur": [21.1458, 79.0882],
+  "Surat": [21.1702, 72.8311],
+  "Vadodara": [22.3072, 73.1812],
+  "Ludhiana": [30.9010, 75.8573],
+  "Chandigarh": [30.7333, 76.7794],
+  "Mohali": [30.7046, 76.7179],
+  "Ranchi": [23.3441, 85.3096],
+  "Patna": [25.5941, 85.1376],
+  "Coimbatore": [11.0168, 76.9558],
+  "Kochi": [9.9312, 76.2673],
+  "Visakhapatnam": [17.6868, 83.2185],
+  "Guwahati": [26.1445, 91.7362],
+  "Thiruvananthapuram": [8.5241, 76.9366],
+  "Mangalore": [12.9141, 74.8560],
+  "Porbandar": [21.6417, 69.6293],
+  "Rajkot": [22.3039, 70.8022],
+  "Jodhpur": [26.2389, 73.0243],
+  "Udaipur": [24.5854, 73.7125],
+  "Raipur": [21.2514, 81.6296],
+  "Goa": [15.2993, 74.1240],
+  "Mysore": [12.2958, 76.6394],
+  "Madurai": [9.9252, 78.1198],
+  "Varanasi": [25.3176, 82.9739],
+  "Agra": [27.1767, 78.0081],
+  "Kanpur": [26.4499, 80.3319],
+  "Nashik": [19.9975, 73.7898],
+  "Aurangabad": [19.8762, 75.3433],
+  "Jabalpur": [23.1815, 79.9864],
+  "Gwalior": [26.2183, 78.1828],
+  "Amritsar": [31.6340, 74.8723],
+  "Shimla": [31.1048, 77.1734],
+  "Dehradun": [30.3165, 78.0322],
+  "Noida": [28.5355, 77.3910],
+  "Gurgaon": [28.4595, 77.0266],
+  "Faridabad": [28.4089, 77.3178],
+  "Thane": [19.2183, 72.9781],
+  "Navi Mumbai": [19.0330, 73.0297],
+};
+
+function getCityCoords(cityName: string): [number, number] | null {
+  const normalizedCity = cityName.trim();
+  if (indianCityCoords[normalizedCity]) {
+    return indianCityCoords[normalizedCity];
+  }
+  for (const [city, coords] of Object.entries(indianCityCoords)) {
+    if (normalizedCity.toLowerCase().includes(city.toLowerCase()) || 
+        city.toLowerCase().includes(normalizedCity.toLowerCase())) {
+      return coords;
+    }
+  }
+  return null;
+}
+
+const pickupIcon = new L.DivIcon({
+  className: 'custom-marker',
+  html: `<div style="background: #22c55e; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><circle cx="12" cy="12" r="3"/></svg>
+  </div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
+
+const dropoffIcon = new L.DivIcon({
+  className: 'custom-marker',
+  html: `<div style="background: #ef4444; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
+  </div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 24],
+});
+
+const truckIcon = new L.DivIcon({
+  className: 'truck-marker',
+  html: `<div style="background: #3b82f6; border: 2px solid white; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+  </div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
+
+function FitBounds({ bounds }: { bounds: L.LatLngBoundsExpression }) {
+  const map = useMap();
+  useEffect(() => {
+    map.fitBounds(bounds, { padding: [30, 30] });
+  }, [map, bounds]);
+  return null;
+}
+
+interface ShipmentMapProps {
+  shipment: TrackedShipment;
+  onExpand?: () => void;
+  isFullscreen?: boolean;
+}
+
+function ShipmentMap({ shipment, onExpand, isFullscreen = false }: ShipmentMapProps) {
+  const load = shipment.load;
+  if (!load) return null;
+  
+  const pickupCoords = load.pickupLat && load.pickupLng 
+    ? [parseFloat(load.pickupLat), parseFloat(load.pickupLng)] as [number, number]
+    : getCityCoords(load.pickupCity);
+  
+  const dropoffCoords = load.dropoffLat && load.dropoffLng
+    ? [parseFloat(load.dropoffLat), parseFloat(load.dropoffLng)] as [number, number]
+    : getCityCoords(load.dropoffCity);
+  
+  if (!pickupCoords || !dropoffCoords) {
+    return (
+      <div className="aspect-video rounded-lg bg-muted/50 flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Location data unavailable</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const progress = shipment.progress / 100;
+  const truckLat = pickupCoords[0] + (dropoffCoords[0] - pickupCoords[0]) * progress;
+  const truckLng = pickupCoords[1] + (dropoffCoords[1] - pickupCoords[1]) * progress;
+  const truckPosition: [number, number] = [truckLat, truckLng];
+  
+  const bounds: L.LatLngBoundsExpression = [pickupCoords, dropoffCoords];
+  const routeLine: [number, number][] = [pickupCoords, dropoffCoords];
+  const completedLine: [number, number][] = [pickupCoords, truckPosition];
+  
+  return (
+    <div className={`relative ${isFullscreen ? 'h-[70vh]' : 'aspect-video'} rounded-lg overflow-hidden`}>
+      <MapContainer
+        center={[(pickupCoords[0] + dropoffCoords[0]) / 2, (pickupCoords[1] + dropoffCoords[1]) / 2]}
+        zoom={6}
+        style={{ height: '100%', width: '100%' }}
+        scrollWheelZoom={isFullscreen}
+        zoomControl={isFullscreen}
+        dragging={isFullscreen}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <FitBounds bounds={bounds} />
+        
+        <Polyline positions={routeLine} color="#94a3b8" weight={4} dashArray="10, 10" opacity={0.6} />
+        <Polyline positions={completedLine} color="#3b82f6" weight={4} />
+        
+        <Marker position={pickupCoords} icon={pickupIcon}>
+          <Popup>
+            <strong>Pickup</strong><br/>
+            {load.pickupCity}
+          </Popup>
+        </Marker>
+        
+        <Marker position={dropoffCoords} icon={dropoffIcon}>
+          <Popup>
+            <strong>Dropoff</strong><br/>
+            {load.dropoffCity}
+          </Popup>
+        </Marker>
+        
+        {shipment.currentStage !== "delivered" && progress > 0 && (
+          <Marker position={truckPosition} icon={truckIcon}>
+            <Popup>
+              <strong>Truck in Transit</strong><br/>
+              {shipment.truck?.registrationNumber || 'Unknown'}<br/>
+              Progress: {shipment.progress}%
+            </Popup>
+          </Marker>
+        )}
+      </MapContainer>
+      
+      {!isFullscreen && onExpand && (
+        <Button 
+          size="icon" 
+          variant="secondary" 
+          className="absolute top-2 right-2 z-[1000] h-8 w-8"
+          onClick={onExpand}
+          data-testid="button-expand-map"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+}
 
 function calculateETA(shipment: TrackedShipment): { date: string; time: string } | null {
   if (shipment.currentStage === "delivered") {
@@ -192,6 +399,7 @@ export default function TrackingPage() {
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
 
   const activeShipments = shipments.filter(s => s.currentStage !== "delivered");
   const selectedShipment = shipments.find(s => s.id === selectedShipmentId) || activeShipments[0] || null;
@@ -409,12 +617,11 @@ export default function TrackingPage() {
 
                   <div>
                     <h3 className="font-semibold mb-4">Live Map</h3>
-                    <div className="aspect-video rounded-lg bg-muted/50 flex items-center justify-center mb-6">
-                      <div className="text-center text-muted-foreground">
-                        <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Map view coming soon</p>
-                        <p className="text-xs">Real-time tracking active</p>
-                      </div>
+                    <div className="mb-6">
+                      <ShipmentMap 
+                        shipment={selectedShipment} 
+                        onExpand={() => setMapFullscreen(true)}
+                      />
                     </div>
 
                     <h3 className="font-semibold mb-4">Carrier & Truck Details</h3>
@@ -580,6 +787,29 @@ export default function TrackingPage() {
                   Close
                 </Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={mapFullscreen} onOpenChange={setMapFullscreen}>
+        <DialogContent className="max-w-6xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Navigation className="h-5 w-5" />
+              Live Tracking Map
+            </DialogTitle>
+            <DialogDescription>
+              {selectedShipment && (
+                <span>
+                  {selectedShipment.load?.pickupCity} to {selectedShipment.load?.dropoffCity} - {selectedShipment.progress}% complete
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedShipment && (
+            <div className="mt-4">
+              <ShipmentMap shipment={selectedShipment} isFullscreen={true} />
             </div>
           )}
         </DialogContent>

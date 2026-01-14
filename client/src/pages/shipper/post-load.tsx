@@ -586,9 +586,14 @@ export default function PostLoadPage() {
   const [submittedLoadNumber, setSubmittedLoadNumber] = useState<number | null>(null);
   const [submittedLoadDetails, setSubmittedLoadDetails] = useState<{
     pickupCity: string;
+    pickupState: string;
     dropoffCity: string;
+    dropoffState: string;
     weight: string;
     goods: string;
+    truckType: string;
+    pickupDate: string;
+    specialNotes: string;
   } | null>(null);
   const [customCommodity, setCustomCommodity] = useState("");
   const [estimation, setEstimation] = useState<{
@@ -836,9 +841,14 @@ export default function PostLoadPage() {
       setSubmittedLoadNumber(result.load_number);
       setSubmittedLoadDetails({
         pickupCity: data.pickupCity,
+        pickupState: data.pickupState,
         dropoffCity: data.dropoffCity,
+        dropoffState: data.dropoffState,
         weight: data.weight,
         goods: finalGoodsDescription,
+        truckType: truckType || '',
+        pickupDate: data.pickupDate,
+        specialNotes: data.specialNotes || '',
       });
       setSubmitted(true);
       
@@ -1089,7 +1099,24 @@ export default function PostLoadPage() {
                   className="flex-1"
                   onClick={() => {
                     const loadNum = `LD-${String(submittedLoadNumber).padStart(3, '0')}`;
-                    const message = `🚛 New Load Posted!\n\nLoad #: ${loadNum}\n📍 From: ${submittedLoadDetails?.pickupCity || ''}\n📍 To: ${submittedLoadDetails?.dropoffCity || ''}\n⚖️ Weight: ${submittedLoadDetails?.weight || ''} Tons\n📦 Cargo: ${submittedLoadDetails?.goods || ''}\n\nPosted via FreightFlow`;
+                    const pickupDate = submittedLoadDetails?.pickupDate 
+                      ? new Date(submittedLoadDetails.pickupDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : '';
+                    const truckLabel = submittedLoadDetails?.truckType 
+                      ? submittedLoadDetails.truckType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                      : '';
+                    let message = `🚛 *New Load Available!*\n\n`;
+                    message += `📋 *Load #:* ${loadNum}\n`;
+                    message += `━━━━━━━━━━━━━━━\n`;
+                    message += `📍 *From:* ${submittedLoadDetails?.pickupCity || ''}, ${submittedLoadDetails?.pickupState || ''}\n`;
+                    message += `📍 *To:* ${submittedLoadDetails?.dropoffCity || ''}, ${submittedLoadDetails?.dropoffState || ''}\n`;
+                    message += `━━━━━━━━━━━━━━━\n`;
+                    message += `⚖️ *Weight:* ${submittedLoadDetails?.weight || ''} Tons\n`;
+                    message += `📦 *Cargo:* ${submittedLoadDetails?.goods || ''}\n`;
+                    if (truckLabel) message += `🚚 *Truck Type:* ${truckLabel}\n`;
+                    if (pickupDate) message += `📅 *Pickup Date:* ${pickupDate}\n`;
+                    if (submittedLoadDetails?.specialNotes) message += `📝 *Notes:* ${submittedLoadDetails.specialNotes}\n`;
+                    message += `\n_Posted via FreightFlow_`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
                   }}
                   data-testid="button-share-whatsapp"
@@ -1102,7 +1129,17 @@ export default function PostLoadPage() {
                   className="flex-1"
                   onClick={() => {
                     const loadNum = `LD-${String(submittedLoadNumber).padStart(3, '0')}`;
-                    const message = `New Load Posted! Load #: ${loadNum}, From: ${submittedLoadDetails?.pickupCity || ''}, To: ${submittedLoadDetails?.dropoffCity || ''}, Weight: ${submittedLoadDetails?.weight || ''} Tons, Cargo: ${submittedLoadDetails?.goods || ''}`;
+                    const pickupDate = submittedLoadDetails?.pickupDate 
+                      ? new Date(submittedLoadDetails.pickupDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                      : '';
+                    let message = `New Load Available!\n`;
+                    message += `Load #: ${loadNum}\n`;
+                    message += `From: ${submittedLoadDetails?.pickupCity || ''}, ${submittedLoadDetails?.pickupState || ''}\n`;
+                    message += `To: ${submittedLoadDetails?.dropoffCity || ''}, ${submittedLoadDetails?.dropoffState || ''}\n`;
+                    message += `Weight: ${submittedLoadDetails?.weight || ''} Tons\n`;
+                    message += `Cargo: ${submittedLoadDetails?.goods || ''}\n`;
+                    if (pickupDate) message += `Pickup: ${pickupDate}\n`;
+                    message += `Via FreightFlow`;
                     window.open(`sms:?body=${encodeURIComponent(message)}`, '_blank');
                   }}
                   data-testid="button-share-sms"

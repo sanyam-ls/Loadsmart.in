@@ -2591,7 +2591,7 @@ export async function registerRoutes(
         });
       }
 
-      res.json({ load_id: load.id, status: 'pending' });
+      res.json({ load_id: load.id, load_number: load.shipperLoadNumber, status: 'pending' });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });

@@ -599,7 +599,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="legalCompanyName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.legalCompanyName")} *</FormLabel>
+                        <FormLabel>{t("onboarding.legalCompanyName")}</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder={t("onboarding.legalCompanyNamePlaceholder")} 
@@ -636,7 +636,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="businessType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.businessType")} *</FormLabel>
+                        <FormLabel>{t("onboarding.businessType")}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-business-type">
@@ -680,7 +680,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="panNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.pan")} *</FormLabel>
+                        <FormLabel>{t("onboarding.pan")}</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="ABCDE1234F" 
@@ -743,7 +743,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="registeredAddress"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.addressLine")} *</FormLabel>
+                        <FormLabel>{t("onboarding.addressLine")}</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder={t("onboarding.addressPlaceholder")} 
@@ -761,7 +761,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       name="registeredCity"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("onboarding.city")} *</FormLabel>
+                          <FormLabel>{t("onboarding.city")}</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder={t("onboarding.cityPlaceholder")} 
@@ -778,7 +778,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       name="registeredState"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("onboarding.state")} *</FormLabel>
+                          <FormLabel>{t("onboarding.state")}</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger data-testid="select-state">
@@ -802,7 +802,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       name="registeredPincode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("onboarding.pincode")} *</FormLabel>
+                          <FormLabel>{t("onboarding.pincode")}</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="400001" 
@@ -841,7 +841,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="contactPersonName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.contactName")} *</FormLabel>
+                        <FormLabel>{t("onboarding.contactName")}</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder={t("onboarding.contactNamePlaceholder")} 
@@ -878,7 +878,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="contactPersonPhone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.phone")} *</FormLabel>
+                        <FormLabel>{t("onboarding.phone")}</FormLabel>
                         <FormControl>
                           <div className="flex">
                             <span className="inline-flex items-center px-3 bg-muted border border-r-0 rounded-l-md text-muted-foreground">
@@ -901,7 +901,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="contactPersonEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.email")} *</FormLabel>
+                        <FormLabel>{t("onboarding.email")}</FormLabel>
                         <FormControl>
                           <Input 
                             type="email"

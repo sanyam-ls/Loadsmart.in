@@ -248,11 +248,15 @@ function ShipmentMap({ shipment, onExpand, isFullscreen = false }: ShipmentMapPr
   const completedLine: [number, number][] = [pickupCoords, truckPosition];
   
   return (
-    <div className={`relative ${isFullscreen ? 'h-[70vh]' : 'aspect-video'} rounded-lg overflow-hidden`}>
+    <div 
+      className={`relative ${isFullscreen ? 'h-[70vh]' : 'aspect-video'} rounded-lg overflow-hidden ${!isFullscreen && onExpand ? 'cursor-pointer' : ''}`}
+      onClick={!isFullscreen && onExpand ? onExpand : undefined}
+      data-testid="map-container"
+    >
       <MapContainer
         center={[(pickupCoords[0] + dropoffCoords[0]) / 2, (pickupCoords[1] + dropoffCoords[1]) / 2]}
         zoom={6}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', pointerEvents: isFullscreen ? 'auto' : 'none' }}
         scrollWheelZoom={isFullscreen}
         zoomControl={isFullscreen}
         dragging={isFullscreen}
@@ -292,15 +296,12 @@ function ShipmentMap({ shipment, onExpand, isFullscreen = false }: ShipmentMapPr
       </MapContainer>
       
       {!isFullscreen && onExpand && (
-        <Button 
-          size="icon" 
-          variant="secondary" 
-          className="absolute top-2 right-2 z-[1000] h-8 w-8"
-          onClick={onExpand}
-          data-testid="button-expand-map"
-        >
-          <Maximize2 className="h-4 w-4" />
-        </Button>
+        <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
+          <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-md p-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <Maximize2 className="h-3 w-3" />
+            Click to expand
+          </div>
+        </div>
       )}
     </div>
   );

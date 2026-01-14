@@ -556,7 +556,7 @@ export default function AdminOnboardingPage() {
                         value={reviewData.creditLimit}
                         onChange={(e) => setReviewData({ ...reviewData, creditLimit: e.target.value })}
                         data-testid="input-credit-limit"
-                        className="pl-7"
+                        className="pl-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                     {selectedRequest?.request.requestedCreditLimit && (
@@ -572,6 +572,7 @@ export default function AdminOnboardingPage() {
                       value={reviewData.paymentTerms || ""}
                       onChange={(e) => setReviewData({ ...reviewData, paymentTerms: e.target.value ? parseInt(e.target.value) : 30 })}
                       data-testid="input-payment-terms"
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div className="space-y-2">

@@ -27,11 +27,25 @@
         background: #ffffff;
         z-index: 9999;
         font-family: 'Inter', system-ui, sans-serif;
+        transition: opacity 0.3s ease-out;
+      }
+      html.dark #initial-loader {
+        background: #0a0a0a;
+      }
+      html.dark #initial-loader .loader-text { color: #a1a1aa; }
+      html.dark #initial-loader .loader-title { color: #fafafa; }
+      html.dark #initial-loader .loader-spinner {
+        border-color: #3f3f46;
+        border-top-color: #3b82f6;
       }
       @media (prefers-color-scheme: dark) {
-        #initial-loader { background: #0a0a0a; }
-        #initial-loader .loader-text { color: #a1a1aa; }
-        #initial-loader .loader-title { color: #fafafa; }
+        html:not(.light) #initial-loader { background: #0a0a0a; }
+        html:not(.light) #initial-loader .loader-text { color: #a1a1aa; }
+        html:not(.light) #initial-loader .loader-title { color: #fafafa; }
+        html:not(.light) #initial-loader .loader-spinner {
+          border-color: #3f3f46;
+          border-top-color: #3b82f6;
+        }
       }
       .loader-spinner {
         width: 40px;
@@ -56,10 +70,21 @@
         color: #71717a;
       }
     </style>
+    <script>
+      (function() {
+        var theme = localStorage.getItem('freightflow-theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (theme === 'dark' || (!theme && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        } else if (theme === 'light') {
+          document.documentElement.classList.add('light');
+        }
+      })();
+    </script>
   </head>
-  <body>
-    <div id="initial-loader">
-      <div class="loader-spinner"></div>
+  <body class="">
+    <div id="initial-loader" role="status" aria-live="polite" aria-label="Loading FreightFlow application">
+      <div class="loader-spinner" aria-hidden="true"></div>
       <div class="loader-title">FreightFlow</div>
       <div class="loader-text">Loading application...</div>
     </div>

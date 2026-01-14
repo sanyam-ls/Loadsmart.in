@@ -71,6 +71,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
 }) {
   const [counterAmount, setCounterAmount] = useState(bid.currentRate.toString());
   const [showCounterInput, setShowCounterInput] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +79,14 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
   const [adminPhone, setAdminPhone] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Get the latest admin offer from chat messages
+  const latestAdminOffer = useMemo(() => {
+    const adminMessages = chatMessages
+      .filter(m => m.sender === "admin" && m.amount)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return adminMessages[0]?.amount || bid.shipperCounterRate || bid.currentRate;
+  }, [chatMessages, bid.shipperCounterRate, bid.currentRate]);
 
   const isRealBid = bid.bidId && !bid.bidId.startsWith("bid-");
   
@@ -360,7 +369,55 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
             </div>
           )}
           
-          {showCounterInput ? (
+          {showConfirmation ? (
+            <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Confirm Load Acceptance
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Accepting this will finalize your commitment to this load.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3 pb-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Your Original Bid:</span>
+                  <span className="font-medium line-through text-muted-foreground">
+                    {formatCurrency(bid.carrierOffer)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Final Agreed Price:</span>
+                  <span className="font-bold text-green-600 text-lg">
+                    {formatCurrency(latestAdminOffer)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Load:</span>
+                  <span className="font-medium">{bid.pickup} → {bid.dropoff}</span>
+                </div>
+              </CardContent>
+              <div className="flex gap-2 px-6 pb-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setShowConfirmation(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  className="flex-1 bg-green-600 hover:bg-green-700" 
+                  onClick={acceptCounterOffer}
+                  disabled={isSending}
+                  data-testid="button-confirm-accept"
+                >
+                  {isSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                  Confirm & Accept
+                </Button>
+              </div>
+            </Card>
+          ) : showCounterInput ? (
             <div className="space-y-3">
               <div className="flex gap-2">
                 <Input
@@ -392,7 +449,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
             <div className="flex gap-2">
               <Button 
                 className="flex-1" 
-                onClick={acceptCounterOffer}
+                onClick={() => setShowConfirmation(true)}
                 disabled={isSending}
                 data-testid="button-accept-bid"
               >

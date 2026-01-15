@@ -57,6 +57,7 @@ interface TrackedShipment {
   endOtpVerified: boolean;
   load: {
     id: string;
+    shipperLoadNumber: number | null;
     adminReferenceNumber: number | null;
     pickupCity: string;
     pickupAddress: string;
@@ -397,11 +398,14 @@ function getStatusBadge(stage: string) {
   );
 }
 
-function formatLoadId(adminReferenceNumber: number | null | undefined): string {
+function formatLoadId(shipperLoadNumber: number | null | undefined, adminReferenceNumber: number | null | undefined): string {
   if (adminReferenceNumber) {
-    return `LD-${adminReferenceNumber}`;
+    return `LD-${String(adminReferenceNumber).padStart(3, '0')}`;
   }
-  return "LD-XXXX";
+  if (shipperLoadNumber) {
+    return `LD-${String(shipperLoadNumber).padStart(3, '0')}`;
+  }
+  return "LD-XXX";
 }
 
 const documentTypeToLabel: Record<string, string> = {
@@ -519,7 +523,7 @@ export default function TrackingPage() {
                   >
                     <div className="flex items-center justify-between mb-2 gap-2">
                       <span className="text-xs text-muted-foreground">
-                        Load {formatLoadId(shipment.load?.adminReferenceNumber)}
+                        Load {formatLoadId(shipment.load?.shipperLoadNumber, shipment.load?.adminReferenceNumber)}
                       </span>
                       {getStatusBadge(shipment.currentStage)}
                     </div>
@@ -764,7 +768,7 @@ export default function TrackingPage() {
             <DialogDescription>
               {selectedShipment && (
                 <span>
-                  Load {formatLoadId(selectedShipment.load?.adminReferenceNumber)} - {selectedShipment.load?.pickupCity} to {selectedShipment.load?.dropoffCity}
+                  Load {formatLoadId(selectedShipment.load?.shipperLoadNumber, selectedShipment.load?.adminReferenceNumber)} - {selectedShipment.load?.pickupCity} to {selectedShipment.load?.dropoffCity}
                 </span>
               )}
             </DialogDescription>

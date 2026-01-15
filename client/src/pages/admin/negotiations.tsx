@@ -446,10 +446,10 @@ export default function AdminNegotiationsPage() {
                   Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
                 </span>
               </div>
-              {/* Show comparison with original posted price */}
-              {bid.load?.adminFinalPrice && (() => {
+              {/* Show comparison with original posted price - use finalPrice (carrier-facing price) */}
+              {bid.load?.finalPrice && (() => {
                 const bidAmount = parseFloat(bid.amount);
-                const originalPrice = parseFloat(bid.load.adminFinalPrice);
+                const originalPrice = parseFloat(bid.load.finalPrice);
                 const difference = bidAmount - originalPrice;
                 const percentDiff = ((difference / originalPrice) * 100).toFixed(1);
                 const isHigher = difference > 0;
@@ -758,10 +758,10 @@ export default function AdminNegotiationsPage() {
                               <span className="font-semibold text-green-600">
                                 Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
                               </span>
-                              {/* Show comparison with original posted price */}
-                              {bid.load?.adminFinalPrice && (() => {
+                              {/* Show comparison with original posted price - use finalPrice (carrier-facing price) */}
+                              {bid.load?.finalPrice && (() => {
                                 const bidAmount = parseFloat(bid.amount);
-                                const originalPrice = parseFloat(bid.load.adminFinalPrice);
+                                const originalPrice = parseFloat(bid.load.finalPrice);
                                 const difference = bidAmount - originalPrice;
                                 const percentDiff = ((difference / originalPrice) * 100).toFixed(1);
                                 const isHigher = difference > 0;
@@ -889,11 +889,11 @@ export default function AdminNegotiationsPage() {
                   Bid Information
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  {/* Original Posted Price */}
-                  {detailBid.load?.adminFinalPrice && (
+                  {/* Original Posted Price - use finalPrice which is what carriers see */}
+                  {detailBid.load?.finalPrice && (
                     <div className="col-span-2 pb-2 border-b border-green-200 dark:border-green-800">
                       <span className="text-muted-foreground">Original Posted Price:</span>
-                      <p className="font-medium text-base">Rs. {parseFloat(detailBid.load.adminFinalPrice).toLocaleString("en-IN")}</p>
+                      <p className="font-medium text-base">Rs. {parseFloat(detailBid.load.finalPrice).toLocaleString("en-IN")}</p>
                     </div>
                   )}
                   <div>
@@ -901,9 +901,9 @@ export default function AdminNegotiationsPage() {
                     <p className="font-bold text-lg text-green-600">Rs. {parseFloat(detailBid.amount).toLocaleString("en-IN")}</p>
                   </div>
                   {/* Comparison with original price */}
-                  {detailBid.load?.adminFinalPrice && (() => {
+                  {detailBid.load?.finalPrice && (() => {
                     const bidAmount = parseFloat(detailBid.amount);
-                    const originalPrice = parseFloat(detailBid.load.adminFinalPrice);
+                    const originalPrice = parseFloat(detailBid.load.finalPrice);
                     const difference = bidAmount - originalPrice;
                     const percentDiff = ((difference / originalPrice) * 100).toFixed(1);
                     const isHigher = difference > 0;

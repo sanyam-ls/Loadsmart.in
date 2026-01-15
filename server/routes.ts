@@ -4615,7 +4615,8 @@ export async function registerRoutes(
           if (load?.awardedBidId) {
             winningBid = await storage.getBid(load.awardedBidId);
             if (winningBid) {
-              winningBidAmount = winningBid.amount;
+              // Use counterAmount if it exists (negotiated price), otherwise use original amount
+              winningBidAmount = winningBid.counterAmount || winningBid.amount;
             }
           }
           

@@ -46,6 +46,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -336,6 +346,9 @@ export default function LoadQueuePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsLoad, setDetailsLoad] = useState<RealLoad | null>(null);
+  const [invoiceConfirmOpen, setInvoiceConfirmOpen] = useState(false);
+  const [loadToSendInvoice, setLoadToSendInvoice] = useState<RealLoad | null>(null);
+  const [isSendingInvoice, setIsSendingInvoice] = useState(false);
 
   const { user } = useAuth();
   
@@ -442,11 +455,21 @@ export default function LoadQueuePage() {
     setPricingDrawerOpen(true);
   };
 
-  // Send invoice to shipper for loads that are already carrier-finalized
-  const handleSendInvoiceToShipper = async (load: RealLoad) => {
+  // Open confirmation dialog before sending invoice to shipper
+  const handleSendInvoiceToShipper = (load: RealLoad) => {
+    setLoadToSendInvoice(load);
+    setInvoiceConfirmOpen(true);
+  };
+
+  // Actually send the invoice after confirmation
+  const confirmSendInvoice = async () => {
+    if (!loadToSendInvoice) return;
+    
     try {
+      setIsSendingInvoice(true);
+      
       // First, check if invoice exists for this load
-      if (!load.invoiceId) {
+      if (!loadToSendInvoice.invoiceId) {
         toast({
           title: t('common.error'),
           description: "No invoice found for this load. Please contact support.",
@@ -456,16 +479,17 @@ export default function LoadQueuePage() {
       }
 
       // Send the invoice to shipper
-      const response = await apiRequest('POST', `/api/admin/invoices/${load.invoiceId}/send`);
+      const response = await apiRequest('POST', `/api/admin/invoices/${loadToSendInvoice.invoiceId}/send`);
 
       if (response) {
         toast({
           title: t('invoices.sent'),
-          description: `Invoice sent to shipper for ${formatLoadId(load)}`,
+          description: `Invoice sent to shipper for ${formatLoadId(loadToSendInvoice)}`,
         });
         
         // Refresh the loads list
         queryClient.invalidateQueries({ queryKey: ['/api/admin/loads'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/queue'] });
       }
     } catch (error: any) {
       console.error("Failed to send invoice:", error);
@@ -474,6 +498,10 @@ export default function LoadQueuePage() {
         description: error.message || "Failed to send invoice",
         variant: "destructive",
       });
+    } finally {
+      setIsSendingInvoice(false);
+      setInvoiceConfirmOpen(false);
+      setLoadToSendInvoice(null);
     }
   };
 
@@ -613,7 +641,7 @@ export default function LoadQueuePage() {
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <span className="font-mono text-sm font-medium">{formatLoadId(load)}</span>
                         <Badge variant="secondary" className={`text-xs ${load.status === 'invoice_created' ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'}`}>
-                          {load.status === 'invoice_created' ? t('invoices.invoice') : t('admin.ready')}
+                          {load.status === 'invoice_created' ? 'Invoice Ready' : 'Awarded'}
                         </Badge>
                       </div>
                       
@@ -1388,6 +1416,64 @@ export default function LoadQueuePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Invoice Send Confirmation Dialog */}
+      <AlertDialog open={invoiceConfirmOpen} onOpenChange={setInvoiceConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send Invoice to Shipper?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              {loadToSendInvoice && (
+                <>
+                  <p>
+                    You are about to send the invoice for load <span className="font-mono font-medium">{formatLoadId(loadToSendInvoice)}</span> to the shipper who originally posted this load.
+                  </p>
+                  <div className="bg-muted rounded-md p-3 mt-2 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Shipper:</span>
+                      <span className="font-medium">{loadToSendInvoice.shipperName || loadToSendInvoice.shipperCompanyName || 'Unknown'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Route:</span>
+                      <span className="font-medium">{loadToSendInvoice.pickupCity} → {loadToSendInvoice.dropoffCity}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Invoice Amount:</span>
+                      <span className="font-medium text-green-600">
+                        Rs. {Number(loadToSendInvoice.adminFinalPrice || loadToSendInvoice.shipperFixedPrice || loadToSendInvoice.adminPrice || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-sm mt-2">
+                    The shipper will receive a notification and can view/acknowledge the invoice.
+                  </p>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSendingInvoice}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmSendInvoice}
+              disabled={isSendingInvoice}
+              className="bg-emerald-600 hover:bg-emerald-700"
+              data-testid="button-confirm-send-invoice"
+            >
+              {isSendingInvoice ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Invoice
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

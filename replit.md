@@ -40,7 +40,16 @@ Supports simultaneous bidding from Solo Drivers and Enterprise Carriers on the s
 - **Bid Categorization**: API responses differentiate between `soloBids` and `enterpriseBids` for admin review
 - **Bid Acceptance**: Accepting a bid from any carrier automatically rejects all other pending bids across both types
 - **No Type Filtering**: The `checkCarrierEligibility` function does NOT filter by carrier type - eligibility is based on load status, posting mode, and carrier compliance only
-- **Counter-Offer Acceptance Flow**: When carrier accepts admin's counter offer, bid stays "countered" and load transitions to "awarded". Admin must then finalize using acceptBid workflow which creates invoice and rejects competing bids. The negotiated `bid.counterAmount` is automatically used for invoice pricing.
+- **Counter-Offer Acceptance Flow (FINALIZED)**: When carrier accepts admin's counter offer, the FULL workflow executes automatically:
+  1. Bid status set to "accepted" with negotiated `counterAmount` as final price
+  2. All competing bids auto-rejected (both pending and countered)
+  3. Invoice created automatically using the negotiated price
+  4. Unique 4-digit pickup ID generated for carrier verification
+  5. Shipment created immediately (carrier sees it in "My Shipments" and "Active Trips")
+  6. Load transitions to "assigned" status
+  7. Admin notified of completed workflow
+  - **Price Logic**: `counterAmount` (negotiated price) is used for Winning Carrier Bid, Carrier Payout, and invoice calculations
+  - **Endpoint**: `POST /api/carrier/bids/:bidId/accept` triggers the complete `acceptBid` workflow from `workflow-service.ts`
 
 ### Real-time Updates
 

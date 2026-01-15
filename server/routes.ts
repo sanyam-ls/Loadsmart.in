@@ -689,6 +689,15 @@ export async function registerRoutes(
         status: load.status,
       });
       
+      // Notify shipper that their load was submitted successfully
+      await storage.createNotification({
+        userId: user.id,
+        title: "Load Submitted",
+        message: `Your load LD-${String(shipperLoadNumber).padStart(3, '0')} from ${load.pickupCity} to ${load.dropoffCity} has been submitted for pricing.`,
+        type: "load",
+        loadId: load.id,
+      });
+      
       res.json(load);
     } catch (error) {
       if (error instanceof z.ZodError) {

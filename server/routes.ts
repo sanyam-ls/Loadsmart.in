@@ -4809,6 +4809,17 @@ export async function registerRoutes(
             }
           }
           
+          // Get admin contact info for shipper support
+          const admins = await storage.getAdmins();
+          const primaryAdmin = admins[0];
+          const adminContact = primaryAdmin ? {
+            name: primaryAdmin.companyName || primaryAdmin.username || 'FreightFlow Support',
+            phone: primaryAdmin.phone || '+91 9876543210',
+          } : {
+            name: 'FreightFlow Support',
+            phone: '+91 9876543210',
+          };
+
           return {
             ...invoice,
             pickupCity: load?.pickupCity,
@@ -4823,6 +4834,7 @@ export async function registerRoutes(
             carrier,
             driver,
             truck,
+            adminContact,
           };
         } catch (err) {
           console.error(`Error enriching invoice ${invoice.id}:`, err);

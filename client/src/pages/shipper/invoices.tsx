@@ -693,12 +693,12 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                                 {selectedInvoice.carrier.name}
                               </p>
                             </div>
-                            {selectedInvoice.carrier.phone && (
+                            {selectedInvoice.adminContact?.phone && (
                               <div>
-                                <Label className="text-xs text-muted-foreground">Phone</Label>
+                                <Label className="text-xs text-muted-foreground">Support Contact</Label>
                                 <p className="text-sm flex items-center gap-1">
                                   <Phone className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.carrier.phone}
+                                  {selectedInvoice.adminContact.phone}
                                 </p>
                               </div>
                             )}
@@ -748,12 +748,15 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                                   <User className="h-3 w-3 text-muted-foreground" />
                                   {selectedInvoice.driver.name}
                                 </p>
-                                {selectedInvoice.driver.phone && (
-                                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                    <Phone className="h-3 w-3" />
-                                    {selectedInvoice.driver.phone}
-                                  </p>
-                                )}
+                              </div>
+                            </div>
+                          )}
+                          {selectedInvoice.adminContact?.phone && (
+                            <div className="bg-background/50 rounded-md p-2">
+                              <Label className="text-xs text-muted-foreground">Support Contact</Label>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Phone className="h-3 w-3 text-muted-foreground" />
+                                <p className="text-sm">{selectedInvoice.adminContact.phone}</p>
                               </div>
                             </div>
                           )}

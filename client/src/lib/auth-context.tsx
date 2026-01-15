@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (userData: { username: string; email?: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string; city?: string; otpId?: string }): Promise<boolean> => {
+  const register = async (userData: { username: string; email?: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string; city?: string; otpId?: string }): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -74,17 +74,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         credentials: "include",
         body: JSON.stringify(userData),
       });
+      const data = await response.json();
       if (response.ok) {
-        const data = await response.json();
         // Clear any stale cached data from previous session
         queryClient.clear();
         setUser(data.user);
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error: data.error || "Registration failed" };
     } catch (error) {
       console.error("Registration failed:", error);
-      return false;
+      return { success: false, error: "Something went wrong. Please try again." };
     }
   };
 

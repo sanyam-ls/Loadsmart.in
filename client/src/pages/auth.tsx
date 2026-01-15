@@ -278,7 +278,7 @@ export default function AuthPage() {
 
     setIsLoading(true);
     try {
-      const success = await register({
+      const result = await register({
         username: data.username,
         email: data.email,
         password: data.password,
@@ -289,7 +289,7 @@ export default function AuthPage() {
         city: data.city,
         otpId: otpId || undefined,
       });
-      if (success) {
+      if (result.success) {
         // Shippers need to complete onboarding before they can post loads
         if (data.role === "shipper") {
           toast({ 
@@ -302,7 +302,7 @@ export default function AuthPage() {
           navigate("/");
         }
       } else {
-        toast({ title: "Registration failed", description: "Username or email may already exist.", variant: "destructive" });
+        toast({ title: "Registration failed", description: result.error || "Please try again.", variant: "destructive" });
       }
     } catch (error) {
       toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });

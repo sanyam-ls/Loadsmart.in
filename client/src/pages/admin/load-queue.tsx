@@ -153,6 +153,10 @@ interface RealLoad {
   submittedAt?: string;
   shipperLoadNumber?: number | null;
   adminReferenceNumber?: number | null;
+  invoiceId?: string;
+  assignedCarrierId?: string;
+  awardedBidId?: string;
+  pickupId?: string;
 }
 
 // Format load ID for display - Admin sees LD-1001, LD-1002, etc.
@@ -438,6 +442,41 @@ export default function LoadQueuePage() {
     setPricingDrawerOpen(true);
   };
 
+  // Send invoice to shipper for loads that are already carrier-finalized
+  const handleSendInvoiceToShipper = async (load: RealLoad) => {
+    try {
+      // First, check if invoice exists for this load
+      if (!load.invoiceId) {
+        toast({
+          title: t('common.error'),
+          description: "No invoice found for this load. Please contact support.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Send the invoice to shipper
+      const response = await apiRequest('POST', `/api/admin/invoices/${load.invoiceId}/send`);
+
+      if (response) {
+        toast({
+          title: t('invoices.sent'),
+          description: `Invoice sent to shipper for ${formatLoadId(load)}`,
+        });
+        
+        // Refresh the loads list
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/loads'] });
+      }
+    } catch (error: any) {
+      console.error("Failed to send invoice:", error);
+      toast({
+        title: t('common.error'),
+        description: error.message || "Failed to send invoice",
+        variant: "destructive",
+      });
+    }
+  };
+
   const openPricingDrawer = (load: MockLoad) => {
     setSelectedLoad(load);
     setPricingDrawerOpen(true);
@@ -617,7 +656,7 @@ export default function LoadQueuePage() {
                         <Button 
                           size="sm"
                           className="flex-1"
-                          onClick={() => openRealLoadPricingDrawer(load)}
+                          onClick={() => handleSendInvoiceToShipper(load)}
                           data-testid={`button-send-invoice-${load.id.slice(0, 8)}`}
                         >
                           <Send className="h-3 w-3 mr-1" />

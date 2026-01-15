@@ -1228,6 +1228,23 @@ export async function registerRoutes(
         finalPrice: String(finalAmount), // Update carrier payout to the negotiated price
       });
 
+      // Auto-reject all other bids on this load (both pending and countered, from any carrier type)
+      const otherBids = await storage.getBidsByLoad(bid.loadId);
+      for (const otherBid of otherBids) {
+        if (otherBid.id !== bidId && (otherBid.status === "pending" || otherBid.status === "countered")) {
+          await storage.updateBid(otherBid.id, { 
+            status: "rejected",
+            notes: `Auto-rejected: Bid awarded to ${user.companyName || user.username} at Rs. ${Number(finalAmount).toLocaleString('en-IN')}`
+          });
+        }
+      }
+
+      // Also mark this bid as "accepted" status
+      await storage.updateBid(bidId, { 
+        status: "accepted",
+        amount: String(finalAmount),
+      });
+
       // Notify admin - they need to create invoice for this awarded load
       const admins = await storage.getAdmins();
       for (const admin of admins) {

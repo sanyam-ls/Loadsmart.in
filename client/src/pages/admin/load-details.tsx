@@ -878,7 +878,7 @@ export default function AdminLoadDetailsPage() {
                             key={bid.bidId} 
                             data-testid={`row-solo-bid-${bid.bidId}`}
                             className="cursor-pointer hover-elevate"
-                            onClick={() => navigate(`/admin/negotiations?bidId=${bid.bidId}`)}
+                            onClick={() => setLocation(`/admin/negotiations?bidId=${bid.bidId}`)}
                           >
                             <TableCell className="font-medium">{bid.carrierName}</TableCell>
                             <TableCell className="font-semibold">{formatCurrency(bid.amount)}</TableCell>
@@ -938,7 +938,7 @@ export default function AdminLoadDetailsPage() {
                             key={bid.bidId} 
                             data-testid={`row-enterprise-bid-${bid.bidId}`}
                             className="cursor-pointer hover-elevate"
-                            onClick={() => navigate(`/admin/negotiations?bidId=${bid.bidId}`)}
+                            onClick={() => setLocation(`/admin/negotiations?bidId=${bid.bidId}`)}
                           >
                             <TableCell className="font-medium">{bid.carrierName}</TableCell>
                             <TableCell className="font-semibold">{formatCurrency(bid.amount)}</TableCell>
@@ -989,7 +989,7 @@ export default function AdminLoadDetailsPage() {
                       key={bid.bidId} 
                       data-testid={`row-bid-${bid.bidId}`}
                       className="cursor-pointer hover-elevate"
-                      onClick={() => navigate(`/admin/negotiations?bidId=${bid.bidId}`)}
+                      onClick={() => setLocation(`/admin/negotiations?bidId=${bid.bidId}`)}
                     >
                       <TableCell className="font-medium">{bid.carrierName}</TableCell>
                       <TableCell>

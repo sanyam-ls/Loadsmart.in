@@ -45,16 +45,21 @@ Supports simultaneous bidding from Solo Drivers and Enterprise Carriers on the s
   - `driver_id` is optional and can be set to "Assign Later" (unassigned)
   - Both fields are stored in the `bids` table and transferred to the shipment upon bid acceptance
   - Solo carriers don't see truck/driver selection as they operate single-truck businesses
-- **Counter-Offer Acceptance Flow (FINALIZED)**: When carrier accepts admin's counter offer, the FULL workflow executes automatically:
-  1. Bid status set to "accepted" with negotiated `counterAmount` as final price
-  2. All competing bids auto-rejected (both pending and countered)
-  3. Invoice created automatically using the negotiated price
-  4. Unique 4-digit pickup ID generated for carrier verification
-  5. Shipment created immediately (carrier sees it in "My Shipments" and "Active Trips")
-  6. Load transitions to "assigned" status
-  7. Admin notified of completed workflow
+- **Counter-Offer Acceptance Flow (BULLETPROOF)**: When carrier accepts admin's counter offer, the centralized `acceptBid()` workflow in `workflow-service.ts` executes atomically with comprehensive logging and idempotency:
+  1. **Step 1**: Validate bid exists and can be accepted (idempotent - returns success if already accepted)
+  2. **Step 2**: Validate load exists and is in valid bidding state
+  3. **Step 3**: Calculate final accepted amount (priority: explicit price > counterAmount > original bid)
+  4. **Step 4**: Update bid status to "accepted" with negotiated price
+  5. **Step 5**: Auto-reject all other pending/countered bids for this load
+  6. **Step 6**: Transition load state: `bidding → awarded → invoice_created`
+  7. **Step 7**: Generate unique 4-digit pickup ID and update load with carrier assignment
+  8. **Step 8**: Create invoice (if not already exists)
+  9. **Step 9**: Create shipment (if not already exists) with status "pickup_scheduled"
+  10. **Step 10**: Broadcast real-time updates to carrier and shipper
+  - **Idempotency**: Calling acceptBid multiple times with same bidId returns success without duplicating work
+  - **Error Resilience**: Each step logs progress; invoice/shipment creation failures don't block workflow
   - **Price Logic**: `counterAmount` (negotiated price) is used for Winning Carrier Bid, Carrier Payout, and invoice calculations
-  - **Endpoint**: `POST /api/carrier/bids/:bidId/accept` triggers the complete `acceptBid` workflow from `workflow-service.ts`
+  - **Endpoint**: `POST /api/carrier/bids/:bidId/accept` triggers the complete `acceptBid` workflow
 
 ### Real-time Updates
 

@@ -247,142 +247,243 @@ export async function acceptBid(
   bidId: string,
   acceptedBy: string,
   finalPrice?: number  // Optional: the final negotiated price from counter-offers
-): Promise<{ success: boolean; error?: string; bid?: Bid }> {
+): Promise<{ success: boolean; error?: string; bid?: Bid; shipmentId?: string; invoiceId?: string }> {
+  const logPrefix = `[acceptBid:${bidId.slice(0, 8)}]`;
+  console.log(`${logPrefix} Starting bid acceptance workflow...`);
+  
+  // =========================================================================
+  // STEP 1: VALIDATE BID EXISTS AND CAN BE ACCEPTED
+  // =========================================================================
   const bid = await storage.getBid(bidId);
   if (!bid) {
+    console.error(`${logPrefix} Bid not found`);
     return { success: false, error: "Bid not found" };
   }
 
-  const currentStatus = (bid.status || "pending") as BidStatus;
-  if (!canTransitionBid(currentStatus, "accepted")) {
+  const currentBidStatus = (bid.status || "pending") as BidStatus;
+  
+  // Allow acceptance from pending OR countered status
+  if (currentBidStatus !== "pending" && currentBidStatus !== "countered") {
+    // If already accepted, return success (idempotent)
+    if (currentBidStatus === "accepted") {
+      console.log(`${logPrefix} Bid already accepted, returning success (idempotent)`);
+      return { success: true, bid };
+    }
+    console.error(`${logPrefix} Cannot accept bid in status: ${currentBidStatus}`);
     return { 
       success: false, 
-      error: `Cannot accept bid in status: ${currentStatus}` 
+      error: `Cannot accept bid in status: ${currentBidStatus}` 
     };
   }
 
-  // Use the final negotiated price if provided, otherwise use counter amount (if countered), otherwise original bid
-  // This ensures negotiated counter offers are properly used when carrier accepted the counter
+  // =========================================================================
+  // STEP 2: VALIDATE LOAD EXISTS AND IS IN VALID STATE
+  // =========================================================================
+  const load = await storage.getLoad(bid.loadId);
+  if (!load) {
+    console.error(`${logPrefix} Load not found: ${bid.loadId}`);
+    return { success: false, error: "Load not found" };
+  }
+
+  const currentLoadStatus = (load.status || "draft") as LoadStatus;
+  const validBiddingStates: LoadStatus[] = ["posted_to_carriers", "open_for_bid", "counter_received"];
+  const alreadyAwardedStates: LoadStatus[] = ["awarded", "invoice_created", "invoice_sent"];
+  
+  // If already in awarded/invoice states, check if this bid is the awarded one (idempotent)
+  if (alreadyAwardedStates.includes(currentLoadStatus)) {
+    if (load.awardedBidId === bidId) {
+      console.log(`${logPrefix} Load already awarded to this bid, returning success (idempotent)`);
+      return { success: true, bid };
+    } else {
+      console.error(`${logPrefix} Load already awarded to different bid: ${load.awardedBidId}`);
+      return { success: false, error: "Load already awarded to another carrier" };
+    }
+  }
+
+  if (!validBiddingStates.includes(currentLoadStatus)) {
+    console.error(`${logPrefix} Load not in biddable state: ${currentLoadStatus}`);
+    return { success: false, error: `Load not open for bidding (status: ${currentLoadStatus})` };
+  }
+
+  // =========================================================================
+  // STEP 3: CALCULATE FINAL ACCEPTED AMOUNT
+  // =========================================================================
+  // Priority: explicit finalPrice > counterAmount (if countered) > original bid amount
   const acceptedAmount = finalPrice != null 
     ? finalPrice.toString() 
-    : (bid.counterAmount && bid.status === "countered") 
+    : (bid.counterAmount && currentBidStatus === "countered") 
       ? bid.counterAmount.toString() 
       : bid.amount;
+  
+  console.log(`${logPrefix} Accepted amount: Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
 
-  // Accept this bid (use only existing schema fields)
+  // =========================================================================
+  // STEP 4: UPDATE BID STATUS TO ACCEPTED
+  // =========================================================================
+  console.log(`${logPrefix} Step 4: Updating bid status to accepted...`);
   const updatedBid = await storage.updateBid(bidId, { 
     status: "accepted",
-    amount: acceptedAmount,  // Update bid amount to reflect negotiated price
+    amount: acceptedAmount,
     notes: `Accepted by ${acceptedBy} at ${new Date().toISOString()} for Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`
   });
 
-  // Auto-close all other bids for this load (both pending and countered, from any carrier type)
+  // =========================================================================
+  // STEP 5: AUTO-REJECT ALL OTHER BIDS FOR THIS LOAD
+  // =========================================================================
+  console.log(`${logPrefix} Step 5: Auto-rejecting other bids...`);
   const otherBids = await storage.getBidsByLoad(bid.loadId);
+  let rejectedCount = 0;
   for (const otherBid of otherBids) {
     if (otherBid.id !== bidId && (otherBid.status === "pending" || otherBid.status === "countered")) {
       await storage.updateBid(otherBid.id, { 
         status: "rejected",
         notes: `Auto-rejected: Another bid was accepted (${otherBid.carrierType || "enterprise"} carrier bid closed)`
       });
+      rejectedCount++;
     }
   }
+  console.log(`${logPrefix} Rejected ${rejectedCount} other bids`);
 
-  // Transition load through proper state flow and create invoice
-  // Flow: counter_received → awarded → invoice_created
-  // Shipment will be created later when shipper acknowledges the invoice
-  const load = await storage.getLoad(bid.loadId);
-  if (load) {
-    const currentStatus = (load.status || "draft") as LoadStatus;
-    
-    // First transition to awarded if coming from bidding states
-    const biddingStates: LoadStatus[] = ["posted_to_carriers", "open_for_bid", "counter_received"];
-    if (biddingStates.includes(currentStatus)) {
-      await transitionLoadState(bid.loadId, "awarded", acceptedBy, `Bid ${bidId} accepted`);
-    }
-    
-    // Then transition to invoice_created
-    await transitionLoadState(bid.loadId, "invoice_created", acceptedBy, `Invoice created for Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
-    
-    // Generate unique 4-digit pickup ID for carrier verification
-    const pickupId = await storage.generateUniquePickupId();
-    
-    await storage.updateLoad(bid.loadId, {
-      assignedCarrierId: bid.carrierId,
-      assignedTruckId: bid.truckId,
-      finalPrice: acceptedAmount,  // Use the negotiated final price
-      awardedBidId: bidId,
-      pickupId: pickupId,  // Unique 4-digit code for carrier pickup
-    });
-
-    // Note: Shipment is NOT created here - it will be created when shipper acknowledges invoice
-
-    // Create invoice now that carrier is finalized (if not already exists)
-    try {
-      const existingInvoice = await storage.getInvoiceByLoad(load.id);
-      if (!existingInvoice) {
-        const invoiceNumber = await storage.generateInvoiceNumber();
-        const finalAmount = acceptedAmount || load.adminFinalPrice || "0";  // Use negotiated price
-        
-        // Calculate advance payment from load (no GST applied - total equals subtotal)
-        const advancePercent = load.advancePaymentPercent || 0;
-        const advanceAmount = advancePercent > 0 ? (parseFloat(finalAmount) * (advancePercent / 100)).toFixed(2) : null;
-        const balanceOnDelivery = advancePercent > 0 ? (parseFloat(finalAmount) - parseFloat(advanceAmount || "0")).toFixed(2) : null;
-        
-        const newInvoice = await storage.createInvoice({
-          invoiceNumber,
-          loadId: load.id,
-          shipperId: load.shipperId,
-          adminId: acceptedBy,
-          subtotal: finalAmount,
-          fuelSurcharge: "0",
-          tollCharges: "0",
-          handlingFee: "0",
-          insuranceFee: "0",
-          discountAmount: "0",
-          discountReason: null,
-          taxPercent: "0",
-          taxAmount: "0",
-          totalAmount: finalAmount,
-          advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
-          advancePaymentAmount: advanceAmount,
-          balanceOnDelivery: balanceOnDelivery,
-          paymentTerms: "Net 30",
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          notes: `Invoice generated for load ${load.id} after carrier finalization`,
-          lineItems: [{
-            description: `Freight services: ${load.pickupCity} to ${load.dropoffCity}`,
-            quantity: 1,
-            rate: finalAmount,
-            amount: finalAmount
-          }],
-          status: "draft",
-        });
-        
-        // Link the invoice to the load
-        await storage.updateLoad(bid.loadId, {
-          invoiceId: newInvoice.id,
-        });
-      }
-    } catch (invoiceError) {
-      console.error("Failed to create invoice after bid acceptance:", invoiceError);
-    }
-
-    broadcastBidAccepted(bid.carrierId, load.id, {
-      id: bidId,
-      amount: bid.amount,
-      loadId: load.id,
-    });
-
-    // Broadcast invoice_created status - shipment created after shipper acknowledges
-    broadcastLoadUpdated(load.id, load.shipperId, "invoice_created", "invoice_created", {
-      id: load.id,
-      status: "invoice_created",
-      pickupCity: load.pickupCity,
-      dropoffCity: load.dropoffCity,
-    });
+  // =========================================================================
+  // STEP 6: TRANSITION LOAD STATE: bidding → awarded → invoice_created
+  // =========================================================================
+  console.log(`${logPrefix} Step 6: Transitioning load state...`);
+  
+  // First transition to awarded
+  const awardedResult = await transitionLoadState(bid.loadId, "awarded", acceptedBy, `Bid ${bidId} accepted at Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
+  if (!awardedResult.success) {
+    console.error(`${logPrefix} Failed to transition to awarded: ${awardedResult.error}`);
+    // Continue anyway - the state might have already been transitioned
+  }
+  
+  // Then transition to invoice_created
+  const invoiceCreatedResult = await transitionLoadState(bid.loadId, "invoice_created", acceptedBy, `Invoice created for Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
+  if (!invoiceCreatedResult.success) {
+    console.error(`${logPrefix} Failed to transition to invoice_created: ${invoiceCreatedResult.error}`);
   }
 
-  return { success: true, bid: updatedBid };
+  // =========================================================================
+  // STEP 7: GENERATE PICKUP ID AND UPDATE LOAD
+  // =========================================================================
+  console.log(`${logPrefix} Step 7: Generating pickup ID and updating load...`);
+  const pickupId = await storage.generateUniquePickupId();
+  
+  await storage.updateLoad(bid.loadId, {
+    assignedCarrierId: bid.carrierId,
+    assignedTruckId: bid.truckId,
+    finalPrice: acceptedAmount,
+    awardedBidId: bidId,
+    pickupId: pickupId,
+    awardedAt: new Date(),
+  });
+  console.log(`${logPrefix} Load updated with pickupId: ${pickupId}, carrierId: ${bid.carrierId.slice(0, 8)}`);
+
+  // =========================================================================
+  // STEP 8: CREATE INVOICE (if not already exists)
+  // =========================================================================
+  console.log(`${logPrefix} Step 8: Creating invoice...`);
+  let invoiceId: string | undefined;
+  try {
+    const existingInvoice = await storage.getInvoiceByLoad(load.id);
+    if (existingInvoice) {
+      invoiceId = existingInvoice.id;
+      console.log(`${logPrefix} Invoice already exists: ${invoiceId.slice(0, 8)}`);
+    } else {
+      const invoiceNumber = await storage.generateInvoiceNumber();
+      const finalAmount = acceptedAmount || load.adminFinalPrice || "0";
+      
+      const advancePercent = load.advancePaymentPercent || 0;
+      const advanceAmount = advancePercent > 0 ? (parseFloat(finalAmount) * (advancePercent / 100)).toFixed(2) : null;
+      const balanceOnDelivery = advancePercent > 0 ? (parseFloat(finalAmount) - parseFloat(advanceAmount || "0")).toFixed(2) : null;
+      
+      const newInvoice = await storage.createInvoice({
+        invoiceNumber,
+        loadId: load.id,
+        shipperId: load.shipperId,
+        adminId: acceptedBy,
+        subtotal: finalAmount,
+        fuelSurcharge: "0",
+        tollCharges: "0",
+        handlingFee: "0",
+        insuranceFee: "0",
+        discountAmount: "0",
+        discountReason: null,
+        taxPercent: "0",
+        taxAmount: "0",
+        totalAmount: finalAmount,
+        advancePaymentPercent: advancePercent > 0 ? advancePercent : null,
+        advancePaymentAmount: advanceAmount,
+        balanceOnDelivery: balanceOnDelivery,
+        paymentTerms: "Net 30",
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        notes: `Invoice generated for load ${load.id} after carrier finalization`,
+        lineItems: [{
+          description: `Freight services: ${load.pickupCity} to ${load.dropoffCity}`,
+          quantity: 1,
+          rate: finalAmount,
+          amount: finalAmount
+        }],
+        status: "draft",
+      });
+      
+      invoiceId = newInvoice.id;
+      console.log(`${logPrefix} Invoice created: ${invoiceNumber} (${invoiceId.slice(0, 8)})`);
+      
+      // Link the invoice to the load
+      await storage.updateLoad(bid.loadId, {
+        invoiceId: newInvoice.id,
+      });
+    }
+  } catch (invoiceError) {
+    console.error(`${logPrefix} Failed to create invoice:`, invoiceError);
+    // Don't fail the whole workflow - invoice can be created manually
+  }
+
+  // =========================================================================
+  // STEP 9: CREATE SHIPMENT (if not already exists)
+  // =========================================================================
+  console.log(`${logPrefix} Step 9: Creating shipment...`);
+  let shipmentId: string | undefined;
+  try {
+    const existingShipment = await storage.getShipmentByLoad(bid.loadId);
+    if (existingShipment) {
+      shipmentId = existingShipment.id;
+      console.log(`${logPrefix} Shipment already exists: ${shipmentId.slice(0, 8)}`);
+    } else {
+      const newShipment = await storage.createShipment({
+        loadId: bid.loadId,
+        carrierId: bid.carrierId,
+        truckId: bid.truckId || null,
+        driverId: bid.driverId || null,
+        status: "pickup_scheduled",
+      });
+      shipmentId = newShipment.id;
+      console.log(`${logPrefix} Shipment created: ${shipmentId.slice(0, 8)}`);
+    }
+  } catch (shipmentError) {
+    console.error(`${logPrefix} Failed to create shipment:`, shipmentError);
+    // Don't fail the whole workflow - shipment can be created manually
+  }
+
+  // =========================================================================
+  // STEP 10: BROADCAST REAL-TIME UPDATES
+  // =========================================================================
+  console.log(`${logPrefix} Step 10: Broadcasting updates...`);
+  broadcastBidAccepted(bid.carrierId, load.id, {
+    id: bidId,
+    amount: acceptedAmount,
+    loadId: load.id,
+  });
+
+  broadcastLoadUpdated(load.id, load.shipperId, "invoice_created", "invoice_created", {
+    id: load.id,
+    status: "invoice_created",
+    pickupCity: load.pickupCity,
+    dropoffCity: load.dropoffCity,
+  });
+
+  console.log(`${logPrefix} Bid acceptance workflow completed successfully!`);
+  return { success: true, bid: updatedBid, shipmentId, invoiceId };
 }
 
 export async function rejectBid(

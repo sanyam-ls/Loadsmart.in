@@ -1180,12 +1180,11 @@ export async function registerRoutes(
         finalAmount = latestAdminOffer || bid.counterAmount || bid.amount;
       }
       
-      // Record carrier acceptance but keep bid in "countered" status for admin to finalize
-      // Admin will call acceptBid to complete the workflow and create invoice
+      // Record the accepted amount before calling acceptBid workflow
+      // The acceptBid workflow will update status and complete the full workflow
       await storage.updateBid(bidId, { 
         adminMediated: true,  // Flag that carrier has responded to admin counter
         counterAmount: finalAmount, // Ensure counterAmount reflects the accepted price
-        notes: `Carrier accepted counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')} at ${new Date().toISOString()}. Awaiting admin confirmation.`,
       });
 
       // Create negotiation message for acceptance
@@ -1209,7 +1208,8 @@ export async function registerRoutes(
       });
 
       // Use the full acceptBid workflow from workflow-service.ts
-      // This handles: bid acceptance, rejecting other bids, load state transition, invoice creation, pickup ID
+      // This handles ALL steps: bid acceptance, rejecting other bids, load state transition, 
+      // invoice creation, pickup ID generation, shipment creation, and broadcast notifications
       const acceptResult = await acceptBid(bidId, user.id, Number(finalAmount));
       
       if (!acceptResult.success) {
@@ -1217,30 +1217,10 @@ export async function registerRoutes(
         return res.status(400).json({ error: acceptResult.error || "Failed to complete bid acceptance workflow" });
       }
       
-      // Update awarded timestamp
-      await storage.updateLoad(bid.loadId, {
-        awardedAt: new Date(),
-      });
-
-      // Create shipment immediately after carrier accepts (same as when admin accepts and sends invoice)
-      try {
-        const existingShipment = await storage.getShipmentByLoad(bid.loadId);
-        if (!existingShipment) {
-          const refreshedLoad = await storage.getLoad(bid.loadId);
-          if (refreshedLoad) {
-            await storage.createShipment({
-              loadId: bid.loadId,
-              carrierId: user.id,
-              truckId: bid.truckId || null,
-              driverId: bid.driverId || null,
-              status: "pickup_scheduled",
-            });
-            console.log(`Shipment created for load ${bid.loadId} after carrier accepted bid`);
-          }
-        }
-      } catch (shipmentError) {
-        console.error("Failed to create shipment after carrier acceptance:", shipmentError);
-      }
+      console.log(`[CarrierAccept] Workflow completed - Shipment: ${acceptResult.shipmentId?.slice(0, 8)}, Invoice: ${acceptResult.invoiceId?.slice(0, 8)}`);
+      
+      // Note: Shipment and invoice are now created inside acceptBid workflow
+      // No need for duplicate creation here
 
       // Notify admin about the completed bid acceptance
       const admins = await storage.getAdmins();

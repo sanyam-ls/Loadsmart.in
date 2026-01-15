@@ -287,11 +287,21 @@ export async function acceptBid(
     }
   }
 
-  // Transition load to invoice_created state and create invoice
+  // Transition load through proper state flow and create invoice
+  // Flow: counter_received → awarded → invoice_created
   // Shipment will be created later when shipper acknowledges the invoice
   const load = await storage.getLoad(bid.loadId);
   if (load) {
-    await transitionLoadState(bid.loadId, "invoice_created", acceptedBy, `Bid ${bidId} accepted at Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
+    const currentStatus = (load.status || "draft") as LoadStatus;
+    
+    // First transition to awarded if coming from bidding states
+    const biddingStates: LoadStatus[] = ["posted_to_carriers", "open_for_bid", "counter_received"];
+    if (biddingStates.includes(currentStatus)) {
+      await transitionLoadState(bid.loadId, "awarded", acceptedBy, `Bid ${bidId} accepted`);
+    }
+    
+    // Then transition to invoice_created
+    await transitionLoadState(bid.loadId, "invoice_created", acceptedBy, `Invoice created for Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
     
     // Generate unique 4-digit pickup ID for carrier verification
     const pickupId = await storage.generateUniquePickupId();

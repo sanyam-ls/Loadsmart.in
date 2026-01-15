@@ -63,7 +63,7 @@ New shippers must complete a business verification process before posting loads.
 - **Document Upload**: The Documents tab uses `DocumentUpload` component (`client/src/components/DocumentUpload.tsx`) for direct file uploads to Replit Object Storage. Uploads use presigned URLs via `/api/uploads/request-url`, supporting images (JPEG, PNG, GIF, WebP) and PDF files up to 10MB. Uploaded file paths auto-save via the draft mechanism.
 - **Admin Review Queue**: Admin page at `/admin/onboarding` with status-based filtering (Draft, Pending, Under Review, Approved, Rejected, On Hold), search, and detailed review dialog showing all onboarding data across tabs.
 - **Status Flow**: `draft → pending → under_review → (approved | rejected | on_hold)`. Draft represents newly registered shippers who haven't submitted. Shippers can update if status is `on_hold` or `rejected`.
-- **Approval Integration**: When approved, sets `user.isVerified=true` to enable platform access.
+- **Approval Integration**: When approved, sets `user.isVerified=true` and syncs business data to users table (legalCompanyName→companyName, registeredAddress→companyAddress, contactPersonPhone→phone).
 - **Gate Enforcement**: Shippers must be verified (`isVerified=true`) before posting loads.
 - **Full i18n**: All onboarding strings translated in English, Hindi, Punjabi, Marathi, and Tamil.
 
@@ -76,7 +76,7 @@ New carriers must complete a verification process before accessing the marketpla
 - **Auto-Save**: Changes auto-save for draft, on_hold, and rejected statuses via `PATCH /api/carrier/onboarding/draft`.
 - **Document Upload**: Uses `DocumentUpload` component for direct file uploads to Replit Object Storage.
 - **Status Flow**: `draft → pending → under_review → (approved | rejected | on_hold)`. Carriers can update if status is `on_hold` or `rejected`.
-- **Approval Integration**: When approved, sets `user.isVerified=true`, enabling marketplace access.
+- **Approval Integration**: When approved, sets `user.isVerified=true` and syncs business data to users table (businessAddress→companyAddress for enterprise carriers).
 - **Gate Enforcement**: Carriers must be verified (`isVerified=true`) before accessing loads or placing bids.
 - **Full i18n**: All onboarding strings translated in English (other languages pending).
 

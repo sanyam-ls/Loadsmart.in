@@ -103,6 +103,12 @@ type Bid = {
     licensePlate: string;
     truckType: string;
   };
+  driver?: {
+    id: string;
+    name: string;
+    phone?: string;
+    licenseNumber?: string;
+  };
 };
 
 type LoadWithBids = {
@@ -874,10 +880,30 @@ export default function AdminNegotiationsPage() {
                         <p className="font-medium">{detailBid.truck.licensePlate}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Type:</span>
+                        <span className="text-muted-foreground">Truck Type:</span>
                         <p className="font-medium">{detailBid.truck.truckType}</p>
                       </div>
                     </>
+                  )}
+                  {detailBid.driver && (
+                    <>
+                      <div>
+                        <span className="text-muted-foreground">Assigned Driver:</span>
+                        <p className="font-medium">{detailBid.driver.name}</p>
+                      </div>
+                      {detailBid.driver.phone && (
+                        <div>
+                          <span className="text-muted-foreground">Driver Phone:</span>
+                          <p className="font-medium">{detailBid.driver.phone}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {!detailBid.driver && detailBid.carrier?.carrierType === "enterprise" && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Assigned Driver:</span>
+                      <p className="font-medium text-amber-600">To be assigned later</p>
+                    </div>
                   )}
                 </div>
               </div>

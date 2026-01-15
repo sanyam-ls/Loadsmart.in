@@ -984,6 +984,7 @@ export async function registerRoutes(
           const carrier = await storage.getUser(bid.carrierId);
           const load = await storage.getLoad(bid.loadId);
           const truck = bid.truckId ? await storage.getTruck(bid.truckId) : null;
+          const driver = bid.driverId ? await storage.getDriver(bid.driverId) : null;
           const carrierProfile = await storage.getCarrierProfile(bid.carrierId);
           const { password: _, ...carrierWithoutPassword } = carrier || {};
           return { 
@@ -993,7 +994,8 @@ export async function registerRoutes(
               carrierType: carrierProfile?.carrierType || "enterprise"
             }, 
             load,
-            truck
+            truck,
+            driver
           };
         })
       );

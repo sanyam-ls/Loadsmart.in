@@ -51,6 +51,46 @@ import {
 
 type SortOption = "newest" | "oldest" | "expiring" | "largest";
 
+// Shipper-specific document categories (excluding carrier documents)
+const shipperDocumentCategories: DocumentCategory[] = [
+  "pod", "bol", "invoice", "lr", "eway_bill", "weight_slip", "photos", "other"
+];
+
+// Categorized groups for shipper documents
+const shipperDocumentGroups = {
+  shipment: {
+    label: "Shipment Documents",
+    icon: "truck",
+    categories: ["pod", "bol", "lr"] as DocumentCategory[],
+  },
+  compliance: {
+    label: "Compliance & Customs",
+    icon: "shield",
+    categories: ["eway_bill", "weight_slip"] as DocumentCategory[],
+  },
+  financial: {
+    label: "Financial",
+    icon: "receipt",
+    categories: ["invoice"] as DocumentCategory[],
+  },
+  media: {
+    label: "Photos & Other",
+    icon: "image",
+    categories: ["photos", "other"] as DocumentCategory[],
+  },
+};
+
+const shipperCategoryLabels: Record<string, string> = {
+  pod: "Proof of Delivery",
+  bol: "Bill of Lading",
+  invoice: "Invoice",
+  lr: "LR / Consignment Note",
+  eway_bill: "E-way Bill",
+  weight_slip: "Weight Slip",
+  photos: "Photos",
+  other: "Other",
+};
+
 export default function DocumentsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -96,6 +136,8 @@ export default function DocumentsPage() {
 
   const filteredAndSortedDocs = useMemo(() => {
     let result = documents.filter(doc => {
+      // Only show shipper-relevant document categories
+      const isShipperCategory = shipperDocumentCategories.includes(doc.category);
       const matchesSearch = 
         doc.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         doc.loadId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -103,7 +145,7 @@ export default function DocumentsPage() {
       const matchesType = typeFilter === "all" || doc.category === typeFilter;
       const matchesStatus = statusFilter === "all" || doc.status === statusFilter;
       const matchesLoad = loadFilter === "all" || doc.loadId === loadFilter;
-      return matchesSearch && matchesType && matchesStatus && matchesLoad;
+      return isShipperCategory && matchesSearch && matchesType && matchesStatus && matchesLoad;
     });
 
     result.sort((a, b) => {
@@ -296,8 +338,13 @@ export default function DocumentsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('common.all')} {t('common.type')}</SelectItem>
-              {Object.entries(documentCategoryLabels).map(([key, label]) => (
-                <SelectItem key={key} value={key}>{label}</SelectItem>
+              {Object.entries(shipperDocumentGroups).map(([groupKey, group]) => (
+                <div key={groupKey}>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group.label}</div>
+                  {group.categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{shipperCategoryLabels[cat]}</SelectItem>
+                  ))}
+                </div>
               ))}
             </SelectContent>
           </Select>
@@ -387,7 +434,7 @@ export default function DocumentsPage() {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between gap-2">
                     <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                      {documentCategoryLabels[doc.category]}
+                      {shipperCategoryLabels[doc.category] || documentCategoryLabels[doc.category]}
                     </Badge>
                     {getStatusBadge(doc.status)}
                   </div>
@@ -521,8 +568,13 @@ export default function DocumentsPage() {
                     <SelectValue placeholder={t('documents.selectDocumentType')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(documentCategoryLabels).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    {Object.entries(shipperDocumentGroups).map(([groupKey, group]) => (
+                      <div key={groupKey}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group.label}</div>
+                        {group.categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{shipperCategoryLabels[cat]}</SelectItem>
+                        ))}
+                      </div>
                     ))}
                   </SelectContent>
                 </Select>
@@ -652,7 +704,7 @@ export default function DocumentsPage() {
                     </div>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>Category: {documentCategoryLabels[selectedDocument.category]}</p>
+                    <p>Category: {shipperCategoryLabels[selectedDocument.category] || documentCategoryLabels[selectedDocument.category]}</p>
                     <p>Uploaded: {formatDate(selectedDocument.uploadedDate)}</p>
                     {selectedDocument.loadId && <p>Load: {selectedDocument.loadId}</p>}
                     {selectedDocument.notes && <p>Notes: {selectedDocument.notes}</p>}
@@ -717,7 +769,7 @@ export default function DocumentsPage() {
                       <Separator />
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">{t('common.type')}</span>
-                        <Badge variant="secondary">{documentCategoryLabels[selectedDocument.category]}</Badge>
+                        <Badge variant="secondary">{shipperCategoryLabels[selectedDocument.category] || documentCategoryLabels[selectedDocument.category]}</Badge>
                       </div>
                       <Separator />
                       <div className="flex items-center justify-between">

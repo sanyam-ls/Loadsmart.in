@@ -948,7 +948,8 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   const shipperData = useMockData();
   const documentVault = useDocumentVault();
   
-  const [users, setUsers] = useState<AdminUser[]>(enterpriseUsers);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [adminLoads, setAdminLoads] = useState<AdminLoad[]>(enterpriseLoads);
   const [carriers, setCarriers] = useState<AdminCarrier[]>(enterpriseCarriers);
   const [verificationQueue, setVerificationQueue] = useState<VerificationRequest[]>(enterpriseVerifications);
@@ -963,6 +964,45 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => { usersRef.current = users; }, [users]);
   useEffect(() => { carriersRef.current = carriers; }, [carriers]);
   useEffect(() => { adminLoadsRef.current = adminLoads; }, [adminLoads]);
+
+  // Fetch real users from database API
+  const fetchUsersFromAPI = useCallback(async () => {
+    try {
+      setUsersLoading(true);
+      const response = await fetch("/api/admin/users", { credentials: "include" });
+      if (response.ok) {
+        const apiUsers = await response.json();
+        const mappedUsers: AdminUser[] = apiUsers.map((u: any) => ({
+          userId: u.id,
+          name: u.name || u.fullName || u.username,
+          email: u.email || "",
+          company: u.company || u.companyName || "",
+          role: u.role as AdminUser["role"],
+          status: (u.status || "active") as AdminUser["status"],
+          dateJoined: new Date(u.dateJoined || u.createdAt),
+          phone: u.phone || "",
+          isVerified: u.isVerified || false,
+          lastActive: u.lastActive ? new Date(u.lastActive) : undefined,
+          region: u.region || "India",
+        }));
+        setUsers(mappedUsers);
+      } else {
+        // Fallback to mock data if API fails (e.g., not logged in as admin)
+        console.log("Using fallback user data - API returned:", response.status);
+        setUsers(enterpriseUsers);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users from API:", error);
+      setUsers(enterpriseUsers);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  // Fetch users on mount
+  useEffect(() => {
+    fetchUsersFromAPI();
+  }, [fetchUsersFromAPI]);
 
   const syncCarriersFromSource = useCallback(() => {
     const sourceCarriers: AdminCarrier[] = mockCarriers.map((c, idx) => ({
@@ -1230,12 +1270,13 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   const refreshFromShipperPortal = useCallback(() => {
     syncLoadsFromShipper();
     syncCarriersFromSource();
+    fetchUsersFromAPI(); // Refresh users from database
     addActivity({
       type: "load",
       message: "Data synchronized with Shipper Portal",
       severity: "info",
     });
-  }, [syncLoadsFromShipper, syncCarriersFromSource]);
+  }, [syncLoadsFromShipper, syncCarriersFromSource, fetchUsersFromAPI]);
 
   const syncToShipperPortal = useCallback((loadId: string, updates: Partial<MockLoad>) => {
     shipperData.updateLoad(loadId, updates);

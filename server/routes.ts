@@ -1938,6 +1938,38 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Get all users
+  app.get("/api/admin/users", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const allUsers = await storage.getAllUsers();
+      
+      // Remove passwords and format for frontend
+      const usersWithoutPasswords = allUsers.map(u => {
+        const { password: _, ...userWithoutPassword } = u;
+        return {
+          ...userWithoutPassword,
+          // Map database fields to frontend expected format
+          name: u.username,
+          company: u.companyName || "",
+          dateJoined: u.createdAt,
+          phone: u.phone || "",
+          status: u.isVerified ? "active" : "pending", // Derive status from isVerified
+          region: "India", // Default region
+        };
+      });
+
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Get all users error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Admin: Create user (for admin to add users manually)
   app.post("/api/admin/users", requireAuth, async (req, res) => {
     try {

@@ -1206,53 +1206,58 @@ export async function registerRoutes(
         lastActivityAt: new Date(),
       });
 
-      // Use workflow-service transitionLoadState for proper lifecycle validation and audit logging
-      // This respects Admin-as-Mediator by keeping invoice creation under admin control
-      const transitionResult = await transitionLoadState(
-        bid.loadId,
-        "awarded",
-        user.id,
-        `Carrier ${user.companyName || user.username} accepted counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')}`
-      );
+      // Use the full acceptBid workflow from workflow-service.ts
+      // This handles: bid acceptance, rejecting other bids, load state transition, invoice creation, pickup ID
+      const acceptResult = await acceptBid(bidId, user.id, Number(finalAmount));
       
-      if (!transitionResult.success) {
-        console.error("Failed to transition load to awarded:", transitionResult.error);
-        return res.status(400).json({ error: transitionResult.error || "Failed to transition load status" });
+      if (!acceptResult.success) {
+        console.error("Failed to accept bid via workflow:", acceptResult.error);
+        return res.status(400).json({ error: acceptResult.error || "Failed to complete bid acceptance workflow" });
       }
       
-      // Update load with carrier assignment info and negotiated price
+      // Update awarded timestamp
       await storage.updateLoad(bid.loadId, {
-        assignedCarrierId: user.id,
-        awardedBidId: bidId,
         awardedAt: new Date(),
-        finalPrice: String(finalAmount), // Update carrier payout to the negotiated price
       });
 
-      // Auto-reject all other bids on this load (both pending and countered, from any carrier type)
-      const otherBids = await storage.getBidsByLoad(bid.loadId);
-      for (const otherBid of otherBids) {
-        if (otherBid.id !== bidId && (otherBid.status === "pending" || otherBid.status === "countered")) {
-          await storage.updateBid(otherBid.id, { 
-            status: "rejected",
-            notes: `Auto-rejected: Bid awarded to ${user.companyName || user.username} at Rs. ${Number(finalAmount).toLocaleString('en-IN')}`
-          });
+      // Create shipment immediately after carrier accepts (same as when admin accepts and sends invoice)
+      try {
+        const existingShipment = await storage.getShipmentByLoad(bid.loadId);
+        if (!existingShipment) {
+          const refreshedLoad = await storage.getLoad(bid.loadId);
+          if (refreshedLoad) {
+            const shipmentNumber = await storage.generateShipmentNumber();
+            await storage.createShipment({
+              shipmentNumber,
+              loadId: bid.loadId,
+              carrierId: user.id,
+              shipperId: refreshedLoad.shipperId,
+              truckId: bid.truckId || null,
+              driverId: null,
+              status: "assigned",
+              pickupLocation: refreshedLoad.pickupAddress || refreshedLoad.pickupCity,
+              dropoffLocation: refreshedLoad.dropoffAddress || refreshedLoad.dropoffCity,
+              estimatedPickupDate: refreshedLoad.pickupDate || new Date(),
+              currentLatitude: null,
+              currentLongitude: null,
+            });
+            
+            // Also transition load to "assigned" status for consistency
+            await transitionLoadState(bid.loadId, "assigned", user.id, "Shipment created after carrier accepted bid");
+          }
         }
+      } catch (shipmentError) {
+        console.error("Failed to create shipment after carrier acceptance:", shipmentError);
       }
 
-      // Also mark this bid as "accepted" status
-      await storage.updateBid(bidId, { 
-        status: "accepted",
-        amount: String(finalAmount),
-      });
-
-      // Notify admin - they need to create invoice for this awarded load
+      // Notify admin about the completed bid acceptance
       const admins = await storage.getAdmins();
       for (const admin of admins) {
         await storage.createNotification({
           userId: admin.id,
-          title: "Action Required: Create Invoice for Awarded Load",
-          message: `${user.companyName || user.username} accepted the counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')} for load ${load.pickupCity} to ${load.dropoffCity}. Please create and send the invoice.`,
-          type: "action_required",
+          title: "Bid Accepted - Invoice Created",
+          message: `${user.companyName || user.username} accepted the counter offer of Rs. ${Number(finalAmount).toLocaleString('en-IN')} for load ${load.pickupCity} to ${load.dropoffCity}. Invoice has been generated automatically.`,
+          type: "info",
           contextType: "bid_accepted",
           relatedLoadId: bid.loadId,
           relatedBidId: bidId,

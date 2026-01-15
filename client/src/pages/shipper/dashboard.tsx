@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Package, DollarSign, Truck, TrendingUp, TrendingDown, Plus, ArrowRight, FileText, Receipt, Loader2, AlertTriangle } from "lucide-react";
+import { Package, DollarSign, Truck, TrendingUp, TrendingDown, Plus, ArrowRight, FileText, Receipt, Loader2, AlertTriangle, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatCard } from "@/components/stat-card";
 import { useAuth } from "@/lib/auth-context";
 import { useLoads, useInvoices, useNotifications } from "@/lib/api-hooks";
-import { useDocumentVault } from "@/lib/document-vault-store";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -23,6 +22,31 @@ import {
   ResponsiveContainer 
 } from "recharts";
 import type { Load, Invoice } from "@shared/schema";
+
+interface TrackedShipment {
+  id: string;
+  loadId: string;
+  currentStage: string;
+  progress: number;
+  load: {
+    shipperLoadNumber?: number | null;
+    adminReferenceNumber?: number | null;
+    pickupCity: string;
+    dropoffCity: string;
+  } | null;
+  carrier: {
+    companyName: string;
+  } | null;
+  documents: Array<{ id: string; documentType: string; status: string }>;
+}
+
+interface ApiDocument {
+  id: string;
+  documentType: string;
+  fileName: string;
+  createdAt: string;
+  load?: { shipperLoadNumber?: number; adminReferenceNumber?: number };
+}
 
 function getStatusBadgeStyle(status: string | null | undefined) {
   switch (status) {
@@ -63,57 +87,107 @@ export default function ShipperDashboard() {
   const { data: loads, isLoading: loadsLoading } = useLoads();
   const { data: invoices, isLoading: invoicesLoading } = useInvoices();
   const { data: notifications } = useNotifications();
-  const { getExpiringDocuments, getExpiredDocuments } = useDocumentVault();
+  
+  // Fetch real shipment data for tracking
+  const { data: shipments = [] } = useQuery<TrackedShipment[]>({
+    queryKey: ['/api/shipments/tracking'],
+  });
+  
+  // Fetch real document data
+  const { data: apiDocuments = [] } = useQuery<ApiDocument[]>({
+    queryKey: ['/api/shipper/documents'],
+  });
 
   const userLoads = (loads || []).filter((load: Load) => load.shipperId === user?.id);
   const activeLoads = userLoads.filter((load: Load) => 
     ['pending', 'priced', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid'].includes(load.status || '')
   );
-  const inTransitLoads = userLoads.filter((load: Load) => load.status === 'in_transit');
   
-  const expiringDocs = getExpiringDocuments();
-  const expiredDocs = getExpiredDocuments();
+  // Get in-transit count from real shipments
+  const inTransitShipments = shipments.filter(s => s.currentStage === 'in_transit');
+  const deliveredShipments = shipments.filter(s => s.currentStage === 'delivered');
+  
+  // Real document count from API
+  const totalDocuments = apiDocuments.length;
   
   const recentLoads = userLoads.slice(0, 5);
 
   const userInvoices = (invoices || []) as Invoice[];
-  const totalSpend = userInvoices
-    .filter(inv => inv.status === 'paid')
-    .reduce((sum, inv) => sum + parseFloat(inv.totalAmount?.toString() || '0'), 0);
   
-  const monthlyData = [
-    { month: 'Jul', amount: 150000 },
-    { month: 'Aug', amount: 180000 },
-    { month: 'Sep', amount: 220000 },
-    { month: 'Oct', amount: 195000 },
-    { month: 'Nov', amount: 240000 },
-    { month: 'Dec', amount: totalSpend || 280000 },
-  ];
-
-  const spendChange = 12;
+  // Calculate real spending data from invoices
+  const { totalSpend, monthlyData, spendChange } = useMemo(() => {
+    const paidInvoices = userInvoices.filter(inv => inv.status === 'paid');
+    const total = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.totalAmount?.toString() || '0'), 0);
+    
+    // Group invoices by month for chart
+    const now = new Date();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const last6Months: { month: string; amount: number }[] = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = monthNames[date.getMonth()];
+      
+      const monthTotal = userInvoices
+        .filter(inv => {
+          if (!inv.createdAt) return false;
+          const invDate = new Date(inv.createdAt);
+          return invDate.getMonth() === date.getMonth() && 
+                 invDate.getFullYear() === date.getFullYear();
+        })
+        .reduce((sum, inv) => sum + parseFloat(inv.totalAmount?.toString() || '0'), 0);
+      
+      last6Months.push({ month: monthKey, amount: monthTotal });
+    }
+    
+    // Calculate change from last month
+    const currentMonth = last6Months[last6Months.length - 1]?.amount || 0;
+    const lastMonth = last6Months[last6Months.length - 2]?.amount || 0;
+    const change = lastMonth > 0 ? Math.round(((currentMonth - lastMonth) / lastMonth) * 100) : 0;
+    
+    return { totalSpend: total, monthlyData: last6Months, spendChange: change };
+  }, [userInvoices]);
 
   const unreadNotifications = (notifications || []).filter(n => !n.isRead).slice(0, 4);
 
-  const dashboardAlerts = [
-    ...unreadNotifications.map((notif, i) => ({
-      id: `notif-${i}`,
-      type: notif.type === 'error' ? 'delay' : 'status',
-      message: notif.message || notif.title,
-      time: notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString() : 'Just now',
-    })),
-    ...expiredDocs.slice(0, 2).map((doc, i) => ({
-      id: `expired-${i}`,
-      type: "document" as const,
-      message: `${doc.fileName} has expired and needs renewal`,
-      time: "Action required",
-    })),
-    ...expiringDocs.slice(0, 2).map((doc, i) => ({
-      id: `expiring-${i}`,
-      type: "document" as const,
-      message: `${doc.fileName} expires soon`,
-      time: "Review needed",
-    })),
-  ];
+  // Build dashboard alerts from real data
+  const dashboardAlerts = useMemo(() => {
+    const alerts: Array<{ id: string; type: string; message: string; time: string }> = [];
+    
+    // Add notifications
+    unreadNotifications.forEach((notif, i) => {
+      alerts.push({
+        id: `notif-${i}`,
+        type: notif.type === 'error' ? 'delay' : 'status',
+        message: notif.message || notif.title,
+        time: notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString() : 'Just now',
+      });
+    });
+    
+    // Add shipment updates
+    inTransitShipments.slice(0, 2).forEach((shipment, i) => {
+      const loadId = shipment.load?.adminReferenceNumber || shipment.load?.shipperLoadNumber;
+      alerts.push({
+        id: `transit-${i}`,
+        type: 'status',
+        message: `Load LD-${String(loadId).padStart(3, '0')} is in transit to ${shipment.load?.dropoffCity}`,
+        time: 'Active',
+      });
+    });
+    
+    // Add recent document uploads
+    apiDocuments.slice(0, 2).forEach((doc, i) => {
+      const loadNum = doc.load?.adminReferenceNumber || doc.load?.shipperLoadNumber;
+      alerts.push({
+        id: `doc-${i}`,
+        type: 'document',
+        message: `${doc.fileName} uploaded for LD-${String(loadNum).padStart(3, '0')}`,
+        time: new Date(doc.createdAt).toLocaleTimeString(),
+      });
+    });
+    
+    return alerts.slice(0, 7);
+  }, [unreadNotifications, inTransitShipments, apiDocuments]);
 
   if (loadsLoading || invoicesLoading) {
     return (
@@ -143,15 +217,15 @@ export default function ShipperDashboard() {
           title={t("dashboard.activeLoads")}
           value={activeLoads.length}
           icon={Package}
-          trend={{ value: 12, isPositive: true }}
+          subtitle={`${userLoads.length} total`}
           onClick={() => navigate("/shipper/loads")}
           testId="stat-active-loads"
         />
         <StatCard
           title={t("dashboard.inTransit")}
-          value={inTransitLoads.length}
+          value={inTransitShipments.length}
           icon={Truck}
-          trend={{ value: 8, isPositive: true }}
+          subtitle={`${deliveredShipments.length} delivered`}
           onClick={() => navigate("/shipper/tracking")}
           testId="stat-in-transit"
         />
@@ -159,15 +233,15 @@ export default function ShipperDashboard() {
           title={t("shipper.totalSpent")}
           value={`Rs. ${totalSpend.toLocaleString('en-IN')}`}
           icon={DollarSign}
-          trend={{ value: Math.abs(spendChange), isPositive: spendChange > 0 }}
+          trend={spendChange !== 0 ? { value: Math.abs(spendChange), isPositive: spendChange > 0 } : undefined}
           onClick={() => navigate("/shipper/invoices")}
           testId="stat-monthly-spend"
         />
         <StatCard
           title={t("documents.title")}
-          value={expiringDocs.length + expiredDocs.length}
+          value={totalDocuments}
           icon={FileText}
-          subtitle={t("common.required")}
+          subtitle={`${shipments.reduce((sum, s) => sum + s.documents.length, 0)} from shipments`}
           onClick={() => navigate("/shipper/documents")}
           testId="stat-documents"
         />
@@ -292,7 +366,7 @@ export default function ShipperDashboard() {
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium text-sm">{formatLoadId(load)}</span>
                         <Badge variant="outline" className="text-xs">
-                          {load.truckType || 'General'}
+                          {load.requiredTruckType || 'General'}
                         </Badge>
                         <Badge 
                           variant="secondary" 
@@ -302,7 +376,7 @@ export default function ShipperDashboard() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
-                        {load.pickupCity}, {load.pickupState} to {load.dropoffCity}, {load.dropoffState}
+                        {load.pickupCity}{load.pickupLocality ? `, ${load.pickupLocality}` : ''} to {load.dropoffCity}{load.dropoffLocality ? `, ${load.dropoffLocality}` : ''}
                       </p>
                     </div>
                     <div className="text-right ml-4">
@@ -364,6 +438,70 @@ export default function ShipperDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Track Shipments Section */}
+      {shipments.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                Active Shipments
+              </CardTitle>
+              <CardDescription>Real-time tracking of your shipments</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/tracking")} data-testid="link-view-tracking">
+              {t("dashboard.viewAll")}
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {shipments.slice(0, 3).map((shipment) => {
+                const loadNum = shipment.load?.adminReferenceNumber || shipment.load?.shipperLoadNumber;
+                return (
+                  <div
+                    key={shipment.id}
+                    className="p-4 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                    onClick={() => navigate("/shipper/tracking")}
+                    data-testid={`shipment-card-${shipment.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="font-medium text-sm">
+                        LD-{String(loadNum).padStart(3, '0')}
+                      </span>
+                      <Badge className={`text-xs no-default-hover-elevate no-default-active-elevate ${
+                        shipment.currentStage === 'delivered'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : shipment.currentStage === 'in_transit'
+                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}>
+                        {shipment.currentStage === 'in_transit' ? 'In Transit' : 
+                         shipment.currentStage === 'delivered' ? 'Delivered' : 'Active'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {shipment.load?.pickupCity} to {shipment.load?.dropoffCity}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Truck className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{shipment.carrier?.companyName}</span>
+                    </div>
+                    <div className="mt-2 w-full bg-muted rounded-full h-1.5">
+                      <div 
+                        className="bg-primary h-1.5 rounded-full transition-all"
+                        style={{ width: `${shipment.progress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{shipment.progress}% complete</p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

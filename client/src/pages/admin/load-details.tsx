@@ -874,7 +874,12 @@ export default function AdminLoadDetailsPage() {
                       {soloBidsFiltered
                         .sort((a, b) => a.amount - b.amount)
                         .map((bid) => (
-                          <TableRow key={bid.bidId} data-testid={`row-solo-bid-${bid.bidId}`}>
+                          <TableRow 
+                            key={bid.bidId} 
+                            data-testid={`row-solo-bid-${bid.bidId}`}
+                            className="cursor-pointer hover-elevate"
+                            onClick={() => navigate(`/admin/negotiations?bidId=${bid.bidId}`)}
+                          >
                             <TableCell className="font-medium">{bid.carrierName}</TableCell>
                             <TableCell className="font-semibold">{formatCurrency(bid.amount)}</TableCell>
                             <TableCell>
@@ -929,7 +934,12 @@ export default function AdminLoadDetailsPage() {
                       {enterpriseBidsFiltered
                         .sort((a, b) => a.amount - b.amount)
                         .map((bid) => (
-                          <TableRow key={bid.bidId} data-testid={`row-enterprise-bid-${bid.bidId}`}>
+                          <TableRow 
+                            key={bid.bidId} 
+                            data-testid={`row-enterprise-bid-${bid.bidId}`}
+                            className="cursor-pointer hover-elevate"
+                            onClick={() => navigate(`/admin/negotiations?bidId=${bid.bidId}`)}
+                          >
                             <TableCell className="font-medium">{bid.carrierName}</TableCell>
                             <TableCell className="font-semibold">{formatCurrency(bid.amount)}</TableCell>
                             <TableCell>
@@ -975,7 +985,12 @@ export default function AdminLoadDetailsPage() {
                 </TableHeader>
                 <TableBody>
                   {allBids.map((bid) => (
-                    <TableRow key={bid.bidId} data-testid={`row-bid-${bid.bidId}`}>
+                    <TableRow 
+                      key={bid.bidId} 
+                      data-testid={`row-bid-${bid.bidId}`}
+                      className="cursor-pointer hover-elevate"
+                      onClick={() => navigate(`/admin/negotiations?bidId=${bid.bidId}`)}
+                    >
                       <TableCell className="font-medium">{bid.carrierName}</TableCell>
                       <TableCell>
                         <Badge 

@@ -264,6 +264,21 @@ export default function AdminNegotiationsPage() {
     refetchInterval: 10000,
   });
 
+  // Auto-open bid detail dialog when navigating with bidId query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const bidId = params.get("bidId");
+    if (bidId && bids.length > 0 && !detailBid) {
+      const bid = bids.find(b => b.id === bidId);
+      if (bid) {
+        setDetailBid(bid);
+        setDetailDialogOpen(true);
+        // Clear the query param from URL
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [bids, detailBid]);
+
   const acceptMutation = useMutation({
     mutationFn: async ({ bidId, finalPrice }: { bidId: string; finalPrice?: number }) => {
       return apiRequest("PATCH", `/api/bids/${bidId}`, { 

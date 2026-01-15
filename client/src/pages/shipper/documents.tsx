@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { 
   FileText, Upload, Search, Filter, Download, Eye, Trash2, AlertCircle, 
   CheckCircle, X, Tag, Calendar, Link2, Plus, RotateCw, ZoomIn, ZoomOut,
@@ -91,12 +92,42 @@ const shipperCategoryLabels: Record<string, string> = {
   other: "Other",
 };
 
+// Map API document types to our category types
+const apiDocTypeToCategory: Record<string, DocumentCategory> = {
+  lr_consignment: "lr",
+  eway_bill: "eway_bill",
+  loading_photos: "photos",
+  delivery_photos: "photos",
+  pod: "pod",
+  invoice: "invoice",
+  weight_slip: "weight_slip",
+  bol: "bol",
+  other: "other",
+};
+
+interface ApiDocument {
+  id: string;
+  userId: string;
+  loadId?: string;
+  shipmentId?: string;
+  documentType: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number;
+  isVerified: boolean;
+  createdAt: string;
+  load?: {
+    shipperLoadNumber?: number;
+    adminReferenceNumber?: number;
+  };
+}
+
 export default function DocumentsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { getActiveLoads } = useMockData();
   const {
-    documents,
+    documents: mockDocuments,
     templates,
     uploadDocument,
     deleteDocument,
@@ -107,6 +138,45 @@ export default function DocumentsPage() {
   } = useDocumentVault();
   
   const activeLoads = getActiveLoads();
+  
+  // Fetch real shipment documents from API
+  const { data: apiDocuments = [], isLoading: isLoadingApiDocs } = useQuery<ApiDocument[]>({
+    queryKey: ['/api/shipper/documents'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+  
+  // Convert API documents to VaultDocument format and merge with mock documents
+  const documents = useMemo(() => {
+    const convertedApiDocs: VaultDocument[] = apiDocuments.map((doc) => {
+      const category = apiDocTypeToCategory[doc.documentType] || "other";
+      const loadNumber = doc.load?.adminReferenceNumber || doc.load?.shipperLoadNumber;
+      const loadIdStr = loadNumber ? `LD-${String(loadNumber).padStart(3, '0')}` : doc.loadId;
+      
+      return {
+        documentId: `api-${doc.id}`,
+        fileName: doc.fileName,
+        fileSize: doc.fileSize || 0,
+        fileType: doc.fileName.toLowerCase().endsWith('.pdf') ? "pdf" as const : "image" as const,
+        fileUrl: doc.fileUrl,
+        category,
+        loadId: loadIdStr,
+        shipmentId: doc.shipmentId,
+        uploadedBy: "Carrier",
+        uploadedDate: new Date(doc.createdAt),
+        status: "active" as DocumentStatus,
+        tags: [doc.documentType],
+        version: 1,
+        isVerified: doc.isVerified,
+      };
+    });
+    
+    // Merge: API documents first (real), then mock documents
+    // Filter out mock documents that might duplicate API documents
+    const apiDocIds = new Set(convertedApiDocs.map(d => d.fileName));
+    const filteredMockDocs = mockDocuments.filter(d => !apiDocIds.has(d.fileName));
+    
+    return [...convertedApiDocs, ...filteredMockDocs];
+  }, [apiDocuments, mockDocuments]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<DocumentCategory | "all">("all");

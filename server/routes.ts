@@ -9842,6 +9842,43 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/shipper/documents - Get all documents for shipper's loads
+  app.get("/api/shipper/documents", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Shipper access required" });
+      }
+
+      // Get all loads belonging to this shipper
+      const shipperLoads = await storage.getLoadsByShipper(user.id);
+      
+      // Collect all documents from all loads
+      const allDocs: any[] = [];
+      for (const load of shipperLoads) {
+        const loadDocs = await storage.getDocumentsByLoad(load.id);
+        // Add load info to each document
+        for (const doc of loadDocs) {
+          allDocs.push({
+            ...doc,
+            load: {
+              shipperLoadNumber: load.shipperLoadNumber,
+              adminReferenceNumber: load.adminReferenceNumber,
+            },
+          });
+        }
+      }
+
+      // Sort by creation date (newest first)
+      allDocs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      res.json(allDocs);
+    } catch (error) {
+      console.error("Get shipper documents error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // GET /api/loads/:loadId/documents - Get documents for a load
   app.get("/api/loads/:loadId/documents", requireAuth, async (req, res) => {
     try {

@@ -76,6 +76,7 @@ export interface IStorage {
 
   getLoad(id: string): Promise<Load | undefined>;
   getLoadsByShipper(shipperId: string): Promise<Load[]>;
+  getLoadsByCarrier(carrierId: string): Promise<Load[]>;
   getAvailableLoads(): Promise<Load[]>;
   getAllLoads(): Promise<Load[]>;
   createLoad(load: InsertLoad): Promise<Load>;
@@ -390,6 +391,10 @@ export class DatabaseStorage implements IStorage {
 
   async getLoadsByShipper(shipperId: string): Promise<Load[]> {
     return db.select().from(loads).where(eq(loads.shipperId, shipperId)).orderBy(desc(loads.createdAt));
+  }
+
+  async getLoadsByCarrier(carrierId: string): Promise<Load[]> {
+    return db.select().from(loads).where(eq(loads.assignedCarrierId, carrierId)).orderBy(desc(loads.createdAt));
   }
 
   async getAvailableLoads(): Promise<Load[]> {

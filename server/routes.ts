@@ -695,7 +695,7 @@ export async function registerRoutes(
         title: "Load Submitted",
         message: `Your load LD-${String(shipperLoadNumber).padStart(3, '0')} from ${load.pickupCity} to ${load.dropoffCity} has been submitted for pricing.`,
         type: "load",
-        loadId: load.id,
+        relatedLoadId: load.id,
       });
       
       res.json(load);
@@ -9992,6 +9992,26 @@ export async function registerRoutes(
           shipmentId: req.params.id,
           loadId: shipment.loadId,
           document: doc,
+        });
+        
+        // Create notification for shipper about document upload
+        const loadNum = load.adminReferenceNumber ?? load.shipperLoadNumber;
+        const loadLabel = loadNum != null ? `LD-${String(loadNum).padStart(3, '0')}` : 'your shipment';
+        const docTypeLabels: Record<string, string> = {
+          'lr_consignment': 'LR/Consignment Note',
+          'eway_bill': 'E-Way Bill',
+          'loading_photos': 'Loading Photos',
+          'pod': 'Proof of Delivery',
+          'invoice': 'Invoice',
+          'other': 'Document',
+        };
+        const docLabel = docTypeLabels[documentType] || documentType;
+        await storage.createNotification({
+          userId: load.shipperId,
+          title: "Document Uploaded",
+          message: `${user.companyName || user.username} uploaded ${docLabel} for ${loadLabel}`,
+          type: "document",
+          relatedLoadId: load.id,
         });
       }
 

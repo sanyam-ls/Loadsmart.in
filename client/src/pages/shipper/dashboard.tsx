@@ -114,10 +114,13 @@ export default function ShipperDashboard() {
 
   const userInvoices = (invoices || []) as Invoice[];
   
-  // Calculate real spending data from invoices
+  // Calculate real spending data from invoices (all invoices, not just paid)
   const { totalSpend, monthlyData, spendChange } = useMemo(() => {
-    const paidInvoices = userInvoices.filter(inv => inv.status === 'paid');
-    const total = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.totalAmount?.toString() || '0'), 0);
+    // Include all invoices for total spend (sent, acknowledged, paid)
+    const relevantInvoices = userInvoices.filter(inv => 
+      ['sent', 'acknowledged', 'paid'].includes(inv.status || '')
+    );
+    const total = relevantInvoices.reduce((sum, inv) => sum + parseFloat(inv.totalAmount?.toString() || '0'), 0);
     
     // Group invoices by month for chart
     const now = new Date();
@@ -128,7 +131,7 @@ export default function ShipperDashboard() {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthKey = monthNames[date.getMonth()];
       
-      const monthTotal = userInvoices
+      const monthTotal = relevantInvoices
         .filter(inv => {
           if (!inv.createdAt) return false;
           const invDate = new Date(inv.createdAt);

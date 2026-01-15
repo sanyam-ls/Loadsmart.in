@@ -1233,7 +1233,7 @@ export async function registerRoutes(
               carrierId: user.id,
               shipperId: refreshedLoad.shipperId,
               truckId: bid.truckId || null,
-              driverId: null,
+              driverId: bid.driverId || null,
               status: "assigned",
               pickupLocation: refreshedLoad.pickupAddress || refreshedLoad.pickupCity,
               dropoffLocation: refreshedLoad.dropoffAddress || refreshedLoad.dropoffCity,
@@ -3430,7 +3430,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Only carriers can submit bids" });
       }
 
-      const { load_id, amount, bid_type, notes, truck_id, carrier_type } = req.body;
+      const { load_id, amount, bid_type, notes, truck_id, driver_id, carrier_type } = req.body;
 
       const load = await storage.getLoad(load_id);
       if (!load) {
@@ -3465,6 +3465,7 @@ export async function registerRoutes(
         loadId: load_id,
         carrierId: user.id,
         truckId: truck_id || null,
+        driverId: driver_id && driver_id !== 'unassigned' ? driver_id : null,
         amount: finalAmount,
         notes: notes || null,
         status: 'pending',
@@ -3679,6 +3680,7 @@ export async function registerRoutes(
         loadId: bid.loadId,
         carrierId: bid.carrierId,
         truckId: truck_id || bid.truckId || null,
+        driverId: bid.driverId || null,
         status: 'pickup_scheduled',
       });
 
@@ -4928,12 +4930,16 @@ export async function registerRoutes(
         try {
           const existingShipment = await storage.getShipmentByLoad(load.id);
           if (!existingShipment) {
-            // Get truck from awarded bid if available
+            // Get truck and driver from awarded bid if available
             let truckId = load.assignedTruckId;
-            if (!truckId && load.awardedBidId) {
+            let driverId: string | null = null;
+            if (load.awardedBidId) {
               const awardedBid = await storage.getBid(load.awardedBidId);
-              if (awardedBid?.truckId) {
+              if (awardedBid?.truckId && !truckId) {
                 truckId = awardedBid.truckId;
+              }
+              if (awardedBid?.driverId) {
+                driverId = awardedBid.driverId;
               }
             }
 
@@ -4941,6 +4947,7 @@ export async function registerRoutes(
               loadId: load.id,
               carrierId: load.assignedCarrierId,
               truckId: truckId || null,
+              driverId: driverId,
               status: 'pickup_scheduled',
             });
           }
@@ -5322,10 +5329,20 @@ export async function registerRoutes(
         try {
           const existingShipment = await storage.getShipmentByLoad(invoice.loadId);
           if (!existingShipment) {
+            // Get driver from awarded bid if available
+            let driverId: string | null = null;
+            if (load.awardedBidId) {
+              const awardedBid = await storage.getBid(load.awardedBidId);
+              if (awardedBid?.driverId) {
+                driverId = awardedBid.driverId;
+              }
+            }
+            
             const shipment = await storage.createShipment({
               loadId: invoice.loadId,
               carrierId: load.assignedCarrierId,
               truckId: load.assignedTruckId || null,
+              driverId: driverId,
               status: 'pickup_scheduled',
             });
             console.log(`[Invoice] Created shipment ${shipment.id} for load ${invoice.loadId} when invoice sent`);

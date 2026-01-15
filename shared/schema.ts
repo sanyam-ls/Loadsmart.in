@@ -813,6 +813,7 @@ export const bids = pgTable("bids", {
   loadId: varchar("load_id").notNull().references(() => loads.id),
   carrierId: varchar("carrier_id").notNull().references(() => users.id),
   truckId: varchar("truck_id").references(() => trucks.id),
+  driverId: varchar("driver_id").references(() => drivers.id),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   counterAmount: decimal("counter_amount", { precision: 12, scale: 2 }),
   estimatedPickup: timestamp("estimated_pickup"),

@@ -264,7 +264,8 @@ function calculateMatchScore(load: CarrierLoad): number {
 export default function CarrierLoadsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, carrierType } = useAuth();
+  const isEnterprise = carrierType === "enterprise";
   const searchString = useSearch();
   const highlightLoadId = new URLSearchParams(searchString).get("highlight");
   
@@ -280,6 +281,19 @@ export default function CarrierLoadsPage() {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailLoad, setDetailLoad] = useState<CarrierLoad | null>(null);
+  const [selectedTruckId, setSelectedTruckId] = useState<string>("");
+  const [selectedDriverId, setSelectedDriverId] = useState<string>("");
+
+  // Fetch trucks and drivers for enterprise carriers
+  const { data: trucks = [] } = useQuery<{ id: string; licensePlate: string; truckType: string; make?: string; model?: string }[]>({
+    queryKey: ["/api/trucks"],
+    enabled: isEnterprise,
+  });
+
+  const { data: drivers = [] } = useQuery<{ id: string; name: string; phone?: string; licenseNumber?: string }[]>({
+    queryKey: ["/api/drivers"],
+    enabled: isEnterprise,
+  });
 
   useEffect(() => {
     if (user?.id && user?.role === "carrier") {
@@ -378,11 +392,14 @@ export default function CarrierLoadsPage() {
   }, [apiLoads]);
 
   const bidMutation = useMutation({
-    mutationFn: async (data: { load_id: string; amount: number; bid_type: string }) => {
+    mutationFn: async (data: { load_id: string; amount: number; bid_type: string; truck_id?: string; driver_id?: string }) => {
       return apiRequest('POST', '/api/bids/submit', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/carrier/loads'] });
+      // Reset truck/driver selection after successful bid
+      setSelectedTruckId("");
+      setSelectedDriverId("");
     },
   });
 
@@ -455,6 +472,8 @@ export default function CarrierLoadsPage() {
     setSelectedLoad(load);
     const price = getCarrierPrice(load);
     setBidAmount(price.toString());
+    setSelectedTruckId("");
+    setSelectedDriverId("");
     setBidDialogOpen(true);
   };
 
@@ -508,6 +527,8 @@ export default function CarrierLoadsPage() {
         load_id: selectedLoad.id,
         amount: price,
         bid_type: 'admin_posted_acceptance',
+        ...(isEnterprise && selectedTruckId && { truck_id: selectedTruckId }),
+        ...(isEnterprise && selectedDriverId && { driver_id: selectedDriverId }),
       });
       
       toast({
@@ -543,6 +564,8 @@ export default function CarrierLoadsPage() {
         load_id: selectedLoad.id,
         amount,
         bid_type: isCounterBid ? 'counter' : 'carrier_bid',
+        ...(isEnterprise && selectedTruckId && { truck_id: selectedTruckId }),
+        ...(isEnterprise && selectedDriverId && { driver_id: selectedDriverId }),
       });
       
       toast({
@@ -1186,6 +1209,51 @@ export default function CarrierLoadsPage() {
                 </CardContent>
               </Card>
               
+              {/* Truck and Driver Selection for Enterprise Carriers */}
+              {isEnterprise && (
+                <Card>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Truck className="h-4 w-4" />
+                      Assign Resources
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Select Truck *</label>
+                      <Select value={selectedTruckId} onValueChange={setSelectedTruckId}>
+                        <SelectTrigger data-testid="select-truck">
+                          <SelectValue placeholder="Choose a truck for this load" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {trucks.map((truck) => (
+                            <SelectItem key={truck.id} value={truck.id}>
+                              {truck.licensePlate} - {truck.make} {truck.model} ({truck.truckType})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Assign Driver (Optional)</label>
+                      <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                        <SelectTrigger data-testid="select-driver">
+                          <SelectValue placeholder="Choose a driver" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Assign Later</SelectItem>
+                          {drivers.map((driver) => (
+                            <SelectItem key={driver.id} value={driver.id}>
+                              {driver.name} {driver.licenseNumber ? `(${driver.licenseNumber})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
               <div className="p-4 bg-muted/50 rounded-lg border">
                 <label className="text-sm font-medium mb-2 block">Your Bid Amount (Rs.)</label>
                 <Input
@@ -1205,12 +1273,17 @@ export default function CarrierLoadsPage() {
                       submitBid();
                     }
                   }}
-                  disabled={!bidAmount || bidMutation.isPending}
+                  disabled={!bidAmount || bidMutation.isPending || (isEnterprise && !selectedTruckId)}
                   data-testid="button-place-bid"
                 >
                   {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Place Bid
                 </Button>
+                {isEnterprise && !selectedTruckId && (
+                  <p className="text-xs text-destructive mt-2">
+                    Please select a truck to place your bid.
+                  </p>
+                )}
                 {parseFloat(bidAmount) !== getCarrierPrice(selectedLoad) && bidAmount && (
                   <p className="text-xs text-muted-foreground mt-2">
                     Different price will go through admin negotiation.

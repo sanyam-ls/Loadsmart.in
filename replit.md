@@ -40,6 +40,11 @@ Supports simultaneous bidding from Solo Drivers and Enterprise Carriers on the s
 - **Bid Categorization**: API responses differentiate between `soloBids` and `enterpriseBids` for admin review
 - **Bid Acceptance**: Accepting a bid from any carrier automatically rejects all other pending bids across both types
 - **No Type Filtering**: The `checkCarrierEligibility` function does NOT filter by carrier type - eligibility is based on load status, posting mode, and carrier compliance only
+- **Enterprise Carrier Bid Requirements**: Enterprise carriers MUST select a truck at bid time (required) and can optionally assign a driver. This ensures resource allocation happens upfront, not after shipment creation.
+  - `truck_id` is required for enterprise carriers to submit a bid
+  - `driver_id` is optional and can be set to "Assign Later" (unassigned)
+  - Both fields are stored in the `bids` table and transferred to the shipment upon bid acceptance
+  - Solo carriers don't see truck/driver selection as they operate single-truck businesses
 - **Counter-Offer Acceptance Flow (FINALIZED)**: When carrier accepts admin's counter offer, the FULL workflow executes automatically:
   1. Bid status set to "accepted" with negotiated `counterAmount` as final price
   2. All competing bids auto-rejected (both pending and countered)

@@ -95,6 +95,8 @@ type Bid = {
     requiredTruckType?: string;
     adminReferenceNumber?: number;
     shipperLoadNumber?: number;
+    adminFinalPrice?: string;
+    finalPrice?: string;
   };
   truck?: {
     id: string;
@@ -437,13 +439,28 @@ export default function AdminNegotiationsPage() {
               {bid.load?.pickupCity} <ArrowRight className="h-3 w-3 inline" /> {bid.load?.dropoffCity}
             </div>
             
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-4 text-sm flex-wrap">
               <div className="flex items-center gap-1">
                 <IndianRupee className="h-4 w-4 text-green-600" />
                 <span className="font-semibold text-lg" data-testid={`text-amount-${bid.id}`}>
                   Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
                 </span>
               </div>
+              {/* Show comparison with original posted price */}
+              {bid.load?.adminFinalPrice && (() => {
+                const bidAmount = parseFloat(bid.amount);
+                const originalPrice = parseFloat(bid.load.adminFinalPrice);
+                const difference = bidAmount - originalPrice;
+                const percentDiff = ((difference / originalPrice) * 100).toFixed(1);
+                const isHigher = difference > 0;
+                const isEqual = difference === 0;
+                if (isEqual) return null;
+                return (
+                  <span className={`text-sm font-medium ${isHigher ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+                    ({isHigher ? "+" : ""}{percentDiff}% vs posted)
+                  </span>
+                );
+              })()}
               {bid.truck && (
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <Truck className="h-4 w-4" />
@@ -733,7 +750,7 @@ export default function AdminNegotiationsPage() {
                             key={bid.id}
                             className="flex items-center justify-between gap-4 p-3 rounded-md bg-muted/50"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-wrap">
                               {getCarrierTypeBadge(bid.carrier?.carrierType)}
                               <span className="font-medium">
                                 {getCarrierDisplayName(bid.carrier)}
@@ -741,6 +758,21 @@ export default function AdminNegotiationsPage() {
                               <span className="font-semibold text-green-600">
                                 Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
                               </span>
+                              {/* Show comparison with original posted price */}
+                              {bid.load?.adminFinalPrice && (() => {
+                                const bidAmount = parseFloat(bid.amount);
+                                const originalPrice = parseFloat(bid.load.adminFinalPrice);
+                                const difference = bidAmount - originalPrice;
+                                const percentDiff = ((difference / originalPrice) * 100).toFixed(1);
+                                const isHigher = difference > 0;
+                                const isEqual = difference === 0;
+                                if (isEqual) return null;
+                                return (
+                                  <span className={`text-xs font-medium ${isHigher ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+                                    ({isHigher ? "+" : ""}{percentDiff}%)
+                                  </span>
+                                );
+                              })()}
                               {getStatusBadge(bid.status)}
                             </div>
                             {bid.status === "pending" && (
@@ -857,10 +889,38 @@ export default function AdminNegotiationsPage() {
                   Bid Information
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
+                  {/* Original Posted Price */}
+                  {detailBid.load?.adminFinalPrice && (
+                    <div className="col-span-2 pb-2 border-b border-green-200 dark:border-green-800">
+                      <span className="text-muted-foreground">Original Posted Price:</span>
+                      <p className="font-medium text-base">Rs. {parseFloat(detailBid.load.adminFinalPrice).toLocaleString("en-IN")}</p>
+                    </div>
+                  )}
                   <div>
                     <span className="text-muted-foreground">Bid Amount:</span>
                     <p className="font-bold text-lg text-green-600">Rs. {parseFloat(detailBid.amount).toLocaleString("en-IN")}</p>
                   </div>
+                  {/* Comparison with original price */}
+                  {detailBid.load?.adminFinalPrice && (() => {
+                    const bidAmount = parseFloat(detailBid.amount);
+                    const originalPrice = parseFloat(detailBid.load.adminFinalPrice);
+                    const difference = bidAmount - originalPrice;
+                    const percentDiff = ((difference / originalPrice) * 100).toFixed(1);
+                    const isHigher = difference > 0;
+                    const isEqual = difference === 0;
+                    return (
+                      <div>
+                        <span className="text-muted-foreground">Difference:</span>
+                        {isEqual ? (
+                          <p className="font-medium text-muted-foreground">Same as posted</p>
+                        ) : (
+                          <p className={`font-medium ${isHigher ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+                            {isHigher ? "+" : ""}{difference.toLocaleString("en-IN")} ({isHigher ? "+" : ""}{percentDiff}%)
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div>
                     <span className="text-muted-foreground">Status:</span>
                     <div className="mt-1">{getStatusBadge(detailBid.status)}</div>

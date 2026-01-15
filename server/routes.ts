@@ -628,7 +628,21 @@ export async function registerRoutes(
             }
           }
           
-          return { ...load, bidCount: loadBids.length, assignedCarrierName };
+          // Sync status with shipment: derive effective status from shipment if exists
+          let effectiveStatus = load.status;
+          if (load.assignedCarrierId && !["delivered", "closed", "in_transit"].includes(load.status || "")) {
+            const shipment = await storage.getShipmentByLoad(load.id);
+            if (shipment) {
+              // Derive status from shipment state
+              if (shipment.endOtpVerified) {
+                effectiveStatus = "delivered";
+              } else if (shipment.status === "in_transit" || shipment.startOtpVerified) {
+                effectiveStatus = "in_transit";
+              }
+            }
+          }
+          
+          return { ...load, status: effectiveStatus, bidCount: loadBids.length, assignedCarrierName };
         })
       );
 

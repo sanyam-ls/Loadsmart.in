@@ -537,10 +537,10 @@ export default function LoadQueuePage() {
         </div>
       </div>
 
-      {/* Invoice Sending - Compact grid of carrier finalized loads */}
+      {/* Invoice Sending - Compact grid of carrier finalized loads with invoices ready to send */}
       {(() => {
         const invoiceLoads = realLoads
-          .filter(l => l.status === 'awarded')
+          .filter(l => l.status === 'awarded' || l.status === 'invoice_created')
           .sort((a, b) => {
             const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
             const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
@@ -573,8 +573,8 @@ export default function LoadQueuePage() {
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <span className="font-mono text-sm font-medium">{formatLoadId(load)}</span>
-                        <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs">
-                          {t('admin.ready')}
+                        <Badge variant="secondary" className={`text-xs ${load.status === 'invoice_created' ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'}`}>
+                          {load.status === 'invoice_created' ? t('invoices.invoice') : t('admin.ready')}
                         </Badge>
                       </div>
                       

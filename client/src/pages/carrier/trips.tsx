@@ -5,7 +5,7 @@ import {
   MapPin, Truck, Clock, CheckCircle, Upload,
   Route, Calendar, TrendingUp, ArrowRight, Map as MapIcon, Lock,
   Package, Building2,
-  FileText, Eye, Download, Check, Loader2
+  FileText, Eye, Download, Check, Loader2, Camera, SwitchCamera, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -180,6 +180,14 @@ export default function TripsPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState<string>("lr_consignment");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  
+  // Camera capture states
+  const [cameraMode, setCameraMode] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const isEnterprise = carrierType === "enterprise";
 
@@ -303,6 +311,95 @@ export default function TripsPage() {
   function getUploadedDocument(docLabel: string): ShipmentDocument | undefined {
     const docType = labelToDocumentType[docLabel];
     return shipmentDocuments.find(d => d.documentType === docType);
+  }
+
+  // Camera functions
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (error) {
+      toast({ title: "Camera Error", description: "Could not access camera. Please check permissions.", variant: "destructive" });
+      setCameraMode(false);
+    }
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setCameraMode(false);
+    setCapturedImage(null);
+  }
+
+  async function switchCamera() {
+    // Stop current stream
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+    // Toggle facing mode
+    const newFacing = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(newFacing);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (error) {
+      toast({ title: "Camera Error", description: "Could not switch camera", variant: "destructive" });
+    }
+  }
+
+  function capturePhoto() {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL("image/jpeg", 0.9);
+        setCapturedImage(imageData);
+        // Stop camera after capture
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+          setCameraStream(null);
+        }
+      }
+    }
+  }
+
+  function useCapturedImage() {
+    if (capturedImage) {
+      // Convert base64 to File
+      fetch(capturedImage)
+        .then(res => res.blob())
+        .then(blob => {
+          const file = new File([blob], `document_${Date.now()}.jpg`, { type: "image/jpeg" });
+          setSelectedFile(file);
+          setCameraMode(false);
+          setCapturedImage(null);
+        });
+    }
+  }
+
+  function retakePhoto() {
+    setCapturedImage(null);
+    startCamera();
   }
 
   function openDocumentViewer(docLabel: string) {
@@ -866,6 +963,7 @@ export default function TripsPage() {
         if (!open) {
           setSelectedFile(null);
           setSelectedDocType("lr_consignment");
+          stopCamera();
         }
       }}>
         <DialogContent className="max-w-md">
@@ -875,9 +973,13 @@ export default function TripsPage() {
               Upload Document
             </DialogTitle>
             <DialogDescription>
-              Upload images (JPG, PNG) or PDF documents to share with the shipper
+              Upload images (JPG, PNG), PDF documents, or take a photo
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Hidden canvas for capturing photos */}
+          <canvas ref={canvasRef} className="hidden" />
+          
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="doc-type">Document Type</Label>
@@ -895,56 +997,134 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="doc-file">Select File</Label>
-              <Input 
-                id="doc-file"
-                type="file"
-                accept="image/*,.pdf"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                data-testid="input-document-file"
-              />
-              {selectedFile && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                </p>
-              )}
-            </div>
+            
+            {/* Camera Mode */}
+            {cameraMode ? (
+              <div className="space-y-3">
+                {capturedImage ? (
+                  <div className="relative">
+                    <img 
+                      src={capturedImage} 
+                      alt="Captured" 
+                      className="w-full rounded-lg border"
+                    />
+                    <div className="flex gap-2 mt-3 justify-center">
+                      <Button variant="outline" onClick={retakePhoto} data-testid="button-retake">
+                        <Camera className="h-4 w-4 mr-2" />
+                        Retake
+                      </Button>
+                      <Button onClick={useCapturedImage} data-testid="button-use-photo">
+                        <Check className="h-4 w-4 mr-2" />
+                        Use Photo
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <video 
+                      ref={videoRef} 
+                      autoPlay 
+                      playsInline 
+                      muted 
+                      className="w-full rounded-lg border bg-black"
+                    />
+                    <div className="flex gap-2 mt-3 justify-center">
+                      <Button variant="outline" onClick={stopCamera} data-testid="button-cancel-camera">
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button variant="outline" onClick={switchCamera} data-testid="button-switch-camera">
+                        <SwitchCamera className="h-4 w-4 mr-2" />
+                        Flip
+                      </Button>
+                      <Button onClick={capturePhoto} data-testid="button-capture">
+                        <Camera className="h-4 w-4 mr-2" />
+                        Capture
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* File Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="doc-file">Select File</Label>
+                  <Input 
+                    id="doc-file"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    data-testid="input-document-file"
+                  />
+                </div>
+                
+                {/* Or use camera */}
+                <div className="relative flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground bg-background px-2">OR</span>
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t" />
+                  </div>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => {
+                    setCameraMode(true);
+                    startCamera();
+                  }}
+                  data-testid="button-open-camera"
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Take Photo with Camera
+                </Button>
+                
+                {selectedFile && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setUploadDialogOpen(false)}
-              data-testid="button-cancel-upload"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={() => {
-                if (!shipmentId || !selectedDocType || !selectedFile) return;
-                uploadMutation.mutate({ 
-                  documentType: selectedDocType,
-                  file: selectedFile,
-                });
-                setUploadDialogOpen(false);
-                setSelectedFile(null);
-              }}
-              disabled={uploadMutation.isPending || !selectedDocType || !selectedFile}
-              data-testid="button-confirm-upload"
-            >
-              {uploadMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload
-                </>
-              )}
-            </Button>
-          </DialogFooter>
+          
+          {!cameraMode && (
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setUploadDialogOpen(false)}
+                data-testid="button-cancel-upload"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (!shipmentId || !selectedDocType || !selectedFile) return;
+                  uploadMutation.mutate({ 
+                    documentType: selectedDocType,
+                    file: selectedFile,
+                  });
+                  setUploadDialogOpen(false);
+                  setSelectedFile(null);
+                }}
+                disabled={uploadMutation.isPending || !selectedDocType || !selectedFile}
+                data-testid="button-confirm-upload"
+              >
+                {uploadMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>

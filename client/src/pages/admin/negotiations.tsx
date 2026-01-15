@@ -441,6 +441,13 @@ export default function AdminNegotiationsPage() {
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-2 flex-1 min-w-0">
+            {/* Load ID displayed prominently at top */}
+            {bid.load && (
+              <Badge variant="secondary" className="text-xs font-mono mb-1" data-testid={`text-load-id-${bid.id}`}>
+                <Package className="h-3 w-3 mr-1" />
+                {formatLoadId(bid.load)}
+              </Badge>
+            )}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold" data-testid={`text-carrier-${bid.id}`}>
                 {getCarrierDisplayName(bid.carrier)}
@@ -702,6 +709,12 @@ export default function AdminNegotiationsPage() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div className="space-y-2 flex-1 min-w-0">
+                          {bid.load && (
+                            <Badge variant="secondary" className="text-xs font-mono mb-1">
+                              <Package className="h-3 w-3 mr-1" />
+                              {formatLoadId(bid.load)}
+                            </Badge>
+                          )}
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold">
                               {getCarrierDisplayName(bid.carrier)}

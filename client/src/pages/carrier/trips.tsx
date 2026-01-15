@@ -698,7 +698,7 @@ export default function TripsPage() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2">
-                            {["LR / Consignment Note", "E-way Bill", "Loading Photos", "Proof of Delivery (POD)"].map((docLabel, index) => {
+                            {["LR / Consignment Note", "E-way Bill", "Loading Photos", "Proof of Delivery (POD)", "Invoice", "Other Document"].map((docLabel, index) => {
                               const uploadedDoc = getUploadedDocument(docLabel);
                               const docType = labelToDocumentType[docLabel];
                               const isUploading = uploadingDocType === docType && uploadMutation.isPending;

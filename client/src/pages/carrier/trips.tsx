@@ -93,9 +93,11 @@ function convertShipmentToTrip(
   drivers: Driver[], 
   trucks: DbTruck[]
 ): CarrierTrip {
-  const loadId = load?.adminReferenceNumber 
-    ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}` 
-    : `LD-${shipment.loadId.slice(0, 6)}`;
+  const loadId = load?.shipperLoadNumber 
+    ? `LD-${String(load.shipperLoadNumber).padStart(3, '0')}` 
+    : load?.adminReferenceNumber
+      ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}`
+      : `LD-${shipment.loadId.slice(0, 6)}`;
   
   let status: CarrierTrip["status"] = "awaiting_pickup";
   let progress = 0;
@@ -224,7 +226,9 @@ export default function TripsPage() {
     const loadNum = selectedTrip.loadId.replace('LD-', '').replace(/^0+/, '');
     return shipments.find(s => {
       const load = loads.find(l => l.id === s.loadId);
-      return load?.adminReferenceNumber?.toString() === loadNum || s.id === selectedTrip.tripId.replace('real-', '');
+      return load?.shipperLoadNumber?.toString() === loadNum || 
+             load?.adminReferenceNumber?.toString() === loadNum || 
+             s.id === selectedTrip.tripId.replace('real-', '');
     });
   }, [selectedTrip, shipments, loads]);
 

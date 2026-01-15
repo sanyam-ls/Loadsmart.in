@@ -7468,8 +7468,23 @@ export async function registerRoutes(
         notes: validatedBody.notes,
       });
 
-      // Also mark the user as verified
-      await storage.updateUser(verification.carrierId, { isVerified: true });
+      // Get carrier info for user update
+      const carrierUser = await storage.getUser(verification.carrierId);
+      
+      // Update user with verified status and sync business info from verification
+      if (verification.carrierType === "enterprise") {
+        // Enterprise carriers: use business info from verification
+        await storage.updateUser(verification.carrierId, { 
+          isVerified: true,
+          companyName: carrierUser?.companyName || undefined,
+          companyAddress: verification.businessAddress || undefined,
+        });
+      } else {
+        // Solo carriers: just set verified
+        await storage.updateUser(verification.carrierId, { 
+          isVerified: true,
+        });
+      }
 
       // Sync carrierType from verification to carrierProfiles on approval
       if (verification.carrierType) {
@@ -7528,12 +7543,9 @@ export async function registerRoutes(
         userAgent: req.get("user-agent"),
       });
 
-      // Get carrier info for broadcast
-      const carrier = await storage.getUser(verification.carrierId);
-      
-      // Broadcast real-time verification status to carrier
+      // Broadcast real-time verification status to carrier (use carrierUser from earlier)
       broadcastVerificationStatus(verification.carrierId, "approved", {
-        companyName: carrier?.companyName || "Carrier",
+        companyName: carrierUser?.companyName || "Carrier",
       });
 
       res.json(updated);
@@ -8460,9 +8472,24 @@ export async function registerRoutes(
         followUpDate: reviewData.followUpDate ? new Date(reviewData.followUpDate) : undefined,
       });
 
-      // If approved, update user verification status
+      // If approved, update user verification status and sync business info
       if (reviewData.decision === "approved") {
-        await storage.updateUser(request.shipperId, { isVerified: true });
+        // Build address from onboarding data
+        const addressParts = [
+          request.registeredAddress,
+          request.registeredCity || request.registeredCityCustom,
+          request.registeredState,
+          request.registeredPincode,
+        ].filter(Boolean);
+        const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : undefined;
+        
+        // Update user with verified status and business info from onboarding
+        await storage.updateUser(request.shipperId, { 
+          isVerified: true,
+          companyName: request.legalCompanyName || request.tradeName || undefined,
+          companyAddress: fullAddress,
+          phone: request.contactPersonPhone || undefined,
+        });
       }
 
       // Audit log

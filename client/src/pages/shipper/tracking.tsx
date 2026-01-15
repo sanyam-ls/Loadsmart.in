@@ -540,19 +540,11 @@ export default function TrackingPage() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                       <FileText className="h-3 w-3" />
                       <span>{shipment.documents.length} docs</span>
-                      {shipment.documents.filter(d => d.status === "verified").length > 0 && (
-                        <Badge variant="outline" className="text-xs py-0">
-                          <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
-                          {shipment.documents.filter(d => d.status === "verified").length} verified
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-2 text-xs">
-                      <Badge variant="secondary" className="text-xs">
-                        {shipment.documents.filter(d => d.status === "verified").length}/{4} required
+                      <Badge variant="secondary" className="text-xs py-0">
+                        {shipment.documents.length}/4 uploaded
                       </Badge>
                     </div>
                   </div>
@@ -702,7 +694,17 @@ export default function TrackingPage() {
                       )}
                     </div>
 
-                    <h3 className="font-semibold mb-4">Documents</h3>
+                    <div className="flex items-center justify-between mb-4 gap-2">
+                      <h3 className="font-semibold">Documents</h3>
+                      <a 
+                        href="/shipper/documents" 
+                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                        data-testid="link-view-all-documents"
+                      >
+                        View All
+                        <ArrowRight className="h-3 w-3" />
+                      </a>
+                    </div>
                     <div className="space-y-2">
                       {[
                         { key: "lr_consignment", label: "LR / Consignment Note" },

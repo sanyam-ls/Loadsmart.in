@@ -1228,24 +1228,14 @@ export async function registerRoutes(
         if (!existingShipment) {
           const refreshedLoad = await storage.getLoad(bid.loadId);
           if (refreshedLoad) {
-            const shipmentNumber = await storage.generateShipmentNumber();
             await storage.createShipment({
-              shipmentNumber,
               loadId: bid.loadId,
               carrierId: user.id,
-              shipperId: refreshedLoad.shipperId,
               truckId: bid.truckId || null,
               driverId: bid.driverId || null,
-              status: "assigned",
-              pickupLocation: refreshedLoad.pickupAddress || refreshedLoad.pickupCity,
-              dropoffLocation: refreshedLoad.dropoffAddress || refreshedLoad.dropoffCity,
-              estimatedPickupDate: refreshedLoad.pickupDate || new Date(),
-              currentLatitude: null,
-              currentLongitude: null,
+              status: "pickup_scheduled",
             });
-            
-            // Also transition load to "assigned" status for consistency
-            await transitionLoadState(bid.loadId, "assigned", user.id, "Shipment created after carrier accepted bid");
+            console.log(`Shipment created for load ${bid.loadId} after carrier accepted bid`);
           }
         }
       } catch (shipmentError) {

@@ -1,11 +1,14 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useUpload } from "@/hooks/use-upload";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   FileText, Upload, Search, Filter, Download, Eye, Trash2, AlertCircle, 
   CheckCircle, X, Tag, Calendar, Link2, Plus, RotateCw, ZoomIn, ZoomOut,
   ChevronLeft, ChevronRight, Clock, FileImage, Info, Edit2, History,
-  Folder, FolderOpen, ArrowLeft, Receipt, Truck, Shield, Image, FileCheck
+  Folder, FolderOpen, ArrowLeft, Receipt, Truck, Shield, Image, FileCheck,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +55,12 @@ import {
 } from "@/lib/document-vault-store";
 
 type SortOption = "newest" | "oldest" | "expiring" | "largest";
+
+// Helper function to check if a file URL is displayable
+const isDisplayableUrl = (url: string | undefined): boolean => {
+  if (!url) return false;
+  return url.startsWith('http') || url.startsWith('data:') || url.startsWith('/objects/');
+};
 
 // Shipper-specific document categories (excluding carrier documents)
 const shipperDocumentCategories: DocumentCategory[] = [
@@ -234,6 +243,33 @@ export default function DocumentsPage() {
   const [selectedDocument, setSelectedDocument] = useState<VaultDocument | null>(null);
   const [expiringViewOpen, setExpiringViewOpen] = useState(false);
 
+  // File upload with real object storage
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
+  const [uploadedFileSize, setUploadedFileSize] = useState<number>(0);
+  
+  const { uploadFile, isUploading, error: uploadError } = useUpload({
+    onSuccess: (response) => {
+      // Use the object path directly - the server has /objects/:objectPath route
+      // The objectPath is like "/objects/uploads/uuid"
+      setUploadedFileUrl(response.objectPath);
+      setUploadedFileSize(response.metadata.size);
+      toast({
+        title: t('documents.uploadComplete'),
+        description: t('documents.fileUploaded'),
+      });
+    },
+    onError: (err) => {
+      console.error("Upload error:", err);
+      toast({
+        title: t('common.error'),
+        description: err.message || t('documents.uploadFailed'),
+        variant: "destructive",
+      });
+    },
+  });
+
   const [uploadForm, setUploadForm] = useState({
     fileName: "",
     fileType: "pdf" as "pdf" | "image",
@@ -308,11 +344,39 @@ export default function DocumentsPage() {
     setSearchQuery("");
   };
 
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Auto-fill filename from the file
+      setUploadForm(prev => ({
+        ...prev,
+        fileName: file.name,
+        fileType: file.type.includes('pdf') ? 'pdf' : 'image',
+      }));
+      // Upload the file immediately to object storage
+      await uploadFile(file);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleUpload = () => {
-    if (!uploadForm.fileName || !uploadForm.category) {
+    if (!uploadForm.category) {
       toast({
-        title: "Missing Information",
-        description: "Please provide a file name and select a document type.",
+        title: t('common.error'),
+        description: t('documents.selectDocumentType'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!uploadedFileUrl) {
+      toast({
+        title: t('common.error'),
+        description: t('documents.pleaseSelectFile'),
         variant: "destructive",
       });
       return;
@@ -327,11 +391,12 @@ export default function DocumentsPage() {
       expiryDate.setMonth(expiryDate.getMonth() + template.defaultExpiryMonths);
     }
 
+    // Use the real uploaded file URL
     uploadDocument({
-      fileName: uploadForm.fileName,
-      fileSize: Math.floor(Math.random() * 2000000) + 100000,
+      fileName: uploadForm.fileName || selectedFile?.name || 'document',
+      fileSize: uploadedFileSize || selectedFile?.size || 0,
       fileType: uploadForm.fileType,
-      fileUrl: `/mock/${uploadForm.category}.${uploadForm.fileType === "pdf" ? "pdf" : "jpg"}`,
+      fileUrl: uploadedFileUrl,
       category: uploadForm.category as DocumentCategory,
       loadId: uploadForm.loadId && uploadForm.loadId !== "none" ? uploadForm.loadId : undefined,
       uploadedBy: "You",
@@ -342,10 +407,11 @@ export default function DocumentsPage() {
     });
 
     toast({
-      title: "Document Uploaded",
-      description: `${uploadForm.fileName} has been added to your vault.`,
+      title: t('documents.documentUploaded'),
+      description: `${uploadForm.fileName} ${t('documents.addedToVault')}`,
     });
 
+    // Reset form
     setUploadForm({
       fileName: "",
       fileType: "pdf",
@@ -355,6 +421,9 @@ export default function DocumentsPage() {
       tags: "",
       expiryDate: "",
     });
+    setSelectedFile(null);
+    setUploadedFileUrl("");
+    setUploadedFileSize(0);
     setUploadDialogOpen(false);
   };
 
@@ -738,10 +807,59 @@ export default function DocumentsPage() {
               </div>
             </div>
 
-            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover-elevate cursor-pointer">
-              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium mb-1">{t('documents.dragAndDrop')}</p>
-              <p className="text-xs text-muted-foreground">{t('documents.supportedFormats')}: PDF, JPG, PNG</p>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+              className="hidden"
+              data-testid="input-file-upload"
+            />
+            <div 
+              className={`border-2 border-dashed rounded-lg p-6 text-center hover-elevate cursor-pointer transition-colors ${
+                selectedFile ? 'border-green-500 bg-green-500/5' : 'border-border'
+              }`}
+              onClick={() => fileInputRef.current?.click()}
+              data-testid="dropzone-upload"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-8 w-8 mx-auto mb-2 text-primary animate-spin" />
+                  <p className="text-sm font-medium mb-1">{t('documents.uploadingFile')}</p>
+                  <p className="text-xs text-muted-foreground">{t('common.pleaseWait')}...</p>
+                </>
+              ) : selectedFile && uploadedFileUrl ? (
+                <>
+                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                  <p className="text-sm font-medium mb-1 text-green-600">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground">{t('documents.fileReady')}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFile(null);
+                      setUploadedFileUrl("");
+                      setUploadedFileSize(0);
+                      setUploadForm(prev => ({ ...prev, fileName: "" }));
+                    }}
+                    data-testid="button-clear-file"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    {t('common.change')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm font-medium mb-1">{t('documents.clickToUpload')}</p>
+                  <p className="text-xs text-muted-foreground">{t('documents.supportedFormats')}: PDF, JPG, PNG</p>
+                </>
+              )}
+              {uploadError && (
+                <p className="text-xs text-red-500 mt-2">{uploadError.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -905,7 +1023,7 @@ export default function DocumentsPage() {
               }}
             >
               {selectedDocument?.fileType === "pdf" ? (
-                selectedDocument.fileUrl && (selectedDocument.fileUrl.startsWith('http') || selectedDocument.fileUrl.startsWith('data:')) ? (
+                isDisplayableUrl(selectedDocument.fileUrl) ? (
                   <iframe 
                     src={selectedDocument.fileUrl} 
                     className="w-full h-[500px] border-0 rounded-lg bg-white"
@@ -940,10 +1058,10 @@ export default function DocumentsPage() {
                   </div>
                 )
               ) : (
-                selectedDocument?.fileUrl && (selectedDocument.fileUrl.startsWith('http') || selectedDocument.fileUrl.startsWith('data:')) ? (
+                isDisplayableUrl(selectedDocument?.fileUrl) ? (
                   <img 
-                    src={selectedDocument.fileUrl} 
-                    alt={selectedDocument.fileName}
+                    src={selectedDocument?.fileUrl} 
+                    alt={selectedDocument?.fileName || 'Document'}
                     className="max-w-full max-h-[500px] rounded-lg object-contain shadow-lg"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -954,7 +1072,7 @@ export default function DocumentsPage() {
                   />
                 ) : null
               )}
-              {selectedDocument?.fileType !== "pdf" && (!selectedDocument?.fileUrl || (!selectedDocument.fileUrl.startsWith('http') && !selectedDocument.fileUrl.startsWith('data:'))) && (
+              {selectedDocument?.fileType !== "pdf" && !isDisplayableUrl(selectedDocument?.fileUrl) && (
                 <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-lg p-8 min-w-[300px] min-h-[200px] flex items-center justify-center">
                   <div className="text-center">
                     <FileImage className="h-16 w-16 mx-auto mb-2 text-blue-500" />
@@ -1122,7 +1240,7 @@ export default function DocumentsPage() {
                 <TabsContent value="preview" className="mt-4">
                   <div className="bg-muted rounded-lg min-h-[300px] flex flex-col items-center justify-center overflow-hidden">
                     {selectedDocument.fileType === "pdf" ? (
-                      selectedDocument.fileUrl && (selectedDocument.fileUrl.startsWith('http') || selectedDocument.fileUrl.startsWith('data:')) ? (
+                      isDisplayableUrl(selectedDocument.fileUrl) ? (
                         <iframe 
                           src={selectedDocument.fileUrl} 
                           className="w-full h-[400px] border-0"
@@ -1140,7 +1258,7 @@ export default function DocumentsPage() {
                         </div>
                       )
                     ) : (
-                      selectedDocument.fileUrl && (selectedDocument.fileUrl.startsWith('http') || selectedDocument.fileUrl.startsWith('data:')) ? (
+                      isDisplayableUrl(selectedDocument.fileUrl) ? (
                         <div className="w-full p-4">
                           <img 
                             src={selectedDocument.fileUrl} 

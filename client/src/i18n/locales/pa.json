@@ -89,7 +89,11 @@
     "less": "ਘੱਟ",
     "expandAll": "ਸਭ ਫੈਲਾਓ",
     "collapseAll": "ਸਭ ਸਮੇਟੋ",
-    "unknown": "ਅਗਿਆਤ"
+    "unknown": "ਅਗਿਆਤ",
+    "change": "ਬਦਲੋ",
+    "pleaseWait": "ਕਿਰਪਾ ਕਰਕੇ ਉਡੀਕ ਕਰੋ",
+    "on": "ਤੇ",
+    "current": "ਮੌਜੂਦਾ"
   },
   "nav": {
     "dashboard": "ਡੈਸ਼ਬੋਰਡ",
@@ -398,7 +402,20 @@
     "nonCompliant": "ਗੈਰ-ਪਾਲਣਾਸ਼ੀਲ",
     "expiredDocuments": "ਮਿਆਦ ਪੁੱਗੇ ਦਸਤਾਵੇਜ਼",
     "expiringDocuments": "ਮਿਆਦ ਪੁੱਗ ਰਹੇ ਦਸਤਾਵੇਜ਼",
-    "missingDocuments": "ਗੁੰਮ ਦਸਤਾਵੇਜ਼"
+    "missingDocuments": "ਗੁੰਮ ਦਸਤਾਵੇਜ਼",
+    "uploadComplete": "ਅੱਪਲੋਡ ਮੁਕੰਮਲ",
+    "fileUploaded": "ਫਾਈਲ ਸਫਲਤਾਪੂਰਵਕ ਅੱਪਲੋਡ ਹੋਈ",
+    "uploadFailed": "ਅੱਪਲੋਡ ਫੇਲ੍ਹ",
+    "uploadingFile": "ਫਾਈਲ ਅੱਪਲੋਡ ਹੋ ਰਹੀ ਹੈ...",
+    "fileReady": "ਫਾਈਲ ਸੇਵ ਲਈ ਤਿਆਰ",
+    "clickToUpload": "ਫਾਈਲ ਅੱਪਲੋਡ ਕਰਨ ਲਈ ਕਲਿੱਕ ਕਰੋ",
+    "pleaseSelectFile": "ਕਿਰਪਾ ਕਰਕੇ ਅੱਪਲੋਡ ਕਰਨ ਲਈ ਫਾਈਲ ਚੁਣੋ",
+    "addedToVault": "ਤੁਹਾਡੇ ਵੌਲਟ ਵਿੱਚ ਜੋੜ ਦਿੱਤੀ ਗਈ ਹੈ",
+    "tags": "ਟੈਗ",
+    "addTag": "ਟੈਗ ਜੋੜੋ",
+    "version": "ਸੰਸਕਰਣ",
+    "uploadedBy": "ਦੁਆਰਾ ਅੱਪਲੋਡ",
+    "markVerified": "ਤਸਦੀਕ ਵਜੋਂ ਮਾਰਕ ਕਰੋ"
   },
   "invoices": {
     "title": "ਬਿੱਲ",

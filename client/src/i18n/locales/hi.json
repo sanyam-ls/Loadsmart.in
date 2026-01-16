@@ -89,7 +89,11 @@
     "less": "कम",
     "expandAll": "सभी विस्तृत करें",
     "collapseAll": "सभी संक्षिप्त करें",
-    "unknown": "अज्ञात"
+    "unknown": "अज्ञात",
+    "change": "बदलें",
+    "pleaseWait": "कृपया प्रतीक्षा करें",
+    "on": "पर",
+    "current": "वर्तमान"
   },
   "nav": {
     "dashboard": "डैशबोर्ड",
@@ -398,7 +402,20 @@
     "nonCompliant": "गैर-अनुपालक",
     "expiredDocuments": "समाप्त दस्तावेज़",
     "expiringDocuments": "समाप्त हो रहे दस्तावेज़",
-    "missingDocuments": "गायब दस्तावेज़"
+    "missingDocuments": "गायब दस्तावेज़",
+    "uploadComplete": "अपलोड पूर्ण",
+    "fileUploaded": "फाइल सफलतापूर्वक अपलोड हुई",
+    "uploadFailed": "अपलोड विफल",
+    "uploadingFile": "फाइल अपलोड हो रही है...",
+    "fileReady": "फाइल सेव के लिए तैयार",
+    "clickToUpload": "फाइल अपलोड करने के लिए क्लिक करें",
+    "pleaseSelectFile": "कृपया अपलोड करने के लिए फाइल चुनें",
+    "addedToVault": "आपके वॉल्ट में जोड़ दी गई है",
+    "tags": "टैग",
+    "addTag": "टैग जोड़ें",
+    "version": "संस्करण",
+    "uploadedBy": "द्वारा अपलोड",
+    "markVerified": "सत्यापित के रूप में चिह्नित करें"
   },
   "invoices": {
     "title": "चालान",

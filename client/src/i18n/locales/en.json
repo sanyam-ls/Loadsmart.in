@@ -94,7 +94,11 @@
     "expandAll": "Expand All",
     "collapseAll": "Collapse All",
     "unknown": "Unknown",
-    "to": "to"
+    "to": "to",
+    "change": "Change",
+    "pleaseWait": "Please wait",
+    "on": "on",
+    "current": "Current"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -405,7 +409,20 @@
     "nonCompliant": "Non-Compliant",
     "expiredDocuments": "Expired Documents",
     "expiringDocuments": "Expiring Documents",
-    "missingDocuments": "Missing Documents"
+    "missingDocuments": "Missing Documents",
+    "uploadComplete": "Upload Complete",
+    "fileUploaded": "File uploaded successfully",
+    "uploadFailed": "Upload failed",
+    "uploadingFile": "Uploading file...",
+    "fileReady": "File ready to save",
+    "clickToUpload": "Click to upload a file",
+    "pleaseSelectFile": "Please select a file to upload",
+    "addedToVault": "has been added to your vault",
+    "tags": "Tags",
+    "addTag": "Add tag",
+    "version": "Version",
+    "uploadedBy": "Uploaded by",
+    "markVerified": "Mark as Verified"
   },
   "invoices": {
     "title": "Invoices",

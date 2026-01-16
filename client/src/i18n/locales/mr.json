@@ -89,7 +89,11 @@
     "less": "कमी",
     "expandAll": "सर्व विस्तृत करा",
     "collapseAll": "सर्व संकुचित करा",
-    "unknown": "अज्ञात"
+    "unknown": "अज्ञात",
+    "change": "बदला",
+    "pleaseWait": "कृपया प्रतीक्षा करा",
+    "on": "वर",
+    "current": "सध्याचे"
   },
   "nav": {
     "dashboard": "डॅशबोर्ड",
@@ -398,7 +402,20 @@
     "nonCompliant": "अनुपालनात नाही",
     "expiredDocuments": "कालबाह्य कागदपत्रे",
     "expiringDocuments": "कालबाह्य होणारी कागदपत्रे",
-    "missingDocuments": "गहाळ कागदपत्रे"
+    "missingDocuments": "गहाळ कागदपत्रे",
+    "uploadComplete": "अपलोड पूर्ण",
+    "fileUploaded": "फाइल यशस्वीरित्या अपलोड झाली",
+    "uploadFailed": "अपलोड अयशस्वी",
+    "uploadingFile": "फाइल अपलोड होत आहे...",
+    "fileReady": "फाइल सेव्ह करण्यास तयार",
+    "clickToUpload": "फाइल अपलोड करण्यासाठी क्लिक करा",
+    "pleaseSelectFile": "कृपया अपलोड करण्यासाठी फाइल निवडा",
+    "addedToVault": "तुमच्या वॉल्टमध्ये जोडले गेले आहे",
+    "tags": "टॅग",
+    "addTag": "टॅग जोडा",
+    "version": "आवृत्ती",
+    "uploadedBy": "द्वारे अपलोड",
+    "markVerified": "सत्यापित म्हणून चिन्हांकित करा"
   },
   "invoices": {
     "title": "बिले",

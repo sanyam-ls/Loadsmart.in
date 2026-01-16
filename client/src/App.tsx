@@ -20,6 +20,7 @@ import { CarrierDataProvider } from "@/lib/carrier-data-store";
 import { CarrierOtpNotification } from "@/components/carrier-otp-notification";
 import { CarrierOnboardingGate } from "@/hooks/use-carrier-onboarding-gate";
 import { ShipperOnboardingGate } from "@/hooks/use-shipper-onboarding-gate";
+import { AdminVerificationBanner } from "@/components/admin-verification-banner";
 
 import AuthPage from "@/pages/auth";
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -133,6 +134,7 @@ function AppContent() {
               <ThemeToggle />
             </div>
           </header>
+          <AdminVerificationBanner />
           <main className="flex-1 overflow-auto">
             <Suspense fallback={<PageLoader />}>
               <Switch>

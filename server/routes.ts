@@ -190,6 +190,19 @@ export async function registerRoutes(
       req.session.userId = user.id;
       
       const { password: _, ...userWithoutPassword } = user;
+      
+      // Broadcast new user registration to admins for real-time updates
+      broadcastMarketplaceEvent("user_registered", {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          companyName: user.companyName,
+          createdAt: user.createdAt,
+        },
+      });
+      
       res.json({ user: userWithoutPassword });
     } catch (error) {
       if (error instanceof z.ZodError) {

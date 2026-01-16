@@ -999,9 +999,16 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Fetch users on mount
+  // Fetch users on mount and auto-refresh every 30 seconds
   useEffect(() => {
     fetchUsersFromAPI();
+    
+    // Auto-refresh users every 30 seconds to show new registrations
+    const intervalId = setInterval(() => {
+      fetchUsersFromAPI();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
   }, [fetchUsersFromAPI]);
 
   const syncCarriersFromSource = useCallback(() => {

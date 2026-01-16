@@ -232,6 +232,7 @@ export default function DocumentsPage() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<VaultDocument | null>(null);
+  const [expiringViewOpen, setExpiringViewOpen] = useState(false);
 
   const [uploadForm, setUploadForm] = useState({
     fileName: "",
@@ -447,7 +448,7 @@ export default function DocumentsPage() {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => setStatusFilter("expiring_soon")}
+                onClick={() => setExpiringViewOpen(true)}
                 data-testid="button-view-expiring"
               >
                 {t('documents.viewDocument')}
@@ -1154,6 +1155,233 @@ export default function DocumentsPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Expiring Documents Dialog */}
+      <Dialog open={expiringViewOpen} onOpenChange={setExpiringViewOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              {t('documents.expiringDocuments')}
+            </DialogTitle>
+            <DialogDescription>
+              Auto-detected documents with expiry dates that need your attention
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              {/* Expired Documents Section */}
+              {expiredDocs.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-3 w-3 rounded-full bg-red-500" />
+                    <h3 className="font-semibold text-red-600 dark:text-red-400">
+                      Expired Documents ({expiredDocs.length})
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    {expiredDocs.map((doc) => {
+                      const rawDays = doc.expiryDate ? getDaysUntilExpiry(doc.expiryDate) : null;
+                      const daysAgo = rawDays !== null ? Math.abs(rawDays) : 0;
+                      const folder = documentFolders[doc.category];
+                      const IconComponent = folder?.icon || FileText;
+                      
+                      return (
+                        <Card key={doc.documentId} className="border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${folder?.bgColor || 'bg-gray-100'}`}>
+                                <IconComponent className={`h-5 w-5 ${folder?.color || 'text-gray-600'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">{doc.fileName}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{shipperCategoryLabels[doc.category] || doc.category}</span>
+                                  {doc.loadId && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{doc.loadId}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <Badge variant="destructive" className="mb-1">
+                                  {t('documents.expired')}
+                                </Badge>
+                                <p className="text-xs text-red-600 dark:text-red-400">
+                                  <Calendar className="h-3 w-3 inline mr-1" />
+                                  {doc.expiryDate && formatDate(doc.expiryDate)}
+                                </p>
+                                <p className="text-xs text-red-500 font-medium">
+                                  {daysAgo} day{daysAgo !== 1 ? 's' : ''} ago
+                                </p>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedDocument(doc);
+                                  setDetailPanelOpen(true);
+                                  setExpiringViewOpen(false);
+                                }}
+                                data-testid={`button-view-expired-${doc.documentId}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Expiring Soon Documents Section */}
+              {expiringDocs.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-3 w-3 rounded-full bg-amber-500" />
+                    <h3 className="font-semibold text-amber-600 dark:text-amber-400">
+                      Expiring Soon ({expiringDocs.length})
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    {expiringDocs
+                      .sort((a, b) => {
+                        const aDays = a.expiryDate ? (getDaysUntilExpiry(a.expiryDate) ?? Infinity) : Infinity;
+                        const bDays = b.expiryDate ? (getDaysUntilExpiry(b.expiryDate) ?? Infinity) : Infinity;
+                        return aDays - bDays;
+                      })
+                      .map((doc) => {
+                        const rawDaysLeft = doc.expiryDate ? getDaysUntilExpiry(doc.expiryDate) : null;
+                        const daysLeft = rawDaysLeft ?? 0;
+                        const folder = documentFolders[doc.category];
+                        const IconComponent = folder?.icon || FileText;
+                        const isUrgent = daysLeft <= 7;
+                        const isWarning = daysLeft <= 14;
+                        
+                        return (
+                          <Card 
+                            key={doc.documentId} 
+                            className={
+                              isUrgent 
+                                ? "border-orange-300 dark:border-orange-700 bg-orange-50/50 dark:bg-orange-900/10"
+                                : isWarning
+                                  ? "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10"
+                                  : "border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10"
+                            }
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-4">
+                                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${folder?.bgColor || 'bg-gray-100'}`}>
+                                  <IconComponent className={`h-5 w-5 ${folder?.color || 'text-gray-600'}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{doc.fileName}</p>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>{shipperCategoryLabels[doc.category] || doc.category}</span>
+                                    {doc.loadId && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{doc.loadId}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <Badge 
+                                    variant="outline" 
+                                    className={
+                                      isUrgent 
+                                        ? "border-orange-400 text-orange-600 dark:text-orange-400 mb-1"
+                                        : "border-amber-400 text-amber-600 dark:text-amber-400 mb-1"
+                                    }
+                                  >
+                                    {daysLeft} day{daysLeft !== 1 ? 's' : ''} left
+                                  </Badge>
+                                  <p className="text-xs text-muted-foreground">
+                                    <Calendar className="h-3 w-3 inline mr-1" />
+                                    {doc.expiryDate && formatDate(doc.expiryDate)}
+                                  </p>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedDocument(doc);
+                                    setDetailPanelOpen(true);
+                                    setExpiringViewOpen(false);
+                                  }}
+                                  data-testid={`button-view-expiring-${doc.documentId}`}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* No expiring documents */}
+              {expiredDocs.length === 0 && expiringDocs.length === 0 && (
+                <div className="text-center py-8">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                  <p className="font-medium text-green-600 dark:text-green-400">All documents are up to date!</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    No documents require immediate attention
+                  </p>
+                </div>
+              )}
+
+              {/* Auto-Detection Info */}
+              <Card className="bg-muted/50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm">Auto-Expiry Detection</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The system automatically monitors document expiry dates and creates alerts when documents are within 30 days of expiration. 
+                        Documents with past expiry dates are marked as expired.
+                      </p>
+                      <div className="flex gap-4 mt-3 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                          <span>Expired</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-full bg-orange-500" />
+                          <span>≤7 days</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                          <span>≤14 days</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
+                          <span>≤30 days</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </ScrollArea>
+
+          <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+            <Button variant="outline" onClick={() => setExpiringViewOpen(false)}>
+              {t('common.close')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

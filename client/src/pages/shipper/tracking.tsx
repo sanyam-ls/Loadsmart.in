@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { useToast } from "@/hooks/use-toast";
@@ -696,14 +697,20 @@ export default function TrackingPage() {
 
                     <div className="flex items-center justify-between mb-4 gap-2">
                       <h3 className="font-semibold">Documents</h3>
-                      <a 
-                        href="/shipper/documents" 
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                        data-testid="link-view-all-documents"
-                      >
-                        View All
-                        <ArrowRight className="h-3 w-3" />
-                      </a>
+                      {(() => {
+                        const loadNum = selectedShipment.load?.adminReferenceNumber || selectedShipment.load?.shipperLoadNumber;
+                        const loadId = loadNum ? `LD-${String(loadNum).padStart(3, '0')}` : '';
+                        return (
+                          <Link 
+                            href={`/shipper/documents?load=${encodeURIComponent(loadId)}`}
+                            className="text-xs text-primary hover:underline flex items-center gap-1"
+                            data-testid="link-view-all-documents"
+                          >
+                            View All
+                            <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        );
+                      })()}
                     </div>
                     <div className="space-y-2">
                       {[

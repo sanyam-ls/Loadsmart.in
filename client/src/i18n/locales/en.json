@@ -422,7 +422,11 @@
     "addTag": "Add tag",
     "version": "Version",
     "uploadedBy": "Uploaded by",
-    "markVerified": "Mark as Verified"
+    "markVerified": "Mark as Verified",
+    "newDocumentReceived": "New Document Received",
+    "documentAddedToCategory": "{{category}} document has been added to your vault",
+    "viewAll": "View All",
+    "viewInDocuments": "View in Documents"
   },
   "invoices": {
     "title": "Invoices",

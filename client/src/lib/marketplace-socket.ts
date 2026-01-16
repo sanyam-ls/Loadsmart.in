@@ -145,6 +145,17 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         otpRequestedHandlers?.forEach(handler => handler(message));
       }
 
+      if (message.type === "shipment_document_uploaded") {
+        // Invalidate shipper documents to refresh document categories
+        queryClient.invalidateQueries({ queryKey: ["/api/shipper/documents"] });
+        // Also refresh tracking page data
+        queryClient.invalidateQueries({ queryKey: ["/api/shipper/tracked-shipments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+        
+        const documentUploadedHandlers = handlers.get("shipment_document_uploaded");
+        documentUploadedHandlers?.forEach(handler => handler(message));
+      }
+
       const typeHandlers = handlers.get(message.type);
       if (typeHandlers) {
         typeHandlers.forEach(handler => handler(message));

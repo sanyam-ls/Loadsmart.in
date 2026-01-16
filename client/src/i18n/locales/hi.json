@@ -415,7 +415,11 @@
     "addTag": "टैग जोड़ें",
     "version": "संस्करण",
     "uploadedBy": "द्वारा अपलोड",
-    "markVerified": "सत्यापित के रूप में चिह्नित करें"
+    "markVerified": "सत्यापित के रूप में चिह्नित करें",
+    "newDocumentReceived": "नया दस्तावेज़ प्राप्त हुआ",
+    "documentAddedToCategory": "{{category}} दस्तावेज़ आपके वॉल्ट में जोड़ दिया गया है",
+    "viewAll": "सभी देखें",
+    "viewInDocuments": "दस्तावेज़ों में देखें"
   },
   "invoices": {
     "title": "चालान",

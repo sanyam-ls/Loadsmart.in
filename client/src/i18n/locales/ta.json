@@ -415,7 +415,11 @@
     "addTag": "குறிச்சொல் சேர்",
     "version": "பதிப்பு",
     "uploadedBy": "பதிவேற்றியவர்",
-    "markVerified": "சரிபார்க்கப்பட்டதாக குறி"
+    "markVerified": "சரிபார்க்கப்பட்டதாக குறி",
+    "newDocumentReceived": "புதிய ஆவணம் பெறப்பட்டது",
+    "documentAddedToCategory": "{{category}} ஆவணம் உங்கள் வால்ட்டில் சேர்க்கப்பட்டது",
+    "viewAll": "அனைத்தையும் காண்",
+    "viewInDocuments": "ஆவணங்களில் காண்"
   },
   "invoices": {
     "title": "விலைப்பட்டியல்கள்",

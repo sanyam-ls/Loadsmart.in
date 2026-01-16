@@ -415,7 +415,11 @@
     "addTag": "ਟੈਗ ਜੋੜੋ",
     "version": "ਸੰਸਕਰਣ",
     "uploadedBy": "ਦੁਆਰਾ ਅੱਪਲੋਡ",
-    "markVerified": "ਤਸਦੀਕ ਵਜੋਂ ਮਾਰਕ ਕਰੋ"
+    "markVerified": "ਤਸਦੀਕ ਵਜੋਂ ਮਾਰਕ ਕਰੋ",
+    "newDocumentReceived": "ਨਵਾਂ ਦਸਤਾਵੇਜ਼ ਪ੍ਰਾਪਤ ਹੋਇਆ",
+    "documentAddedToCategory": "{{category}} ਦਸਤਾਵੇਜ਼ ਤੁਹਾਡੇ ਵੌਲਟ ਵਿੱਚ ਜੋੜਿਆ ਗਿਆ ਹੈ",
+    "viewAll": "ਸਭ ਵੇਖੋ",
+    "viewInDocuments": "ਦਸਤਾਵੇਜ਼ਾਂ ਵਿੱਚ ਵੇਖੋ"
   },
   "invoices": {
     "title": "ਬਿੱਲ",

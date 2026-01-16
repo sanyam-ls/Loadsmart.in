@@ -415,7 +415,11 @@
     "addTag": "टॅग जोडा",
     "version": "आवृत्ती",
     "uploadedBy": "द्वारे अपलोड",
-    "markVerified": "सत्यापित म्हणून चिन्हांकित करा"
+    "markVerified": "सत्यापित म्हणून चिन्हांकित करा",
+    "newDocumentReceived": "नवीन कागदपत्र प्राप्त झाले",
+    "documentAddedToCategory": "{{category}} कागदपत्र तुमच्या वॉल्टमध्ये जोडले गेले आहे",
+    "viewAll": "सर्व पहा",
+    "viewInDocuments": "कागदपत्रांमध्ये पहा"
   },
   "invoices": {
     "title": "बिले",

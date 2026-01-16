@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useUpload } from "@/hooks/use-upload";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { 
   FileText, Upload, Search, Filter, Download, Eye, Trash2, AlertCircle, 
   CheckCircle, X, Tag, Calendar, Link2, Plus, RotateCw, ZoomIn, ZoomOut,
@@ -177,6 +179,7 @@ interface ApiDocument {
 export default function DocumentsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [location] = useLocation();
   const { getActiveLoads } = useMockData();
   const {
     documents: mockDocuments,
@@ -190,6 +193,27 @@ export default function DocumentsPage() {
   } = useDocumentVault();
   
   const activeLoads = getActiveLoads();
+  
+  // Get initial load filter from URL query parameter
+  const getInitialLoadFilter = () => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const loadParam = urlParams.get('load');
+      if (loadParam) {
+        // If already in LD-XXX format, use directly
+        if (loadParam.startsWith('LD-')) {
+          return loadParam;
+        }
+        // Otherwise, format load ID to match our format (LD-XXX)
+        const loadNum = parseInt(loadParam);
+        if (!isNaN(loadNum)) {
+          return `LD-${String(loadNum).padStart(3, '0')}`;
+        }
+        return loadParam;
+      }
+    }
+    return "all";
+  };
   
   // Fetch real shipment documents from API
   const { data: apiDocuments = [], isLoading: isLoadingApiDocs } = useQuery<ApiDocument[]>({
@@ -233,9 +257,28 @@ export default function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<DocumentCategory | "all">("all");
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | "all">("all");
-  const [loadFilter, setLoadFilter] = useState("all");
+  const [loadFilter, setLoadFilter] = useState(() => getInitialLoadFilter());
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [selectedFolder, setSelectedFolder] = useState<DocumentCategory | null>(null);
+  
+  // Update load filter when URL changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loadParam = urlParams.get('load');
+    if (loadParam) {
+      // Use the load param directly if it's already in LD-XXX format, otherwise format it
+      if (loadParam.startsWith('LD-')) {
+        setLoadFilter(loadParam);
+      } else {
+        const loadNum = parseInt(loadParam);
+        if (!isNaN(loadNum)) {
+          setLoadFilter(`LD-${String(loadNum).padStart(3, '0')}`);
+        } else {
+          setLoadFilter(loadParam);
+        }
+      }
+    }
+  }, [location]);
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -281,6 +324,41 @@ export default function DocumentsPage() {
   });
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
+
+  // Listen for real-time document upload events
+  // Note: The WebSocket connection is established at the app level, so we only subscribe to events here
+  useEffect(() => {
+    const unsubscribe = onMarketplaceEvent("shipment_document_uploaded", (data: any) => {
+      const docType = data?.document?.documentType || data?.documentType;
+      const categoryMapping: Record<string, string> = {
+        lr_consignment: "LR / Consignment",
+        eway_bill: "E-way Bill",
+        loading_photos: "Photos",
+        delivery_photos: "Photos",
+        pod: "Proof of Delivery",
+        invoice: "Invoice",
+        weight_slip: "Weight Slip",
+        bol: "Bill of Lading",
+        other: "Other",
+      };
+      const categoryName = categoryMapping[docType] || docType || "Document";
+      
+      // Show toast notification for new document
+      toast({
+        title: t('documents.newDocumentReceived', { defaultValue: "New Document Received" }),
+        description: t('documents.documentAddedToCategory', { 
+          defaultValue: `${categoryName} document has been added to your vault`,
+          category: categoryName 
+        }),
+      });
+      
+      // Query is already invalidated by the WebSocket handler in marketplace-socket.ts
+    });
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [toast, t]);
 
   // Filter expiring/expired docs to only show shipper-relevant categories (not carrier documents)
   const expiringDocs = getExpiringDocuments().filter(doc => shipperDocumentCategories.includes(doc.category));

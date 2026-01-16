@@ -246,8 +246,9 @@ export default function DocumentsPage() {
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
 
-  const expiringDocs = getExpiringDocuments();
-  const expiredDocs = getExpiredDocuments();
+  // Filter expiring/expired docs to only show shipper-relevant categories (not carrier documents)
+  const expiringDocs = getExpiringDocuments().filter(doc => shipperDocumentCategories.includes(doc.category));
+  const expiredDocs = getExpiredDocuments().filter(doc => shipperDocumentCategories.includes(doc.category));
 
   // Count documents per category for folder badges
   const documentCountsByCategory = useMemo(() => {

@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   FileText, Upload, Search, Filter, Download, Eye, Trash2, AlertCircle, 
   CheckCircle, X, Tag, Calendar, Link2, Plus, RotateCw, ZoomIn, ZoomOut,
-  ChevronLeft, ChevronRight, Clock, FileImage, Info, Edit2, History
+  ChevronLeft, ChevronRight, Clock, FileImage, Info, Edit2, History,
+  Folder, FolderOpen, ArrowLeft, Receipt, Truck, Shield, Image, FileCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,27 +58,69 @@ const shipperDocumentCategories: DocumentCategory[] = [
   "pod", "bol", "invoice", "lr", "eway_bill", "weight_slip", "photos", "other"
 ];
 
-// Categorized groups for shipper documents
-const shipperDocumentGroups = {
-  shipment: {
-    label: "Shipment Documents",
-    icon: "truck",
-    categories: ["pod", "bol", "lr"] as DocumentCategory[],
+// Folder configuration for shipper document categories
+const documentFolders: Partial<Record<DocumentCategory, {
+  label: string;
+  icon: typeof FileText;
+  color: string;
+  bgColor: string;
+  description: string;
+}>> = {
+  eway_bill: {
+    label: "E-way Bills",
+    icon: Shield,
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+    description: "GST e-way bill documents for transport",
   },
-  compliance: {
-    label: "Compliance & Customs",
-    icon: "shield",
-    categories: ["eway_bill", "weight_slip"] as DocumentCategory[],
+  lr: {
+    label: "LR / Consignments",
+    icon: FileCheck,
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    description: "Lorry receipts and consignment notes",
   },
-  financial: {
-    label: "Financial",
-    icon: "receipt",
-    categories: ["invoice"] as DocumentCategory[],
+  pod: {
+    label: "Proof of Delivery",
+    icon: CheckCircle,
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-900/30",
+    description: "Delivery confirmations and receipts",
   },
-  media: {
-    label: "Photos & Other",
-    icon: "image",
-    categories: ["photos", "other"] as DocumentCategory[],
+  bol: {
+    label: "Bill of Lading",
+    icon: Truck,
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    description: "Transport and shipping contracts",
+  },
+  invoice: {
+    label: "Invoices",
+    icon: Receipt,
+    color: "text-emerald-600 dark:text-emerald-400",
+    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+    description: "Billing and payment documents",
+  },
+  photos: {
+    label: "Photos",
+    icon: Image,
+    color: "text-pink-600 dark:text-pink-400",
+    bgColor: "bg-pink-100 dark:bg-pink-900/30",
+    description: "Loading, unloading, and delivery photos",
+  },
+  weight_slip: {
+    label: "Weight Slips",
+    icon: FileText,
+    color: "text-cyan-600 dark:text-cyan-400",
+    bgColor: "bg-cyan-100 dark:bg-cyan-900/30",
+    description: "Weighbridge and weight verification slips",
+  },
+  other: {
+    label: "Other Documents",
+    icon: Folder,
+    color: "text-gray-600 dark:text-gray-400",
+    bgColor: "bg-gray-100 dark:bg-gray-900/30",
+    description: "Miscellaneous supporting documents",
   },
 };
 
@@ -183,6 +226,7 @@ export default function DocumentsPage() {
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | "all">("all");
   const [loadFilter, setLoadFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [selectedFolder, setSelectedFolder] = useState<DocumentCategory | null>(null);
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -204,6 +248,15 @@ export default function DocumentsPage() {
   const expiringDocs = getExpiringDocuments();
   const expiredDocs = getExpiredDocuments();
 
+  // Count documents per category for folder badges
+  const documentCountsByCategory = useMemo(() => {
+    const counts: Record<DocumentCategory, number> = {} as Record<DocumentCategory, number>;
+    shipperDocumentCategories.forEach(cat => {
+      counts[cat] = documents.filter(d => d.category === cat && shipperDocumentCategories.includes(d.category)).length;
+    });
+    return counts;
+  }, [documents]);
+
   const filteredAndSortedDocs = useMemo(() => {
     let result = documents.filter(doc => {
       // Only show shipper-relevant document categories
@@ -212,10 +265,12 @@ export default function DocumentsPage() {
         doc.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         doc.loadId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         doc.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      // When a folder is selected, filter by that folder
+      const matchesFolder = selectedFolder === null || doc.category === selectedFolder;
       const matchesType = typeFilter === "all" || doc.category === typeFilter;
       const matchesStatus = statusFilter === "all" || doc.status === statusFilter;
       const matchesLoad = loadFilter === "all" || doc.loadId === loadFilter;
-      return isShipperCategory && matchesSearch && matchesType && matchesStatus && matchesLoad;
+      return isShipperCategory && matchesSearch && matchesFolder && matchesType && matchesStatus && matchesLoad;
     });
 
     result.sort((a, b) => {
@@ -236,7 +291,20 @@ export default function DocumentsPage() {
     });
 
     return result;
-  }, [documents, searchQuery, typeFilter, statusFilter, loadFilter, sortBy]);
+  }, [documents, searchQuery, selectedFolder, typeFilter, statusFilter, loadFilter, sortBy]);
+
+  // Handle folder navigation
+  const handleFolderClick = (category: DocumentCategory) => {
+    setSelectedFolder(category);
+    setSearchQuery("");
+    setStatusFilter("all");
+    setLoadFilter("all");
+  };
+
+  const handleBackToFolders = () => {
+    setSelectedFolder(null);
+    setSearchQuery("");
+  };
 
   const handleUpload = () => {
     if (!uploadForm.fileName || !uploadForm.category) {
@@ -361,7 +429,7 @@ export default function DocumentsPage() {
         </Button>
       </div>
 
-      {(expiringDocs.length > 0 || expiredDocs.length > 0) && (
+      {(expiringDocs.length > 0 || expiredDocs.length > 0) && !selectedFolder && (
         <Card className="mb-6 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -389,180 +457,255 @@ export default function DocumentsPage() {
         </Card>
       )}
 
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, load ID (e.g. LD-057)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-              data-testid="input-search-documents"
-            />
+      {/* Folder View - Show when no folder is selected */}
+      {selectedFolder === null ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+            {shipperDocumentCategories.map((category) => {
+              const folder = documentFolders[category];
+              if (!folder) return null;
+              const count = documentCountsByCategory[category] || 0;
+              const FolderIcon = folder.icon;
+              
+              return (
+                <Card 
+                  key={category}
+                  className="hover-elevate cursor-pointer transition-all"
+                  onClick={() => handleFolderClick(category)}
+                  data-testid={`folder-${category}`}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${folder.bgColor}`}>
+                        <FolderIcon className={`h-6 w-6 ${folder.color}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm">{folder.label}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{count} {count === 1 ? 'document' : 'documents'}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{folder.description}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as DocumentCategory | "all")}>
-            <SelectTrigger className="w-full sm:w-44" data-testid="select-type-filter">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Document type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('common.all')} {t('common.type')}</SelectItem>
-              {Object.entries(shipperDocumentGroups).map(([groupKey, group]) => (
-                <div key={groupKey}>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group.label}</div>
-                  {group.categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{shipperCategoryLabels[cat]}</SelectItem>
-                  ))}
-                </div>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | "all")}>
-            <SelectTrigger className="w-full sm:w-40" data-testid="select-status-filter">
-              <SelectValue placeholder={t('common.status')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('common.all')}</SelectItem>
-              <SelectItem value="active">{t('common.active')}</SelectItem>
-              <SelectItem value="expiring_soon">{t('documents.expiringSoon')}</SelectItem>
-              <SelectItem value="expired">{t('documents.expired')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-4 flex-wrap justify-between">
-          <div className="flex items-center gap-2">
-            <Select value={loadFilter} onValueChange={setLoadFilter}>
-              <SelectTrigger className="w-40" data-testid="select-load-filter">
-                <Link2 className="h-4 w-4 mr-2" />
-                <SelectValue placeholder={t('loads.title')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common.all')} {t('loads.title')}</SelectItem>
-                {linkedLoads.map(loadId => (
-                  <SelectItem key={loadId} value={loadId}>{loadId}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              {t('common.showing')} {filteredAndSortedDocs.length} {t('common.of')} {documents.length} {t('documents.title').toLowerCase()}
-            </p>
-          </div>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-40" data-testid="select-sort">
-              <SelectValue placeholder={t('common.sortBy')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">{t('common.descending')}</SelectItem>
-              <SelectItem value="oldest">{t('common.ascending')}</SelectItem>
-              <SelectItem value="expiring">{t('documents.expiringSoon')}</SelectItem>
-              <SelectItem value="largest">{t('common.more')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      {filteredAndSortedDocs.length === 0 ? (
-        <EmptyState
-          icon={FileText}
-          title={t('documents.noDocumentsFound')}
-          description={t('documents.uploadFirstDocument')}
-          actionLabel={t('documents.uploadDocument')}
-          onAction={() => setUploadDialogOpen(true)}
-        />
+          {/* Quick Stats */}
+          <Card className="mb-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Quick Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <p className="text-2xl font-bold">{documents.filter(d => shipperDocumentCategories.includes(d.category)).length}</p>
+                  <p className="text-xs text-muted-foreground">Total Documents</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {documents.filter(d => d.status === "active" && shipperDocumentCategories.includes(d.category)).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Active</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{expiringDocs.length}</p>
+                  <p className="text-xs text-muted-foreground">Expiring Soon</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{expiredDocs.length}</p>
+                  <p className="text-xs text-muted-foreground">Expired</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredAndSortedDocs.map((doc) => (
-            <Card 
-              key={doc.documentId} 
-              className="hover-elevate cursor-pointer" 
-              onClick={() => handleDetails(doc)}
-              data-testid={`document-card-${doc.documentId}`}
+        /* Folder Contents View - Show when a folder is selected */
+        <>
+          {/* Breadcrumb and Back Button */}
+          <div className="flex items-center gap-3 mb-6">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleBackToFolders}
+              data-testid="button-back-to-folders"
             >
-              <CardContent className="p-5">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 ${
-                    doc.fileType === "pdf" 
-                      ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                      : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                  }`}>
-                    {doc.fileType === "pdf" ? <FileText className="h-5 w-5" /> : <FileImage className="h-5 w-5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate" data-testid={`text-filename-${doc.documentId}`}>
-                      {doc.fileName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{formatFileSize(doc.fileSize)}</p>
-                  </div>
-                  {doc.isVerified ? (
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                  )}
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-                      {shipperCategoryLabels[doc.category] || documentCategoryLabels[doc.category]}
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Folders
+            </Button>
+            <Separator orientation="vertical" className="h-6" />
+            <div className="flex items-center gap-2">
+              {(() => {
+                const folder = documentFolders[selectedFolder];
+                if (!folder) return null;
+                const FolderIcon = folder.icon;
+                return (
+                  <>
+                    <div className={`flex h-8 w-8 items-center justify-center rounded ${folder.bgColor}`}>
+                      <FolderIcon className={`h-4 w-4 ${folder.color}`} />
+                    </div>
+                    <span className="font-medium">{folder.label}</span>
+                    <Badge variant="secondary" className="ml-2 no-default-hover-elevate no-default-active-elevate">
+                      {filteredAndSortedDocs.length} documents
                     </Badge>
-                    {getStatusBadge(doc.status)}
-                  </div>
-                  {doc.loadId && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{t('loads.title')}</span>
-                      <span className="font-medium">{doc.loadId}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{t('documents.uploadedOn')}</span>
-                    <span>{formatDate(doc.uploadedDate)}</span>
-                  </div>
-                  {doc.expiryDate && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{t('documents.expiryDate')}</span>
-                      <span className={doc.status === "expired" ? "text-destructive" : doc.status === "expiring_soon" ? "text-amber-600 dark:text-amber-400" : ""}>
-                        {formatDate(doc.expiryDate)}
-                        {doc.status !== "active" && ` (${getDaysUntilExpiry(doc.expiryDate)}d)`}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
 
-                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1" 
-                    onClick={() => handleView(doc)}
-                    data-testid={`button-view-${doc.documentId}`}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    {t('common.view')}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => handleDownload(doc)}
-                    data-testid={`button-download-${doc.documentId}`}
-                  >
-                    <Download className="h-4 w-4 mr-1" />
-                    {t('common.download')}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => handleDelete(doc)}
-                    data-testid={`button-delete-${doc.documentId}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+          {/* Search and Filters for folder contents */}
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search documents in this folder..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-documents"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | "all")}>
+                <SelectTrigger className="w-full sm:w-40" data-testid="select-status-filter">
+                  <SelectValue placeholder={t('common.status')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
+                  <SelectItem value="active">{t('common.active')}</SelectItem>
+                  <SelectItem value="expiring_soon">{t('documents.expiringSoon')}</SelectItem>
+                  <SelectItem value="expired">{t('documents.expired')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={loadFilter} onValueChange={setLoadFilter}>
+                <SelectTrigger className="w-full sm:w-40" data-testid="select-load-filter">
+                  <Link2 className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder={t('loads.title')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('common.all')} {t('loads.title')}</SelectItem>
+                  {linkedLoads.map(loadId => (
+                    <SelectItem key={loadId} value={loadId}>{loadId}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                <SelectTrigger className="w-full sm:w-36" data-testid="select-sort">
+                  <SelectValue placeholder={t('common.sortBy')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="expiring">Expiring Soon</SelectItem>
+                  <SelectItem value="largest">Largest First</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Document Cards */}
+          {filteredAndSortedDocs.length === 0 ? (
+            <EmptyState
+              icon={Folder}
+              title="No documents in this folder"
+              description="Upload documents to organize them in this category."
+              actionLabel={t('documents.uploadDocument')}
+              onAction={() => setUploadDialogOpen(true)}
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredAndSortedDocs.map((doc) => (
+                <Card 
+                  key={doc.documentId} 
+                  className="hover-elevate cursor-pointer" 
+                  onClick={() => handleDetails(doc)}
+                  data-testid={`document-card-${doc.documentId}`}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 ${
+                        doc.fileType === "pdf" 
+                          ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                      }`}>
+                        {doc.fileType === "pdf" ? <FileText className="h-5 w-5" /> : <FileImage className="h-5 w-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate" data-testid={`text-filename-${doc.documentId}`}>
+                          {doc.fileName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(doc.fileSize)}</p>
+                      </div>
+                      {doc.isVerified ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                      )}
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center justify-between gap-2">
+                        {getStatusBadge(doc.status)}
+                      </div>
+                      {doc.loadId && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">{t('loads.title')}</span>
+                          <span className="font-medium">{doc.loadId}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{t('documents.uploadedOn')}</span>
+                        <span>{formatDate(doc.uploadedDate)}</span>
+                      </div>
+                      {doc.expiryDate && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">{t('documents.expiryDate')}</span>
+                          <span className={doc.status === "expired" ? "text-destructive" : doc.status === "expiring_soon" ? "text-amber-600 dark:text-amber-400" : ""}>
+                            {formatDate(doc.expiryDate)}
+                            {doc.status !== "active" && ` (${getDaysUntilExpiry(doc.expiryDate)}d)`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1" 
+                        onClick={() => handleView(doc)}
+                        data-testid={`button-view-${doc.documentId}`}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        {t('common.view')}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleDownload(doc)}
+                        data-testid={`button-download-${doc.documentId}`}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        {t('common.download')}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleDelete(doc)}
+                        data-testid={`button-delete-${doc.documentId}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
@@ -638,13 +781,8 @@ export default function DocumentsPage() {
                     <SelectValue placeholder={t('documents.selectDocumentType')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(shipperDocumentGroups).map(([groupKey, group]) => (
-                      <div key={groupKey}>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group.label}</div>
-                        {group.categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{shipperCategoryLabels[cat]}</SelectItem>
-                        ))}
-                      </div>
+                    {shipperDocumentCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{shipperCategoryLabels[cat]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

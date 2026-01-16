@@ -394,8 +394,8 @@ export default function ShipperDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-            <CardTitle className="text-lg">{t("invoices.title")}</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/invoices")} data-testid="link-view-invoices">
+            <CardTitle className="text-lg">{t("memos.title")}</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/invoices")} data-testid="link-view-memos">
               {t("dashboard.viewAll")}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
@@ -404,7 +404,7 @@ export default function ShipperDashboard() {
             {userInvoices.length === 0 ? (
               <div className="text-center py-8">
                 <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">{t("invoices.noInvoicesFound")}</p>
+                <p className="text-sm text-muted-foreground">{t("memos.noMemosFound")}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -413,7 +413,7 @@ export default function ShipperDashboard() {
                     key={invoice.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer" 
                     onClick={() => navigate("/shipper/invoices")} 
-                    data-testid={`invoice-${invoice.id}`}
+                    data-testid={`memo-${invoice.id}`}
                   >
                     <div className="flex items-center gap-3">
                       <Receipt className="h-4 w-4 text-muted-foreground" />

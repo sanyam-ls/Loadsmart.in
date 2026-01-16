@@ -409,7 +409,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
   if (isLoading) {
     return (
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold">{t('invoices.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('memos.title')}</h1>
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
             <Card key={i} className="animate-pulse">
@@ -513,8 +513,8 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold" data-testid="text-invoices-title">{t('invoices.title')}</h1>
-        <p className="text-muted-foreground">{t('shipper.viewInvoices')}</p>
+        <h1 className="text-2xl font-bold" data-testid="text-memos-title">{t('memos.title')}</h1>
+        <p className="text-muted-foreground">{t('memos.viewMemos')}</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -525,7 +525,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                 <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t('common.total')} {t('invoices.title')}</p>
+                <p className="text-sm text-muted-foreground">{t('common.total')} {t('memos.title')}</p>
                 <p className="text-xl font-bold">{invoices.length}</p>
               </div>
             </div>
@@ -591,7 +591,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
               <CardContent className="py-8 text-center">
                 <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-4" />
                 <h3 className="text-lg font-semibold">{t('messages.success')}</h3>
-                <p className="text-muted-foreground">{t('invoices.noInvoicesFound')}</p>
+                <p className="text-muted-foreground">{t('memos.noMemosFound')}</p>
               </CardContent>
             </Card>
           ) : (
@@ -610,7 +610,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             <Card>
               <CardContent className="py-8 text-center">
                 <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">{t('invoices.noInvoicesFound')}</p>
+                <p className="text-muted-foreground">{t('memos.noMemosFound')}</p>
               </CardContent>
             </Card>
           ) : (
@@ -623,7 +623,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
             <Card>
               <CardContent className="py-8 text-center">
                 <DollarSign className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">{t('invoices.noInvoicesFound')}</p>
+                <p className="text-muted-foreground">{t('memos.noMemosFound')}</p>
               </CardContent>
             </Card>
           ) : (

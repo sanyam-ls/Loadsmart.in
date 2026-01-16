@@ -49,7 +49,7 @@ const shipperItems: NavItem[] = [
   { titleKey: "nav.dashboard", url: "/shipper", icon: LayoutDashboard },
   { titleKey: "nav.postLoad", url: "/shipper/post-load", icon: Plus },
   { titleKey: "nav.myLoads", url: "/shipper/loads", icon: Package },
-  { titleKey: "nav.invoices", url: "/shipper/invoices", icon: FileText },
+  { titleKey: "nav.memos", url: "/shipper/invoices", icon: FileText },
   { titleKey: "nav.tracking", url: "/shipper/tracking", icon: Route },
   { titleKey: "nav.documents", url: "/shipper/documents", icon: FileText },
 ];

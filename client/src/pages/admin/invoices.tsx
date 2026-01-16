@@ -434,8 +434,8 @@ export default function AdminInvoicesPage() {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Invoice Management</h1>
-          <p className="text-muted-foreground">Track invoices and shipper responses</p>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">Memo Management</h1>
+          <p className="text-muted-foreground">Track memos and shipper responses</p>
         </div>
         <Button onClick={() => refetch()} variant="outline" data-testid="button-refresh">
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -451,7 +451,7 @@ export default function AdminInvoicesPage() {
                 <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Invoices</p>
+                <p className="text-sm text-muted-foreground">Total Memos</p>
                 <p className="text-xl font-bold">{stats.total}</p>
               </div>
             </div>
@@ -501,14 +501,14 @@ export default function AdminInvoicesPage() {
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
           <div>
-            <CardTitle className="text-lg">All Invoices</CardTitle>
+            <CardTitle className="text-lg">All Memos</CardTitle>
             <CardDescription>With shipper response status tracking</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search invoices..."
+                placeholder="Search memos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 w-48"

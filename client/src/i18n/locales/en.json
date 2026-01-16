@@ -108,6 +108,7 @@
     "postLoad": "Post Load",
     "tracking": "Track Shipments",
     "invoices": "Invoices",
+    "memos": "Memos",
     "carriers": "Carriers",
     "shippers": "Shippers",
     "users": "Users",

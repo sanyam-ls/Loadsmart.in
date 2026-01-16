@@ -747,9 +747,9 @@ export async function registerRoutes(
             id: shipperUser.id,
             username: shipperUser.username,
             email: shipperUser.email,
-            company: shipperUser.company,
+            company: shipperUser.companyName,
             phone: shipperUser.phone,
-            isVerified: shipperUser.isVerified,
+            isVerified: shipperUser.isVerified ?? false,
             role: shipperUser.role,
           };
         }
@@ -761,10 +761,90 @@ export async function registerRoutes(
             id: carrierUser.id,
             username: carrierUser.username,
             email: carrierUser.email,
-            company: carrierUser.company,
+            company: carrierUser.companyName,
             phone: carrierUser.phone,
-            isVerified: carrierUser.isVerified,
+            isVerified: carrierUser.isVerified ?? false,
             role: carrierUser.role,
+          };
+        }
+      }
+      
+      // Fetch shipment with truck and driver details
+      let shipmentDetails: {
+        id: string;
+        status: string;
+        truckId: string | null;
+        driverId: string | null;
+        truck?: {
+          id: string;
+          licensePlate: string;
+          manufacturer: string | null;
+          model: string | null;
+          truckType: string | null;
+          capacity: string | null;
+          chassisNumber: string | null;
+          registrationNumber: string | null;
+        } | null;
+        driver?: {
+          id: string;
+          username: string;
+          phone: string | null;
+          email: string | null;
+        } | null;
+      } | null = null;
+      
+      const shipment = await storage.getShipmentByLoad(load.id);
+      if (shipment) {
+        shipmentDetails = {
+          id: shipment.id,
+          status: shipment.status || "pending",
+          truckId: shipment.truckId,
+          driverId: shipment.driverId,
+        };
+        
+        // Fetch truck details if truckId exists
+        if (shipment.truckId) {
+          const truck = await storage.getTruck(shipment.truckId);
+          if (truck) {
+            shipmentDetails.truck = {
+              id: truck.id,
+              licensePlate: truck.licensePlate,
+              manufacturer: truck.make,
+              model: truck.model,
+              truckType: truck.truckType,
+              capacity: truck.capacity?.toString() || null,
+              chassisNumber: truck.chassisNumber,
+              registrationNumber: truck.registrationNumber,
+            };
+          }
+        }
+        
+        // Fetch driver details if driverId exists (from drivers table)
+        if (shipment.driverId) {
+          const driver = await storage.getDriver(shipment.driverId);
+          if (driver) {
+            shipmentDetails.driver = {
+              id: driver.id,
+              username: driver.name,
+              phone: driver.phone,
+              email: driver.email,
+            };
+          }
+        }
+      }
+      
+      // Fetch carrier profile details
+      let carrierOnboarding: {
+        carrierType: string | null;
+        fleetSize: number | null;
+      } | null = null;
+      
+      if (load.assignedCarrierId) {
+        const profile = await storage.getCarrierProfile(load.assignedCarrierId);
+        if (profile) {
+          carrierOnboarding = {
+            carrierType: profile.carrierType,
+            fleetSize: profile.fleetSize,
           };
         }
       }
@@ -775,10 +855,10 @@ export async function registerRoutes(
       
       if (shouldIncludeBids) {
         const loadBids = await storage.getBidsByLoad(load.id);
-        res.json({ ...load, bids: loadBids, shipper, assignedCarrier });
+        res.json({ ...load, bids: loadBids, shipper, assignedCarrier, shipmentDetails, carrierOnboarding });
       } else {
         // Hide bids and pricing info from shippers pre-finalization
-        res.json({ ...load, bids: [], bidCount: 0, shipper, assignedCarrier });
+        res.json({ ...load, bids: [], bidCount: 0, shipper, assignedCarrier, shipmentDetails, carrierOnboarding });
       }
     } catch (error) {
       console.error("Get load error:", error);

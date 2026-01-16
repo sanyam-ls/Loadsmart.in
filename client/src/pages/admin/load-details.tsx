@@ -94,9 +94,39 @@ interface SafeUserDTO {
   role: string;
 }
 
+interface ShipmentDetails {
+  id: string;
+  status: string;
+  truckId: string | null;
+  driverId: string | null;
+  truck?: {
+    id: string;
+    licensePlate: string;
+    manufacturer: string | null;
+    model: string | null;
+    truckType: string | null;
+    capacity: string | null;
+    chassisNumber: string | null;
+    registrationNumber: string | null;
+  } | null;
+  driver?: {
+    id: string;
+    username: string;
+    phone: string | null;
+    email: string;
+  } | null;
+}
+
+interface CarrierOnboarding {
+  carrierType: string | null;
+  fleetSize: number | null;
+}
+
 type LoadWithRelations = Load & { 
   shipper?: SafeUserDTO | null; 
-  assignedCarrier?: SafeUserDTO | null; 
+  assignedCarrier?: SafeUserDTO | null;
+  shipmentDetails?: ShipmentDetails | null;
+  carrierOnboarding?: CarrierOnboarding | null;
 };
 
 export default function AdminLoadDetailsPage() {
@@ -622,7 +652,14 @@ export default function AdminLoadDetailsPage() {
                       </div>
                       <div>
                         <CardTitle>{apiLoad?.assignedCarrier?.company || detailedLoad.carrierDetails?.companyName || "Assigned Carrier"}</CardTitle>
-                        <CardDescription>Assigned Carrier</CardDescription>
+                        <CardDescription className="flex items-center gap-2">
+                          Assigned Carrier
+                          {apiLoad?.carrierOnboarding?.carrierType && (
+                            <Badge variant="outline" className="text-xs">
+                              {apiLoad.carrierOnboarding.carrierType === "solo" ? "Solo Operator" : "Enterprise Fleet"}
+                            </Badge>
+                          )}
+                        </CardDescription>
                       </div>
                     </div>
                     <Badge className={(apiLoad?.assignedCarrier?.isVerified || detailedLoad.carrierDetails?.verificationStatus === "verified") ? "bg-green-500" : ""}>
@@ -649,10 +686,10 @@ export default function AdminLoadDetailsPage() {
                           <span className="font-medium">{apiLoad.assignedCarrier.username}</span>
                         </div>
                       )}
-                      {detailedLoad.carrierDetails?.fleetSize && (
+                      {(apiLoad?.carrierOnboarding?.fleetSize || detailedLoad.carrierDetails?.fleetSize) && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Fleet Size</span>
-                          <span className="font-medium">{detailedLoad.carrierDetails.fleetSize} vehicles</span>
+                          <span className="font-medium">{apiLoad?.carrierOnboarding?.fleetSize || detailedLoad.carrierDetails?.fleetSize} vehicles</span>
                         </div>
                       )}
                     </div>
@@ -660,7 +697,94 @@ export default function AdminLoadDetailsPage() {
                 </CardContent>
               </Card>
 
-              {detailedLoad.vehicleDetails && (
+
+              {apiLoad?.shipmentDetails?.truck && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Truck className="h-5 w-5 text-primary" />
+                      Truck Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">License Plate</span>
+                          <span className="font-medium font-mono">{apiLoad.shipmentDetails.truck.licensePlate}</span>
+                        </div>
+                        {apiLoad.shipmentDetails.truck.manufacturer && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Manufacturer</span>
+                            <span className="font-medium">{apiLoad.shipmentDetails.truck.manufacturer}</span>
+                          </div>
+                        )}
+                        {apiLoad.shipmentDetails.truck.model && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Model</span>
+                            <span className="font-medium">{apiLoad.shipmentDetails.truck.model}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-3">
+                        {apiLoad.shipmentDetails.truck.truckType && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Truck Type</span>
+                            <span className="font-medium">{apiLoad.shipmentDetails.truck.truckType}</span>
+                          </div>
+                        )}
+                        {apiLoad.shipmentDetails.truck.capacity && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Capacity</span>
+                            <span className="font-medium">{apiLoad.shipmentDetails.truck.capacity}</span>
+                          </div>
+                        )}
+                        {apiLoad.shipmentDetails.truck.registrationNumber && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Registration No.</span>
+                            <span className="font-medium font-mono">{apiLoad.shipmentDetails.truck.registrationNumber}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {apiLoad?.shipmentDetails?.driver && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
+                      Driver Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Driver Name</span>
+                          <span className="font-medium">{apiLoad.shipmentDetails.driver.username}</span>
+                        </div>
+                        {apiLoad.shipmentDetails.driver.phone && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Phone</span>
+                            <span className="font-medium">{apiLoad.shipmentDetails.driver.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Email</span>
+                          <span className="font-medium">{apiLoad.shipmentDetails.driver.email}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!apiLoad?.shipmentDetails?.truck && !apiLoad?.shipmentDetails?.driver && detailedLoad.vehicleDetails && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">Assigned Vehicle</CardTitle>
@@ -713,6 +837,15 @@ export default function AdminLoadDetailsPage() {
                         </Badge>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!apiLoad?.shipmentDetails?.truck && !apiLoad?.shipmentDetails?.driver && !detailedLoad.vehicleDetails && (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <Truck className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No truck or driver assigned yet</p>
                   </CardContent>
                 </Card>
               )}

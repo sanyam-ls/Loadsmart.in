@@ -898,39 +898,68 @@ export default function DocumentsPage() {
           
           <div className="flex items-center justify-center bg-muted rounded-lg min-h-[400px] overflow-auto">
             <div 
-              className="flex items-center justify-center p-8"
+              className="flex items-center justify-center p-4 w-full h-full"
               style={{ 
                 transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
                 transition: "transform 0.2s ease"
               }}
             >
               {selectedDocument?.fileType === "pdf" ? (
-                <div className="bg-background border rounded-lg p-8 shadow-lg min-w-[300px]">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText className="h-8 w-8 text-red-500" />
-                    <div>
-                      <p className="font-semibold">{selectedDocument.fileName}</p>
-                      <p className="text-sm text-muted-foreground">{formatFileSize(selectedDocument.fileSize)}</p>
+                selectedDocument.fileUrl && (selectedDocument.fileUrl.startsWith('http') || selectedDocument.fileUrl.startsWith('data:')) ? (
+                  <iframe 
+                    src={selectedDocument.fileUrl} 
+                    className="w-full h-[500px] border-0 rounded-lg bg-white"
+                    title={selectedDocument.fileName}
+                  />
+                ) : (
+                  <div className="bg-background border rounded-lg p-8 shadow-lg min-w-[300px]">
+                    <div className="flex items-center gap-2 mb-4">
+                      <FileText className="h-8 w-8 text-red-500" />
+                      <div>
+                        <p className="font-semibold">{selectedDocument.fileName}</p>
+                        <p className="text-sm text-muted-foreground">{formatFileSize(selectedDocument.fileSize)}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>Category: {shipperCategoryLabels[selectedDocument.category] || documentCategoryLabels[selectedDocument.category]}</p>
+                      <p>Uploaded: {formatDate(selectedDocument.uploadedDate)}</p>
+                      {selectedDocument.loadId && <p>Load: {selectedDocument.loadId}</p>}
+                      {selectedDocument.notes && <p>Notes: {selectedDocument.notes}</p>}
+                    </div>
+                    <div className="mt-4 pt-4 border-t text-center">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Document stored locally
+                      </p>
+                      {selectedDocument.fileUrl && (
+                        <Button size="sm" variant="outline" onClick={() => window.open(selectedDocument.fileUrl, '_blank')}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Open Document
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>Category: {shipperCategoryLabels[selectedDocument.category] || documentCategoryLabels[selectedDocument.category]}</p>
-                    <p>Uploaded: {formatDate(selectedDocument.uploadedDate)}</p>
-                    {selectedDocument.loadId && <p>Load: {selectedDocument.loadId}</p>}
-                    {selectedDocument.notes && <p>Notes: {selectedDocument.notes}</p>}
-                  </div>
-                  <div className="mt-4 pt-4 border-t">
-                    <p className="text-xs text-center text-muted-foreground">
-                      PDF Preview (simulated)
-                    </p>
-                  </div>
-                </div>
+                )
               ) : (
+                selectedDocument?.fileUrl && (selectedDocument.fileUrl.startsWith('http') || selectedDocument.fileUrl.startsWith('data:')) ? (
+                  <img 
+                    src={selectedDocument.fileUrl} 
+                    alt={selectedDocument.fileName}
+                    className="max-w-full max-h-[500px] rounded-lg object-contain shadow-lg"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.nextElementSibling;
+                      if (fallback) fallback.classList.remove('hidden');
+                    }}
+                  />
+                ) : null
+              )}
+              {selectedDocument?.fileType !== "pdf" && (!selectedDocument?.fileUrl || (!selectedDocument.fileUrl.startsWith('http') && !selectedDocument.fileUrl.startsWith('data:'))) && (
                 <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-lg p-8 min-w-[300px] min-h-[200px] flex items-center justify-center">
                   <div className="text-center">
                     <FileImage className="h-16 w-16 mx-auto mb-2 text-blue-500" />
                     <p className="font-medium">{selectedDocument?.fileName}</p>
-                    <p className="text-sm text-muted-foreground">Image Preview (simulated)</p>
+                    <p className="text-sm text-muted-foreground mt-2">Document stored locally</p>
                   </div>
                 </div>
               )}
@@ -1093,7 +1122,7 @@ export default function DocumentsPage() {
                 <TabsContent value="preview" className="mt-4">
                   <div className="bg-muted rounded-lg min-h-[300px] flex flex-col items-center justify-center overflow-hidden">
                     {selectedDocument.fileType === "pdf" ? (
-                      selectedDocument.fileUrl && selectedDocument.fileUrl.startsWith('http') ? (
+                      selectedDocument.fileUrl && (selectedDocument.fileUrl.startsWith('http') || selectedDocument.fileUrl.startsWith('data:')) ? (
                         <iframe 
                           src={selectedDocument.fileUrl} 
                           className="w-full h-[400px] border-0"
@@ -1111,7 +1140,7 @@ export default function DocumentsPage() {
                         </div>
                       )
                     ) : (
-                      selectedDocument.fileUrl && selectedDocument.fileUrl.startsWith('http') ? (
+                      selectedDocument.fileUrl && (selectedDocument.fileUrl.startsWith('http') || selectedDocument.fileUrl.startsWith('data:')) ? (
                         <div className="w-full p-4">
                           <img 
                             src={selectedDocument.fileUrl} 

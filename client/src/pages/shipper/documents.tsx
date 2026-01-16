@@ -1091,27 +1091,55 @@ export default function DocumentsPage() {
                 </TabsContent>
 
                 <TabsContent value="preview" className="mt-4">
-                  <div className="bg-muted rounded-lg p-8 min-h-[300px] flex items-center justify-center">
+                  <div className="bg-muted rounded-lg min-h-[300px] flex flex-col items-center justify-center overflow-hidden">
                     {selectedDocument.fileType === "pdf" ? (
-                      <div className="text-center">
-                        <FileText className="h-16 w-16 mx-auto mb-4 text-red-500" />
-                        <p className="font-medium">{selectedDocument.fileName}</p>
-                        <p className="text-sm text-muted-foreground mb-4">{formatFileSize(selectedDocument.fileSize)}</p>
-                        <Button onClick={() => handleView(selectedDocument)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          {t('documents.viewDocument')}
-                        </Button>
-                      </div>
+                      selectedDocument.fileUrl && selectedDocument.fileUrl.startsWith('http') ? (
+                        <iframe 
+                          src={selectedDocument.fileUrl} 
+                          className="w-full h-[400px] border-0"
+                          title={selectedDocument.fileName}
+                        />
+                      ) : (
+                        <div className="text-center p-8">
+                          <FileText className="h-16 w-16 mx-auto mb-4 text-red-500" />
+                          <p className="font-medium">{selectedDocument.fileName}</p>
+                          <p className="text-sm text-muted-foreground mb-4">{formatFileSize(selectedDocument.fileSize)}</p>
+                          <Button onClick={() => handleView(selectedDocument)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            {t('documents.viewDocument')}
+                          </Button>
+                        </div>
+                      )
                     ) : (
-                      <div className="text-center">
-                        <FileImage className="h-16 w-16 mx-auto mb-4 text-blue-500" />
-                        <p className="font-medium">{selectedDocument.fileName}</p>
-                        <p className="text-sm text-muted-foreground mb-4">{formatFileSize(selectedDocument.fileSize)}</p>
-                        <Button onClick={() => handleView(selectedDocument)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          {t('documents.viewDocument')}
-                        </Button>
-                      </div>
+                      selectedDocument.fileUrl && selectedDocument.fileUrl.startsWith('http') ? (
+                        <div className="w-full p-4">
+                          <img 
+                            src={selectedDocument.fileUrl} 
+                            alt={selectedDocument.fileName}
+                            className="max-w-full max-h-[400px] mx-auto rounded-lg object-contain"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.parentElement?.querySelector('.fallback')?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="fallback hidden text-center py-8">
+                            <FileImage className="h-16 w-16 mx-auto mb-4 text-blue-500" />
+                            <p className="font-medium">{selectedDocument.fileName}</p>
+                            <p className="text-sm text-muted-foreground">Preview not available</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center p-8">
+                          <FileImage className="h-16 w-16 mx-auto mb-4 text-blue-500" />
+                          <p className="font-medium">{selectedDocument.fileName}</p>
+                          <p className="text-sm text-muted-foreground mb-4">{formatFileSize(selectedDocument.fileSize)}</p>
+                          <Button onClick={() => handleView(selectedDocument)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            {t('documents.viewDocument')}
+                          </Button>
+                        </div>
+                      )
                     )}
                   </div>
                 </TabsContent>

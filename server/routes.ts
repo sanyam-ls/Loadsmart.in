@@ -149,10 +149,15 @@ export async function registerRoutes(
       }
 
       const hashedPassword = await hashPassword(data.password);
-      const user = await storage.createUser({
+      let user = await storage.createUser({
         ...data,
         password: hashedPassword,
       });
+
+      // Admins are always verified automatically
+      if (user.role === "admin") {
+        user = await storage.updateUser(user.id, { isVerified: true });
+      }
 
       if (user.role === "carrier") {
         // Get carrierType from registration data (solo or enterprise)

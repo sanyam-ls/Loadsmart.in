@@ -247,32 +247,6 @@ export default function AdminOverview() {
         />
       </div>
 
-      {pendingVerifications > 0 && (
-        <Card 
-          className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-900/10 cursor-pointer hover-elevate"
-          onClick={() => setLocation("/admin/verification")}
-          data-testid="card-pending-verifications"
-        >
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                  <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <p className="font-medium">{t('admin.pendingVerifications')}</p>
-                  <p className="text-sm text-muted-foreground">{t('admin.itemsRequireAttention', { count: pendingVerifications })}</p>
-                </div>
-              </div>
-              <Button variant="outline" size="sm">
-                {t('admin.reviewNow')}
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-3">
         <TransactionVolumeChart />
 

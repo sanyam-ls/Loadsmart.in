@@ -75,6 +75,7 @@ type Bid = {
   loadId: string;
   carrierId: string;
   amount: string;
+  counterAmount?: string; // Latest negotiated amount (from counter-offers)
   status: string;
   notes?: string;
   proposedTruckId?: string;
@@ -489,11 +490,14 @@ export default function AdminNegotiationsPage() {
                   </span>
                 );
               })()}
-              {/* Real-time Platform Margin: Shipper pays (adminFinalPrice) - Carrier bid = Margin */}
+              {/* Real-time Platform Margin: Shipper pays (adminFinalPrice) - Carrier bid/counter = Margin */}
               {bid.load?.adminFinalPrice && (() => {
-                const bidAmount = parseFloat(bid.amount);
+                // Use counterAmount (negotiated price) if available, otherwise use original bid amount
+                const carrierPrice = bid.counterAmount && parseFloat(bid.counterAmount) > 0 
+                  ? parseFloat(bid.counterAmount) 
+                  : parseFloat(bid.amount);
                 const shipperPrice = parseFloat(bid.load.adminFinalPrice);
-                const platformMargin = shipperPrice - bidAmount;
+                const platformMargin = shipperPrice - carrierPrice;
                 const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
                 const isProfit = platformMargin > 0;
                 const isLoss = platformMargin < 0;
@@ -827,9 +831,12 @@ export default function AdminNegotiationsPage() {
                               })()}
                               {/* Platform Margin Badge */}
                               {bid.load?.adminFinalPrice && (() => {
-                                const bidAmount = parseFloat(bid.amount);
+                                // Use counterAmount (negotiated price) if available
+                                const carrierPrice = bid.counterAmount && parseFloat(bid.counterAmount) > 0 
+                                  ? parseFloat(bid.counterAmount) 
+                                  : parseFloat(bid.amount);
                                 const shipperPrice = parseFloat(bid.load.adminFinalPrice);
-                                const platformMargin = shipperPrice - bidAmount;
+                                const platformMargin = shipperPrice - carrierPrice;
                                 const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
                                 const isProfit = platformMargin > 0;
                                 const isLoss = platformMargin < 0;
@@ -1015,9 +1022,12 @@ export default function AdminNegotiationsPage() {
                     <div className="col-span-2 pt-2 border-t border-green-200 dark:border-green-800">
                       <span className="text-muted-foreground">Platform Margin:</span>
                       {(() => {
-                        const bidAmount = parseFloat(detailBid.amount);
+                        // Use counterAmount (negotiated price) if available
+                        const carrierPrice = detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0 
+                          ? parseFloat(detailBid.counterAmount) 
+                          : parseFloat(detailBid.amount);
                         const shipperPrice = parseFloat(detailBid.load.adminFinalPrice!);
-                        const platformMargin = shipperPrice - bidAmount;
+                        const platformMargin = shipperPrice - carrierPrice;
                         const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
                         const isProfit = platformMargin > 0;
                         const isLoss = platformMargin < 0;
@@ -1030,13 +1040,14 @@ export default function AdminNegotiationsPage() {
                               {isProfit ? "Profit" : isLoss ? "Loss" : "Break Even"}
                             </Badge>
                             <span className={`font-bold text-lg ${isProfit ? "text-green-600 dark:text-green-400" : isLoss ? "text-red-600 dark:text-red-400" : ""}`}>
-                              {isProfit ? "+" : ""}₹{platformMargin.toLocaleString("en-IN")} ({marginPercent}%)
+                              {isProfit ? "+" : isLoss ? "-" : ""}₹{Math.abs(platformMargin).toLocaleString("en-IN")} ({marginPercent}%)
                             </span>
                           </div>
                         );
                       })()}
                       <p className="text-xs text-muted-foreground mt-1">
-                        Shipper pays ₹{parseFloat(detailBid.load.adminFinalPrice!).toLocaleString("en-IN")} - Carrier gets ₹{parseFloat(detailBid.amount).toLocaleString("en-IN")}
+                        Shipper pays ₹{parseFloat(detailBid.load.adminFinalPrice!).toLocaleString("en-IN")} - Carrier gets ₹{(detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0 ? parseFloat(detailBid.counterAmount) : parseFloat(detailBid.amount)).toLocaleString("en-IN")}
+                        {detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0 && " (negotiated)"}
                       </p>
                     </div>
                   )}

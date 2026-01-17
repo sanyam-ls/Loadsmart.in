@@ -9160,6 +9160,33 @@ export async function registerRoutes(
 
       const userInput = userInputSchema.parse(req.body);
 
+      // Extract price from message text if no explicit amount provided
+      // This enables real-time margin updates when users mention prices in chat
+      let extractedAmount = userInput.amount;
+      if (!extractedAmount && userInput.message) {
+        // Match Indian price formats: Rs. 95,000 or ₹95000 or 95,000 or 95000
+        const pricePatterns = [
+          /(?:Rs\.?\s*|₹\s*)?(\d{1,3}(?:,\d{2,3})*(?:\.\d{2})?)/gi,  // Rs. 95,000 or ₹95,000 or 95,000
+          /(\d+(?:,\d{3})*(?:\.\d{2})?)/g  // Plain numbers like 95000 or 95,000
+        ];
+        
+        for (const pattern of pricePatterns) {
+          const matches = userInput.message.match(pattern);
+          if (matches && matches.length > 0) {
+            // Get the last mentioned price (most likely the proposed price)
+            const lastMatch = matches[matches.length - 1];
+            // Remove Rs., ₹ prefix and commas to get numeric value
+            const numericValue = lastMatch.replace(/[Rs.₹,\s]/gi, "");
+            const parsedValue = parseFloat(numericValue);
+            // Only accept reasonable freight prices (between 1000 and 10000000)
+            if (parsedValue >= 1000 && parsedValue <= 10000000) {
+              extractedAmount = parsedValue.toString();
+              break;
+            }
+          }
+        }
+      }
+
       // Build final payload - server controls senderId and senderRole from session
       const negotiation = await storage.createBidNegotiation({
         bidId: bid.id,
@@ -9168,7 +9195,7 @@ export async function registerRoutes(
         senderRole: user.role,
         messageType: userInput.messageType,
         message: userInput.message,
-        amount: userInput.amount,
+        amount: extractedAmount,
       });
 
       // Update bid if this is a counter offer
@@ -9184,14 +9211,15 @@ export async function registerRoutes(
         }
       }
 
-      // Broadcast negotiation message to relevant parties
+      // Broadcast negotiation message to relevant parties (include extracted amount for real-time margin)
       const targetRole = isAdmin ? "carrier" : "admin";
       const targetUserId = isAdmin ? bid.carrierId : null;
       broadcastNegotiationMessage(targetRole, targetUserId, bid.id, {
         id: negotiation.id,
         senderRole: user.role,
         message: userInput.message,
-        counterAmount: userInput.amount,
+        amount: extractedAmount,  // Include extracted amount for real-time margin calculation
+        counterAmount: extractedAmount,
         createdAt: negotiation.createdAt,
       });
 

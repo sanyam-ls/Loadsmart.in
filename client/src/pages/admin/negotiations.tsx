@@ -489,6 +489,24 @@ export default function AdminNegotiationsPage() {
                   </span>
                 );
               })()}
+              {/* Real-time Platform Margin: Shipper pays (adminFinalPrice) - Carrier bid = Margin */}
+              {bid.load?.adminFinalPrice && (() => {
+                const bidAmount = parseFloat(bid.amount);
+                const shipperPrice = parseFloat(bid.load.adminFinalPrice);
+                const platformMargin = shipperPrice - bidAmount;
+                const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
+                const isProfit = platformMargin > 0;
+                const isLoss = platformMargin < 0;
+                return (
+                  <Badge 
+                    variant={isProfit ? "default" : isLoss ? "destructive" : "secondary"}
+                    className={`text-xs ${isProfit ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : isLoss ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" : ""}`}
+                    data-testid={`badge-margin-${bid.id}`}
+                  >
+                    {isProfit ? "+" : isLoss ? "-" : ""}₹{Math.abs(platformMargin).toLocaleString("en-IN")} ({marginPercent}%)
+                  </Badge>
+                );
+              })()}
               {bid.truck && (
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <Truck className="h-4 w-4" />
@@ -807,6 +825,23 @@ export default function AdminNegotiationsPage() {
                                   </span>
                                 );
                               })()}
+                              {/* Platform Margin Badge */}
+                              {bid.load?.adminFinalPrice && (() => {
+                                const bidAmount = parseFloat(bid.amount);
+                                const shipperPrice = parseFloat(bid.load.adminFinalPrice);
+                                const platformMargin = shipperPrice - bidAmount;
+                                const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
+                                const isProfit = platformMargin > 0;
+                                const isLoss = platformMargin < 0;
+                                return (
+                                  <Badge 
+                                    variant={isProfit ? "default" : isLoss ? "destructive" : "secondary"}
+                                    className={`text-xs ${isProfit ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : isLoss ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" : ""}`}
+                                  >
+                                    {isProfit ? "+" : isLoss ? "-" : ""}₹{Math.abs(platformMargin).toLocaleString("en-IN")} ({marginPercent}%)
+                                  </Badge>
+                                );
+                              })()}
                               {getStatusBadge(bid.status)}
                             </div>
                             {bid.status === "pending" && (
@@ -975,6 +1010,36 @@ export default function AdminNegotiationsPage() {
                       </div>
                     );
                   })()}
+                  {/* Platform Margin Calculation */}
+                  {detailBid.load?.adminFinalPrice && (
+                    <div className="col-span-2 pt-2 border-t border-green-200 dark:border-green-800">
+                      <span className="text-muted-foreground">Platform Margin:</span>
+                      {(() => {
+                        const bidAmount = parseFloat(detailBid.amount);
+                        const shipperPrice = parseFloat(detailBid.load.adminFinalPrice!);
+                        const platformMargin = shipperPrice - bidAmount;
+                        const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
+                        const isProfit = platformMargin > 0;
+                        const isLoss = platformMargin < 0;
+                        return (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge 
+                              variant={isProfit ? "default" : isLoss ? "destructive" : "secondary"}
+                              className={`${isProfit ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : isLoss ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" : ""}`}
+                            >
+                              {isProfit ? "Profit" : isLoss ? "Loss" : "Break Even"}
+                            </Badge>
+                            <span className={`font-bold text-lg ${isProfit ? "text-green-600 dark:text-green-400" : isLoss ? "text-red-600 dark:text-red-400" : ""}`}>
+                              {isProfit ? "+" : ""}₹{platformMargin.toLocaleString("en-IN")} ({marginPercent}%)
+                            </span>
+                          </div>
+                        );
+                      })()}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Shipper pays ₹{parseFloat(detailBid.load.adminFinalPrice!).toLocaleString("en-IN")} - Carrier gets ₹{parseFloat(detailBid.amount).toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <span className="text-muted-foreground">Status:</span>
                     <div className="mt-1">{getStatusBadge(detailBid.status)}</div>

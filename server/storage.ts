@@ -1337,22 +1337,28 @@ export class DatabaseStorage implements IStorage {
     
     try {
       console.log('[DEBUG getLatestNegotiationAmountsForBids] Querying for', bidIds.length, 'bids');
-      // Use a subquery to get the latest amount for each bid - varchar array
-      const results = await db.execute(sql`
-        SELECT DISTINCT ON (bid_id) bid_id, amount
-        FROM bid_negotiations
-        WHERE bid_id = ANY(${sql.array(bidIds, "varchar")})
-          AND amount IS NOT NULL 
-          AND amount::numeric > 0
-        ORDER BY bid_id, created_at DESC
-      `);
       
-      console.log('[DEBUG getLatestNegotiationAmountsForBids] Query returned', results.rows.length, 'rows');
+      // Use inArray for Drizzle compatibility
+      const allNegotiations = await db.select({
+        bidId: bidNegotiations.bidId,
+        amount: bidNegotiations.amount,
+        createdAt: bidNegotiations.createdAt
+      })
+        .from(bidNegotiations)
+        .where(and(
+          inArray(bidNegotiations.bidId, bidIds),
+          sql`${bidNegotiations.amount} IS NOT NULL AND ${bidNegotiations.amount}::numeric > 0`
+        ))
+        .orderBy(desc(bidNegotiations.createdAt));
+      
+      console.log('[DEBUG getLatestNegotiationAmountsForBids] Query returned', allNegotiations.length, 'rows');
+      
+      // Get the latest amount for each bid (first occurrence due to DESC order)
       const amountMap = new Map<string, string>();
-      for (const row of results.rows as any[]) {
-        if (row.bid_id && row.amount) {
-          amountMap.set(row.bid_id, row.amount);
-          console.log('[DEBUG getLatestNegotiationAmountsForBids] Found:', row.bid_id, '->', row.amount);
+      for (const row of allNegotiations) {
+        if (row.bidId && row.amount && !amountMap.has(row.bidId)) {
+          amountMap.set(row.bidId, row.amount);
+          console.log('[DEBUG getLatestNegotiationAmountsForBids] Found:', row.bidId, '->', row.amount);
         }
       }
       console.log('[DEBUG getLatestNegotiationAmountsForBids] Returning map with', amountMap.size, 'entries');

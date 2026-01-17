@@ -473,15 +473,39 @@ export default function AdminNegotiationsPage() {
             </div>
             
             <div className="flex items-center gap-4 text-sm flex-wrap">
-              <div className="flex items-center gap-1">
-                <IndianRupee className="h-4 w-4 text-green-600" />
-                <span className="font-semibold text-lg" data-testid={`text-amount-${bid.id}`}>
-                  Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
-                </span>
-              </div>
+              {(() => {
+                // Display amount priority: latestNegotiationAmount > counterAmount > amount
+                const displayAmount = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0
+                  ? parseFloat(bid.latestNegotiationAmount)
+                  : bid.counterAmount && parseFloat(bid.counterAmount) > 0
+                    ? parseFloat(bid.counterAmount)
+                    : parseFloat(bid.amount);
+                const hasNegotiatedAmount = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0;
+                const originalAmount = parseFloat(bid.amount);
+                return (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <IndianRupee className="h-4 w-4 text-green-600" />
+                      <span className="font-semibold text-lg" data-testid={`text-amount-${bid.id}`}>
+                        Rs. {displayAmount.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    {hasNegotiatedAmount && displayAmount !== originalAmount && (
+                      <span className="text-xs text-muted-foreground line-through">
+                        Rs. {originalAmount.toLocaleString("en-IN")}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               {/* Show comparison with original posted price - use finalPrice (carrier-facing price) */}
               {bid.load?.finalPrice && (() => {
-                const bidAmount = parseFloat(bid.amount);
+                // Use display amount (negotiated if available) for comparison
+                const bidAmount = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0
+                  ? parseFloat(bid.latestNegotiationAmount)
+                  : bid.counterAmount && parseFloat(bid.counterAmount) > 0
+                    ? parseFloat(bid.counterAmount)
+                    : parseFloat(bid.amount);
                 const originalPrice = parseFloat(bid.load.finalPrice);
                 const difference = bidAmount - originalPrice;
                 const percentDiff = ((difference / originalPrice) * 100).toFixed(1);
@@ -817,12 +841,36 @@ export default function AdminNegotiationsPage() {
                               <span className="font-medium">
                                 {getCarrierDisplayName(bid.carrier)}
                               </span>
-                              <span className="font-semibold text-green-600">
-                                Rs. {parseFloat(bid.amount).toLocaleString("en-IN")}
-                              </span>
+                              {(() => {
+                                // Display amount priority: latestNegotiationAmount > counterAmount > amount
+                                const displayAmount = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0
+                                  ? parseFloat(bid.latestNegotiationAmount)
+                                  : bid.counterAmount && parseFloat(bid.counterAmount) > 0
+                                    ? parseFloat(bid.counterAmount)
+                                    : parseFloat(bid.amount);
+                                const hasNegotiatedAmount = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0;
+                                const originalAmount = parseFloat(bid.amount);
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-semibold text-green-600">
+                                      Rs. {displayAmount.toLocaleString("en-IN")}
+                                    </span>
+                                    {hasNegotiatedAmount && displayAmount !== originalAmount && (
+                                      <span className="text-xs text-muted-foreground line-through">
+                                        Rs. {originalAmount.toLocaleString("en-IN")}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                               {/* Show comparison with original posted price - use finalPrice (carrier-facing price) */}
                               {bid.load?.finalPrice && (() => {
-                                const bidAmount = parseFloat(bid.amount);
+                                // Use display amount (negotiated if available) for comparison
+                                const bidAmount = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0
+                                  ? parseFloat(bid.latestNegotiationAmount)
+                                  : bid.counterAmount && parseFloat(bid.counterAmount) > 0
+                                    ? parseFloat(bid.counterAmount)
+                                    : parseFloat(bid.amount);
                                 const originalPrice = parseFloat(bid.load.finalPrice);
                                 const difference = bidAmount - originalPrice;
                                 const percentDiff = ((difference / originalPrice) * 100).toFixed(1);

@@ -1082,6 +1082,12 @@ export async function registerRoutes(
       const latestNegotiationAmounts = user.role === "admin" 
         ? await storage.getLatestNegotiationAmountsForBids(bidIds)
         : new Map<string, string>();
+      
+      // Debug: Log the amounts map
+      console.log('[DEBUG] latestNegotiationAmounts map size:', latestNegotiationAmounts.size);
+      if (latestNegotiationAmounts.size > 0) {
+        console.log('[DEBUG] latestNegotiationAmounts entries:', Array.from(latestNegotiationAmounts.entries()));
+      }
 
       const bidsWithDetails = await Promise.all(
         bidsList.map(async (bid) => {

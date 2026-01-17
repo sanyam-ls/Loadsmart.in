@@ -1336,6 +1336,7 @@ export class DatabaseStorage implements IStorage {
     if (bidIds.length === 0) return new Map();
     
     try {
+      console.log('[DEBUG getLatestNegotiationAmountsForBids] Querying for', bidIds.length, 'bids');
       // Use a subquery to get the latest amount for each bid - varchar array
       const results = await db.execute(sql`
         SELECT DISTINCT ON (bid_id) bid_id, amount
@@ -1346,12 +1347,15 @@ export class DatabaseStorage implements IStorage {
         ORDER BY bid_id, created_at DESC
       `);
       
+      console.log('[DEBUG getLatestNegotiationAmountsForBids] Query returned', results.rows.length, 'rows');
       const amountMap = new Map<string, string>();
       for (const row of results.rows as any[]) {
         if (row.bid_id && row.amount) {
           amountMap.set(row.bid_id, row.amount);
+          console.log('[DEBUG getLatestNegotiationAmountsForBids] Found:', row.bid_id, '->', row.amount);
         }
       }
+      console.log('[DEBUG getLatestNegotiationAmountsForBids] Returning map with', amountMap.size, 'entries');
       return amountMap;
     } catch (error) {
       console.error("Error fetching latest negotiation amounts:", error);

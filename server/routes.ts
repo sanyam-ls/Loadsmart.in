@@ -3408,6 +3408,56 @@ export async function registerRoutes(
     }
   });
 
+  // Real-time analytics endpoint for admin dashboard (optimized with SQL aggregations)
+  app.get("/api/admin/analytics/realtime", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Use optimized SQL aggregation methods instead of loading all data
+      const [negotiationStats, profitStats] = await Promise.all([
+        storage.getRealtimeNegotiationAnalytics(),
+        storage.getRealtimeProfitMarginAnalytics(),
+      ]);
+
+      // Calculate negotiation rate
+      const totalAccepts = negotiationStats.directAccepts + negotiationStats.negotiatedAccepts;
+      const negotiationRate = totalAccepts > 0 
+        ? Math.round((negotiationStats.negotiatedAccepts / totalAccepts) * 100) 
+        : 0;
+
+      res.json({
+        // Negotiation Analytics
+        negotiations: {
+          activeLoads: negotiationStats.activeLoads,
+          pendingBids: negotiationStats.pendingBids,
+          counteredBids: negotiationStats.counteredBids,
+          acceptedBids: negotiationStats.acceptedBids,
+          recentBids24h: negotiationStats.recentBids24h,
+          recentCounters24h: negotiationStats.recentCounters24h,
+          directAccepts: negotiationStats.directAccepts,
+          negotiatedAccepts: negotiationStats.negotiatedAccepts,
+          negotiationRate,
+        },
+        // Profit Margin Analytics  
+        profitMargin: profitStats,
+        // Today's Activity
+        today: {
+          newBids: negotiationStats.todayBids,
+          counterOffers: negotiationStats.todayCounters,
+          acceptedBids: negotiationStats.todayAccepts,
+        },
+        // Timestamp for real-time display
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Get realtime analytics error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Get admin-posted loads for carriers (with eligibility filters)
   app.get("/api/carrier/loads", requireAuth, async (req, res) => {
     try {

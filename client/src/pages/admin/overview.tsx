@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, FileCheck, Clock, Loader2 } from "lucide-react";
+import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, FileCheck, Clock, Loader2, MessageSquare, ArrowUpDown, Percent, Wallet, Activity, Zap } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,6 +94,38 @@ export default function AdminOverview() {
   const { data: carriers, isLoading: carriersLoading } = useCarriers();
   const { data: bids } = useBids();
   const { data: invoices } = useInvoices();
+  
+  // Real-time analytics with auto-refresh every 10 seconds
+  const { data: analytics } = useQuery<{
+    negotiations: {
+      activeLoads: number;
+      pendingBids: number;
+      counteredBids: number;
+      acceptedBids: number;
+      recentBids24h: number;
+      recentCounters24h: number;
+      directAccepts: number;
+      negotiatedAccepts: number;
+      negotiationRate: number;
+    };
+    profitMargin: {
+      totalShipperAmount: number;
+      totalCarrierPayout: number;
+      totalPlatformMargin: number;
+      avgMarginPercent: number;
+      completedLoads: number;
+      loadsWithMarginData: number;
+    };
+    today: {
+      newBids: number;
+      counterOffers: number;
+      acceptedBids: number;
+    };
+    timestamp: string;
+  }>({
+    queryKey: ['/api/admin/analytics/realtime'],
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
+  });
 
   const chartAxisColor = theme === "dark" ? "hsl(220, 10%, 65%)" : "hsl(220, 12%, 35%)";
   const chartGridColor = theme === "dark" ? "hsl(220, 12%, 18%)" : "hsl(220, 12%, 92%)";
@@ -112,6 +145,7 @@ export default function AdminOverview() {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/verifications'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/queue'] });
     queryClient.invalidateQueries({ queryKey: ['/api/admin/negotiations'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/analytics/realtime'] });
   };
 
   if (loadsLoading || usersLoading || carriersLoading) {
@@ -245,6 +279,140 @@ export default function AdminOverview() {
           href="/admin/volume"
           testId="card-monthly-volume"
         />
+      </div>
+
+      {/* Real-time Analytics Section */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Negotiation Analytics Card */}
+        <Card 
+          className="cursor-pointer hover-elevate"
+          onClick={() => setLocation("/admin/negotiations")}
+          data-testid="card-negotiation-analytics"
+        >
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+                  <MessageSquare className="h-4 w-4 text-blue-500" />
+                </div>
+                <CardTitle className="text-base">Real-time Negotiations</CardTitle>
+              </div>
+              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                <Zap className="h-3 w-3" />
+                Live
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {analytics?.negotiations.activeLoads || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">Active Loads</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  {analytics?.negotiations.counteredBids || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">Counter Offers</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Pending Bids</span>
+                <Badge variant="outline">{analytics?.negotiations.pendingBids || 0}</Badge>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Accepted Today</span>
+                <Badge className="bg-green-600">{analytics?.today.acceptedBids || 0}</Badge>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Negotiation Rate</span>
+                <Badge variant="secondary">{analytics?.negotiations.negotiationRate || 0}%</Badge>
+              </div>
+            </div>
+
+            <div className="border-t pt-3 mt-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Activity className="h-3 w-3" />
+                  Last 24h: {analytics?.negotiations.recentBids24h || 0} bids
+                </span>
+                <span>{analytics?.negotiations.recentCounters24h || 0} counters</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Profit Margin Analytics Card */}
+        <Card 
+          className="cursor-pointer hover-elevate"
+          onClick={() => setLocation("/admin/volume")}
+          data-testid="card-profit-margin-analytics"
+        >
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
+                  <Percent className="h-4 w-4 text-green-500" />
+                </div>
+                <CardTitle className="text-base">Real-time Profit Margin</CardTitle>
+              </div>
+              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                <Zap className="h-3 w-3" />
+                Live
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {analytics?.profitMargin.avgMarginPercent || 0}%
+                </p>
+                <p className="text-xs text-muted-foreground">Avg Margin</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">
+                  Rs. {((analytics?.profitMargin.totalPlatformMargin || 0) / 100000).toFixed(1)}L
+                </p>
+                <p className="text-xs text-muted-foreground">Total Margin</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <ArrowUpDown className="h-3 w-3" />
+                  Shipper Amount
+                </span>
+                <span className="font-medium">Rs. {((analytics?.profitMargin.totalShipperAmount || 0) / 100000).toFixed(1)}L</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Wallet className="h-3 w-3" />
+                  Carrier Payout
+                </span>
+                <span className="font-medium">Rs. {((analytics?.profitMargin.totalCarrierPayout || 0) / 100000).toFixed(1)}L</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Completed Loads</span>
+                <Badge variant="outline">{analytics?.profitMargin.completedLoads || 0}</Badge>
+              </div>
+            </div>
+
+            <div className="border-t pt-3 mt-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Loads with margin data: {analytics?.profitMargin.loadsWithMarginData || 0}</span>
+                <span>
+                  Updated: {analytics?.timestamp ? new Date(analytics.timestamp).toLocaleTimeString() : '--:--'}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -490,7 +658,7 @@ export default function AdminOverview() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{t('admin.totalVolume')}</span>
                   <Badge variant="secondary">
-                    Rs. {(allLoads.reduce((sum: number, l: Load) => sum + parseFloat(l.grossPrice || '0'), 0) / 100000).toFixed(1)}L
+                    Rs. {(allLoads.reduce((sum: number, l: Load) => sum + parseFloat(l.adminFinalPrice || l.finalPrice || '0'), 0) / 100000).toFixed(1)}L
                   </Badge>
                 </div>
               </div>

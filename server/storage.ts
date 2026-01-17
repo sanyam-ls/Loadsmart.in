@@ -1412,6 +1412,152 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  // Optimized analytics aggregations - uses SQL counts instead of loading all data
+  async getRealtimeNegotiationAnalytics(): Promise<{
+    activeLoads: number;
+    pendingBids: number;
+    counteredBids: number;
+    acceptedBids: number;
+    recentBids24h: number;
+    recentCounters24h: number;
+    directAccepts: number;
+    negotiatedAccepts: number;
+    todayBids: number;
+    todayCounters: number;
+    todayAccepts: number;
+  }> {
+    const negotiationStates = ["posted_to_carriers", "open_for_bid", "counter_received"];
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Count active loads in negotiation
+    const [activeLoadsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(loads)
+      .where(inArray(loads.status, negotiationStates));
+    
+    // Bid counts by status
+    const [pendingBidsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(eq(bids.status, "pending"));
+    
+    const [counteredBidsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(eq(bids.status, "countered"));
+    
+    const [acceptedBidsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(eq(bids.status, "accepted"));
+
+    // Recent 24h activity
+    const [recentBidsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(sql`${bids.createdAt} > ${yesterday}`);
+    
+    const [recentCountersResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(and(
+        sql`${bids.createdAt} > ${yesterday}`,
+        sql`${bids.counterAmount} IS NOT NULL AND COALESCE(${bids.counterAmount}, 0) > 0`
+      ));
+
+    // Direct vs negotiated accepts
+    const [directAcceptsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(and(
+        eq(bids.status, "accepted"),
+        sql`(${bids.counterAmount} IS NULL OR COALESCE(${bids.counterAmount}, 0) = 0)`
+      ));
+    
+    const [negotiatedAcceptsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(and(
+        eq(bids.status, "accepted"),
+        sql`${bids.counterAmount} IS NOT NULL AND COALESCE(${bids.counterAmount}, 0) > 0`
+      ));
+
+    // Today's activity
+    const [todayBidsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(sql`${bids.createdAt} >= ${today}`);
+    
+    const [todayCountersResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(and(
+        sql`${bids.createdAt} >= ${today}`,
+        sql`${bids.counterAmount} IS NOT NULL AND COALESCE(${bids.counterAmount}, 0) > 0`
+      ));
+
+    const [todayAcceptsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(bids)
+      .where(and(
+        eq(bids.status, "accepted"),
+        sql`${bids.createdAt} >= ${today}`
+      ));
+
+    return {
+      activeLoads: activeLoadsResult?.count || 0,
+      pendingBids: pendingBidsResult?.count || 0,
+      counteredBids: counteredBidsResult?.count || 0,
+      acceptedBids: acceptedBidsResult?.count || 0,
+      recentBids24h: recentBidsResult?.count || 0,
+      recentCounters24h: recentCountersResult?.count || 0,
+      directAccepts: directAcceptsResult?.count || 0,
+      negotiatedAccepts: negotiatedAcceptsResult?.count || 0,
+      todayBids: todayBidsResult?.count || 0,
+      todayCounters: todayCountersResult?.count || 0,
+      todayAccepts: todayAcceptsResult?.count || 0,
+    };
+  }
+
+  async getRealtimeProfitMarginAnalytics(): Promise<{
+    totalShipperAmount: number;
+    totalCarrierPayout: number;
+    totalPlatformMargin: number;
+    avgMarginPercent: number;
+    completedLoads: number;
+    loadsWithMarginData: number;
+  }> {
+    const completedStates = ["awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "in_transit", "delivered", "closed"];
+
+    // Count completed loads
+    const [completedLoadsResult] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(loads)
+      .where(inArray(loads.status, completedStates));
+
+    // Calculate profit margins using a join between invoices and accepted bids
+    // Using COALESCE for safe null handling - amounts are stored as decimal type
+    const marginResult = await db.execute(sql`
+      SELECT 
+        COALESCE(SUM(COALESCE(i.total_amount, 0)), 0) as total_shipper,
+        COALESCE(SUM(COALESCE(b.counter_amount, b.amount, 0)), 0) as total_carrier,
+        COUNT(*) as loads_with_data
+      FROM invoices i
+      JOIN bids b ON b.load_id = i.load_id AND b.status = 'accepted'
+      WHERE COALESCE(i.total_amount, 0) > 0
+        AND (COALESCE(b.counter_amount, 0) > 0 OR COALESCE(b.amount, 0) > 0)
+    `);
+
+    const marginData = marginResult.rows[0] as any || {};
+    const totalShipper = parseFloat(marginData.total_shipper || '0');
+    const totalCarrier = parseFloat(marginData.total_carrier || '0');
+    const loadsWithData = parseInt(marginData.loads_with_data || '0', 10);
+
+    const totalMargin = totalShipper - totalCarrier;
+    const avgMarginPercent = totalShipper > 0 
+      ? Math.round(((totalShipper - totalCarrier) / totalShipper) * 1000) / 10
+      : 0;
+
+    return {
+      totalShipperAmount: Math.round(totalShipper),
+      totalCarrierPayout: Math.round(totalCarrier),
+      totalPlatformMargin: Math.round(totalMargin),
+      avgMarginPercent,
+      completedLoads: completedLoadsResult?.count || 0,
+      loadsWithMarginData: loadsWithData,
+    };
+  }
+
   // ==================== OTP OPERATIONS ====================
   
   // Generate a 6-digit OTP code

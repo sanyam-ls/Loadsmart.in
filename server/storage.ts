@@ -1336,11 +1336,11 @@ export class DatabaseStorage implements IStorage {
     if (bidIds.length === 0) return new Map();
     
     try {
-      // Use a subquery to get the latest amount for each bid - cast to uuid[]
+      // Use a subquery to get the latest amount for each bid - varchar array
       const results = await db.execute(sql`
         SELECT DISTINCT ON (bid_id) bid_id, amount
         FROM bid_negotiations
-        WHERE bid_id = ANY(${sql.array(bidIds, "uuid")})
+        WHERE bid_id = ANY(${sql.array(bidIds, "varchar")})
           AND amount IS NOT NULL 
           AND amount::numeric > 0
         ORDER BY bid_id, created_at DESC

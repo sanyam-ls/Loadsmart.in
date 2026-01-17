@@ -1077,6 +1077,12 @@ export async function registerRoutes(
         bidsList = await storage.getAllBids();
       }
       
+      // For admin, get latest negotiation amounts for all bids (real-time from chat)
+      const bidIds = bidsList.map(b => b.id);
+      const latestNegotiationAmounts = user.role === "admin" 
+        ? await storage.getLatestNegotiationAmountsForBids(bidIds)
+        : new Map<string, string>();
+
       const bidsWithDetails = await Promise.all(
         bidsList.map(async (bid) => {
           const carrier = await storage.getUser(bid.carrierId);
@@ -1085,8 +1091,14 @@ export async function registerRoutes(
           const driver = bid.driverId ? await storage.getDriver(bid.driverId) : null;
           const carrierProfile = await storage.getCarrierProfile(bid.carrierId);
           const { password: _, ...carrierWithoutPassword } = carrier || {};
+          
+          // Include latest negotiation amount from chat (real-time)
+          const latestNegotiationAmount = latestNegotiationAmounts.get(bid.id) || null;
+          
           return { 
             ...bid, 
+            // Override counterAmount with latest negotiation amount if available (for live margin calculation)
+            latestNegotiationAmount,
             carrier: {
               ...carrierWithoutPassword,
               carrierType: carrierProfile?.carrierType || "enterprise"

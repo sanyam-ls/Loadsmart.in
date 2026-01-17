@@ -75,7 +75,8 @@ type Bid = {
   loadId: string;
   carrierId: string;
   amount: string;
-  counterAmount?: string; // Latest negotiated amount (from counter-offers)
+  counterAmount?: string; // Stored counter-offer amount
+  latestNegotiationAmount?: string; // Real-time latest negotiation amount from chat
   status: string;
   notes?: string;
   proposedTruckId?: string;
@@ -160,6 +161,9 @@ export default function AdminNegotiationsPage() {
       });
 
       const unsubscribeNegotiation = onMarketplaceEvent("negotiation_message", (data) => {
+        // Refresh bids to get updated latestNegotiationAmount for real-time margin calculation
+        queryClient.invalidateQueries({ queryKey: ["/api/bids"] });
+        
         if (chatBid && data.bidId === chatBid.id) {
           const newMessage: ChatMessage = {
             id: data.negotiation?.id || `msg-${Date.now()}`,
@@ -492,10 +496,12 @@ export default function AdminNegotiationsPage() {
               })()}
               {/* Real-time Platform Margin: Shipper pays (adminFinalPrice) - Carrier bid/counter = Margin */}
               {bid.load?.adminFinalPrice && (() => {
-                // Use counterAmount (negotiated price) if available, otherwise use original bid amount
-                const carrierPrice = bid.counterAmount && parseFloat(bid.counterAmount) > 0 
-                  ? parseFloat(bid.counterAmount) 
-                  : parseFloat(bid.amount);
+                // Priority: latestNegotiationAmount (real-time chat) > counterAmount (stored) > amount (original)
+                const carrierPrice = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0 
+                  ? parseFloat(bid.latestNegotiationAmount)
+                  : bid.counterAmount && parseFloat(bid.counterAmount) > 0 
+                    ? parseFloat(bid.counterAmount) 
+                    : parseFloat(bid.amount);
                 const shipperPrice = parseFloat(bid.load.adminFinalPrice);
                 const platformMargin = shipperPrice - carrierPrice;
                 const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
@@ -831,10 +837,12 @@ export default function AdminNegotiationsPage() {
                               })()}
                               {/* Platform Margin Badge */}
                               {bid.load?.adminFinalPrice && (() => {
-                                // Use counterAmount (negotiated price) if available
-                                const carrierPrice = bid.counterAmount && parseFloat(bid.counterAmount) > 0 
-                                  ? parseFloat(bid.counterAmount) 
-                                  : parseFloat(bid.amount);
+                                // Priority: latestNegotiationAmount (real-time chat) > counterAmount (stored) > amount (original)
+                                const carrierPrice = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0 
+                                  ? parseFloat(bid.latestNegotiationAmount)
+                                  : bid.counterAmount && parseFloat(bid.counterAmount) > 0 
+                                    ? parseFloat(bid.counterAmount) 
+                                    : parseFloat(bid.amount);
                                 const shipperPrice = parseFloat(bid.load.adminFinalPrice);
                                 const platformMargin = shipperPrice - carrierPrice;
                                 const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
@@ -1022,15 +1030,19 @@ export default function AdminNegotiationsPage() {
                     <div className="col-span-2 pt-2 border-t border-green-200 dark:border-green-800">
                       <span className="text-muted-foreground">Platform Margin:</span>
                       {(() => {
-                        // Use counterAmount (negotiated price) if available
-                        const carrierPrice = detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0 
-                          ? parseFloat(detailBid.counterAmount) 
-                          : parseFloat(detailBid.amount);
+                        // Priority: latestNegotiationAmount (real-time chat) > counterAmount (stored) > amount (original)
+                        const carrierPrice = detailBid.latestNegotiationAmount && parseFloat(detailBid.latestNegotiationAmount) > 0 
+                          ? parseFloat(detailBid.latestNegotiationAmount)
+                          : detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0 
+                            ? parseFloat(detailBid.counterAmount) 
+                            : parseFloat(detailBid.amount);
                         const shipperPrice = parseFloat(detailBid.load.adminFinalPrice!);
                         const platformMargin = shipperPrice - carrierPrice;
                         const marginPercent = shipperPrice > 0 ? ((platformMargin / shipperPrice) * 100).toFixed(1) : "0";
                         const isProfit = platformMargin > 0;
                         const isLoss = platformMargin < 0;
+                        const hasNegotiatedPrice = (detailBid.latestNegotiationAmount && parseFloat(detailBid.latestNegotiationAmount) > 0) || 
+                          (detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0);
                         return (
                           <div className="flex items-center gap-2 mt-1">
                             <Badge 
@@ -1046,8 +1058,15 @@ export default function AdminNegotiationsPage() {
                         );
                       })()}
                       <p className="text-xs text-muted-foreground mt-1">
-                        Shipper pays ₹{parseFloat(detailBid.load.adminFinalPrice!).toLocaleString("en-IN")} - Carrier gets ₹{(detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0 ? parseFloat(detailBid.counterAmount) : parseFloat(detailBid.amount)).toLocaleString("en-IN")}
-                        {detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0 && " (negotiated)"}
+                        Shipper pays ₹{parseFloat(detailBid.load.adminFinalPrice!).toLocaleString("en-IN")} - Carrier gets ₹{(
+                          detailBid.latestNegotiationAmount && parseFloat(detailBid.latestNegotiationAmount) > 0 
+                            ? parseFloat(detailBid.latestNegotiationAmount) 
+                            : detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0 
+                              ? parseFloat(detailBid.counterAmount) 
+                              : parseFloat(detailBid.amount)
+                        ).toLocaleString("en-IN")}
+                        {(detailBid.latestNegotiationAmount && parseFloat(detailBid.latestNegotiationAmount) > 0) ? " (live)" : 
+                         (detailBid.counterAmount && parseFloat(detailBid.counterAmount) > 0) ? " (negotiated)" : ""}
                       </p>
                     </div>
                   )}

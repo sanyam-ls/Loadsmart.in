@@ -1318,6 +1318,47 @@ export class DatabaseStorage implements IStorage {
       .orderBy(bidNegotiations.createdAt);
   }
 
+  // Get the latest negotiation amount for a bid (from chat messages)
+  async getLatestNegotiationAmount(bidId: string): Promise<string | null> {
+    const [latest] = await db.select({ amount: bidNegotiations.amount })
+      .from(bidNegotiations)
+      .where(and(
+        eq(bidNegotiations.bidId, bidId),
+        sql`${bidNegotiations.amount} IS NOT NULL AND ${bidNegotiations.amount}::numeric > 0`
+      ))
+      .orderBy(desc(bidNegotiations.createdAt))
+      .limit(1);
+    return latest?.amount || null;
+  }
+
+  // Get latest negotiation amounts for multiple bids (optimized batch query)
+  async getLatestNegotiationAmountsForBids(bidIds: string[]): Promise<Map<string, string>> {
+    if (bidIds.length === 0) return new Map();
+    
+    try {
+      // Use a subquery to get the latest amount for each bid - cast to uuid[]
+      const results = await db.execute(sql`
+        SELECT DISTINCT ON (bid_id) bid_id, amount
+        FROM bid_negotiations
+        WHERE bid_id = ANY(${sql.array(bidIds, "uuid")})
+          AND amount IS NOT NULL 
+          AND amount::numeric > 0
+        ORDER BY bid_id, created_at DESC
+      `);
+      
+      const amountMap = new Map<string, string>();
+      for (const row of results.rows as any[]) {
+        if (row.bid_id && row.amount) {
+          amountMap.set(row.bid_id, row.amount);
+        }
+      }
+      return amountMap;
+    } catch (error) {
+      console.error("Error fetching latest negotiation amounts:", error);
+      return new Map(); // Return empty map on error to not break the API
+    }
+  }
+
   // Negotiation Thread methods
   async createNegotiationThread(thread: InsertNegotiationThread): Promise<NegotiationThread> {
     const [newThread] = await db.insert(negotiationThreads).values(thread).returning();

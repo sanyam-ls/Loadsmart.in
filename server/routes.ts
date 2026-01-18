@@ -2716,14 +2716,72 @@ export async function registerRoutes(
   });
 
   // ==========================================
-  // GOOGLE MAPS DISTANCE MATRIX API
+  // ROAD DISTANCE CALCULATION API
+  // Uses OSRM (Open Source Routing Machine) - free, no API key needed
+  // Falls back to Google Maps if configured
   // ==========================================
   
   // Cache for distance calculations (to reduce API calls)
   const distanceCache = new Map<string, { distance: number; duration: string; timestamp: number }>();
   const DISTANCE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours cache for distance
+  
+  // Geocode cache to reduce Nominatim calls
+  const geocodeCache = new Map<string, { lat: number; lng: number; timestamp: number }>();
+  const GEOCODE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days cache for geocoding
 
-  // Calculate road distance between two locations using Google Maps Distance Matrix API
+  // Helper: Geocode a location using OpenStreetMap Nominatim (free)
+  async function geocodeLocation(location: string): Promise<{ lat: number; lng: number } | null> {
+    const cacheKey = location.toLowerCase().trim();
+    const cached = geocodeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < GEOCODE_CACHE_TTL) {
+      return { lat: cached.lat, lng: cached.lng };
+    }
+    
+    try {
+      // Add ", India" for better accuracy with Indian cities
+      const searchQuery = location.toLowerCase().includes("india") ? location : `${location}, India`;
+      
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("q", searchQuery);
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      
+      const response = await fetch(url.toString(), {
+        headers: {
+          "User-Agent": "FreightFlow/1.0 (logistics platform)"
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        geocodeCache.set(cacheKey, { ...result, timestamp: Date.now() });
+        return result;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("[Geocode] Error geocoding location:", location, error);
+      return null;
+    }
+  }
+  
+  // Helper: Format duration from seconds
+  function formatDuration(durationSeconds: number): string {
+    const hours = Math.floor(durationSeconds / 3600);
+    const minutes = Math.floor((durationSeconds % 3600) / 60);
+    if (hours >= 24) {
+      const days = Math.floor(hours / 10); // Assume 10 hours driving per day
+      return `${days} day${days > 1 ? "s" : ""}`;
+    } else if (hours > 0) {
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    } else {
+      return `${minutes} mins`;
+    }
+  }
+
+  // Calculate road distance between two locations
   app.post("/api/distance/calculate", requireAuth, async (req, res) => {
     try {
       const inputSchema = z.object({
@@ -2747,85 +2805,110 @@ export async function registerRoutes(
         });
       }
       
+      // Try Google Maps first if API key is available
       const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
       
-      if (!GOOGLE_MAPS_API_KEY) {
-        console.warn("[Distance API] GOOGLE_MAPS_API_KEY not configured, using fallback calculation");
-        // Fallback to simple estimation (1.5x straight line as rough estimate)
-        return res.json({
-          distance: null,
-          duration: null,
-          source: "unavailable",
-          message: "Google Maps API not configured. Please add GOOGLE_MAPS_API_KEY."
-        });
-      }
-      
-      // Format locations for Google Maps API (add ", India" if not already present)
-      const formatLocation = (loc: string) => {
-        const normalized = loc.trim();
-        if (!normalized.toLowerCase().includes("india")) {
-          return `${normalized}, India`;
+      if (GOOGLE_MAPS_API_KEY) {
+        try {
+          const formatLocation = (loc: string) => {
+            const normalized = loc.trim();
+            if (!normalized.toLowerCase().includes("india")) {
+              return `${normalized}, India`;
+            }
+            return normalized;
+          };
+          
+          const originFormatted = formatLocation(origin);
+          const destFormatted = formatLocation(destination);
+          
+          console.log(`[Distance API] Calling Google Maps API: ${originFormatted} -> ${destFormatted}`);
+          
+          const apiUrl = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
+          apiUrl.searchParams.set("origins", originFormatted);
+          apiUrl.searchParams.set("destinations", destFormatted);
+          apiUrl.searchParams.set("mode", "driving");
+          apiUrl.searchParams.set("units", "metric");
+          apiUrl.searchParams.set("key", GOOGLE_MAPS_API_KEY);
+          
+          const response = await fetch(apiUrl.toString());
+          const data = await response.json();
+          
+          if (data.status === "OK" && data.rows?.[0]?.elements?.[0]?.status === "OK") {
+            const element = data.rows[0].elements[0];
+            const distanceKm = Math.round(element.distance.value / 1000);
+            const durationStr = formatDuration(element.duration.value);
+            
+            console.log(`[Distance API] Google Maps result: ${distanceKm} km, ${durationStr}`);
+            
+            distanceCache.set(cacheKey, { distance: distanceKm, duration: durationStr, timestamp: Date.now() });
+            
+            return res.json({
+              distance: distanceKm,
+              duration: durationStr,
+              source: "google_maps",
+              originResolved: data.origin_addresses?.[0],
+              destinationResolved: data.destination_addresses?.[0]
+            });
+          }
+        } catch (googleError) {
+          console.error("[Distance API] Google Maps failed, trying OSRM:", googleError);
         }
-        return normalized;
-      };
+      }
       
-      const originFormatted = formatLocation(origin);
-      const destFormatted = formatLocation(destination);
+      // Use OSRM (Open Source Routing Machine) - free, no API key needed
+      console.log(`[Distance API] Using OSRM for: ${origin} -> ${destination}`);
       
-      console.log(`[Distance API] Calling Google Maps API: ${originFormatted} -> ${destFormatted}`);
+      // First, geocode both locations
+      const [originCoords, destCoords] = await Promise.all([
+        geocodeLocation(origin),
+        geocodeLocation(destination)
+      ]);
       
-      // Call Google Maps Distance Matrix API
-      const apiUrl = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
-      apiUrl.searchParams.set("origins", originFormatted);
-      apiUrl.searchParams.set("destinations", destFormatted);
-      apiUrl.searchParams.set("mode", "driving");
-      apiUrl.searchParams.set("units", "metric");
-      apiUrl.searchParams.set("key", GOOGLE_MAPS_API_KEY);
-      
-      const response = await fetch(apiUrl.toString());
-      const data = await response.json();
-      
-      console.log(`[Distance API] Google Maps response status: ${data.status}`);
-      
-      if (data.status !== "OK") {
-        console.error("[Distance API] Google Maps API error:", data.status, data.error_message);
+      if (!originCoords) {
+        console.error("[Distance API] Could not geocode origin:", origin);
         return res.status(400).json({
-          error: "Unable to calculate distance",
-          details: data.error_message || data.status,
-          source: "google_maps_error"
+          error: "Could not find origin location",
+          details: `Unable to geocode: ${origin}`,
+          source: "geocode_error"
         });
       }
       
-      const element = data.rows?.[0]?.elements?.[0];
+      if (!destCoords) {
+        console.error("[Distance API] Could not geocode destination:", destination);
+        return res.status(400).json({
+          error: "Could not find destination location",
+          details: `Unable to geocode: ${destination}`,
+          source: "geocode_error"
+        });
+      }
       
-      if (!element || element.status !== "OK") {
-        console.error("[Distance API] No route found:", element?.status);
+      console.log(`[Distance API] Coordinates: ${originCoords.lat},${originCoords.lng} -> ${destCoords.lat},${destCoords.lng}`);
+      
+      // Call OSRM routing API
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originCoords.lng},${originCoords.lat};${destCoords.lng},${destCoords.lat}?overview=false`;
+      
+      const osrmResponse = await fetch(osrmUrl, {
+        headers: {
+          "User-Agent": "FreightFlow/1.0 (logistics platform)"
+        }
+      });
+      
+      const osrmData = await osrmResponse.json();
+      
+      if (osrmData.code !== "Ok" || !osrmData.routes || osrmData.routes.length === 0) {
+        console.error("[Distance API] OSRM error:", osrmData.code, osrmData.message);
         return res.status(400).json({
           error: "No route found between these locations",
-          details: element?.status || "Unknown error",
-          source: "no_route"
+          details: osrmData.message || osrmData.code,
+          source: "osrm_error"
         });
       }
       
-      // Extract distance in km and duration
-      const distanceMeters = element.distance.value;
-      const distanceKm = Math.round(distanceMeters / 1000);
-      const durationSeconds = element.duration.value;
+      const route = osrmData.routes[0];
+      const distanceKm = Math.round(route.distance / 1000);
+      const durationStr = formatDuration(route.duration);
       
-      // Format duration (e.g., "46h 20m" or "2 days")
-      const hours = Math.floor(durationSeconds / 3600);
-      const minutes = Math.floor((durationSeconds % 3600) / 60);
-      let durationStr: string;
-      if (hours >= 24) {
-        const days = Math.floor(hours / 10); // Assume 10 hours driving per day
-        durationStr = `${days} day${days > 1 ? "s" : ""}`;
-      } else if (hours > 0) {
-        durationStr = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-      } else {
-        durationStr = `${minutes} mins`;
-      }
-      
-      console.log(`[Distance API] Result: ${distanceKm} km, ${durationStr}`);
+      console.log(`[Distance API] OSRM result: ${distanceKm} km, ${durationStr}`);
       
       // Cache the result
       distanceCache.set(cacheKey, {
@@ -2847,9 +2930,7 @@ export async function registerRoutes(
       res.json({
         distance: distanceKm,
         duration: durationStr,
-        source: "google_maps",
-        originResolved: data.origin_addresses?.[0],
-        destinationResolved: data.destination_addresses?.[0]
+        source: "osrm"
       });
       
     } catch (error) {

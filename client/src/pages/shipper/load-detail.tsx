@@ -7,8 +7,9 @@ import {
   ChevronLeft, MapPin, Calendar, 
   Users, Copy, X, CheckCircle, AlertCircle, Star, FileText, Loader2,
   Building2, User as UserIcon, Phone, IndianRupee, Package, Truck, StickyNote,
-  Mail, Landmark, Navigation, Percent, Receipt, EyeOff
+  Mail, Landmark, Navigation, Percent, Receipt, EyeOff, MessageCircle
 } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -231,6 +232,60 @@ export default function LoadDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              const loadNum = formatLoadId(load);
+              const pickupDate = load.pickupDate 
+                ? new Date(load.pickupDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                : '';
+              const truckLabel = load.requiredTruckType 
+                ? load.requiredTruckType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                : '';
+              let message = `*Load Details - ${loadNum}*\n\n`;
+              message += `*From:* ${load.pickupCity}\n`;
+              message += `*To:* ${load.dropoffCity}\n`;
+              message += `---\n`;
+              if (load.weight) message += `*Weight:* ${load.weight} MT\n`;
+              if (load.goodsToBeCarried) message += `*Cargo:* ${load.goodsToBeCarried}\n`;
+              if (truckLabel) message += `*Truck Type:* ${truckLabel}\n`;
+              if (pickupDate) message += `*Pickup Date:* ${pickupDate}\n`;
+              if (load.specialNotes) message += `*Notes:* ${load.specialNotes}\n`;
+              message += `\n*View Details:* https://loalink.com`;
+              window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+            }}
+            data-testid="button-share-whatsapp"
+          >
+            <SiWhatsapp className="h-4 w-4 mr-2 text-green-500" />
+            WhatsApp
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              const loadNum = formatLoadId(load);
+              const pickupDate = load.pickupDate 
+                ? new Date(load.pickupDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                : '';
+              const truckLabel = load.requiredTruckType 
+                ? load.requiredTruckType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                : '';
+              let message = `Load Details - ${loadNum}\n`;
+              message += `From: ${load.pickupCity}\n`;
+              message += `To: ${load.dropoffCity}\n`;
+              if (load.weight) message += `Weight: ${load.weight} MT\n`;
+              if (load.goodsToBeCarried) message += `Cargo: ${load.goodsToBeCarried}\n`;
+              if (truckLabel) message += `Truck: ${truckLabel}\n`;
+              if (pickupDate) message += `Pickup: ${pickupDate}\n`;
+              message += `\nView: https://loalink.com`;
+              window.open(`sms:?body=${encodeURIComponent(message)}`, '_blank');
+            }}
+            data-testid="button-share-sms"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            SMS
+          </Button>
           <Button variant="outline" size="sm" onClick={handleDuplicate} data-testid="button-duplicate">
             <Copy className="h-4 w-4 mr-2" />
             Duplicate

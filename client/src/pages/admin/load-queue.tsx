@@ -1705,8 +1705,8 @@ export default function LoadQueuePage() {
 
       {/* Reprice and Repost Dialog */}
       <Dialog open={repriceDialogOpen} onOpenChange={setRepriceDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5" />
               Reprice & Repost Load
@@ -1717,8 +1717,8 @@ export default function LoadQueuePage() {
           </DialogHeader>
           
           {repriceLoad && (
-            <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-4">
+            <ScrollArea className="flex-1 max-h-[60vh] pr-4">
+            <div className="space-y-4 pb-2">
               {/* Load Summary */}
               <Card>
                 <CardContent className="pt-4">
@@ -2105,7 +2105,7 @@ export default function LoadQueuePage() {
             </ScrollArea>
           )}
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-shrink-0 pt-4 border-t">
             <Button 
               variant="outline" 
               onClick={() => setRepriceDialogOpen(false)}

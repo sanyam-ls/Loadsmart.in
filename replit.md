@@ -34,6 +34,15 @@ A specialized portal for owner-operators with simplified navigation and focused 
 
 The system supports simultaneous bidding from Solo Drivers and Enterprise Carriers on the same loads without carrier type filtering. Loads in `posted_to_carriers`, `open_for_bid`, or `counter_received` statuses are visible for bidding. Bid acceptance from any carrier automatically rejects all other pending bids. Enterprise carriers must select a truck at bid time, and an optional driver, which are then transferred to the shipment upon bid acceptance. A robust `acceptBid()` workflow handles counter-offer acceptance, ensuring idempotency and error resilience.
 
+### Fleet Carrier Resource Assignment Rules
+
+Fleet/Enterprise carriers are restricted to assigning one truck and one driver per active load. Validation is enforced at bid submission time:
+-   A truck cannot be assigned to multiple active shipments or accepted bids simultaneously
+-   A driver cannot be assigned to multiple active shipments or accepted bids simultaneously
+-   Resources become available for new assignments only after delivery is completed (status: `delivered`, `closed`, `cancelled`, or `completed`)
+-   Terminal shipment statuses that release resources: `delivered`, `closed`, `cancelled`, `completed`
+-   Both shipments and accepted bids are checked to prevent race conditions during bid acceptance workflow
+
 ### Admin Reprice & Repost Feature
 
 Administrators can reprice and repost loads in `posted_to_carriers`, `open_for_bid`, `counter_received`, or `priced` statuses. Repricing marketplace loads automatically rejects all pending bids. The feature includes an enhanced pricing calculator for setting gross price, platform margin, and carrier advance payment, with server-side validation and an audit trail.

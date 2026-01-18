@@ -612,9 +612,13 @@ export class DatabaseStorage implements IStorage {
 
   // Admin mediation methods
   async getLoadsSubmittedToAdmin(): Promise<Load[]> {
-    // Use canonical statuses from schema - pending = awaiting admin review, priced = ready to post
+    // Use canonical statuses from schema - includes:
+    // - pending = awaiting admin review
+    // - priced = ready to post  
+    // - posted_to_carriers, open_for_bid, counter_received = active marketplace (for repricing)
+    // - invoice_created, invoice_sent, invoice_acknowledged, awarded = post-award workflow
     return db.select().from(loads)
-      .where(sql`${loads.status} IN ('pending', 'priced', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'awarded')`)
+      .where(sql`${loads.status} IN ('pending', 'priced', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'awarded')`)
       .orderBy(desc(loads.submittedAt));
   }
 

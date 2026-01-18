@@ -1202,7 +1202,22 @@ export async function registerRoutes(
       const bidsWithDetails = await Promise.all(
         bidsList.map(async (bid) => {
           const load = await storage.getLoad(bid.loadId);
-          return { ...bid, load };
+          
+          // Get the latest carrier counter offer from negotiations
+          const negotiations = await storage.getBidNegotiations(bid.id);
+          const carrierCounterOffers = negotiations
+            .filter(n => n.senderRole === "carrier" && n.messageType === "counter_offer" && n.amount)
+            .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          
+          const latestCarrierAmount = carrierCounterOffers.length > 0 
+            ? carrierCounterOffers[0].amount 
+            : null;
+          
+          return { 
+            ...bid, 
+            load,
+            latestCarrierAmount, // Carrier's latest counter offer
+          };
         })
       );
 

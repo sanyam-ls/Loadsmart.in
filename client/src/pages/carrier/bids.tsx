@@ -554,6 +554,11 @@ export default function CarrierBidsPage() {
         : load?.shipperLoadNumber 
           ? `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`
           : bid.loadId.slice(0, 8).toUpperCase();
+      
+      // Use latest carrier amount if available, otherwise original bid amount
+      const latestCarrierAmount = (bid as any).latestCarrierAmount;
+      const carrierCurrentOffer = latestCarrierAmount ? Number(latestCarrierAmount) : Number(bid.amount) || 50000;
+      
       return {
       bidId: bid.id,
       loadId: bid.loadId,
@@ -567,11 +572,11 @@ export default function CarrierBidsPage() {
       weight: Number(bid.load?.weight) || 10,
       distance: Number(bid.load?.distance) || 500,
       proposedRate: Number(bid.load?.finalPrice) || Number(bid.load?.adminFinalPrice) || Number(bid.amount) || 50000,
-      carrierOffer: Number(bid.amount) || 50000,
-      currentRate: Number(bid.counterAmount) || Number(bid.amount) || 50000,
+      carrierOffer: carrierCurrentOffer, // Use latest carrier counter offer
+      currentRate: Number(bid.counterAmount) || carrierCurrentOffer,
       shipperCounterRate: bid.counterAmount ? Number(bid.counterAmount) : null,
-      estimatedRevenue: Number(bid.amount) || 50000,
-      estimatedProfit: Math.round((Number(bid.amount) || 50000) * 0.2),
+      estimatedRevenue: carrierCurrentOffer,
+      estimatedProfit: Math.round(carrierCurrentOffer * 0.2),
       requiredVehicleType: bid.load?.requiredTruckType || "Open - 17 Feet",
       bidStatus: (bid.status as CarrierBid["bidStatus"]) || "pending",
       timeLeftToRespond: 24,

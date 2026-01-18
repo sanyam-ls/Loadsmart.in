@@ -2569,17 +2569,92 @@ export async function registerRoutes(
   // ADMIN-AS-MEDIATOR FLOW ENDPOINTS
   // ==========================================
 
-  // AI-powered truck type suggestion based on weight, goods, and market trends
-  // Rate limiting cache to prevent abuse
+  // AI-powered truck type suggestion based on weight, commodity, and market trends
+  // Uses ML analysis via OpenAI to provide intelligent recommendations
   const truckSuggestionCache = new Map<string, { result: any; timestamp: number }>();
-  const CACHE_TTL = 30000; // 30 seconds cache
+  const CACHE_TTL = 60000; // 60 seconds cache for AI suggestions
+  
+  // Commodity category mappings for ML analysis
+  const COMMODITY_TRUCK_REQUIREMENTS: Record<string, { preferredTypes: string[]; requirements: string }> = {
+    // Temperature-sensitive goods
+    "frozen_foods": { preferredTypes: ["reefer_container", "container_20ft"], requirements: "refrigeration" },
+    "dairy_products": { preferredTypes: ["reefer_container", "container_20ft"], requirements: "refrigeration" },
+    "pharmaceuticals": { preferredTypes: ["reefer_container", "container_20ft"], requirements: "temperature_controlled" },
+    "fresh_produce": { preferredTypes: ["reefer_container", "container_20ft"], requirements: "ventilation" },
+    
+    // Hazardous materials
+    "chemicals": { preferredTypes: ["tanker_chemical", "container_20ft"], requirements: "hazmat_certified" },
+    "petroleum": { preferredTypes: ["tanker_oil", "tanker_chemical"], requirements: "hazmat_certified" },
+    "gases": { preferredTypes: ["tanker_chemical"], requirements: "pressure_rated" },
+    
+    // Bulk materials
+    "cement": { preferredTypes: ["bulker_cement", "open_14_wheeler"], requirements: "covered_bulk" },
+    "grains": { preferredTypes: ["bulker_cement", "container_20ft"], requirements: "food_grade" },
+    "fertilizers": { preferredTypes: ["bulker_cement", "open_14_wheeler"], requirements: "covered" },
+    "coal": { preferredTypes: ["dumper_hyva", "open_18_wheeler"], requirements: "open_body" },
+    "sand_gravel": { preferredTypes: ["dumper_hyva", "open_14_wheeler"], requirements: "tipper" },
+    "iron_ore": { preferredTypes: ["dumper_hyva", "open_18_wheeler"], requirements: "heavy_duty" },
+    
+    // Manufactured goods
+    "electronics": { preferredTypes: ["container_20ft", "container_40ft"], requirements: "enclosed_secure" },
+    "textiles": { preferredTypes: ["container_20ft", "open_20_feet"], requirements: "covered" },
+    "furniture": { preferredTypes: ["container_40ft", "open_24_feet"], requirements: "large_volume" },
+    "machinery": { preferredTypes: ["trailer_40ft", "lowbed_trailer"], requirements: "heavy_duty" },
+    "automobiles": { preferredTypes: ["car_carrier", "trailer_40ft"], requirements: "specialized" },
+    "fmcg": { preferredTypes: ["container_20ft", "open_17_feet"], requirements: "enclosed" },
+    "packaged_foods": { preferredTypes: ["container_20ft", "open_17_feet"], requirements: "food_grade" },
+    
+    // Agricultural
+    "cotton": { preferredTypes: ["container_40ft", "open_24_feet"], requirements: "high_volume" },
+    "sugarcane": { preferredTypes: ["open_18_wheeler", "open_14_wheeler"], requirements: "open_body" },
+    "vegetables": { preferredTypes: ["open_17_feet", "open_20_feet"], requirements: "ventilated" },
+    "fruits": { preferredTypes: ["reefer_container", "open_17_feet"], requirements: "ventilated" },
+    
+    // Construction
+    "steel": { preferredTypes: ["trailer_40ft", "open_18_wheeler"], requirements: "flatbed" },
+    "timber": { preferredTypes: ["trailer_40ft", "open_24_feet"], requirements: "long_body" },
+    "bricks": { preferredTypes: ["open_14_wheeler", "open_10_wheeler"], requirements: "open_body" },
+    "tiles": { preferredTypes: ["container_20ft", "open_17_feet"], requirements: "enclosed" },
+    
+    // General
+    "general_cargo": { preferredTypes: ["open_17_feet", "open_20_feet"], requirements: "standard" },
+    "parcels": { preferredTypes: ["lcv_17ft", "lcv_14ft"], requirements: "enclosed" },
+    "other": { preferredTypes: ["open_17_feet", "open_20_feet"], requirements: "standard" },
+  };
+  
+  // Weight-based truck capacity mapping (in tons)
+  const TRUCK_CAPACITIES: Record<string, { minWeight: number; maxWeight: number; name: string }> = {
+    "mini_pickup": { minWeight: 0, maxWeight: 1, name: "Mini Pickup" },
+    "lcv_tata_ace": { minWeight: 0.5, maxWeight: 1.5, name: "Tata Ace" },
+    "lcv_14ft": { minWeight: 1, maxWeight: 3, name: "LCV 14 Feet" },
+    "lcv_17ft": { minWeight: 2, maxWeight: 5, name: "LCV 17 Feet" },
+    "open_17_feet": { minWeight: 3, maxWeight: 7, name: "Open 17 Feet" },
+    "open_19_feet": { minWeight: 5, maxWeight: 9, name: "Open 19 Feet" },
+    "open_20_feet": { minWeight: 6, maxWeight: 12, name: "Open 20 Feet" },
+    "open_22_feet": { minWeight: 8, maxWeight: 16, name: "Open 22 Feet" },
+    "open_24_feet": { minWeight: 10, maxWeight: 20, name: "Open 24 Feet" },
+    "open_10_wheeler": { minWeight: 12, maxWeight: 25, name: "10 Wheeler" },
+    "open_14_wheeler": { minWeight: 20, maxWeight: 35, name: "14 Wheeler" },
+    "open_18_wheeler": { minWeight: 25, maxWeight: 45, name: "18 Wheeler" },
+    "container_20ft": { minWeight: 5, maxWeight: 24, name: "20ft Container" },
+    "container_40ft": { minWeight: 10, maxWeight: 30, name: "40ft Container" },
+    "trailer_40ft": { minWeight: 15, maxWeight: 40, name: "40ft Trailer" },
+    "lowbed_trailer": { minWeight: 20, maxWeight: 60, name: "Lowbed Trailer" },
+    "tanker_oil": { minWeight: 10, maxWeight: 30, name: "Oil Tanker" },
+    "tanker_chemical": { minWeight: 10, maxWeight: 25, name: "Chemical Tanker" },
+    "bulker_cement": { minWeight: 15, maxWeight: 35, name: "Cement Bulker" },
+    "dumper_hyva": { minWeight: 15, maxWeight: 30, name: "Dumper/Hyva" },
+    "reefer_container": { minWeight: 5, maxWeight: 22, name: "Reefer Container" },
+    "car_carrier": { minWeight: 5, maxWeight: 20, name: "Car Carrier" },
+  };
   
   app.post("/api/loads/suggest-truck", requireAuth, async (req, res) => {
     try {
-      // Validate input
+      // Validate input with structured commodity type
       const inputSchema = z.object({
         weight: z.union([z.string(), z.number()]).transform(v => String(v)),
         weightUnit: z.enum(["tons", "kg"]).default("tons"),
+        commodityType: z.string().optional().default(""),
         goodsDescription: z.string().optional().default(""),
         pickupCity: z.string().optional().default(""),
         dropoffCity: z.string().optional().default(""),
@@ -2593,7 +2668,7 @@ export async function registerRoutes(
       }
       
       // Check cache first
-      const cacheKey = `${req.session.userId}-${numericWeight}-${validated.weightUnit}-${validated.goodsDescription}`;
+      const cacheKey = `${req.session.userId}-${numericWeight}-${validated.weightUnit}-${validated.commodityType}-${validated.goodsDescription}`;
       const cached = truckSuggestionCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
         return res.json(cached.result);
@@ -2602,62 +2677,103 @@ export async function registerRoutes(
       // Convert weight to tons
       const weightInTons = validated.weightUnit === "kg" ? numericWeight / 1000 : numericWeight;
       
-      // Get historical load data for market trends
+      // ========================================
+      // STEP 1: MARKET TREND ANALYSIS (ML Feature)
+      // ========================================
       const allLoads = await storage.getAllLoads();
-      const similarLoads = allLoads.filter(load => {
+      
+      // Filter loads by similar weight range (±30%)
+      const weightSimilarLoads = allLoads.filter(load => {
         const loadWeight = parseFloat(load.weight || "0");
         return loadWeight > weightInTons * 0.7 && loadWeight < weightInTons * 1.3;
-      }).slice(0, 50);
+      });
       
-      // Analyze what truck types are commonly used for similar weights
-      const truckTypeUsage: Record<string, number> = {};
-      similarLoads.forEach(load => {
+      // Filter loads by same commodity type (if provided)
+      const commoditySimilarLoads = validated.commodityType 
+        ? allLoads.filter(load => {
+            const loadGoods = (load.goodsToBeCarried || "").toLowerCase();
+            const commodityKey = validated.commodityType.toLowerCase().replace(/\s+/g, "_");
+            return loadGoods.includes(commodityKey) || loadGoods.includes(validated.commodityType.toLowerCase());
+          })
+        : [];
+      
+      // Combine weight and commodity matches with scoring
+      interface LoadScore { truckType: string; score: number; source: string }
+      const truckScores: LoadScore[] = [];
+      
+      // Weight-based matches (score: 2 points each)
+      weightSimilarLoads.forEach(load => {
         if (load.requiredTruckType) {
-          truckTypeUsage[load.requiredTruckType] = (truckTypeUsage[load.requiredTruckType] || 0) + 1;
+          truckScores.push({ truckType: load.requiredTruckType, score: 2, source: "weight_match" });
         }
       });
       
-      // Sort by frequency
-      const popularTrucks = Object.entries(truckTypeUsage)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 3)
+      // Commodity-based matches (score: 3 points each - higher priority)
+      commoditySimilarLoads.forEach(load => {
+        if (load.requiredTruckType) {
+          truckScores.push({ truckType: load.requiredTruckType, score: 3, source: "commodity_match" });
+        }
+      });
+      
+      // Calculate aggregate scores per truck type
+      const aggregatedScores: Record<string, { totalScore: number; count: number; sources: Set<string> }> = {};
+      truckScores.forEach(({ truckType, score, source }) => {
+        if (!aggregatedScores[truckType]) {
+          aggregatedScores[truckType] = { totalScore: 0, count: 0, sources: new Set() };
+        }
+        aggregatedScores[truckType].totalScore += score;
+        aggregatedScores[truckType].count += 1;
+        aggregatedScores[truckType].sources.add(source);
+      });
+      
+      // Sort by score and get top recommendations from market data
+      const marketRecommendations = Object.entries(aggregatedScores)
+        .map(([truckType, data]) => ({
+          truckType,
+          score: data.totalScore,
+          count: data.count,
+          hasCommodityMatch: data.sources.has("commodity_match"),
+          hasWeightMatch: data.sources.has("weight_match"),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+      
+      // ========================================
+      // STEP 2: RULE-BASED ANALYSIS
+      // ========================================
+      const commodityKey = validated.commodityType?.toLowerCase().replace(/\s+/g, "_") || "";
+      const commodityRequirements = COMMODITY_TRUCK_REQUIREMENTS[commodityKey] || COMMODITY_TRUCK_REQUIREMENTS["other"];
+      
+      // Find trucks that fit weight AND commodity requirements
+      const weightCompatibleTrucks = Object.entries(TRUCK_CAPACITIES)
+        .filter(([, capacity]) => weightInTons >= capacity.minWeight * 0.8 && weightInTons <= capacity.maxWeight * 1.1)
         .map(([type]) => type);
       
-      // Rule-based suggestion as fallback
-      let suggestedTruck = "open_10_wheeler";
-      const desc = (validated.goodsDescription || "").toLowerCase();
+      // Intersection of commodity-preferred trucks and weight-compatible trucks
+      const idealTrucks = commodityRequirements.preferredTypes.filter(t => weightCompatibleTrucks.includes(t));
       
-      if (desc.includes("frozen") || desc.includes("cold") || desc.includes("perishable")) {
-        suggestedTruck = "container_20ft";
-      } else if (desc.includes("liquid") || desc.includes("oil") || desc.includes("fuel")) {
-        suggestedTruck = "tanker_oil";
-      } else if (desc.includes("cement") || desc.includes("powder") || desc.includes("bulk")) {
-        suggestedTruck = "bulker_cement";
-      } else if (desc.includes("sand") || desc.includes("gravel") || desc.includes("stone")) {
-        suggestedTruck = "dumper_hyva";
-      } else if (desc.includes("machine") || desc.includes("equipment") || desc.includes("vehicle")) {
-        suggestedTruck = "trailer_40ft";
-      } else if (weightInTons > 35) {
-        suggestedTruck = "open_18_wheeler";
-      } else if (weightInTons > 25) {
-        suggestedTruck = "open_14_wheeler";
-      } else if (weightInTons > 15) {
-        suggestedTruck = "open_10_wheeler";
-      } else if (weightInTons > 7) {
-        suggestedTruck = "open_20_feet";
-      } else if (weightInTons > 2) {
-        suggestedTruck = "lcv_17ft";
-      } else if (weightInTons > 1) {
-        suggestedTruck = "lcv_tata_ace";
-      } else {
-        suggestedTruck = "mini_pickup";
+      // Rule-based suggestion
+      let ruleBasedSuggestion = idealTrucks[0] || weightCompatibleTrucks[0] || "open_10_wheeler";
+      
+      // Weight-only fallback if no matches
+      if (!ruleBasedSuggestion || ruleBasedSuggestion === "open_10_wheeler") {
+        if (weightInTons > 35) ruleBasedSuggestion = "open_18_wheeler";
+        else if (weightInTons > 25) ruleBasedSuggestion = "open_14_wheeler";
+        else if (weightInTons > 15) ruleBasedSuggestion = "open_10_wheeler";
+        else if (weightInTons > 7) ruleBasedSuggestion = "open_20_feet";
+        else if (weightInTons > 3) ruleBasedSuggestion = "open_17_feet";
+        else if (weightInTons > 1) ruleBasedSuggestion = "lcv_17ft";
+        else ruleBasedSuggestion = "mini_pickup";
       }
       
-      // Use market data if available, otherwise use rule-based
-      const finalSuggestion = popularTrucks.length > 0 ? popularTrucks[0] : suggestedTruck;
+      // ========================================
+      // STEP 3: AI/ML POWERED RECOMMENDATION
+      // ========================================
+      let aiSuggestion: string | null = null;
+      let aiInsight: string | null = null;
+      let aiConfidence: number | null = null;
+      let aiAlternatives: string[] = [];
       
-      // Generate AI insight if OpenAI is available
-      let aiInsight = null;
       if (process.env.AI_INTEGRATIONS_OPENAI_API_KEY && process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
         try {
           const OpenAI = (await import("openai")).default;
@@ -2666,36 +2782,126 @@ export async function registerRoutes(
             baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
           });
           
+          // Build market context for AI
+          const marketContext = marketRecommendations.length > 0
+            ? `\nMarket Data (${weightSimilarLoads.length + commoditySimilarLoads.length} similar loads analyzed):\n${marketRecommendations.slice(0, 3).map(r => `- ${r.truckType.replace(/_/g, " ")}: used ${r.count} times, score ${r.score}`).join("\n")}`
+            : "\nNo historical market data available for similar loads.";
+          
+          const availableTruckTypes = Object.entries(TRUCK_CAPACITIES)
+            .map(([type, info]) => `${type} (${info.minWeight}-${info.maxWeight} tons)`)
+            .join(", ");
+          
+          const prompt = `You are an expert Indian logistics ML system. Analyze these inputs and recommend the optimal truck type.
+
+INPUT DATA:
+- Weight: ${weightInTons} tons
+- Commodity: ${validated.commodityType || validated.goodsDescription || "General Cargo"}
+- Route: ${validated.pickupCity && validated.dropoffCity ? `${validated.pickupCity} to ${validated.dropoffCity}` : "Not specified"}
+${marketContext}
+
+AVAILABLE TRUCK TYPES:
+${availableTruckTypes}
+
+COMMODITY REQUIREMENTS:
+${commodityRequirements.requirements}
+
+ANALYSIS REQUIRED:
+1. Consider weight capacity (truck should have ~20% buffer above load weight)
+2. Consider commodity-specific requirements (refrigeration, hazmat, bulk handling, etc.)
+3. Consider market trends from historical data
+4. Factor in route characteristics if provided
+
+RESPOND IN THIS EXACT JSON FORMAT:
+{
+  "recommendedTruck": "truck_type_id",
+  "confidence": 0.85,
+  "alternatives": ["alt1", "alt2"],
+  "reasoning": "One sentence explanation of why this truck is recommended",
+  "factors": ["weight_optimal", "commodity_match", "market_trend"]
+}`;
+          
           const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [{
               role: "system",
-              content: "You are a logistics expert. Provide brief, helpful truck recommendations."
+              content: "You are an ML-powered logistics optimization system specializing in Indian freight. Always respond with valid JSON only."
             }, {
               role: "user",
-              content: `For a ${weightInTons} ton load${validated.goodsDescription ? ` of "${validated.goodsDescription}"` : ""}${validated.pickupCity && validated.dropoffCity ? ` from ${validated.pickupCity} to ${validated.dropoffCity}` : ""}, I'm suggesting a ${finalSuggestion.replace(/_/g, " ")}. Is this a good choice? Give a one-sentence explanation.`
+              content: prompt
             }],
-            max_tokens: 100,
+            max_tokens: 300,
+            temperature: 0.3, // Lower temperature for more consistent recommendations
           });
           
-          aiInsight = response.choices[0]?.message?.content || null;
+          const aiResponse = response.choices[0]?.message?.content || "";
+          
+          try {
+            // Parse JSON response
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              aiSuggestion = parsed.recommendedTruck || null;
+              aiInsight = parsed.reasoning || null;
+              aiConfidence = parsed.confidence || null;
+              aiAlternatives = parsed.alternatives || [];
+            }
+          } catch (parseError) {
+            console.log("AI response parsing failed, using fallback:", parseError);
+            // Try to extract a simple recommendation from non-JSON response
+            const truckMatch = aiResponse.toLowerCase().match(/(open_\d+_(?:feet|wheeler)|container_\d+ft|trailer_\d+ft|lcv_\d+ft|tanker_\w+|bulker_\w+|dumper_\w+|reefer_\w+)/);
+            if (truckMatch) {
+              aiSuggestion = truckMatch[0];
+            }
+          }
         } catch (aiError) {
           console.error("AI suggestion error:", aiError);
         }
       }
       
+      // ========================================
+      // STEP 4: FINAL RECOMMENDATION (Ensemble)
+      // ========================================
+      // Priority: AI suggestion (if confident) > Market trend > Rule-based
+      let finalSuggestion = ruleBasedSuggestion;
+      let suggestionSource = "rule_based";
+      let confidence = 0.6;
+      
+      // Use market data if available
+      if (marketRecommendations.length > 0 && marketRecommendations[0].score >= 4) {
+        finalSuggestion = marketRecommendations[0].truckType;
+        suggestionSource = marketRecommendations[0].hasCommodityMatch ? "market_commodity" : "market_weight";
+        confidence = Math.min(0.9, 0.6 + (marketRecommendations[0].count * 0.05));
+      }
+      
+      // Override with AI suggestion if available and confident
+      if (aiSuggestion && aiConfidence && aiConfidence >= 0.7) {
+        finalSuggestion = aiSuggestion;
+        suggestionSource = "ai_ml";
+        confidence = aiConfidence;
+      }
+      
+      // Prepare alternatives
+      const alternatives = Array.from(new Set([
+        ...aiAlternatives,
+        ...marketRecommendations.slice(1, 3).map(r => r.truckType),
+        ...idealTrucks.slice(0, 2),
+      ])).filter(t => t !== finalSuggestion).slice(0, 3);
+      
       const result = {
         suggestedTruck: finalSuggestion,
-        alternatives: popularTrucks.length > 1 ? popularTrucks.slice(1) : [],
-        basedOnMarketData: popularTrucks.length > 0,
-        marketDataCount: similarLoads.length,
-        aiInsight,
+        alternatives,
+        basedOnMarketData: suggestionSource.includes("market") || suggestionSource === "ai_ml",
+        marketDataCount: weightSimilarLoads.length + commoditySimilarLoads.length,
+        aiInsight: aiInsight || (suggestionSource === "ai_ml" ? "AI-optimized recommendation based on weight, commodity, and market trends" : null),
+        confidence: Math.round(confidence * 100),
+        suggestionSource,
+        commodityRequirements: commodityRequirements.requirements,
       };
       
       // Cache the result
       truckSuggestionCache.set(cacheKey, { result, timestamp: Date.now() });
       
-      // Clean up old cache entries periodically
+      // Clean up old cache entries
       if (truckSuggestionCache.size > 100) {
         const now = Date.now();
         for (const [key, value] of truckSuggestionCache.entries()) {
@@ -2704,6 +2910,8 @@ export async function registerRoutes(
           }
         }
       }
+      
+      console.log(`[Truck Suggestion] Weight: ${weightInTons}t, Commodity: ${validated.commodityType || "general"}, Suggested: ${finalSuggestion}, Source: ${suggestionSource}, Confidence: ${result.confidence}%, MarketData: ${marketRecommendations.length} recommendations (${weightSimilarLoads.length} weight-similar, ${commoditySimilarLoads.length} commodity-similar loads)`);
       
       res.json(result);
     } catch (error) {

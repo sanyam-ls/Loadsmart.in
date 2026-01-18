@@ -117,15 +117,20 @@ New carriers must complete a verification process before accessing the marketpla
 
 -   **PostgreSQL**: Accessed via `DATABASE_URL` using `pg.Pool` and `Drizzle Kit`.
 
-### AI Truck Suggestions
+### AI/ML Truck Suggestions
 
-The platform includes AI-powered truck type suggestions for shippers when posting loads:
-- **Immediate Suggestions**: When weight is entered, a local calculation provides instant truck type suggestions
-- **AI-Enhanced Insights**: Background API call to `POST /api/loads/suggest-truck` fetches AI-powered recommendations
-- **Market Trend Analysis**: Analyzes historical loads with similar weights to find commonly used truck types
-- **OpenAI Integration**: Generates one-sentence explanations for suggestions when available
-- **Features**: Zod validation, 30-second caching, rate limiting protection, proper error handling
-- **UI Indicators**: Shows "AI Recommended" for market-based suggestions vs "Suggested" for rule-based
+The platform includes ML-powered truck type suggestions based on weight, commodity type, and market trends:
+- **Multi-Factor Analysis**: Considers weight, commodity type, and route when suggesting trucks
+- **Commodity Category Mappings**: 25+ commodity categories with preferred truck types (frozen foods → reefer, electronics → container, cement → bulker, etc.)
+- **Weight-Based Capacity Matching**: Maps weight ranges to appropriate truck capacities with 20% buffer
+- **Market Trend Analysis (ML Feature)**: Analyzes historical loads by weight (±30%) and commodity type, scoring matches and ranking by frequency
+- **OpenAI Integration**: ML-powered recommendations with structured JSON output, confidence scores, and alternative suggestions
+- **Ensemble Approach**: Priority ordering - AI suggestion (if >70% confident) > Market trend (if score ≥4) > Rule-based fallback
+- **Confidence Scores**: Each recommendation includes a confidence percentage (60-90%) based on data quality
+- **Suggestion Sources**: Tracks source as "ai_ml", "market_commodity", "market_weight", or "rule_based"
+- **UI Display**: Shows "AI/ML Recommended", "Market Trend Based", or "Suggested" labels with confidence badge
+- **Caching**: 60-second cache to reduce API calls and improve response times
+- **API Endpoint**: `POST /api/loads/suggest-truck` accepts weight, weightUnit, commodityType, goodsDescription, pickupCity, dropoffCity
 
 ### Shared Data Files
 

@@ -637,6 +637,8 @@ export default function PostLoadPage() {
     nearbyTrucks: number;
     aiInsight?: string | null;
     basedOnMarketData?: boolean;
+    confidence?: number;
+    suggestionSource?: string;
   } | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [isLoadingAiSuggestion, setIsLoadingAiSuggestion] = useState(false);
@@ -791,7 +793,8 @@ export default function PostLoadPage() {
             body: JSON.stringify({
               weight,
               weightUnit,
-              goodsDescription,
+              commodityType: goodsDescription || "",
+              goodsDescription: goodsDescription === "other" ? customCommodity : (goodsDescription || ""),
               pickupCity,
               dropoffCity,
             }),
@@ -805,6 +808,8 @@ export default function PostLoadPage() {
               nearbyTrucks: prev?.nearbyTrucks || nearbyTrucks,
               aiInsight: data.aiInsight,
               basedOnMarketData: data.basedOnMarketData,
+              confidence: data.confidence,
+              suggestionSource: data.suggestionSource,
             }));
           }
         } catch (error) {
@@ -818,7 +823,7 @@ export default function PostLoadPage() {
       const timeoutId = setTimeout(fetchAiSuggestion, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [weight, weightUnit, goodsDescription, truckType]);
+  }, [weight, weightUnit, goodsDescription, customCommodity, truckType, pickupCity, dropoffCity]);
 
   // Fetch accurate road distance from Google Maps API when cities change
   useEffect(() => {
@@ -1822,23 +1827,34 @@ export default function PostLoadPage() {
                             />
                           </FormControl>
                           {estimation?.suggestedTruck && !field.value && (
-                            <div className="space-y-1">
-                              <FormDescription className="flex items-center gap-1 text-primary font-medium">
+                            <div className="space-y-1.5 mt-2 p-2 rounded-md bg-primary/5 border border-primary/20">
+                              <FormDescription className="flex items-center gap-2 text-primary font-medium">
                                 {isLoadingAiSuggestion ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 ) : (
-                                  <Sparkles className="h-3 w-3" />
+                                  <Sparkles className="h-3.5 w-3.5" />
                                 )}
-                                {estimation.basedOnMarketData ? "AI Recommended" : "Suggested"}: {getTruckLabel(estimation.suggestedTruck)}
+                                <span>
+                                  {estimation.suggestionSource === "ai_ml" 
+                                    ? "AI/ML Recommended" 
+                                    : estimation.basedOnMarketData 
+                                      ? "Market Trend Based" 
+                                      : "Suggested"}: {getTruckLabel(estimation.suggestedTruck)}
+                                </span>
+                                {estimation.confidence && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 no-default-hover-elevate no-default-active-elevate">
+                                    {estimation.confidence}% match
+                                  </Badge>
+                                )}
                               </FormDescription>
                               {estimation.aiInsight && (
-                                <p className="text-xs text-muted-foreground pl-4 italic">
+                                <p className="text-xs text-muted-foreground pl-6 italic">
                                   {estimation.aiInsight}
                                 </p>
                               )}
                               {estimation.basedOnMarketData && !estimation.aiInsight && (
-                                <p className="text-xs text-muted-foreground pl-4">
-                                  Based on market trends for similar loads
+                                <p className="text-xs text-muted-foreground pl-6">
+                                  Based on weight, commodity type, and market trends for similar loads
                                 </p>
                               )}
                             </div>

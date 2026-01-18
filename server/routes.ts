@@ -7879,6 +7879,182 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   });
 
+  // POST /api/admin/loads/:loadId/reprice-repost - Reprice and repost an already-posted load
+  app.post("/api/admin/loads/:loadId/reprice-repost", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { finalPrice, postMode, allowCounterBids, invitedCarrierIds, carrierAdvancePercent, reason } = req.body;
+      
+      if (!finalPrice || isNaN(parseFloat(finalPrice))) {
+        return res.status(400).json({ error: "Valid final price is required" });
+      }
+
+      const load = await storage.getLoad(req.params.loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Only allow repricing for loads in active marketplace states
+      const allowedStatuses = ['posted_to_carriers', 'open_for_bid', 'counter_received', 'priced'];
+      if (!allowedStatuses.includes(load.status)) {
+        return res.status(400).json({ 
+          error: `Cannot reprice load in ${load.status} status. Allowed statuses: ${allowedStatuses.join(', ')}` 
+        });
+      }
+
+      // Store before state for audit
+      const beforeState = {
+        status: load.status,
+        finalPrice: load.finalPrice,
+        adminFinalPrice: load.adminFinalPrice,
+        postedAt: load.postedAt,
+        allowCounterBids: load.allowCounterBids,
+      };
+
+      // Calculate platform margin and carrier payout
+      const priceNum = parseFloat(finalPrice);
+      const platformMarginPercent = 10; // Default 10% margin
+      const platformMargin = Math.round(priceNum * (platformMarginPercent / 100));
+      const carrierPayout = Math.round(priceNum - platformMargin);
+
+      // Determine target status:
+      // - If load is in 'priced' status (never posted), keep it in 'priced' (just update price)
+      // - If load was already posted to marketplace, reset to 'posted_to_carriers'
+      const marketplaceStatuses = ['posted_to_carriers', 'open_for_bid', 'counter_received'];
+      const isInMarketplace = marketplaceStatuses.includes(load.status);
+      const targetStatus = isInMarketplace ? 'posted_to_carriers' : 'priced';
+
+      // Reject any existing pending bids for this load (only relevant for marketplace loads)
+      let rejectedBidsCount = 0;
+      if (isInMarketplace) {
+        const existingBids = await storage.getBidsByLoad(load.id);
+        const pendingBids = existingBids.filter(b => b.status === 'pending' || b.status === 'countered');
+        for (const bid of pendingBids) {
+          await storage.updateBid(bid.id, { 
+            status: 'rejected',
+            rejectedAt: new Date(),
+            rejectionReason: 'Load repriced and reposted by admin'
+          });
+        }
+        rejectedBidsCount = pendingBids.length;
+      }
+
+      // Update load with new price
+      // Note: adminFinalPrice = shipper's gross price (for invoicing)
+      //       finalPrice = carrier payout (after 10% platform margin)
+      const updatePayload: any = {
+        status: targetStatus,
+        previousStatus: load.status,
+        adminFinalPrice: priceNum.toString(),
+        finalPrice: carrierPayout.toString(),
+        adminId: user.id,
+        allowCounterBids: allowCounterBids !== false,
+        statusChangedBy: user.id,
+        statusChangedAt: new Date(),
+        repricedAt: new Date(),
+        repricedBy: user.id,
+      };
+
+      // Only set marketplace-specific fields if posting to carriers
+      if (isInMarketplace) {
+        updatePayload.adminPostMode = postMode || 'open';
+        updatePayload.invitedCarrierIds = invitedCarrierIds || [];
+        updatePayload.carrierAdvancePercent = carrierAdvancePercent || 0;
+        updatePayload.postedAt = new Date();
+      }
+
+      const updatedLoad = await storage.updateLoad(load.id, updatePayload);
+
+      // Create admin decision record for repricing
+      const actionType = isInMarketplace ? 'reprice_repost' : 'reprice';
+      await storage.createAdminDecision({
+        loadId: load.id,
+        adminId: user.id,
+        suggestedPrice: load.adminFinalPrice || load.finalPrice,
+        finalPrice: priceNum.toString(),
+        postingMode: postMode || 'open',
+        invitedCarrierIds: invitedCarrierIds || [],
+        comment: reason || (isInMarketplace ? 'Repriced and reposted' : 'Repriced'),
+        pricingBreakdown: JSON.stringify({
+          platformMargin,
+          carrierPayout,
+          originalPrice: load.adminFinalPrice || load.finalPrice,
+          rejectedBidsCount,
+        }),
+        actionType,
+      });
+
+      // Create audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        loadId: load.id,
+        actionType,
+        actionDescription: isInMarketplace 
+          ? `Repriced load from ${load.adminFinalPrice || load.finalPrice} to ${priceNum} and reposted`
+          : `Repriced load from ${load.adminFinalPrice || load.finalPrice} to ${priceNum}`,
+        reason: reason || (isInMarketplace ? 'Admin repriced and reposted' : 'Admin repriced'),
+        beforeState,
+        afterState: {
+          status: targetStatus,
+          finalPrice: carrierPayout.toString(),
+          adminFinalPrice: priceNum.toString(),
+          postedAt: isInMarketplace ? new Date() : undefined,
+          allowCounterBids: allowCounterBids !== false,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { 
+          rejectedBidsCount,
+          postMode: postMode || 'open',
+          isInMarketplace,
+        },
+      });
+
+      // Notify shipper about repricing
+      const notificationMessage = isInMarketplace
+        ? `Your load from ${load.pickupCity} to ${load.dropoffCity} has been repriced to Rs. ${priceNum.toLocaleString('en-IN')} and reposted to carriers.`
+        : `Your load from ${load.pickupCity} to ${load.dropoffCity} has been repriced to Rs. ${priceNum.toLocaleString('en-IN')}.`;
+      
+      await storage.createNotification({
+        userId: load.shipperId,
+        title: "Load Repriced",
+        message: notificationMessage,
+        type: "load",
+        relatedLoadId: load.id,
+      });
+
+      // Broadcast to carrier clients only if posting to marketplace
+      if (isInMarketplace) {
+        broadcastLoadPosted({
+          id: load.id,
+          pickupCity: load.pickupCity,
+          dropoffCity: load.dropoffCity,
+          adminFinalPrice: carrierPayout.toString(),
+          requiredTruckType: load.requiredTruckType,
+          status: 'posted_to_carriers',
+        });
+      }
+
+      const responseMessage = isInMarketplace
+        ? `Load repriced to Rs. ${priceNum.toLocaleString('en-IN')} and reposted to carriers`
+        : `Load repriced to Rs. ${priceNum.toLocaleString('en-IN')}`;
+
+      res.json({ 
+        success: true, 
+        load: updatedLoad,
+        rejectedBidsCount,
+        message: responseMessage
+      });
+    } catch (error) {
+      console.error("Reprice and repost error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // GET /api/admin/troubleshoot/audit-trail/:loadId - Get audit trail for load
   app.get("/api/admin/troubleshoot/audit-trail/:loadId", requireAuth, async (req, res) => {
     try {

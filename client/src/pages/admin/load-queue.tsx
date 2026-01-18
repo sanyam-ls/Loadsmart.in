@@ -167,6 +167,7 @@ interface RealLoad {
   assignedCarrierId?: string;
   awardedBidId?: string;
   pickupId?: string;
+  allowCounterBids?: boolean;
 }
 
 // Format load ID for display - Admin sees LD-1001, LD-1002, etc.
@@ -349,6 +350,12 @@ export default function LoadQueuePage() {
   const [invoiceConfirmOpen, setInvoiceConfirmOpen] = useState(false);
   const [loadToSendInvoice, setLoadToSendInvoice] = useState<RealLoad | null>(null);
   const [isSendingInvoice, setIsSendingInvoice] = useState(false);
+  const [repriceDialogOpen, setRepriceDialogOpen] = useState(false);
+  const [repriceLoad, setRepriceLoad] = useState<RealLoad | null>(null);
+  const [repriceAmount, setRepriceAmount] = useState("");
+  const [repriceAllowCounter, setRepriceAllowCounter] = useState(true);
+  const [repriceReason, setRepriceReason] = useState("");
+  const [isRepricing, setIsRepricing] = useState(false);
 
   const { user } = useAuth();
   
@@ -515,6 +522,50 @@ export default function LoadQueuePage() {
     const pricing = calculateSuggestedPrice(load);
     setInvoicePricingAmount(pricing.suggestedPrice);
     setInvoiceDrawerOpen(true);
+  };
+
+  const openRepriceDialog = (load: RealLoad) => {
+    setRepriceLoad(load);
+    setRepriceAmount(load.adminFinalPrice || load.finalPrice || "");
+    setRepriceAllowCounter(load.allowCounterBids ?? true);
+    setRepriceReason("");
+    setRepriceDialogOpen(true);
+  };
+
+  const handleRepriceAndRepost = async () => {
+    if (!repriceLoad || !repriceAmount) return;
+    
+    setIsRepricing(true);
+    
+    try {
+      const response = await apiRequest('POST', `/api/admin/loads/${repriceLoad.id}/reprice-repost`, {
+        finalPrice: repriceAmount,
+        postMode: 'open',
+        allowCounterBids: repriceAllowCounter,
+        reason: repriceReason || 'Repriced and reposted by admin',
+      });
+
+      if (response) {
+        toast({
+          title: "Load Repriced & Reposted",
+          description: `Load ${formatLoadId(repriceLoad)} has been repriced to Rs. ${Number(repriceAmount).toLocaleString('en-IN')} and reposted to carriers.`,
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/queue'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/loads'] });
+        setRepriceDialogOpen(false);
+        setRepriceLoad(null);
+      }
+    } catch (error: any) {
+      console.error("Failed to reprice and repost:", error);
+      toast({
+        title: t('common.error'),
+        description: error.message || "Failed to reprice and repost load",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRepricing(false);
+    }
   };
 
   const pendingLoads = useMemo(() => getPendingLoads(loads), [loads]);
@@ -815,6 +866,110 @@ export default function LoadQueuePage() {
         );
       })()}
 
+      {/* Active Marketplace - Loads posted to carriers that can be repriced and reposted */}
+      {(() => {
+        const activeMarketplaceLoads = realLoads.filter(l => 
+          l.status === 'posted_to_carriers' || l.status === 'open_for_bid' || l.status === 'counter_received'
+        );
+        if (activeMarketplaceLoads.length === 0) return null;
+        return (
+          <Card className="border-purple-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Gavel className="h-5 w-5 text-purple-500" />
+                Active Marketplace ({activeMarketplaceLoads.length})
+              </CardTitle>
+              <CardDescription>
+                Loads currently posted to carriers - you can reprice and repost if needed
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="max-h-[300px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('loads.loadId')}</TableHead>
+                      <TableHead>{t('loads.route')}</TableHead>
+                      <TableHead>{t('loads.shipper')}</TableHead>
+                      <TableHead>Current Price</TableHead>
+                      <TableHead>{t('common.status')}</TableHead>
+                      <TableHead className="text-right">{t('common.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeMarketplaceLoads.map((load) => {
+                      const price = load.adminFinalPrice || load.finalPrice;
+                      const priceNum = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0;
+                      const stateDisplay = getCanonicalStateDisplay(load.status);
+                      
+                      return (
+                        <TableRow key={load.id} data-testid={`row-active-load-${load.id.slice(0, 8)}`}>
+                          <TableCell className="font-mono font-medium">{formatLoadId(load)}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1 text-sm">
+                                <MapPin className="h-3 w-3 text-green-500" />
+                                <span className="truncate max-w-[120px]">{load.pickupCity}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-sm">
+                                <MapPin className="h-3 w-3 text-red-500" />
+                                <span className="truncate max-w-[120px]">{load.dropoffCity}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{load.shipperName || t('common.unknown')}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium text-green-600 dark:text-green-400">
+                              Rs. {priceNum.toLocaleString('en-IN')}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={stateDisplay.variant} className={stateDisplay.className}>
+                              {stateDisplay.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button 
+                                size="icon" 
+                                variant="ghost"
+                                onClick={() => openLoadDetails(load)}
+                                data-testid={`button-view-active-details-${load.id.slice(0, 8)}`}
+                                title="View full details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/admin/negotiations?load=${load.id}`)}
+                                data-testid={`button-view-bids-${load.id.slice(0, 8)}`}
+                              >
+                                <Gavel className="h-4 w-4 mr-1" />
+                                Bids
+                              </Button>
+                              <Button 
+                                size="sm"
+                                onClick={() => openRepriceDialog(load)}
+                                data-testid={`button-reprice-load-${load.id.slice(0, 8)}`}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-1" />
+                                Reprice
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <Dialog open={pricingDialogOpen} onOpenChange={setPricingDialogOpen}>
         <DialogContent className="max-w-2xl">
@@ -1474,6 +1629,125 @@ export default function LoadQueuePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reprice and Repost Dialog */}
+      <Dialog open={repriceDialogOpen} onOpenChange={setRepriceDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Reprice & Repost Load
+            </DialogTitle>
+            <DialogDescription>
+              Update the price and repost this load to carriers. Any existing pending bids will be rejected.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {repriceLoad && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Load ID:</span>
+                    <span className="ml-2 font-mono font-medium">{formatLoadId(repriceLoad)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Route:</span>
+                    <span className="ml-2">{repriceLoad.pickupCity} → {repriceLoad.dropoffCity}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Current Price:</span>
+                    <span className="ml-2 font-medium text-amber-600">
+                      Rs. {Number(repriceLoad.adminFinalPrice || repriceLoad.finalPrice || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>
+                    <span className="ml-2">{getCanonicalStateDisplay(repriceLoad.status).label}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="reprice-amount">New Price (Rs.)</Label>
+                  <Input
+                    id="reprice-amount"
+                    type="number"
+                    placeholder="Enter new price"
+                    value={repriceAmount}
+                    onChange={(e) => setRepriceAmount(e.target.value)}
+                    data-testid="input-reprice-amount"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="reprice-allow-counter"
+                    checked={repriceAllowCounter}
+                    onChange={(e) => setRepriceAllowCounter(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                    data-testid="checkbox-allow-counter-bids"
+                  />
+                  <Label htmlFor="reprice-allow-counter" className="text-sm font-normal">
+                    Allow carriers to counter-bid
+                  </Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reprice-reason">Reason (optional)</Label>
+                  <Textarea
+                    id="reprice-reason"
+                    placeholder="e.g., Market rate adjustment, no bids received..."
+                    value={repriceReason}
+                    onChange={(e) => setRepriceReason(e.target.value)}
+                    rows={2}
+                    data-testid="textarea-reprice-reason"
+                  />
+                </div>
+              </div>
+
+              {repriceLoad.status === 'counter_received' && (
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    <AlertCircle className="h-4 w-4 inline mr-1" />
+                    This load has active counter-bids. Repricing will reject all pending bids.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setRepriceDialogOpen(false)}
+              disabled={isRepricing}
+              data-testid="button-cancel-reprice"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRepriceAndRepost}
+              disabled={isRepricing || !repriceAmount}
+              data-testid="button-confirm-reprice"
+            >
+              {isRepricing ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Repricing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Reprice & Repost
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

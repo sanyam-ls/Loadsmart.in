@@ -905,6 +905,43 @@ export async function registerRoutes(
       if (!user) return res.status(401).json({ error: "Unauthorized" });
 
       const trucksList = await storage.getTrucksByCarrier(user.id);
+      
+      // Add availability info for fleet carriers
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      const isFleetCarrier = carrierProfile?.carrierType === 'enterprise' || carrierProfile?.carrierType === 'fleet';
+      
+      if (isFleetCarrier) {
+        // Get active shipments and accepted bids to determine truck availability
+        const terminalStatuses = ['delivered', 'closed', 'cancelled', 'completed'];
+        const carrierShipments = await storage.getShipmentsByCarrier(user.id);
+        const allBids = await storage.getBidsByCarrier(user.id);
+        
+        // Find trucks in active shipments
+        const trucksInActiveShipments = new Set(
+          carrierShipments
+            .filter(s => s.truckId && !terminalStatuses.includes(s.status || ''))
+            .map(s => s.truckId)
+        );
+        
+        // Find trucks in accepted bids
+        const trucksInAcceptedBids = new Set(
+          allBids
+            .filter(b => b.truckId && b.status === 'accepted')
+            .map(b => b.truckId)
+        );
+        
+        // Add availability flag to each truck
+        const trucksWithAvailability = trucksList.map(truck => ({
+          ...truck,
+          isAvailable: !trucksInActiveShipments.has(truck.id) && !trucksInAcceptedBids.has(truck.id),
+          unavailableReason: trucksInActiveShipments.has(truck.id) || trucksInAcceptedBids.has(truck.id) 
+            ? 'Assigned to active shipment' 
+            : null
+        }));
+        
+        return res.json(trucksWithAvailability);
+      }
+      
       res.json(trucksList);
     } catch (error) {
       console.error("Get trucks error:", error);
@@ -973,7 +1010,36 @@ export async function registerRoutes(
       }
 
       const driversList = await storage.getDriversByCarrier(user.id);
-      res.json(driversList);
+      
+      // Add availability info for fleet carriers
+      const terminalStatuses = ['delivered', 'closed', 'cancelled', 'completed'];
+      const carrierShipments = await storage.getShipmentsByCarrier(user.id);
+      const allBids = await storage.getBidsByCarrier(user.id);
+      
+      // Find drivers in active shipments
+      const driversInActiveShipments = new Set(
+        carrierShipments
+          .filter(s => s.driverId && !terminalStatuses.includes(s.status || ''))
+          .map(s => s.driverId)
+      );
+      
+      // Find drivers in accepted bids
+      const driversInAcceptedBids = new Set(
+        allBids
+          .filter(b => b.driverId && b.status === 'accepted')
+          .map(b => b.driverId)
+      );
+      
+      // Add availability flag to each driver
+      const driversWithAvailability = driversList.map(driver => ({
+        ...driver,
+        isAvailable: !driversInActiveShipments.has(driver.id) && !driversInAcceptedBids.has(driver.id),
+        unavailableReason: driversInActiveShipments.has(driver.id) || driversInAcceptedBids.has(driver.id) 
+          ? 'Assigned to active shipment' 
+          : null
+      }));
+      
+      res.json(driversWithAvailability);
     } catch (error) {
       console.error("Get drivers error:", error);
       res.status(500).json({ error: "Internal server error" });

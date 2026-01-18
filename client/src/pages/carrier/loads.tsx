@@ -284,16 +284,20 @@ export default function CarrierLoadsPage() {
   const [selectedTruckId, setSelectedTruckId] = useState<string>("");
   const [selectedDriverId, setSelectedDriverId] = useState<string>("");
 
-  // Fetch trucks and drivers for enterprise carriers
-  const { data: trucks = [] } = useQuery<{ id: string; licensePlate: string; truckType: string; make?: string; model?: string }[]>({
+  // Fetch trucks and drivers for enterprise carriers (with availability info)
+  const { data: trucks = [] } = useQuery<{ id: string; licensePlate: string; truckType: string; make?: string; model?: string; isAvailable?: boolean; unavailableReason?: string | null }[]>({
     queryKey: ["/api/trucks"],
     enabled: isEnterprise,
   });
 
-  const { data: drivers = [] } = useQuery<{ id: string; name: string; phone?: string; licenseNumber?: string }[]>({
+  const { data: drivers = [] } = useQuery<{ id: string; name: string; phone?: string; licenseNumber?: string; isAvailable?: boolean; unavailableReason?: string | null }[]>({
     queryKey: ["/api/drivers"],
     enabled: isEnterprise,
   });
+  
+  // Filter to only show available trucks and drivers in bid dialog
+  const availableTrucks = trucks.filter(t => t.isAvailable !== false);
+  const availableDrivers = drivers.filter(d => d.isAvailable !== false);
 
   useEffect(() => {
     if (user?.id && user?.role === "carrier") {
@@ -1225,13 +1229,22 @@ export default function CarrierLoadsPage() {
                           <SelectValue placeholder="Choose a truck for this load" />
                         </SelectTrigger>
                         <SelectContent>
-                          {trucks.map((truck) => (
-                            <SelectItem key={truck.id} value={truck.id}>
-                              {truck.licensePlate} - {truck.make} {truck.model} ({truck.truckType})
-                            </SelectItem>
-                          ))}
+                          {availableTrucks.length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              No available trucks. All trucks are assigned to active loads.
+                            </div>
+                          ) : (
+                            availableTrucks.map((truck) => (
+                              <SelectItem key={truck.id} value={truck.id}>
+                                {truck.licensePlate} - {truck.make} {truck.model} ({truck.truckType})
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
+                      {trucks.length > 0 && availableTrucks.length === 0 && (
+                        <p className="text-xs text-amber-600">All your trucks are currently assigned to active shipments.</p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -1242,13 +1255,16 @@ export default function CarrierLoadsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="unassigned">Assign Later</SelectItem>
-                          {drivers.map((driver) => (
+                          {availableDrivers.map((driver) => (
                             <SelectItem key={driver.id} value={driver.id}>
                               {driver.name} {driver.licenseNumber ? `(${driver.licenseNumber})` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {drivers.length > 0 && availableDrivers.length === 0 && (
+                        <p className="text-xs text-amber-600">All your drivers are currently assigned to active shipments.</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

@@ -1499,6 +1499,68 @@ export async function registerRoutes(
       // Determine carrier type from profile
       const carrierProfile = await storage.getCarrierProfile(user.id);
       const carrierType = carrierProfile?.carrierType || "enterprise";
+      
+      // Fleet carrier restriction: truck and driver can only be assigned to one active load at a time
+      const isFleetCarrier = carrierType === 'enterprise' || carrierType === 'fleet';
+      if (isFleetCarrier && (req.body.truckId || req.body.driverId)) {
+        // Comprehensive list of active/non-terminal shipment statuses
+        const terminalStatuses = ['delivered', 'closed', 'cancelled', 'completed'];
+        const carrierShipments = await storage.getShipmentsByCarrier(user.id);
+        
+        if (req.body.truckId) {
+          // Check if truck is used in any non-terminal shipment
+          const truckInUse = carrierShipments.find(s => 
+            s.truckId === req.body.truckId && 
+            !terminalStatuses.includes(s.status || '')
+          );
+          if (truckInUse) {
+            const activeLoad = await storage.getLoad(truckInUse.loadId);
+            return res.status(400).json({ 
+              error: `This truck is already assigned to an active shipment (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}). Please wait until delivery is completed.`
+            });
+          }
+          
+          // Also check accepted/awarded bids that haven't created shipments yet
+          const allBids = await storage.getBidsByCarrier(user.id);
+          const truckBidInProgress = allBids.find(b =>
+            b.truckId === req.body.truckId &&
+            b.status === 'accepted'
+          );
+          if (truckBidInProgress) {
+            const activeLoad = await storage.getLoad(truckBidInProgress.loadId);
+            return res.status(400).json({ 
+              error: `This truck is already assigned to an accepted bid (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}). Please wait until delivery is completed.`
+            });
+          }
+        }
+        
+        if (req.body.driverId && req.body.driverId !== 'unassigned') {
+          // Check if driver is used in any non-terminal shipment
+          const driverInUse = carrierShipments.find(s => 
+            s.driverId === req.body.driverId && 
+            !terminalStatuses.includes(s.status || '')
+          );
+          if (driverInUse) {
+            const activeLoad = await storage.getLoad(driverInUse.loadId);
+            return res.status(400).json({ 
+              error: `This driver is already assigned to an active shipment (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}). Please wait until delivery is completed.`
+            });
+          }
+          
+          // Also check accepted bids for driver
+          const allBids = await storage.getBidsByCarrier(user.id);
+          const driverBidInProgress = allBids.find(b =>
+            b.driverId === req.body.driverId &&
+            b.status === 'accepted'
+          );
+          if (driverBidInProgress) {
+            const activeLoad = await storage.getLoad(driverBidInProgress.loadId);
+            return res.status(400).json({ 
+              error: `This driver is already assigned to an accepted bid (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}). Please wait until delivery is completed.`
+            });
+          }
+        }
+      }
 
       const data = insertBidSchema.parse({
         ...req.body,
@@ -4014,6 +4076,72 @@ RESPOND IN THIS EXACT JSON FORMAT:
       const canBid = await canUserBidOnLoad(user.id, load_id);
       if (!canBid.allowed) {
         return res.status(403).json({ error: canBid.reason });
+      }
+      
+      // Fleet carrier restriction: truck and driver can only be assigned to one active load at a time
+      // Get carrier profile to check if this is a fleet carrier
+      const carrierProfileForValidation = await storage.getCarrierProfile(user.id);
+      const isFleetCarrier = carrierProfileForValidation?.carrierType === 'enterprise' || carrierProfileForValidation?.carrierType === 'fleet' || carrier_type === 'enterprise';
+      
+      if (isFleetCarrier) {
+        // Terminal statuses - truck/driver can be reused once delivery reaches these states
+        const terminalStatuses = ['delivered', 'closed', 'cancelled', 'completed'];
+        
+        // Get all shipments for this carrier
+        const carrierShipments = await storage.getShipmentsByCarrier(user.id);
+        const allBids = await storage.getBidsByCarrier(user.id);
+        
+        // Check if truck is already assigned to an active shipment or accepted bid
+        if (truck_id) {
+          const truckInUse = carrierShipments.find(s => 
+            s.truckId === truck_id && 
+            !terminalStatuses.includes(s.status || '')
+          );
+          
+          if (truckInUse) {
+            const activeLoad = await storage.getLoad(truckInUse.loadId);
+            return res.status(400).json({ 
+              error: `This truck is already assigned to an active shipment (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}). Please wait until delivery is completed before assigning this truck to a new load.`
+            });
+          }
+          
+          // Check accepted bids without shipments yet
+          const truckBidInProgress = allBids.find(b =>
+            b.truckId === truck_id && b.status === 'accepted'
+          );
+          if (truckBidInProgress) {
+            const activeLoad = await storage.getLoad(truckBidInProgress.loadId);
+            return res.status(400).json({ 
+              error: `This truck is already assigned to an accepted bid (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}). Please wait until delivery is completed.`
+            });
+          }
+        }
+        
+        // Check if driver is already assigned to an active shipment or accepted bid
+        if (driver_id && driver_id !== 'unassigned') {
+          const driverInUse = carrierShipments.find(s => 
+            s.driverId === driver_id && 
+            !terminalStatuses.includes(s.status || '')
+          );
+          
+          if (driverInUse) {
+            const activeLoad = await storage.getLoad(driverInUse.loadId);
+            return res.status(400).json({ 
+              error: `This driver is already assigned to an active shipment (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}). Please wait until delivery is completed before assigning this driver to a new load.`
+            });
+          }
+          
+          // Check accepted bids for driver
+          const driverBidInProgress = allBids.find(b =>
+            b.driverId === driver_id && b.status === 'accepted'
+          );
+          if (driverBidInProgress) {
+            const activeLoad = await storage.getLoad(driverBidInProgress.loadId);
+            return res.status(400).json({ 
+              error: `This driver is already assigned to an accepted bid (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}). Please wait until delivery is completed.`
+            });
+          }
+        }
       }
 
       // Check if load allows counter bids

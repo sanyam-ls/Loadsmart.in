@@ -22,7 +22,9 @@ import {
   Receipt,
   Gavel,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Scale,
+  IndianRupee
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -356,6 +358,9 @@ export default function LoadQueuePage() {
   const [repriceAllowCounter, setRepriceAllowCounter] = useState(true);
   const [repriceReason, setRepriceReason] = useState("");
   const [isRepricing, setIsRepricing] = useState(false);
+  const [repriceUsePerTonRate, setRepriceUsePerTonRate] = useState(false);
+  const [repriceRatePerTon, setRepriceRatePerTon] = useState(0);
+  const [repriceTonnage, setRepriceTonnage] = useState<number>(0);
 
   const { user } = useAuth();
   
@@ -526,9 +531,30 @@ export default function LoadQueuePage() {
 
   const openRepriceDialog = (load: RealLoad) => {
     setRepriceLoad(load);
-    setRepriceAmount(load.adminFinalPrice || load.finalPrice || "");
     setRepriceAllowCounter(load.allowCounterBids ?? true);
     setRepriceReason("");
+    
+    // Calculate weight in tons
+    const weight = parseFloat(load.weight?.toString() || "0");
+    const weightInTons = load.weightUnit === 'KG' ? weight / 1000 : weight;
+    setRepriceTonnage(weightInTons > 0 ? weightInTons : 1);
+    
+    // Initialize calculator based on load's rate type
+    const currentPrice = parseFloat(load.adminFinalPrice || load.finalPrice || "0");
+    
+    if (load.rateType === "per_ton" && load.shipperPricePerTon) {
+      // Per ton rate mode
+      setRepriceUsePerTonRate(true);
+      const perTonRate = parseFloat(load.shipperPricePerTon?.toString() || "0");
+      setRepriceRatePerTon(perTonRate > 0 ? perTonRate : Math.round(currentPrice / (weightInTons || 1)));
+      setRepriceAmount(currentPrice > 0 ? currentPrice.toString() : "");
+    } else {
+      // Fixed price mode
+      setRepriceUsePerTonRate(false);
+      setRepriceRatePerTon(0);
+      setRepriceAmount(currentPrice > 0 ? currentPrice.toString() : "");
+    }
+    
     setRepriceDialogOpen(true);
   };
 
@@ -1632,7 +1658,7 @@ export default function LoadQueuePage() {
 
       {/* Reprice and Repost Dialog */}
       <Dialog open={repriceDialogOpen} onOpenChange={setRepriceDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5" />
@@ -1645,67 +1671,222 @@ export default function LoadQueuePage() {
           
           {repriceLoad && (
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-muted/50">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Load ID:</span>
-                    <span className="ml-2 font-mono font-medium">{formatLoadId(repriceLoad)}</span>
+              {/* Load Summary */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Load:</span>
+                      <span className="font-mono font-medium">{formatLoadId(repriceLoad)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      <span>{repriceLoad.requiredTruckType || "Standard"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 col-span-2">
+                      <MapPin className="h-4 w-4 text-green-500" />
+                      <span>{repriceLoad.pickupCity}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <MapPin className="h-4 w-4 text-red-500" />
+                      <span>{repriceLoad.dropoffCity}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span>{repriceLoad.weight} {repriceLoad.weightUnit || "MT"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Current:</span>
+                      <span className="font-medium text-amber-600">
+                        Rs. {Number(repriceLoad.adminFinalPrice || repriceLoad.finalPrice || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Route:</span>
-                    <span className="ml-2">{repriceLoad.pickupCity} → {repriceLoad.dropoffCity}</span>
+                </CardContent>
+              </Card>
+
+              {/* Shipper's Pricing Preference */}
+              {(repriceLoad.shipperFixedPrice || repriceLoad.shipperPricePerTon) && (
+                <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-4 w-4 text-amber-600" />
+                      <span className="font-medium text-amber-700 dark:text-amber-400">Shipper's Pricing Preference</span>
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 text-xs">
+                        Pre-filled
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        {repriceLoad.rateType === "per_ton" ? "Per Tonne Rate" : "Fixed Price"}
+                      </span>
+                      <span className="font-bold text-lg text-amber-700 dark:text-amber-400">
+                        {repriceLoad.rateType === "per_ton" && repriceLoad.shipperPricePerTon
+                          ? `Rs. ${parseFloat(repriceLoad.shipperPricePerTon.toString()).toLocaleString("en-IN")}/MT`
+                          : repriceLoad.shipperFixedPrice
+                            ? `Rs. ${parseFloat(repriceLoad.shipperFixedPrice.toString()).toLocaleString("en-IN")}`
+                            : "-"
+                        }
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      The pricing fields below have been pre-filled with the shipper's preferences. You can adjust as needed.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Pricing Method */}
+              <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+                <CardContent className="pt-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Scale className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium">Pricing Method</span>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Current Price:</span>
-                    <span className="ml-2 font-medium text-amber-600">
-                      Rs. {Number(repriceLoad.adminFinalPrice || repriceLoad.finalPrice || 0).toLocaleString('en-IN')}
-                    </span>
+                  
+                  {/* Rate Type Toggle */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={!repriceUsePerTonRate ? "default" : "outline"}
+                      className="w-full"
+                      onClick={() => {
+                        setRepriceUsePerTonRate(false);
+                        setRepriceRatePerTon(0);
+                      }}
+                      data-testid="button-reprice-rate-type-fixed"
+                    >
+                      <IndianRupee className="h-4 w-4 mr-2" />
+                      Fixed Price
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={repriceUsePerTonRate ? "default" : "outline"}
+                      className="w-full"
+                      onClick={() => {
+                        setRepriceUsePerTonRate(true);
+                        // Calculate per-ton rate from current price if switching
+                        const currentPrice = parseFloat(repriceAmount) || 0;
+                        if (currentPrice > 0 && repriceTonnage > 0) {
+                          setRepriceRatePerTon(Math.round(currentPrice / repriceTonnage));
+                        }
+                      }}
+                      data-testid="button-reprice-rate-type-per-ton"
+                    >
+                      <Scale className="h-4 w-4 mr-2" />
+                      Per Tonne Rate
+                    </Button>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Status:</span>
-                    <span className="ml-2">{getCanonicalStateDisplay(repriceLoad.status).label}</span>
-                  </div>
-                </div>
+                  
+                  {/* Per Tonne Rate Calculator */}
+                  {repriceUsePerTonRate && (
+                    <div className="space-y-4 pt-2 border-t">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Tonnage (MT)</Label>
+                          <Input
+                            type="number"
+                            value={repriceTonnage || ""}
+                            onChange={(e) => {
+                              const newWeight = parseFloat(e.target.value) || 0;
+                              setRepriceTonnage(newWeight);
+                              // Recalculate total when tonnage changes
+                              if (repriceRatePerTon > 0) {
+                                setRepriceAmount(Math.round(repriceRatePerTon * newWeight).toString());
+                              }
+                            }}
+                            placeholder="Enter tonnage"
+                            className="text-lg font-medium"
+                            data-testid="input-reprice-tonnage"
+                          />
+                          <p className="text-xs text-muted-foreground">From load: {parseFloat(repriceLoad.weight?.toString() || "0")} {repriceLoad.weightUnit || "MT"}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Rate Per Tonne (Rs.)</Label>
+                          <Input
+                            type="number"
+                            value={repriceRatePerTon || ""}
+                            onChange={(e) => {
+                              const rate = parseInt(e.target.value) || 0;
+                              setRepriceRatePerTon(rate);
+                              // Recalculate total
+                              setRepriceAmount(Math.round(rate * repriceTonnage).toString());
+                            }}
+                            placeholder="e.g. 2000"
+                            className="text-lg font-medium"
+                            data-testid="input-reprice-rate-per-ton"
+                          />
+                        </div>
+                      </div>
+                      
+                      {repriceRatePerTon > 0 && (
+                        <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Calculator className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium">Calculated Total</span>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">
+                              {repriceTonnage} MT x Rs. {repriceRatePerTon.toLocaleString("en-IN")}
+                            </p>
+                            <p className="text-xl font-bold text-primary" data-testid="text-reprice-calculated-total">
+                              Rs. {Math.round(repriceRatePerTon * repriceTonnage).toLocaleString("en-IN")}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Fixed Price Input */}
+                  {!repriceUsePerTonRate && (
+                    <div className="space-y-2 pt-2 border-t">
+                      <Label>Enter Fixed Price (Rs.)</Label>
+                      <div className="flex items-center gap-2">
+                        <IndianRupee className="h-5 w-5 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          value={repriceAmount}
+                          onChange={(e) => setRepriceAmount(e.target.value)}
+                          placeholder="e.g. 50000"
+                          className="text-lg font-medium"
+                          data-testid="input-reprice-fixed-price"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This is the total amount the shipper will pay
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Allow Counter Bids */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="reprice-allow-counter"
+                  checked={repriceAllowCounter}
+                  onChange={(e) => setRepriceAllowCounter(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                  data-testid="checkbox-allow-counter-bids"
+                />
+                <Label htmlFor="reprice-allow-counter" className="text-sm font-normal">
+                  Allow carriers to counter-bid
+                </Label>
               </div>
 
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="reprice-amount">New Price (Rs.)</Label>
-                  <Input
-                    id="reprice-amount"
-                    type="number"
-                    placeholder="Enter new price"
-                    value={repriceAmount}
-                    onChange={(e) => setRepriceAmount(e.target.value)}
-                    data-testid="input-reprice-amount"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="reprice-allow-counter"
-                    checked={repriceAllowCounter}
-                    onChange={(e) => setRepriceAllowCounter(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300"
-                    data-testid="checkbox-allow-counter-bids"
-                  />
-                  <Label htmlFor="reprice-allow-counter" className="text-sm font-normal">
-                    Allow carriers to counter-bid
-                  </Label>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reprice-reason">Reason (optional)</Label>
-                  <Textarea
-                    id="reprice-reason"
-                    placeholder="e.g., Market rate adjustment, no bids received..."
-                    value={repriceReason}
-                    onChange={(e) => setRepriceReason(e.target.value)}
-                    rows={2}
-                    data-testid="textarea-reprice-reason"
-                  />
-                </div>
+              {/* Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="reprice-reason">Reason (optional)</Label>
+                <Textarea
+                  id="reprice-reason"
+                  placeholder="e.g., Market rate adjustment, no bids received..."
+                  value={repriceReason}
+                  onChange={(e) => setRepriceReason(e.target.value)}
+                  rows={2}
+                  data-testid="textarea-reprice-reason"
+                />
               </div>
 
               {repriceLoad.status === 'counter_received' && (

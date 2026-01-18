@@ -1233,25 +1233,25 @@ export default function PostLoadPage() {
                     const truckLabel = submittedLoadDetails?.truckType 
                       ? submittedLoadDetails.truckType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
                       : '';
-                    let message = `🚛 *New Load Available!*\n\n`;
-                    message += `📋 *Load #:* ${loadNum}\n`;
-                    message += `━━━━━━━━━━━━━━━\n`;
-                    message += `📍 *From:* ${submittedLoadDetails?.pickupCity || ''}, ${submittedLoadDetails?.pickupState || ''}\n`;
-                    message += `📍 *To:* ${submittedLoadDetails?.dropoffCity || ''}, ${submittedLoadDetails?.dropoffState || ''}\n`;
-                    message += `━━━━━━━━━━━━━━━\n`;
-                    message += `⚖️ *Weight:* ${submittedLoadDetails?.weight || ''} Tons\n`;
-                    message += `📦 *Cargo:* ${submittedLoadDetails?.goods || ''}\n`;
-                    if (truckLabel) message += `🚚 *Truck Type:* ${truckLabel}\n`;
+                    let message = `*New Load Available*\n\n`;
+                    message += `*Load #:* ${loadNum}\n`;
+                    message += `---\n`;
+                    message += `*From:* ${submittedLoadDetails?.pickupCity || ''}, ${submittedLoadDetails?.pickupState || ''}\n`;
+                    message += `*To:* ${submittedLoadDetails?.dropoffCity || ''}, ${submittedLoadDetails?.dropoffState || ''}\n`;
+                    message += `---\n`;
+                    message += `*Weight:* ${submittedLoadDetails?.weight || ''} Tons\n`;
+                    message += `*Cargo:* ${submittedLoadDetails?.goods || ''}\n`;
+                    if (truckLabel) message += `*Truck:* ${truckLabel}\n`;
                     if (submittedLoadDetails?.rateType === 'per_ton' && submittedLoadDetails?.pricePerTon) {
-                      message += `💰 *Rate:* Rs. ${Number(submittedLoadDetails.pricePerTon).toLocaleString('en-IN')}/Ton\n`;
+                      message += `*Rate:* Rs. ${Number(submittedLoadDetails.pricePerTon).toLocaleString('en-IN')}/Ton\n`;
                     } else if (submittedLoadDetails?.rateType === 'fixed_price' && submittedLoadDetails?.fixedPrice) {
-                      message += `💰 *Price:* Rs. ${Number(submittedLoadDetails.fixedPrice).toLocaleString('en-IN')} (Fixed)\n`;
+                      message += `*Price:* Rs. ${Number(submittedLoadDetails.fixedPrice).toLocaleString('en-IN')} (Fixed)\n`;
                     } else {
-                      message += `💰 *Pricing:* Contact for rates\n`;
+                      message += `*Pricing:* Contact for rates\n`;
                     }
-                    if (pickupDate) message += `📅 *Pickup Date:* ${pickupDate}\n`;
-                    if (submittedLoadDetails?.specialNotes) message += `📝 *Notes:* ${submittedLoadDetails.specialNotes}\n`;
-                    message += `\n🔗 *View & Bid:* https://loalink.com\n`;
+                    if (pickupDate) message += `*Pickup:* ${pickupDate}\n`;
+                    if (submittedLoadDetails?.specialNotes) message += `*Notes:* ${submittedLoadDetails.specialNotes}\n`;
+                    message += `\n*View & Bid:* https://loalink.com\n`;
                     message += `_Sign up as a carrier to access the marketplace_`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
                   }}

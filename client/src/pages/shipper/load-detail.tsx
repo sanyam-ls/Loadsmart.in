@@ -243,16 +243,18 @@ export default function LoadDetailPage() {
               const truckLabel = load.requiredTruckType 
                 ? load.requiredTruckType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
                 : '';
-              let message = `*Load Details - ${loadNum}*\n\n`;
+              let message = `*Load Available*\n\n`;
+              message += `*Load #:* ${loadNum}\n`;
+              message += `---\n`;
               message += `*From:* ${load.pickupCity}\n`;
               message += `*To:* ${load.dropoffCity}\n`;
               message += `---\n`;
-              if (load.weight) message += `*Weight:* ${load.weight} MT\n`;
+              if (load.weight) message += `*Weight:* ${load.weight} Tons\n`;
               if (load.goodsToBeCarried) message += `*Cargo:* ${load.goodsToBeCarried}\n`;
-              if (truckLabel) message += `*Truck Type:* ${truckLabel}\n`;
-              if (pickupDate) message += `*Pickup Date:* ${pickupDate}\n`;
+              if (truckLabel) message += `*Truck:* ${truckLabel}\n`;
+              if (pickupDate) message += `*Pickup:* ${pickupDate}\n`;
               if (load.specialNotes) message += `*Notes:* ${load.specialNotes}\n`;
-              message += `\n*View Details:* https://loalink.com`;
+              message += `\n*View & Bid:* https://loalink.com`;
               window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
             }}
             data-testid="button-share-whatsapp"
@@ -266,19 +268,21 @@ export default function LoadDetailPage() {
             onClick={() => {
               const loadNum = formatLoadId(load);
               const pickupDate = load.pickupDate 
-                ? new Date(load.pickupDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                ? new Date(load.pickupDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                 : '';
               const truckLabel = load.requiredTruckType 
                 ? load.requiredTruckType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
                 : '';
-              let message = `Load Details - ${loadNum}\n`;
+              let message = `Load Available\n`;
+              message += `Load #: ${loadNum}\n`;
               message += `From: ${load.pickupCity}\n`;
               message += `To: ${load.dropoffCity}\n`;
-              if (load.weight) message += `Weight: ${load.weight} MT\n`;
+              if (load.weight) message += `Weight: ${load.weight} Tons\n`;
               if (load.goodsToBeCarried) message += `Cargo: ${load.goodsToBeCarried}\n`;
               if (truckLabel) message += `Truck: ${truckLabel}\n`;
               if (pickupDate) message += `Pickup: ${pickupDate}\n`;
-              message += `\nView: https://loalink.com`;
+              if (load.specialNotes) message += `Notes: ${load.specialNotes}\n`;
+              message += `\nView & Bid: https://loalink.com`;
               window.open(`sms:?body=${encodeURIComponent(message)}`, '_blank');
             }}
             data-testid="button-share-sms"

@@ -366,11 +366,59 @@ export default function LoadQueuePage() {
   const [repriceAdvancePercent, setRepriceAdvancePercent] = useState(0);
   const [repriceSelectedTemplate, setRepriceSelectedTemplate] = useState<string>("");
   
+  // Input string states for margin/payout (allows typing without being overwritten)
+  const [repriceMarginInputStr, setRepriceMarginInputStr] = useState<string>("10");
+  const [repricePayoutInputStr, setRepricePayoutInputStr] = useState<string>("0");
+  const [repriceEditingField, setRepriceEditingField] = useState<'margin' | 'payout' | null>(null);
+  
   // Reprice calculated values
   const repricePlatformEarnings = Math.round(repriceGrossPrice * (repricePlatformMargin / 100));
   const repriceCarrierPayout = repriceGrossPrice - repricePlatformEarnings;
   const repriceAdvanceAmount = Math.round(repriceCarrierPayout * (repriceAdvancePercent / 100));
   const repriceBalanceAmount = repriceCarrierPayout - repriceAdvanceAmount;
+  
+  // Sync payout display when margin changes (not when editing payout)
+  useEffect(() => {
+    if (repriceEditingField !== 'payout') {
+      setRepricePayoutInputStr(repriceCarrierPayout.toString());
+    }
+  }, [repriceCarrierPayout, repriceEditingField]);
+  
+  // Sync margin display when it changes (not when editing margin manually)
+  useEffect(() => {
+    if (repriceEditingField !== 'margin') {
+      setRepriceMarginInputStr(repricePlatformMargin.toString());
+    }
+  }, [repricePlatformMargin, repriceEditingField]);
+  
+  // Handle margin input change - instant update, syncs payout
+  const handleRepriceMarginChange = (inputStr: string) => {
+    setRepriceEditingField('margin');
+    setRepriceMarginInputStr(inputStr);
+    const val = parseInt(inputStr) || 0;
+    const clamped = Math.min(50, Math.max(0, val));
+    setRepricePlatformMargin(clamped);
+  };
+  
+  // Handle carrier payout input - reverse calculation to update margin
+  const handleRepricePayoutChange = (payoutStr: string) => {
+    setRepriceEditingField('payout');
+    setRepricePayoutInputStr(payoutStr);
+    
+    const payout = parseInt(payoutStr.replace(/\D/g, '')) || 0;
+    if (repriceGrossPrice > 0 && payout > 0) {
+      const newMargin = ((repriceGrossPrice - payout) / repriceGrossPrice) * 100;
+      const roundedMargin = Math.round(newMargin * 100) / 100;
+      const clampedMargin = Math.min(50, Math.max(0, roundedMargin));
+      setRepricePlatformMargin(clampedMargin);
+      setRepriceMarginInputStr(clampedMargin.toString());
+    }
+  };
+  
+  // On blur, reset editing field
+  const handleRepriceInputBlur = () => {
+    setRepriceEditingField(null);
+  };
 
   const { user } = useAuth();
   
@@ -561,7 +609,10 @@ export default function LoadQueuePage() {
     
     // Initialize margin from existing load data if available, otherwise default to 10%
     const existingMargin = (load as any).platformRatePercent ? parseFloat((load as any).platformRatePercent.toString()) : 10;
-    setRepricePlatformMargin(Math.max(0, Math.min(50, existingMargin))); // Clamp 0-50%
+    const clampedMargin = Math.max(0, Math.min(50, existingMargin));
+    setRepricePlatformMargin(clampedMargin); // Clamp 0-50%
+    setRepriceMarginInputStr(clampedMargin.toString());
+    setRepriceEditingField(null);
     
     // Initialize advance percent from load data
     const existingAdvance = load.advancePaymentPercent ? parseFloat(load.advancePaymentPercent.toString()) : 0;
@@ -575,6 +626,10 @@ export default function LoadQueuePage() {
     // Initialize calculator based on load's rate type
     const currentPrice = parseFloat(load.adminFinalPrice || load.finalPrice || "0");
     setRepriceGrossPrice(Math.max(0, currentPrice)); // Ensure non-negative
+    
+    // Initialize payout based on calculated values
+    const initialPayout = Math.round(currentPrice * (1 - clampedMargin / 100));
+    setRepricePayoutInputStr(initialPayout.toString());
     
     if (load.rateType === "per_ton" && load.shipperPricePerTon) {
       // Per ton rate mode
@@ -1970,9 +2025,11 @@ export default function LoadQueuePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Input
-                        type="number"
-                        value={repricePlatformMargin}
-                        onChange={(e) => setRepricePlatformMargin(Math.min(50, Math.max(0, parseInt(e.target.value) || 0)))}
+                        type="text"
+                        inputMode="numeric"
+                        value={repriceMarginInputStr}
+                        onChange={(e) => handleRepriceMarginChange(e.target.value)}
+                        onBlur={handleRepriceInputBlur}
                         className="w-16 text-right"
                         data-testid="input-reprice-platform-margin"
                       />
@@ -1986,9 +2043,18 @@ export default function LoadQueuePage() {
                   <Separator />
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Final Price (Carrier Payout):</span>
-                    <span className="font-bold text-lg text-green-600 dark:text-green-400" data-testid="text-reprice-carrier-payout">
-                      Rs. {repriceCarrierPayout.toLocaleString("en-IN")}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-muted-foreground">Rs.</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={repricePayoutInputStr}
+                        onChange={(e) => handleRepricePayoutChange(e.target.value)}
+                        onBlur={handleRepriceInputBlur}
+                        className="w-28 text-right font-bold text-lg text-green-600 dark:text-green-400"
+                        data-testid="input-reprice-carrier-payout"
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

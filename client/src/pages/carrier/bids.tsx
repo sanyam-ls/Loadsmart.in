@@ -80,42 +80,58 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  // Get the latest agreed price from chat messages
-  // Parse amounts from message text if no explicit amount field
-  const latestAgreedPrice = useMemo(() => {
-    // Extract amount from message text (handles: "85600", "85,600", "Rs. 85600", "Rs 85,600")
-    const extractAmount = (text: string): number | null => {
-      // Match any sequence of digits, optionally with commas
-      const match = text.match(/\d[\d,]*/g);
-      if (match) {
-        // Take the last number mentioned (usually the agreed price)
-        const lastMatch = match[match.length - 1];
-        const num = parseFloat(lastMatch.replace(/,/g, ''));
-        if (!isNaN(num) && num >= 10000) return num; // Freight amounts are typically 10k+
-      }
-      return null;
-    };
-    
-    // Process messages in reverse order (last message first - API returns chronologically)
-    // This finds the most recent mentioned amount
-    let lastAmount: number | null = null;
-    
+  // Extract amount from message text (handles: "85600", "85,600", "Rs. 85600", "Rs 85,600")
+  const extractAmount = (text: string): number | null => {
+    // Match any sequence of digits, optionally with commas
+    const match = text.match(/\d[\d,]*/g);
+    if (match) {
+      // Take the last number mentioned (usually the agreed price)
+      const lastMatch = match[match.length - 1];
+      const num = parseFloat(lastMatch.replace(/,/g, ''));
+      if (!isNaN(num) && num >= 10000) return num; // Freight amounts are typically 10k+
+    }
+    return null;
+  };
+  
+  // Compute live carrier offer from chat messages
+  const liveCarrierOffer = useMemo(() => {
+    // Find latest carrier message with an amount
     for (let i = chatMessages.length - 1; i >= 0; i--) {
       const msg = chatMessages[i];
-      // Check explicit amount field first
-      if (msg.amount && msg.amount >= 10000) {
-        lastAmount = msg.amount;
-        break;
-      }
-      // Try to extract from message text
-      const extracted = extractAmount(msg.message);
-      if (extracted) {
-        lastAmount = extracted;
-        break;
+      if (msg.sender === "carrier") {
+        if (msg.amount && msg.amount >= 10000) return msg.amount;
+        const extracted = extractAmount(msg.message);
+        if (extracted) return extracted;
       }
     }
-    
-    return lastAmount || bid.shipperCounterRate || bid.currentRate;
+    return bid.carrierOffer; // Fallback to cached value
+  }, [chatMessages, bid.carrierOffer]);
+  
+  // Compute live admin counter offer from chat messages
+  const liveAdminCounter = useMemo(() => {
+    // Find latest admin message with an amount
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
+      const msg = chatMessages[i];
+      if (msg.sender === "admin") {
+        if (msg.amount && msg.amount >= 10000) return msg.amount;
+        const extracted = extractAmount(msg.message);
+        if (extracted) return extracted;
+      }
+    }
+    return bid.shipperCounterRate || null; // Fallback to cached value
+  }, [chatMessages, bid.shipperCounterRate]);
+  
+  // Get the latest agreed price from chat messages (for Accept button)
+  const latestAgreedPrice = useMemo(() => {
+    // Process messages in reverse order (last message first)
+    // This finds the most recent mentioned amount from either party
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
+      const msg = chatMessages[i];
+      if (msg.amount && msg.amount >= 10000) return msg.amount;
+      const extracted = extractAmount(msg.message);
+      if (extracted) return extracted;
+    }
+    return bid.shipperCounterRate || bid.currentRate;
   }, [chatMessages, bid.shipperCounterRate, bid.currentRate]);
 
   const isRealBid = bid.bidId && !bid.bidId.startsWith("bid-");
@@ -304,8 +320,14 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Your Offer</span>
-              <span className="font-medium text-primary">{formatCurrency(bid.carrierOffer)}</span>
+              <span className="font-medium text-primary">{formatCurrency(liveCarrierOffer)}</span>
             </div>
+            {liveAdminCounter && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Admin Counter</span>
+                <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrency(liveAdminCounter)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Est. Profit</span>
               <span className="font-medium text-green-600">{formatCurrency(bid.estimatedProfit)}</span>

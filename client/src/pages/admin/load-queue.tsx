@@ -560,7 +560,7 @@ export default function LoadQueuePage() {
     setRepriceSelectedTemplate("");
     
     // Initialize margin from existing load data if available, otherwise default to 10%
-    const existingMargin = load.platformRatePercent ? parseFloat(load.platformRatePercent.toString()) : 10;
+    const existingMargin = (load as any).platformRatePercent ? parseFloat((load as any).platformRatePercent.toString()) : 10;
     setRepricePlatformMargin(Math.max(0, Math.min(50, existingMargin))); // Clamp 0-50%
     
     // Initialize advance percent from load data
@@ -1705,8 +1705,8 @@ export default function LoadQueuePage() {
 
       {/* Reprice and Repost Dialog */}
       <Dialog open={repriceDialogOpen} onOpenChange={setRepriceDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-2">
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5" />
               Reprice & Repost Load
@@ -1717,8 +1717,8 @@ export default function LoadQueuePage() {
           </DialogHeader>
           
           {repriceLoad && (
-            <ScrollArea className="flex-1 max-h-[60vh] pr-4">
-            <div className="space-y-4 pb-2">
+            <div className="flex-1 overflow-y-auto px-6 py-2" style={{ maxHeight: 'calc(85vh - 180px)' }}>
+            <div className="space-y-4 pb-4">
               {/* Load Summary */}
               <Card>
                 <CardContent className="pt-4">
@@ -2102,10 +2102,10 @@ export default function LoadQueuePage() {
                 </div>
               )}
             </div>
-            </ScrollArea>
+            </div>
           )}
 
-          <DialogFooter className="gap-2 flex-shrink-0 pt-4 border-t">
+          <DialogFooter className="gap-2 flex-shrink-0 px-6 py-4 border-t">
             <Button 
               variant="outline" 
               onClick={() => setRepriceDialogOpen(false)}

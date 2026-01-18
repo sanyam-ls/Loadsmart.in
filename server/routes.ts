@@ -1203,9 +1203,11 @@ export async function registerRoutes(
         bidsList.map(async (bid) => {
           const load = await storage.getLoad(bid.loadId);
           
-          // Get the latest carrier counter offer from negotiations
-          // Carrier counter offers can be stored as 'counter_offer' or 'message' with an amount
+          // Get the latest counter offers from negotiations
+          // Counter offers can be stored as 'counter_offer' or 'message' with an amount
           const negotiations = await storage.getBidNegotiations(bid.id);
+          
+          // Carrier's latest offer
           const carrierMessages = negotiations
             .filter(n => n.senderRole === "carrier" && n.amount && parseFloat(n.amount.toString()) > 0)
             .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
@@ -1214,10 +1216,20 @@ export async function registerRoutes(
             ? carrierMessages[0].amount 
             : null;
           
+          // Admin's latest offer
+          const adminMessages = negotiations
+            .filter(n => n.senderRole === "admin" && n.amount && parseFloat(n.amount.toString()) > 0)
+            .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          
+          const latestAdminAmount = adminMessages.length > 0 
+            ? adminMessages[0].amount 
+            : null;
+          
           return { 
             ...bid, 
             load,
             latestCarrierAmount, // Carrier's latest counter offer
+            latestAdminAmount,   // Admin's latest counter offer
           };
         })
       );

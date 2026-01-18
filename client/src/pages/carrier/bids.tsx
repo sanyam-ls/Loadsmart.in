@@ -557,7 +557,13 @@ export default function CarrierBidsPage() {
       
       // Use latest carrier amount if available, otherwise original bid amount
       const latestCarrierAmount = (bid as any).latestCarrierAmount;
+      const latestAdminAmount = (bid as any).latestAdminAmount;
       const carrierCurrentOffer = latestCarrierAmount ? Number(latestCarrierAmount) : Number(bid.amount) || 50000;
+      
+      // Admin counter: prefer latestAdminAmount from negotiations, fallback to counterAmount
+      const adminCounterOffer = latestAdminAmount 
+        ? Number(latestAdminAmount) 
+        : (bid.counterAmount ? Number(bid.counterAmount) : null);
       
       return {
       bidId: bid.id,
@@ -573,8 +579,8 @@ export default function CarrierBidsPage() {
       distance: Number(bid.load?.distance) || 500,
       proposedRate: Number(bid.load?.finalPrice) || Number(bid.load?.adminFinalPrice) || Number(bid.amount) || 50000,
       carrierOffer: carrierCurrentOffer, // Use latest carrier counter offer
-      currentRate: Number(bid.counterAmount) || carrierCurrentOffer,
-      shipperCounterRate: bid.counterAmount ? Number(bid.counterAmount) : null,
+      currentRate: adminCounterOffer || carrierCurrentOffer,
+      shipperCounterRate: adminCounterOffer, // Admin's latest counter offer
       estimatedRevenue: carrierCurrentOffer,
       estimatedProfit: Math.round(carrierCurrentOffer * 0.2),
       requiredVehicleType: bid.load?.requiredTruckType || "Open - 17 Feet",

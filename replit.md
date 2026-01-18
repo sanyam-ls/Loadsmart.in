@@ -61,6 +61,21 @@ Supports simultaneous bidding from Solo Drivers and Enterprise Carriers on the s
   - **Price Logic**: `counterAmount` (negotiated price) is used for Winning Carrier Bid, Carrier Payout, and invoice calculations
   - **Endpoint**: `POST /api/carrier/bids/:bidId/accept` triggers the complete `acceptBid` workflow
 
+### Admin Reprice & Repost Feature
+
+Administrators can adjust pricing on already-posted loads when no bids are received or market conditions change:
+- **Allowed Statuses**: Repricing is available for loads in `posted_to_carriers`, `open_for_bid`, `counter_received`, or `priced` status
+- **State Transitions**: 
+  - Marketplace loads (posted_to_carriers, open_for_bid, counter_received) → reset to `posted_to_carriers`
+  - Priced-only loads (never posted) → stay in `priced` (just updates price, no auto-posting)
+- **Bid Rejection**: When repricing marketplace loads, all pending and countered bids are automatically rejected
+- **Pricing Model**: `adminFinalPrice` = shipper's gross price, `finalPrice` = carrier payout (after 10% platform margin)
+- **Audit Trail**: Creates admin decision record and audit log with before/after states
+- **Notifications**: Shipper receives notification about repricing
+- **WebSocket Broadcast**: Carrier clients are notified via WebSocket (marketplace loads only)
+- **UI Location**: Admin Load Queue page (`/admin/load-queue`) → Active Marketplace section → Reprice button
+- **Endpoint**: `POST /api/admin/loads/:loadId/reprice-repost`
+
 ### Real-time Updates
 
 WebSockets facilitate real-time updates for marketplace events (`/ws/marketplace`) and vehicle telematics (`/ws/telemetry`). This includes instant load postings and real-time shipment document sharing with notifications to relevant users.

@@ -456,14 +456,22 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
           ) : showCounterInput ? (
             <div className="space-y-3">
               <div className="flex gap-2">
-                <Input
-                  type="number"
-                  placeholder="Enter counter amount"
-                  value={counterAmount}
-                  onChange={(e) => setCounterAmount(e.target.value)}
-                  className="flex-1"
-                  data-testid="input-counter-amount"
-                />
+                <div className="flex-1 relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rs.</span>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Enter counter amount"
+                    value={counterAmount}
+                    onChange={(e) => {
+                      // Allow only digits and format as needed
+                      const value = e.target.value.replace(/[^\d]/g, '');
+                      setCounterAmount(value);
+                    }}
+                    className="pl-10 text-right font-semibold"
+                    data-testid="input-counter-amount"
+                  />
+                </div>
                 <Button 
                   onClick={() => sendMessage("counter_offer")}
                   disabled={isSending}

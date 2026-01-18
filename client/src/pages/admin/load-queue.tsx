@@ -24,7 +24,8 @@ import {
   Eye,
   RefreshCw,
   Scale,
-  IndianRupee
+  IndianRupee,
+  BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -354,13 +355,22 @@ export default function LoadQueuePage() {
   const [isSendingInvoice, setIsSendingInvoice] = useState(false);
   const [repriceDialogOpen, setRepriceDialogOpen] = useState(false);
   const [repriceLoad, setRepriceLoad] = useState<RealLoad | null>(null);
-  const [repriceAmount, setRepriceAmount] = useState("");
   const [repriceAllowCounter, setRepriceAllowCounter] = useState(true);
   const [repriceReason, setRepriceReason] = useState("");
   const [isRepricing, setIsRepricing] = useState(false);
   const [repriceUsePerTonRate, setRepriceUsePerTonRate] = useState(false);
   const [repriceRatePerTon, setRepriceRatePerTon] = useState(0);
   const [repriceTonnage, setRepriceTonnage] = useState<number>(0);
+  const [repriceGrossPrice, setRepriceGrossPrice] = useState(0);
+  const [repricePlatformMargin, setRepricePlatformMargin] = useState(10);
+  const [repriceAdvancePercent, setRepriceAdvancePercent] = useState(0);
+  const [repriceSelectedTemplate, setRepriceSelectedTemplate] = useState<string>("");
+  
+  // Reprice calculated values
+  const repricePlatformEarnings = Math.round(repriceGrossPrice * (repricePlatformMargin / 100));
+  const repriceCarrierPayout = repriceGrossPrice - repricePlatformEarnings;
+  const repriceAdvanceAmount = Math.round(repriceCarrierPayout * (repriceAdvancePercent / 100));
+  const repriceBalanceAmount = repriceCarrierPayout - repriceAdvanceAmount;
 
   const { user } = useAuth();
   
@@ -372,6 +382,20 @@ export default function LoadQueuePage() {
   const { data: realLoads = [], isLoading: isLoadingReal } = useQuery<RealLoad[]>({
     queryKey: ["/api/admin/queue"],
     refetchInterval: 30000,
+  });
+
+  // Pricing templates for reprice dialog
+  interface PricingTemplate {
+    id: string;
+    name: string;
+    markupPercent: string;
+    fixedFee: string;
+    platformRatePercent: string;
+  }
+  
+  const { data: pricingTemplates = [] } = useQuery<PricingTemplate[]>({
+    queryKey: ["/api/admin/pricing/templates"],
+    enabled: repriceDialogOpen,
   });
 
   // WebSocket listener for real-time load submissions from shippers
@@ -533,6 +557,15 @@ export default function LoadQueuePage() {
     setRepriceLoad(load);
     setRepriceAllowCounter(load.allowCounterBids ?? true);
     setRepriceReason("");
+    setRepriceSelectedTemplate("");
+    
+    // Initialize margin from existing load data if available, otherwise default to 10%
+    const existingMargin = load.platformRatePercent ? parseFloat(load.platformRatePercent.toString()) : 10;
+    setRepricePlatformMargin(Math.max(0, Math.min(50, existingMargin))); // Clamp 0-50%
+    
+    // Initialize advance percent from load data
+    const existingAdvance = load.advancePaymentPercent ? parseFloat(load.advancePaymentPercent.toString()) : 0;
+    setRepriceAdvancePercent(Math.max(0, Math.min(100, existingAdvance))); // Clamp 0-100%
     
     // Calculate weight in tons
     const weight = parseFloat(load.weight?.toString() || "0");
@@ -541,31 +574,45 @@ export default function LoadQueuePage() {
     
     // Initialize calculator based on load's rate type
     const currentPrice = parseFloat(load.adminFinalPrice || load.finalPrice || "0");
+    setRepriceGrossPrice(Math.max(0, currentPrice)); // Ensure non-negative
     
     if (load.rateType === "per_ton" && load.shipperPricePerTon) {
       // Per ton rate mode
       setRepriceUsePerTonRate(true);
       const perTonRate = parseFloat(load.shipperPricePerTon?.toString() || "0");
       setRepriceRatePerTon(perTonRate > 0 ? perTonRate : Math.round(currentPrice / (weightInTons || 1)));
-      setRepriceAmount(currentPrice > 0 ? currentPrice.toString() : "");
     } else {
       // Fixed price mode
       setRepriceUsePerTonRate(false);
       setRepriceRatePerTon(0);
-      setRepriceAmount(currentPrice > 0 ? currentPrice.toString() : "");
     }
     
     setRepriceDialogOpen(true);
   };
+  
+  // Apply template to reprice dialog
+  const applyRepriceTemplate = (templateId: string) => {
+    setRepriceSelectedTemplate(templateId);
+    if (templateId && pricingTemplates.length > 0) {
+      const template = pricingTemplates.find((t) => t.id === templateId);
+      if (template) {
+        setRepricePlatformMargin(parseFloat(template.platformRatePercent) || 10);
+      }
+    }
+  };
 
   const handleRepriceAndRepost = async () => {
-    if (!repriceLoad || !repriceAmount) return;
+    if (!repriceLoad || repriceGrossPrice <= 0) return;
     
     setIsRepricing(true);
     
     try {
+      // NOTE: carrierPayout is computed server-side based on platformMarginPercent
+      // We don't send it from client to prevent tampering
       const response = await apiRequest('POST', `/api/admin/loads/${repriceLoad.id}/reprice-repost`, {
-        finalPrice: repriceAmount,
+        finalPrice: repriceGrossPrice.toString(), // Shipper's gross price (adminFinalPrice)
+        platformMarginPercent: repricePlatformMargin,
+        advancePaymentPercent: repriceAdvancePercent,
         postMode: 'open',
         allowCounterBids: repriceAllowCounter,
         reason: repriceReason || 'Repriced and reposted by admin',
@@ -574,7 +621,7 @@ export default function LoadQueuePage() {
       if (response) {
         toast({
           title: "Load Repriced & Reposted",
-          description: `Load ${formatLoadId(repriceLoad)} has been repriced to Rs. ${Number(repriceAmount).toLocaleString('en-IN')} and reposted to carriers.`,
+          description: `Load ${formatLoadId(repriceLoad)} has been repriced to Rs. ${repriceGrossPrice.toLocaleString('en-IN')} and reposted to carriers.`,
         });
         
         queryClient.invalidateQueries({ queryKey: ['/api/admin/queue'] });
@@ -1658,7 +1705,7 @@ export default function LoadQueuePage() {
 
       {/* Reprice and Repost Dialog */}
       <Dialog open={repriceDialogOpen} onOpenChange={setRepriceDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5" />
@@ -1670,6 +1717,7 @@ export default function LoadQueuePage() {
           </DialogHeader>
           
           {repriceLoad && (
+            <ScrollArea className="flex-1 pr-4">
             <div className="space-y-4">
               {/* Load Summary */}
               <Card>
@@ -1765,10 +1813,9 @@ export default function LoadQueuePage() {
                       className="w-full"
                       onClick={() => {
                         setRepriceUsePerTonRate(true);
-                        // Calculate per-ton rate from current price if switching
-                        const currentPrice = parseFloat(repriceAmount) || 0;
-                        if (currentPrice > 0 && repriceTonnage > 0) {
-                          setRepriceRatePerTon(Math.round(currentPrice / repriceTonnage));
+                        // Calculate per-ton rate from current gross price if switching
+                        if (repriceGrossPrice > 0 && repriceTonnage > 0) {
+                          setRepriceRatePerTon(Math.round(repriceGrossPrice / repriceTonnage));
                         }
                       }}
                       data-testid="button-reprice-rate-type-per-ton"
@@ -1792,7 +1839,8 @@ export default function LoadQueuePage() {
                               setRepriceTonnage(newWeight);
                               // Recalculate total when tonnage changes
                               if (repriceRatePerTon > 0) {
-                                setRepriceAmount(Math.round(repriceRatePerTon * newWeight).toString());
+                                const newTotal = Math.round(repriceRatePerTon * newWeight);
+                                setRepriceGrossPrice(Math.max(0, newTotal));
                               }
                             }}
                             placeholder="Enter tonnage"
@@ -1810,7 +1858,8 @@ export default function LoadQueuePage() {
                               const rate = parseInt(e.target.value) || 0;
                               setRepriceRatePerTon(rate);
                               // Recalculate total
-                              setRepriceAmount(Math.round(rate * repriceTonnage).toString());
+                              const newTotal = Math.round(rate * repriceTonnage);
+                              setRepriceGrossPrice(Math.max(0, newTotal));
                             }}
                             placeholder="e.g. 2000"
                             className="text-lg font-medium"
@@ -1846,8 +1895,11 @@ export default function LoadQueuePage() {
                         <IndianRupee className="h-5 w-5 text-muted-foreground" />
                         <Input
                           type="number"
-                          value={repriceAmount}
-                          onChange={(e) => setRepriceAmount(e.target.value)}
+                          value={repriceGrossPrice || ""}
+                          onChange={(e) => {
+                            const newPrice = parseInt(e.target.value) || 0;
+                            setRepriceGrossPrice(Math.max(0, newPrice)); // Ensure non-negative
+                          }}
                           placeholder="e.g. 50000"
                           className="text-lg font-medium"
                           data-testid="input-reprice-fixed-price"
@@ -1858,6 +1910,158 @@ export default function LoadQueuePage() {
                       </p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Pricing Template Selection */}
+              {pricingTemplates.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Pricing Template (Optional)</Label>
+                  <Select value={repriceSelectedTemplate || "none"} onValueChange={(val) => applyRepriceTemplate(val === "none" ? "" : val)}>
+                    <SelectTrigger data-testid="select-reprice-template">
+                      <SelectValue placeholder="Select a template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No template</SelectItem>
+                      {pricingTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Total Price Summary */}
+              <Card className="border-green-500">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <IndianRupee className="h-5 w-5" />
+                      <span className="font-medium">Total Price</span>
+                      <Badge variant="outline" className="text-xs">
+                        {repriceUsePerTonRate ? "Per Tonne" : "Fixed"}
+                      </Badge>
+                    </div>
+                    <Input
+                      type="number"
+                      value={repriceGrossPrice}
+                      onChange={(e) => setRepriceGrossPrice(parseInt(e.target.value) || 0)}
+                      className="w-32 text-right font-bold text-lg"
+                      data-testid="input-reprice-gross-price"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Margin & Final Price */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Margin & Final Price
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm">Platform Margin</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={repricePlatformMargin}
+                        onChange={(e) => setRepricePlatformMargin(Math.min(50, Math.max(0, parseInt(e.target.value) || 0)))}
+                        className="w-16 text-right"
+                        data-testid="input-reprice-platform-margin"
+                      />
+                      <span className="text-sm font-medium">%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Platform Earnings:</span>
+                    <span className="font-medium text-primary">Rs. {repricePlatformEarnings.toLocaleString("en-IN")}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Final Price (Carrier Payout):</span>
+                    <span className="font-bold text-lg text-green-600 dark:text-green-400" data-testid="text-reprice-carrier-payout">
+                      Rs. {repriceCarrierPayout.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Carrier Advance Payment */}
+              <Card className="border-2 border-green-200 dark:border-green-900">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <IndianRupee className="h-5 w-5 text-green-600" />
+                    Carrier Advance Payment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Quick Select Buttons */}
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Quick Select</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {[0, 50, 75, 90, 100].map((percent) => (
+                        <Button
+                          key={percent}
+                          type="button"
+                          variant={repriceAdvancePercent === percent ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setRepriceAdvancePercent(percent)}
+                          data-testid={`button-reprice-advance-${percent}`}
+                        >
+                          {percent === 0 ? "No Advance" : `${percent}%`}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Input */}
+                  <div className="flex items-center gap-3">
+                    <Label className="text-sm">Custom:</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={repriceAdvancePercent}
+                        onChange={(e) => setRepriceAdvancePercent(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                        className="w-20 text-right"
+                        data-testid="input-reprice-advance-percent"
+                      />
+                      <span className="text-sm font-medium">%</span>
+                    </div>
+                  </div>
+
+                  {/* Payment Breakdown */}
+                  <div className="bg-muted/50 rounded-md p-3 space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Advance (Upfront):</span>
+                      <span className="font-semibold text-green-600 dark:text-green-400">
+                        Rs. {repriceAdvanceAmount.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Balance (On Delivery):</span>
+                      <span className="font-semibold">
+                        Rs. {repriceBalanceAmount.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Total Carrier Payout:</span>
+                      <span className="font-bold text-green-600 dark:text-green-400">
+                        Rs. {repriceCarrierPayout.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Advance is paid to carrier before pickup. Balance is paid after successful delivery.
+                  </p>
                 </CardContent>
               </Card>
 
@@ -1898,6 +2102,7 @@ export default function LoadQueuePage() {
                 </div>
               )}
             </div>
+            </ScrollArea>
           )}
 
           <DialogFooter className="gap-2">
@@ -1911,7 +2116,7 @@ export default function LoadQueuePage() {
             </Button>
             <Button 
               onClick={handleRepriceAndRepost}
-              disabled={isRepricing || !repriceAmount}
+              disabled={isRepricing || repriceGrossPrice <= 0}
               data-testid="button-confirm-reprice"
             >
               {isRepricing ? (

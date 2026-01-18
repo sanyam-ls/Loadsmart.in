@@ -7887,7 +7887,17 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { finalPrice, postMode, allowCounterBids, invitedCarrierIds, carrierAdvancePercent, reason } = req.body;
+      const { 
+        finalPrice, 
+        postMode, 
+        allowCounterBids, 
+        invitedCarrierIds, 
+        carrierAdvancePercent, 
+        reason,
+        platformMarginPercent: inputPlatformMargin,
+        advancePaymentPercent: inputAdvancePercent,
+        carrierPayout: inputCarrierPayout
+      } = req.body;
       
       if (!finalPrice || isNaN(parseFloat(finalPrice))) {
         return res.status(400).json({ error: "Valid final price is required" });
@@ -7915,9 +7925,20 @@ RESPOND IN THIS EXACT JSON FORMAT:
         allowCounterBids: load.allowCounterBids,
       };
 
-      // Calculate platform margin and carrier payout
+      // Calculate platform margin and carrier payout SERVER-SIDE (don't trust client)
       const priceNum = parseFloat(finalPrice);
-      const platformMarginPercent = 10; // Default 10% margin
+      if (isNaN(priceNum) || priceNum <= 0) {
+        return res.status(400).json({ error: "Price must be a positive number" });
+      }
+      
+      // Validate and clamp margin/advance inputs
+      const rawMargin = inputPlatformMargin !== undefined ? parseFloat(inputPlatformMargin) : 10;
+      const platformMarginPercent = Math.max(0, Math.min(50, isNaN(rawMargin) ? 10 : rawMargin)); // Clamp 0-50%
+      
+      const rawAdvance = inputAdvancePercent !== undefined ? parseFloat(inputAdvancePercent) : 0;
+      const advancePaymentPercent = Math.max(0, Math.min(100, isNaN(rawAdvance) ? 0 : rawAdvance)); // Clamp 0-100%
+      
+      // ALWAYS compute carrier payout server-side (ignore client carrierPayout to prevent tampering)
       const platformMargin = Math.round(priceNum * (platformMarginPercent / 100));
       const carrierPayout = Math.round(priceNum - platformMargin);
 
@@ -7945,12 +7966,14 @@ RESPOND IN THIS EXACT JSON FORMAT:
 
       // Update load with new price
       // Note: adminFinalPrice = shipper's gross price (for invoicing)
-      //       finalPrice = carrier payout (after 10% platform margin)
+      //       finalPrice = carrier payout (after platform margin)
       const updatePayload: any = {
         status: targetStatus,
         previousStatus: load.status,
         adminFinalPrice: priceNum.toString(),
         finalPrice: carrierPayout.toString(),
+        platformRatePercent: platformMarginPercent,
+        advancePaymentPercent: advancePaymentPercent,
         adminId: user.id,
         allowCounterBids: allowCounterBids !== false,
         statusChangedBy: user.id,
@@ -7980,8 +8003,12 @@ RESPOND IN THIS EXACT JSON FORMAT:
         invitedCarrierIds: invitedCarrierIds || [],
         comment: reason || (isInMarketplace ? 'Repriced and reposted' : 'Repriced'),
         pricingBreakdown: JSON.stringify({
+          platformMarginPercent,
           platformMargin,
           carrierPayout,
+          advancePaymentPercent,
+          advanceAmount: Math.round(carrierPayout * (advancePaymentPercent / 100)),
+          balanceAmount: Math.round(carrierPayout * ((100 - advancePaymentPercent) / 100)),
           originalPrice: load.adminFinalPrice || load.finalPrice,
           rejectedBidsCount,
         }),

@@ -1204,13 +1204,14 @@ export async function registerRoutes(
           const load = await storage.getLoad(bid.loadId);
           
           // Get the latest carrier counter offer from negotiations
+          // Carrier counter offers can be stored as 'counter_offer' or 'message' with an amount
           const negotiations = await storage.getBidNegotiations(bid.id);
-          const carrierCounterOffers = negotiations
-            .filter(n => n.senderRole === "carrier" && n.messageType === "counter_offer" && n.amount)
+          const carrierMessages = negotiations
+            .filter(n => n.senderRole === "carrier" && n.amount && parseFloat(n.amount.toString()) > 0)
             .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
           
-          const latestCarrierAmount = carrierCounterOffers.length > 0 
-            ? carrierCounterOffers[0].amount 
+          const latestCarrierAmount = carrierMessages.length > 0 
+            ? carrierMessages[0].amount 
             : null;
           
           return { 

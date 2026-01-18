@@ -2781,8 +2781,8 @@ export async function registerRoutes(
     }
   }
 
-  // Calculate road distance between two locations
-  app.post("/api/distance/calculate", requireAuth, async (req, res) => {
+  // Calculate road distance between two locations (public API - no auth needed)
+  app.post("/api/distance/calculate", async (req, res) => {
     try {
       const inputSchema = z.object({
         origin: z.string().min(2, "Origin is required"),

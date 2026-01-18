@@ -850,7 +850,7 @@ export default function PostLoadPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.distance && data.source !== "unavailable") {
-            console.log(`[Distance] Google Maps: ${origin} -> ${destination} = ${data.distance} km`);
+            console.log(`[Distance] OSRM: ${origin} -> ${destination} = ${data.distance} km`);
             setEstimation(prev => ({
               distance: data.distance,
               suggestedTruck: prev?.suggestedTruck || "",
@@ -858,19 +858,20 @@ export default function PostLoadPage() {
               aiInsight: prev?.aiInsight,
               basedOnMarketData: prev?.basedOnMarketData,
             }));
-          } else {
-            // Fallback to local calculation if API not configured
-            console.log("[Distance] API unavailable, using local fallback");
-            const fallbackDistance = calculateDistance(originCity, destCity);
-            setEstimation(prev => ({
-              distance: fallbackDistance,
-              suggestedTruck: prev?.suggestedTruck || "",
-              nearbyTrucks: prev?.nearbyTrucks || 0,
-              aiInsight: prev?.aiInsight,
-              basedOnMarketData: prev?.basedOnMarketData,
-            }));
+            return; // Success, exit early
           }
         }
+        
+        // Fallback to local calculation if API failed or unavailable
+        console.log("[Distance] API unavailable or failed, using local fallback");
+        const fallbackDistance = calculateDistance(originCity, destCity);
+        setEstimation(prev => ({
+          distance: fallbackDistance,
+          suggestedTruck: prev?.suggestedTruck || "",
+          nearbyTrucks: prev?.nearbyTrucks || 0,
+          aiInsight: prev?.aiInsight,
+          basedOnMarketData: prev?.basedOnMarketData,
+        }));
       } catch (error) {
         console.error("Failed to fetch distance:", error);
         // Fallback to local calculation on error

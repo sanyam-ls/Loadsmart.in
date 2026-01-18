@@ -2715,6 +2715,152 @@ export async function registerRoutes(
     }
   });
 
+  // ==========================================
+  // GOOGLE MAPS DISTANCE MATRIX API
+  // ==========================================
+  
+  // Cache for distance calculations (to reduce API calls)
+  const distanceCache = new Map<string, { distance: number; duration: string; timestamp: number }>();
+  const DISTANCE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours cache for distance
+
+  // Calculate road distance between two locations using Google Maps Distance Matrix API
+  app.post("/api/distance/calculate", requireAuth, async (req, res) => {
+    try {
+      const inputSchema = z.object({
+        origin: z.string().min(2, "Origin is required"),
+        destination: z.string().min(2, "Destination is required"),
+      });
+      
+      const { origin, destination } = inputSchema.parse(req.body);
+      
+      // Create cache key (normalized)
+      const cacheKey = `${origin.toLowerCase().trim()}_${destination.toLowerCase().trim()}`;
+      
+      // Check cache first
+      const cached = distanceCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < DISTANCE_CACHE_TTL) {
+        console.log(`[Distance API] Cache hit for ${origin} -> ${destination}`);
+        return res.json({
+          distance: cached.distance,
+          duration: cached.duration,
+          source: "cache"
+        });
+      }
+      
+      const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+      
+      if (!GOOGLE_MAPS_API_KEY) {
+        console.warn("[Distance API] GOOGLE_MAPS_API_KEY not configured, using fallback calculation");
+        // Fallback to simple estimation (1.5x straight line as rough estimate)
+        return res.json({
+          distance: null,
+          duration: null,
+          source: "unavailable",
+          message: "Google Maps API not configured. Please add GOOGLE_MAPS_API_KEY."
+        });
+      }
+      
+      // Format locations for Google Maps API (add ", India" if not already present)
+      const formatLocation = (loc: string) => {
+        const normalized = loc.trim();
+        if (!normalized.toLowerCase().includes("india")) {
+          return `${normalized}, India`;
+        }
+        return normalized;
+      };
+      
+      const originFormatted = formatLocation(origin);
+      const destFormatted = formatLocation(destination);
+      
+      console.log(`[Distance API] Calling Google Maps API: ${originFormatted} -> ${destFormatted}`);
+      
+      // Call Google Maps Distance Matrix API
+      const apiUrl = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
+      apiUrl.searchParams.set("origins", originFormatted);
+      apiUrl.searchParams.set("destinations", destFormatted);
+      apiUrl.searchParams.set("mode", "driving");
+      apiUrl.searchParams.set("units", "metric");
+      apiUrl.searchParams.set("key", GOOGLE_MAPS_API_KEY);
+      
+      const response = await fetch(apiUrl.toString());
+      const data = await response.json();
+      
+      console.log(`[Distance API] Google Maps response status: ${data.status}`);
+      
+      if (data.status !== "OK") {
+        console.error("[Distance API] Google Maps API error:", data.status, data.error_message);
+        return res.status(400).json({
+          error: "Unable to calculate distance",
+          details: data.error_message || data.status,
+          source: "google_maps_error"
+        });
+      }
+      
+      const element = data.rows?.[0]?.elements?.[0];
+      
+      if (!element || element.status !== "OK") {
+        console.error("[Distance API] No route found:", element?.status);
+        return res.status(400).json({
+          error: "No route found between these locations",
+          details: element?.status || "Unknown error",
+          source: "no_route"
+        });
+      }
+      
+      // Extract distance in km and duration
+      const distanceMeters = element.distance.value;
+      const distanceKm = Math.round(distanceMeters / 1000);
+      const durationSeconds = element.duration.value;
+      
+      // Format duration (e.g., "46h 20m" or "2 days")
+      const hours = Math.floor(durationSeconds / 3600);
+      const minutes = Math.floor((durationSeconds % 3600) / 60);
+      let durationStr: string;
+      if (hours >= 24) {
+        const days = Math.floor(hours / 10); // Assume 10 hours driving per day
+        durationStr = `${days} day${days > 1 ? "s" : ""}`;
+      } else if (hours > 0) {
+        durationStr = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+      } else {
+        durationStr = `${minutes} mins`;
+      }
+      
+      console.log(`[Distance API] Result: ${distanceKm} km, ${durationStr}`);
+      
+      // Cache the result
+      distanceCache.set(cacheKey, {
+        distance: distanceKm,
+        duration: durationStr,
+        timestamp: Date.now()
+      });
+      
+      // Clean up old cache entries periodically
+      if (distanceCache.size > 500) {
+        const now = Date.now();
+        for (const [key, value] of distanceCache.entries()) {
+          if (now - value.timestamp > DISTANCE_CACHE_TTL) {
+            distanceCache.delete(key);
+          }
+        }
+      }
+      
+      res.json({
+        distance: distanceKm,
+        duration: durationStr,
+        source: "google_maps",
+        originResolved: data.origin_addresses?.[0],
+        destinationResolved: data.destination_addresses?.[0]
+      });
+      
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      console.error("[Distance API] Error:", error);
+      res.status(500).json({ error: "Failed to calculate distance" });
+    }
+  });
+
   // Shipper submits load to Admin for pricing (no rate required)
   app.post("/api/loads/submit", requireAuth, async (req, res) => {
     try {

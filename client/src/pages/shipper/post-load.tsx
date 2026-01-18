@@ -755,6 +755,9 @@ export default function PostLoadPage() {
     }
   }, [user, form]);
 
+  // State for distance loading
+  const [isLoadingDistance, setIsLoadingDistance] = useState(false);
+  
   // Show truck suggestion immediately when weight is entered (doesn't require cities)
   // Only show when no truck type is selected (user hasn't made a choice yet)
   useEffect(() => {
@@ -769,13 +772,12 @@ export default function PostLoadPage() {
     const localSuggestion = suggestTruckType(weightInTons, goodsDescription || "");
     const nearbyTrucks = Math.floor(Math.random() * 15) + 3;
     
-    // Calculate distance only if both cities are provided
-    const distance = (pickupCity && dropoffCity) 
-      ? calculateDistance(pickupCity, dropoffCity) 
-      : 0;
-    
-    // Set immediate local suggestion (always update, even if truck is selected)
-    setEstimation({ distance, suggestedTruck: localSuggestion, nearbyTrucks });
+    // Set immediate local suggestion with 0 distance (will update when cities are provided)
+    setEstimation(prev => ({ 
+      distance: prev?.distance || 0, 
+      suggestedTruck: localSuggestion, 
+      nearbyTrucks 
+    }));
     
     // Only fetch AI suggestion if no truck type is manually selected
     if (!truckType) {
@@ -798,7 +800,7 @@ export default function PostLoadPage() {
           if (response.ok) {
             const data = await response.json();
             setEstimation(prev => ({
-              distance: prev?.distance || distance,
+              distance: prev?.distance || 0,
               suggestedTruck: data.suggestedTruck,
               nearbyTrucks: prev?.nearbyTrucks || nearbyTrucks,
               aiInsight: data.aiInsight,
@@ -816,7 +818,79 @@ export default function PostLoadPage() {
       const timeoutId = setTimeout(fetchAiSuggestion, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [pickupCity, dropoffCity, weight, weightUnit, goodsDescription, truckType]);
+  }, [weight, weightUnit, goodsDescription, truckType]);
+
+  // Fetch accurate road distance from Google Maps API when cities change
+  useEffect(() => {
+    if (!pickupCity || !dropoffCity || pickupCity === "__other__" || dropoffCity === "__other__") {
+      return;
+    }
+    
+    // Get the actual city values (handle custom cities)
+    const originCity = pickupCity;
+    const destCity = dropoffCity;
+    
+    // Add state to city for better accuracy
+    const pickupState = form.getValues("pickupState");
+    const dropoffState = form.getValues("dropoffState");
+    
+    const origin = pickupState ? `${originCity}, ${pickupState}` : originCity;
+    const destination = dropoffState ? `${destCity}, ${dropoffState}` : destCity;
+    
+    const fetchDistance = async () => {
+      setIsLoadingDistance(true);
+      try {
+        const response = await fetch("/api/distance/calculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ origin, destination }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.distance && data.source !== "unavailable") {
+            console.log(`[Distance] Google Maps: ${origin} -> ${destination} = ${data.distance} km`);
+            setEstimation(prev => ({
+              distance: data.distance,
+              suggestedTruck: prev?.suggestedTruck || "",
+              nearbyTrucks: prev?.nearbyTrucks || 0,
+              aiInsight: prev?.aiInsight,
+              basedOnMarketData: prev?.basedOnMarketData,
+            }));
+          } else {
+            // Fallback to local calculation if API not configured
+            console.log("[Distance] API unavailable, using local fallback");
+            const fallbackDistance = calculateDistance(originCity, destCity);
+            setEstimation(prev => ({
+              distance: fallbackDistance,
+              suggestedTruck: prev?.suggestedTruck || "",
+              nearbyTrucks: prev?.nearbyTrucks || 0,
+              aiInsight: prev?.aiInsight,
+              basedOnMarketData: prev?.basedOnMarketData,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch distance:", error);
+        // Fallback to local calculation on error
+        const fallbackDistance = calculateDistance(originCity, destCity);
+        setEstimation(prev => ({
+          distance: fallbackDistance,
+          suggestedTruck: prev?.suggestedTruck || "",
+          nearbyTrucks: prev?.nearbyTrucks || 0,
+          aiInsight: prev?.aiInsight,
+          basedOnMarketData: prev?.basedOnMarketData,
+        }));
+      } finally {
+        setIsLoadingDistance(false);
+      }
+    };
+    
+    // Debounce the distance fetch
+    const timeoutId = setTimeout(fetchDistance, 300);
+    return () => clearTimeout(timeoutId);
+  }, [pickupCity, dropoffCity, form]);
 
   const updateEstimation = () => {
   };
@@ -2011,7 +2085,13 @@ export default function PostLoadPage() {
                 <div className="p-4 rounded-lg bg-muted/50 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Estimated Distance</span>
-                    <span className="font-semibold">{estimation.distance.toLocaleString()} km</span>
+                    {isLoadingDistance ? (
+                      <span className="text-sm text-muted-foreground animate-pulse">Calculating...</span>
+                    ) : estimation.distance > 0 ? (
+                      <span className="font-semibold">{estimation.distance.toLocaleString()} km</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Enter locations</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Suggested Truck</span>

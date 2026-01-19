@@ -179,6 +179,26 @@ export default function CarrierDashboard() {
   const { data: allSettlements } = useSettlements();
   const { getRevenueAnalytics, completedTrips: mockCompletedTrips } = useCarrierData();
 
+  // Fetch real performance metrics from trip history
+  const { data: realPerformanceData } = useQuery<{
+    hasData: boolean;
+    totalTrips: number;
+    overallScore: number | null;
+    reliabilityScore: number | null;
+    communicationScore: number | null;
+    onTimeRate: number | null;
+    totalRatings?: number;
+    tripHistory: Array<{
+      tripId: string;
+      loadId: string;
+      completedAt: string;
+      wasOnTime: boolean;
+      rating: { reliability: number; communication: number; onTimeDelivery: number } | null;
+    }>;
+  }>({
+    queryKey: ["/api/carrier/performance"],
+  });
+
   // Calculate combined revenue (API + mock data like Revenue page)
   const combinedRevenueData = useMemo(() => {
     const myShipments = (allShipments || []).filter((s: Shipment) => 
@@ -219,8 +239,22 @@ export default function CarrierDashboard() {
     };
   }, [allShipments, allSettlements, allLoads, user?.id, getRevenueAnalytics, mockCompletedTrips]);
 
-  // Calculate performance metrics from completed trips
+  // Calculate performance metrics - prioritize real API data, fallback to mock data
   const performanceMetrics = useMemo(() => {
+    // If real performance data exists from API, use it
+    if (realPerformanceData?.hasData) {
+      return {
+        onTimeRate: realPerformanceData.onTimeRate || 0,
+        reliabilityScore: realPerformanceData.reliabilityScore || 0,
+        communicationScore: realPerformanceData.communicationScore || 0,
+        overallScore: realPerformanceData.overallScore || 0,
+        totalTrips: realPerformanceData.totalTrips,
+        totalRatings: realPerformanceData.totalRatings || 0,
+        isRealData: true
+      };
+    }
+
+    // Fallback to mock data if no real trip history
     const trips = mockCompletedTrips || [];
     if (trips.length === 0) {
       return null;
@@ -244,9 +278,11 @@ export default function CarrierDashboard() {
       reliabilityScore: avgDriverRating,
       communicationScore: avgShipperRating,
       overallScore,
-      totalTrips: trips.length
+      totalTrips: trips.length,
+      totalRatings: 0,
+      isRealData: false
     };
-  }, [mockCompletedTrips]);
+  }, [realPerformanceData, mockCompletedTrips]);
 
   if (statsLoading || loadsLoading || isLoadingOnboarding) {
     return (
@@ -602,8 +638,16 @@ export default function CarrierDashboard() {
                     <span className="text-lg text-muted-foreground">/5.0</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Based on {performanceMetrics.totalTrips} completed trips
+                    Based on {performanceMetrics.totalTrips} completed trip{performanceMetrics.totalTrips !== 1 ? 's' : ''}
+                    {performanceMetrics.isRealData && performanceMetrics.totalRatings > 0 && (
+                      <span> ({performanceMetrics.totalRatings} rating{performanceMetrics.totalRatings !== 1 ? 's' : ''})</span>
+                    )}
                   </p>
+                  {!performanceMetrics.isRealData && (
+                    <Badge variant="outline" className="mt-2 text-xs no-default-hover-elevate no-default-active-elevate">
+                      Demo Data
+                    </Badge>
+                  )}
                 </div>
 
                 {/* Individual Metrics */}

@@ -10,7 +10,8 @@ import {
   insertUserSchema, insertLoadSchema, insertTruckSchema, insertDriverSchema, insertBidSchema,
   insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema,
   trucks as trucksTable,
-  carrierProfiles as carrierProfilesTable
+  carrierProfiles as carrierProfilesTable,
+  ratings
 } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -7312,6 +7313,114 @@ RESPOND IN THIS EXACT JSON FORMAT:
       });
     } catch (error) {
       console.error("Get carrier dashboard stats error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/carrier/performance - Get carrier performance metrics from real trip history
+  app.get("/api/carrier/performance", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Get all completed shipments for this carrier (delivered status)
+      const allShipments = await storage.getShipmentsByCarrier(user.id);
+      const completedShipments = allShipments.filter(s => 
+        s.status === 'delivered' && s.completedAt
+      );
+
+      // Get all ratings received by this carrier
+      const allRatings = await db
+        .select()
+        .from(ratings)
+        .where(eq(ratings.ratedUserId, user.id));
+
+      // If no completed trips, return null metrics
+      if (completedShipments.length === 0) {
+        return res.json({
+          hasData: false,
+          totalTrips: 0,
+          overallScore: null,
+          reliabilityScore: null,
+          communicationScore: null,
+          onTimeRate: null,
+          tripHistory: []
+        });
+      }
+
+      // Calculate on-time delivery rate
+      let onTimeCount = 0;
+      const tripHistory: Array<{
+        tripId: string;
+        loadId: string;
+        completedAt: Date;
+        wasOnTime: boolean;
+        rating: { reliability: number; communication: number; onTimeDelivery: number } | null;
+      }> = [];
+
+      for (const shipment of completedShipments) {
+        // Check if delivery was on time (completedAt <= eta)
+        const wasOnTime = shipment.eta 
+          ? new Date(shipment.completedAt!) <= new Date(shipment.eta)
+          : true; // If no ETA set, assume on-time
+        
+        if (wasOnTime) onTimeCount++;
+
+        // Find rating for this load
+        const loadRating = allRatings.find(r => r.loadId === shipment.loadId);
+
+        tripHistory.push({
+          tripId: shipment.id,
+          loadId: shipment.loadId,
+          completedAt: shipment.completedAt!,
+          wasOnTime,
+          rating: loadRating ? {
+            reliability: loadRating.reliability,
+            communication: loadRating.communication,
+            onTimeDelivery: loadRating.onTimeDelivery
+          } : null
+        });
+      }
+
+      const onTimeRate = Math.round((onTimeCount / completedShipments.length) * 100);
+
+      // Calculate average ratings from received reviews
+      let avgReliability = 0;
+      let avgCommunication = 0;
+      let avgOnTimeRating = 0;
+
+      if (allRatings.length > 0) {
+        avgReliability = allRatings.reduce((sum, r) => sum + r.reliability, 0) / allRatings.length;
+        avgCommunication = allRatings.reduce((sum, r) => sum + r.communication, 0) / allRatings.length;
+        avgOnTimeRating = allRatings.reduce((sum, r) => sum + r.onTimeDelivery, 0) / allRatings.length;
+      } else {
+        // If no ratings yet, use calculated on-time rate to estimate (scale 1-5)
+        avgReliability = 4.0; // Default baseline
+        avgCommunication = 4.0; // Default baseline
+        avgOnTimeRating = (onTimeRate / 100) * 5;
+      }
+
+      // Calculate overall score (weighted average, out of 5)
+      // Weights: Reliability 40%, On-Time 30%, Communication 30%
+      const overallScore = (avgReliability * 0.4) + (avgOnTimeRating * 0.3) + (avgCommunication * 0.3);
+
+      // Sort trip history by completion date (most recent first)
+      tripHistory.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+
+      res.json({
+        hasData: true,
+        totalTrips: completedShipments.length,
+        overallScore: Math.round(overallScore * 10) / 10,
+        reliabilityScore: Math.round(avgReliability * 10) / 10,
+        communicationScore: Math.round(avgCommunication * 10) / 10,
+        onTimeRate,
+        totalRatings: allRatings.length,
+        tripHistory: tripHistory.slice(0, 20) // Return last 20 trips
+      });
+    } catch (error) {
+      console.error("Get carrier performance error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

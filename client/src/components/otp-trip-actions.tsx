@@ -49,14 +49,21 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
 
   const { data: otpStatusRaw, refetch: refetchStatus } = useOtpStatus(shipment.id);
   
+  // Use embedded load from tracking shipment first, then fallback to fetching
+  const embeddedLoad = (shipment as any)?.load;
+  const embeddedShipperId = embeddedLoad?.shipperId;
+  
   const { data: loadData } = useQuery<Load>({
     queryKey: ["/api/loads", shipment.loadId],
-    enabled: !!shipment.loadId,
+    enabled: !!shipment.loadId && !embeddedShipperId,
   });
 
+  // Use embedded shipperId first, then fall back to fetched load data
+  const effectiveShipperId = embeddedShipperId || loadData?.shipperId;
+
   const { data: shipperData } = useQuery<{ id: string; companyName: string | null; username: string }>({
-    queryKey: ["/api/users", loadData?.shipperId],
-    enabled: !!loadData?.shipperId,
+    queryKey: ["/api/users", effectiveShipperId],
+    enabled: !!effectiveShipperId,
   });
   const otpStatus = otpStatusRaw as OtpStatusData | undefined;
   const requestStartMutation = useRequestTripStartOtp();
@@ -162,7 +169,7 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
       onStateChange?.();
       refetchStatus();
       
-      if (otpType === "trip_end" && loadData?.shipperId) {
+      if (otpType === "trip_end" && effectiveShipperId) {
         setRatingDialogOpen(true);
       }
     } catch (error: any) {
@@ -196,13 +203,13 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
             </div>
           </CardContent>
         </Card>
-        {loadData?.shipperId && (
+        {effectiveShipperId && (
           <ShipperRatingDialog
             open={ratingDialogOpen}
             onOpenChange={setRatingDialogOpen}
             shipmentId={shipment.id}
             loadId={shipment.loadId}
-            shipperId={loadData.shipperId}
+            shipperId={effectiveShipperId}
             shipperName={shipperData?.companyName || shipperData?.username || "Shipper"}
           />
         )}
@@ -503,13 +510,13 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
         </DialogContent>
       </Dialog>
 
-      {loadData?.shipperId && (
+      {effectiveShipperId && (
         <ShipperRatingDialog
           open={ratingDialogOpen}
           onOpenChange={setRatingDialogOpen}
           shipmentId={shipment.id}
           loadId={shipment.loadId}
-          shipperId={loadData.shipperId}
+          shipperId={effectiveShipperId}
           shipperName={shipperData?.companyName || shipperData?.username || "Shipper"}
         />
       )}

@@ -924,9 +924,9 @@ export default function CarrierBidsPage() {
                       <div className="text-right space-y-1">
                         <div className="text-sm text-muted-foreground">{t("bids.yourBid")}</div>
                         <div className="text-xl font-bold">{formatCurrency(bid.carrierOffer)}</div>
-                        {bid.shipperCounterRate && bid.bidStatus === "countered" && (
+                        {bid.shipperCounterRate && (
                           <div className="text-sm text-amber-600 dark:text-amber-400">
-                            Counter: {formatCurrency(bid.shipperCounterRate)}
+                            Admin: {formatCurrency(bid.shipperCounterRate)}
                           </div>
                         )}
                         <div className="text-sm text-green-600 dark:text-green-400">

@@ -72,7 +72,7 @@ export default function CarrierRevenuePage() {
     // Calculate revenue by region from DELIVERED shipments only (matches Trip History)
     // Includes both pickup and dropoff regions for comprehensive view
     const { revenueByRegion } = buildRegionMetrics(
-      myShipments.map(s => ({ loadId: s.loadId, status: s.status })),
+      myShipments.map(s => ({ loadId: s.loadId, status: s.status || '' })),
       allLoads.map(l => ({ 
         id: l.id, 
         pickupCity: (l as any).pickupCity, 
@@ -95,9 +95,9 @@ export default function CarrierRevenuePage() {
     myShipments.forEach((s: Shipment) => {
       const load = allLoads.find((l: Load) => l.id === s.loadId);
       if (load) {
-        // Group by month (e.g., "Jan 2026")
-        const deliveryDate = s.deliveryDate ? new Date(s.deliveryDate) : new Date();
-        const monthKey = format(deliveryDate, 'MMM yyyy');
+        // Group by month (e.g., "Jan 2026") - use completedAt for delivery date
+        const completedDate = s.completedAt ? new Date(s.completedAt) : new Date();
+        const monthKey = format(completedDate, 'MMM yyyy');
         const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
         if (!monthlyRevenueMap[monthKey]) {
           monthlyRevenueMap[monthKey] = { revenue: 0, trips: 0 };
@@ -1009,7 +1009,9 @@ export default function CarrierRevenuePage() {
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Avg/Trip</p>
-                            <p className="font-bold text-lg">{formatCurrency(report.avgRevenuePerTrip)}</p>
+                            <p className="font-bold text-lg">
+                              {formatCurrency(report.tripsCompleted > 0 ? report.totalRevenue / report.tripsCompleted : 0)}
+                            </p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Profit</p>
@@ -1018,28 +1020,42 @@ export default function CarrierRevenuePage() {
                             </p>
                           </div>
                         </div>
+                        {!isSoloDriver && (
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4 pt-4 border-t">
                           <div>
                             <p className="text-xs text-muted-foreground">Fuel</p>
-                            <p className="font-medium text-red-600">{formatCurrency(report.fuelCost)}</p>
+                            <p className="font-medium text-red-600">{formatCurrency((report as any).fuelCost || 0)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Tolls</p>
-                            <p className="font-medium text-red-600">{formatCurrency(report.tollCost)}</p>
+                            <p className="font-medium text-red-600">{formatCurrency((report as any).tollCost || 0)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Driver Pay</p>
-                            <p className="font-medium text-red-600">{formatCurrency(report.driverPay)}</p>
+                            <p className="font-medium text-red-600">{formatCurrency((report as any).driverPay || 0)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Maintenance</p>
-                            <p className="font-medium text-red-600">{formatCurrency(report.maintenanceCost)}</p>
+                            <p className="font-medium text-red-600">{formatCurrency((report as any).maintenanceCost || 0)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Platform</p>
-                            <p className="font-medium text-red-600">{formatCurrency(report.platformFees)}</p>
+                            <p className="font-medium text-red-600">{formatCurrency((report as any).platformFees || 0)}</p>
                           </div>
                         </div>
+                        )}
+                        {isSoloDriver && (
+                        <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Platform Fee (15%)</p>
+                            <p className="font-medium text-red-600">{formatCurrency(report.totalRevenue * 0.15 / 0.85)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Net Earnings</p>
+                            <p className="font-medium text-green-600">{formatCurrency(report.totalRevenue)}</p>
+                          </div>
+                        </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}

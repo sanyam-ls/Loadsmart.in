@@ -311,15 +311,25 @@ export default function CarrierLoadsPage() {
   const [selectedDriverId, setSelectedDriverId] = useState<string>("");
 
   // Fetch trucks and drivers for enterprise carriers (with availability info)
-  const { data: trucks = [] } = useQuery<{ id: string; licensePlate: string; truckType: string; make?: string; model?: string; isAvailable?: boolean; unavailableReason?: string | null }[]>({
+  const { data: trucks = [], refetch: refetchTrucks } = useQuery<{ id: string; licensePlate: string; truckType: string; make?: string; model?: string; isAvailable?: boolean; unavailableReason?: string | null }[]>({
     queryKey: ["/api/trucks"],
     enabled: isEnterprise,
+    staleTime: 0, // Always refetch for fresh availability data
   });
 
-  const { data: drivers = [] } = useQuery<{ id: string; name: string; phone?: string; licenseNumber?: string; isAvailable?: boolean; unavailableReason?: string | null }[]>({
+  const { data: drivers = [], refetch: refetchDrivers } = useQuery<{ id: string; name: string; phone?: string; licenseNumber?: string; isAvailable?: boolean; unavailableReason?: string | null }[]>({
     queryKey: ["/api/drivers"],
     enabled: isEnterprise,
+    staleTime: 0, // Always refetch for fresh availability data
   });
+  
+  // Refetch trucks and drivers when bid dialog opens
+  useEffect(() => {
+    if (bidDialogOpen && isEnterprise) {
+      refetchTrucks();
+      refetchDrivers();
+    }
+  }, [bidDialogOpen, isEnterprise, refetchTrucks, refetchDrivers]);
   
   // Filter to only show available trucks and drivers in bid dialog
   const availableTrucks = trucks.filter(t => t.isAvailable !== false);

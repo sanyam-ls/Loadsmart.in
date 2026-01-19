@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/stat-card";
 import { useCarrierData } from "@/lib/carrier-data-store";
-import { useShipments, useLoads, useSettlements, useDrivers } from "@/lib/api-hooks";
+import { useShipments, useLoads, useSettlements, useDrivers, useTrucks } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
 import { deriveRegion, buildRegionMetrics } from "@/lib/utils";
 import {
@@ -45,6 +45,7 @@ export default function CarrierRevenuePage() {
   const { data: allLoads = [] } = useLoads();
   const { data: allSettlements } = useSettlements();
   const { data: allDrivers = [] } = useDrivers();
+  const { data: allTrucks = [] } = useTrucks();
   
   const isSoloDriver = carrierType === "solo";
   
@@ -83,13 +84,64 @@ export default function CarrierRevenuePage() {
       ['delivered']
     );
 
-    // For solo drivers, get their truck info for the truck revenue chart
-    const truckRevenue = totalRealRevenue || shipmentRevenue;
-    const revenueByTruckType = truckRevenue > 0 ? [{
-      truckType: 'My Truck',
-      revenue: truckRevenue,
-      trips: myShipments.length
-    }] : [];
+    // Calculate revenue by truck from shipments with truck assignments
+    const truckRevenueMap: Record<string, { 
+      truckId: string; 
+      plate: string; 
+      truckType: string;
+      revenue: number; 
+      trips: number;
+    }> = {};
+    
+    myShipments.forEach((s: Shipment) => {
+      const load = allLoads.find((l: Load) => l.id === s.loadId);
+      const truckId = s.truckId;
+      if (load && truckId) {
+        const truck = allTrucks.find((t: any) => t.id === truckId);
+        const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
+        
+        if (!truckRevenueMap[truckId]) {
+          truckRevenueMap[truckId] = {
+            truckId,
+            plate: truck?.registrationNumber || truck?.licensePlate || 'Unknown',
+            truckType: truck?.truckType || (load as any).requiredTruckType || 'Unknown',
+            revenue: 0,
+            trips: 0
+          };
+        }
+        truckRevenueMap[truckId].revenue += tripRevenue;
+        truckRevenueMap[truckId].trips += 1;
+      }
+    });
+
+    // Best performing trucks - sorted by revenue
+    const bestPerformingTrucks = Object.values(truckRevenueMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .map(t => ({
+        truckId: t.truckId,
+        plate: t.plate,
+        revenue: t.revenue,
+        trips: t.trips
+      }));
+
+    // Calculate revenue by truck type from actual load data
+    const truckTypeRevenueMap: Record<string, { truckType: string; revenue: number; trips: number }> = {};
+    myShipments.forEach((s: Shipment) => {
+      const load = allLoads.find((l: Load) => l.id === s.loadId);
+      if (load) {
+        const truckType = (load as any).requiredTruckType || 'Unknown';
+        const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
+        
+        if (!truckTypeRevenueMap[truckType]) {
+          truckTypeRevenueMap[truckType] = { truckType, revenue: 0, trips: 0 };
+        }
+        truckTypeRevenueMap[truckType].revenue += tripRevenue;
+        truckTypeRevenueMap[truckType].trips += 1;
+      }
+    });
+
+    const revenueByTruckType = Object.values(truckTypeRevenueMap)
+      .sort((a, b) => b.revenue - a.revenue);
 
     // Calculate monthly reports from shipments for solo drivers
     const monthlyRevenueMap: Record<string, { revenue: number; trips: number }> = {};
@@ -213,11 +265,12 @@ export default function CarrierRevenuePage() {
       hasRealData: myShipments.length > 0 || carrierSettlements.length > 0,
       revenueByRegion,
       revenueByTruckType,
+      bestPerformingTrucks,
       monthlyReports,
       topShippers,
       revenueByDriver
     };
-  }, [allShipments, allLoads, allSettlements, allDrivers, user?.id]);
+  }, [allShipments, allLoads, allSettlements, allDrivers, allTrucks, user?.id]);
   
   const baseAnalytics = useMemo(() => getRevenueAnalytics(), [getRevenueAnalytics]);
   
@@ -243,10 +296,11 @@ export default function CarrierRevenuePage() {
         bestPerformingTrucks: []
       };
     }
+    // Use real data from actual shipments/loads when available
     return {
       ...baseAnalytics,
       totalRevenue: realRevenueData.hasRealData 
-        ? realRevenueData.totalRevenue + baseAnalytics.totalRevenue 
+        ? realRevenueData.totalRevenue 
         : baseAnalytics.totalRevenue,
       topShippers: realRevenueData.topShippers.length > 0 
         ? realRevenueData.topShippers 
@@ -254,6 +308,15 @@ export default function CarrierRevenuePage() {
       revenueByDriver: realRevenueData.revenueByDriver.length > 0 
         ? realRevenueData.revenueByDriver 
         : baseAnalytics.revenueByDriver,
+      bestPerformingTrucks: realRevenueData.bestPerformingTrucks.length > 0
+        ? realRevenueData.bestPerformingTrucks
+        : baseAnalytics.bestPerformingTrucks,
+      revenueByTruckType: realRevenueData.revenueByTruckType.length > 0
+        ? realRevenueData.revenueByTruckType
+        : baseAnalytics.revenueByTruckType,
+      revenueByRegion: realRevenueData.revenueByRegion.length > 0
+        ? realRevenueData.revenueByRegion
+        : baseAnalytics.revenueByRegion,
     };
   }, [baseAnalytics, realRevenueData, isSoloDriver]);
   

@@ -12947,7 +12947,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
       if (shipment.carrierId !== userId) {
         return res.status(403).json({ error: "You can only rate shippers for your own shipments" });
       }
-      if (shipment.status !== "delivered") {
+      // Allow rating if shipment is delivered OR if trip end OTP was verified (which sets status to delivered)
+      if (shipment.status !== "delivered" && !shipment.endOtpVerified) {
         return res.status(400).json({ error: "Can only rate after delivery is complete" });
       }
 

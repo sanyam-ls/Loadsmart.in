@@ -1496,9 +1496,10 @@ export class DatabaseStorage implements IStorage {
       .from(bids)
       .where(eq(bids.status, "pending"));
     
+    // Count bids that have counter offers (either status countered OR has counterAmount)
     const [counteredBidsResult] = await db.select({ count: sql<number>`count(*)::int` })
       .from(bids)
-      .where(eq(bids.status, "countered"));
+      .where(sql`(${bids.status} = 'countered' OR (${bids.counterAmount} IS NOT NULL AND ${bids.counterAmount}::numeric > 0))`);
     
     const [acceptedBidsResult] = await db.select({ count: sql<number>`count(*)::int` })
       .from(bids)

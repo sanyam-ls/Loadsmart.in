@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Key, CheckCircle, Clock, AlertCircle, PlayCircle, StopCircle, RefreshCw, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -57,22 +57,33 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
 
   const { data: otpStatusRaw, refetch: refetchStatus } = useOtpStatus(shipment.id);
   
-  // Use embedded load from tracking shipment first, then fallback to fetching
+  // Always fetch load data to ensure shipperId is available for rating dialog
   const embeddedLoad = (shipment as any)?.load;
   const embeddedShipperId = embeddedLoad?.shipperId;
   
   const { data: loadData } = useQuery<Load>({
     queryKey: ["/api/loads", shipment.loadId],
-    enabled: !!shipment.loadId && !embeddedShipperId,
+    enabled: !!shipment.loadId, // Always fetch - don't skip based on embedded data
+    staleTime: 60000,
   });
 
-  // Use embedded shipperId first, then fall back to fetched load data
-  const effectiveShipperId = embeddedShipperId || loadData?.shipperId;
+  // Use fetched load data first (more reliable), then embedded as fallback
+  const effectiveShipperId = loadData?.shipperId || embeddedShipperId;
 
   const { data: shipperData } = useQuery<{ id: string; companyName: string | null; username: string }>({
     queryKey: ["/api/users", effectiveShipperId],
     enabled: !!effectiveShipperId,
   });
+  
+  // Effect to open rating dialog when shipperId becomes available after trip end
+  useEffect(() => {
+    const pendingKey = getRatingPendingKey(shipment.id);
+    const hasPendingRating = sessionStorage.getItem(pendingKey) === "true";
+    
+    if (hasPendingRating && effectiveShipperId && !ratingDialogOpen) {
+      setRatingDialogOpen(true);
+    }
+  }, [effectiveShipperId, shipment.id, ratingDialogOpen]);
   const otpStatus = otpStatusRaw as OtpStatusData | undefined;
   const requestStartMutation = useRequestTripStartOtp();
   const requestRouteStartMutation = useRequestRouteStartOtp();
@@ -177,11 +188,15 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
       onStateChange?.();
       refetchStatus();
       
-      if (otpType === "trip_end" && effectiveShipperId) {
+      if (otpType === "trip_end") {
         // Store rating pending state in sessionStorage to survive component remounts
+        // This will show the rating dialog when shipperId becomes available
         const pendingKey = getRatingPendingKey(shipment.id);
         sessionStorage.setItem(pendingKey, "true");
-        setRatingDialogOpen(true);
+        // Open dialog immediately if shipperId is available, or the effect will handle it
+        if (effectiveShipperId) {
+          setRatingDialogOpen(true);
+        }
       }
     } catch (error: any) {
       toast({

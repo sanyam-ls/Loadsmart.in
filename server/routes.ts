@@ -12547,11 +12547,6 @@ RESPOND IN THIS EXACT JSON FORMAT:
   // Carrier verifies OTP and starts/ends trip
   app.post("/api/otp/verify", requireAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.session.userId!);
-      if (!user || user.role !== "carrier") {
-        return res.status(403).json({ error: "Only carriers can verify OTP" });
-      }
-
       const { shipmentId, otpType, otpCode } = req.body;
       if (!shipmentId || !otpType || !otpCode) {
         return res.status(400).json({ error: "Shipment ID, OTP type, and OTP code are required" });
@@ -12561,7 +12556,16 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(400).json({ error: "Invalid OTP type" });
       }
 
-      const shipment = await storage.getShipment(shipmentId);
+      // Parallel fetch user and shipment for speed
+      const [user, shipment] = await Promise.all([
+        storage.getUser(req.session.userId!),
+        storage.getShipment(shipmentId)
+      ]);
+      
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can verify OTP" });
+      }
+
       if (!shipment) {
         return res.status(404).json({ error: "Shipment not found" });
       }
@@ -12581,7 +12585,33 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(400).json({ error: verifyResult.message });
       }
 
-      // Update shipment based on OTP type
+      // Helper to run background tasks safely after response is sent
+      const runBackgroundTasks = (type: string, eventData: any, notificationData: { title: string; message: string }) => {
+        setImmediate(() => {
+          try {
+            broadcastMarketplaceEvent(type, eventData);
+          } catch (err) {
+            console.error(`Background broadcast error for ${type}:`, err);
+          }
+          storage.getLoad(shipment.loadId)
+            .then(load => {
+              if (load) {
+                return storage.createNotification({
+                  userId: load.shipperId,
+                  title: notificationData.title,
+                  message: notificationData.message,
+                  type: "success",
+                  isRead: false,
+                  contextType: "shipment",
+                  relatedLoadId: shipment.loadId,
+                });
+              }
+            })
+            .catch(err => console.error(`Background notification error:`, err));
+        });
+      };
+
+      // Update shipment based on OTP type - respond immediately, run background tasks async
       if (otpType === "trip_start") {
         await storage.updateShipment(shipmentId, {
           startOtpVerified: true,
@@ -12589,112 +12619,67 @@ RESPOND IN THIS EXACT JSON FORMAT:
           startedAt: new Date(),
         });
 
-        // Load status remains unchanged - route_start triggers in_transit
-
-        // Broadcast trip started
-        broadcastMarketplaceEvent("trip_started", {
-          shipmentId,
-          loadId: shipment.loadId,
-          carrierId: user.id,
-          carrierName: user.companyName || user.username,
-        });
-
-        // Notify shipper
-        const load = await storage.getLoad(shipment.loadId);
-        if (load) {
-          await storage.createNotification({
-            userId: load.shipperId,
-            title: "Trip Started",
-            message: `Your shipment is now in transit.`,
-            type: "success",
-            isRead: false,
-            contextType: "shipment",
-            relatedLoadId: shipment.loadId,
-          });
-        }
-
         res.json({ 
           success: true, 
           message: "Trip started successfully. Now request Route Start OTP.",
           shipmentStatus: "awaiting_route_start"
         });
-      } else if (otpType === "route_start") {
-        // Route start - puts shipment in transit
-        await storage.updateShipment(shipmentId, {
-          routeStartOtpVerified: true,
-          routeStartOtpVerifiedAt: new Date(),
-          status: "in_transit",
-        });
 
-        // Update load status to in_transit
-        await storage.updateLoad(shipment.loadId, { status: "in_transit" });
-
-        // Broadcast route started
-        broadcastMarketplaceEvent("route_started", {
+        runBackgroundTasks("trip_started", {
           shipmentId,
           loadId: shipment.loadId,
           carrierId: user.id,
           carrierName: user.companyName || user.username,
-        });
+        }, { title: "Trip Started", message: "Your shipment is now in transit." });
 
-        // Notify shipper
-        const load = await storage.getLoad(shipment.loadId);
-        if (load) {
-          await storage.createNotification({
-            userId: load.shipperId,
-            title: "Route Started",
-            message: `Your shipment is now in transit. GPS tracking activated.`,
-            type: "success",
-            isRead: false,
-            contextType: "shipment",
-            relatedLoadId: shipment.loadId,
-          });
-        }
+      } else if (otpType === "route_start") {
+        // Route start - puts shipment in transit - run updates in parallel
+        await Promise.all([
+          storage.updateShipment(shipmentId, {
+            routeStartOtpVerified: true,
+            routeStartOtpVerifiedAt: new Date(),
+            status: "in_transit",
+          }),
+          storage.updateLoad(shipment.loadId, { status: "in_transit" })
+        ]);
 
         res.json({ 
           success: true, 
           message: "Route started successfully. GPS tracking activated.",
           shipmentStatus: "in_transit"
         });
-      } else {
-        // trip_end
-        await storage.updateShipment(shipmentId, {
-          endOtpVerified: true,
-          endOtpVerifiedAt: new Date(),
-          status: "delivered",
-          completedAt: new Date(),
-        });
 
-        // Update load status
-        await storage.updateLoad(shipment.loadId, { status: "delivered" });
-
-        // Broadcast trip completed
-        broadcastMarketplaceEvent("trip_completed", {
+        runBackgroundTasks("route_started", {
           shipmentId,
           loadId: shipment.loadId,
           carrierId: user.id,
           carrierName: user.companyName || user.username,
-        });
+        }, { title: "Route Started", message: "Your shipment is now in transit. GPS tracking activated." });
 
-        // Notify shipper
-        const load = await storage.getLoad(shipment.loadId);
-        if (load) {
-          await storage.createNotification({
-            userId: load.shipperId,
-            title: "Delivery Completed",
-            message: `Your shipment has been delivered successfully.`,
-            type: "success",
-            isRead: false,
-            contextType: "shipment",
-            relatedLoadId: shipment.loadId,
-          });
-        }
+      } else {
+        // trip_end - run updates in parallel
+        await Promise.all([
+          storage.updateShipment(shipmentId, {
+            endOtpVerified: true,
+            endOtpVerifiedAt: new Date(),
+            status: "delivered",
+            completedAt: new Date(),
+          }),
+          storage.updateLoad(shipment.loadId, { status: "delivered" })
+        ]);
 
         res.json({ 
           success: true, 
           message: "Trip completed successfully. Delivery confirmed.",
           shipmentStatus: "delivered"
         });
+
+        runBackgroundTasks("trip_completed", {
+          shipmentId,
+          loadId: shipment.loadId,
+          carrierId: user.id,
+          carrierName: user.companyName || user.username,
+        }, { title: "Delivery Completed", message: "Your shipment has been delivered successfully." });
       }
     } catch (error) {
       console.error("Verify OTP error:", error);

@@ -974,7 +974,17 @@ export async function registerRoutes(
 
   app.patch("/api/trucks/:id", requireAuth, async (req, res) => {
     try {
-      const truck = await storage.updateTruck(req.params.id, req.body);
+      const updates = { ...req.body };
+      
+      // Convert date strings to Date objects for expiry fields
+      const dateFields = ['insuranceExpiry', 'fitnessExpiry', 'permitExpiry', 'pucExpiry', 'lastServiceDate', 'nextServiceDue'];
+      for (const field of dateFields) {
+        if (updates[field] && typeof updates[field] === 'string') {
+          updates[field] = new Date(updates[field]);
+        }
+      }
+      
+      const truck = await storage.updateTruck(req.params.id, updates);
       res.json(truck);
     } catch (error) {
       console.error("Update truck error:", error);

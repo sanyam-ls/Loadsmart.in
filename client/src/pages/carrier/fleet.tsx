@@ -83,11 +83,14 @@ interface TruckDocumentCardProps {
   documentUrl: string | null;
   expiryDate: Date;
   documentType: string;
+  expiryField: string;
   onUpload: (value: string) => void;
+  onExpiryChange: (date: string) => void;
   isUploading: boolean;
 }
 
-function TruckDocumentCard({ title, icon: Icon, documentUrl, expiryDate, documentType, onUpload, isUploading }: TruckDocumentCardProps) {
+function TruckDocumentCard({ title, icon: Icon, documentUrl, expiryDate, documentType, expiryField, onUpload, onExpiryChange, isUploading }: TruckDocumentCardProps) {
+  const [localExpiry, setLocalExpiry] = useState(format(new Date(expiryDate), "yyyy-MM-dd"));
   const daysLeft = getDaysUntilExpiry(expiryDate);
   const isExpired = daysLeft < 0;
   const isExpiringSoon = daysLeft >= 0 && daysLeft < 30;
@@ -111,6 +114,14 @@ function TruckDocumentCard({ title, icon: Icon, documentUrl, expiryDate, documen
   };
   
   const docMeta = documentUrl ? parseDocumentValue(documentUrl) : null;
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setLocalExpiry(newDate);
+    if (newDate) {
+      onExpiryChange(newDate);
+    }
+  };
   
   return (
     <Card className={getBorderClass()}>
@@ -121,7 +132,16 @@ function TruckDocumentCard({ title, icon: Icon, documentUrl, expiryDate, documen
             <div className="flex-1 space-y-2">
               <div>
                 <p className="font-medium">{title}</p>
-                <p className="text-sm text-muted-foreground">Expires: {formatDate(expiryDate)}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-muted-foreground">Expires:</span>
+                  <Input
+                    type="date"
+                    value={localExpiry}
+                    onChange={handleExpiryChange}
+                    className="h-7 w-[140px] text-xs"
+                    data-testid={`input-expiry-${documentType}`}
+                  />
+                </div>
               </div>
               
               <div className="pt-2">
@@ -178,6 +198,12 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
       setIsUploading(true);
       onDocumentUpdate(truck.truckId, field, value);
       setIsUploading(false);
+    }
+  };
+
+  const handleExpiryChange = (field: string) => (dateStr: string) => {
+    if (onDocumentUpdate) {
+      onDocumentUpdate(truck.truckId, field, dateStr);
     }
   };
   
@@ -309,7 +335,9 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
               documentUrl={truck.rcDocumentUrl}
               expiryDate={truck.insuranceExpiry}
               documentType="rc"
+              expiryField="insuranceExpiry"
               onUpload={handleDocumentUpload("rcDocumentUrl")}
+              onExpiryChange={handleExpiryChange("insuranceExpiry")}
               isUploading={isUploading}
             />
             
@@ -319,7 +347,9 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
               documentUrl={truck.insuranceDocumentUrl}
               expiryDate={truck.insuranceExpiry}
               documentType="insurance"
+              expiryField="insuranceExpiry"
               onUpload={handleDocumentUpload("insuranceDocumentUrl")}
+              onExpiryChange={handleExpiryChange("insuranceExpiry")}
               isUploading={isUploading}
             />
             
@@ -329,7 +359,9 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
               documentUrl={truck.fitnessDocumentUrl}
               expiryDate={truck.fitnessExpiry}
               documentType="fitness"
+              expiryField="fitnessExpiry"
               onUpload={handleDocumentUpload("fitnessDocumentUrl")}
+              onExpiryChange={handleExpiryChange("fitnessExpiry")}
               isUploading={isUploading}
             />
             
@@ -339,7 +371,9 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
               documentUrl={truck.permitDocumentUrl}
               expiryDate={truck.permitExpiry}
               documentType="permit"
+              expiryField="permitExpiry"
               onUpload={handleDocumentUpload("permitDocumentUrl")}
+              onExpiryChange={handleExpiryChange("permitExpiry")}
               isUploading={isUploading}
             />
             
@@ -349,7 +383,9 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
               documentUrl={truck.pucDocumentUrl}
               expiryDate={truck.pucExpiry}
               documentType="puc"
+              expiryField="pucExpiry"
               onUpload={handleDocumentUpload("pucDocumentUrl")}
+              onExpiryChange={handleExpiryChange("pucExpiry")}
               isUploading={isUploading}
             />
           </div>

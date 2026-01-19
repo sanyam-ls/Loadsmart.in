@@ -123,14 +123,16 @@ function AppContent() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center justify-between gap-4 p-3 border-b border-border sticky top-0 z-50 bg-background">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex-1 flex justify-center">
+          <header className="flex items-center justify-between gap-2 sm:gap-4 p-2 sm:p-3 border-b border-border sticky top-0 z-50 bg-background">
+            <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
+            <div className="flex-1 flex justify-center min-w-0 px-1 sm:px-2">
               <GlobalSearch />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <NotificationPanel />
-              <LanguageSwitcher />
+              <span className="hidden sm:inline-flex">
+                <LanguageSwitcher />
+              </span>
               <ThemeToggle />
             </div>
           </header>

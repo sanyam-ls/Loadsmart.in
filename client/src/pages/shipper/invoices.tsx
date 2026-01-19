@@ -875,7 +875,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                       </div>
                     </div>
                     <p className="text-base font-medium pt-2 border-t">
-                      Please include your Invoice Number ({selectedInvoice.invoiceNumber}) as payment reference.
+                      Please include your final Invoice Number as payment reference upon delivery.
                     </p>
                   </CardContent>
                 </Card>

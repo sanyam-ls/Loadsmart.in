@@ -1207,22 +1207,26 @@ export async function registerRoutes(
           // Counter offers can be stored as 'counter_offer' or 'message' with an amount
           const negotiations = await storage.getBidNegotiations(bid.id);
           
-          // Carrier's latest offer
-          const carrierMessages = negotiations
-            .filter(n => n.senderRole === "carrier" && n.amount && parseFloat(n.amount.toString()) > 0)
+          // Get all messages with amounts, sorted by most recent first
+          const messagesWithAmounts = negotiations
+            .filter(n => n.amount && parseFloat(n.amount.toString()) > 0)
             .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
           
+          // Carrier's latest offer
+          const carrierMessages = messagesWithAmounts.filter(n => n.senderRole === "carrier");
           const latestCarrierAmount = carrierMessages.length > 0 
             ? carrierMessages[0].amount 
             : null;
           
           // Admin's latest offer
-          const adminMessages = negotiations
-            .filter(n => n.senderRole === "admin" && n.amount && parseFloat(n.amount.toString()) > 0)
-            .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-          
+          const adminMessages = messagesWithAmounts.filter(n => n.senderRole === "admin");
           const latestAdminAmount = adminMessages.length > 0 
             ? adminMessages[0].amount 
+            : null;
+          
+          // The absolute latest negotiation amount from either party
+          const latestNegotiationAmount = messagesWithAmounts.length > 0 
+            ? messagesWithAmounts[0].amount 
             : null;
           
           return { 
@@ -1230,6 +1234,7 @@ export async function registerRoutes(
             load,
             latestCarrierAmount, // Carrier's latest counter offer
             latestAdminAmount,   // Admin's latest counter offer
+            latestNegotiationAmount, // Most recent amount from either party
           };
         })
       );

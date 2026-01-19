@@ -216,12 +216,12 @@ export function GlobalSearch() {
       <Button
         variant="outline"
         size="sm"
-        className="gap-2 text-muted-foreground w-full max-w-[280px] sm:w-64 justify-start"
+        className="gap-2 text-muted-foreground w-full sm:w-64 justify-start"
         onClick={() => setOpen(true)}
         data-testid="button-global-search"
       >
         <Search className="h-4 w-4 shrink-0" />
-        <span className="flex-1 text-left truncate text-xs sm:text-sm">{isShipper ? "Search..." : "Search..."}</span>
+        <span className="flex-1 text-left truncate text-xs sm:text-sm">{isShipper ? "Search loads..." : "Search..."}</span>
         <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
           <span className="text-xs">Ctrl</span>K
         </kbd>

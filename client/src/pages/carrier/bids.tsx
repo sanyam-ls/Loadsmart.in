@@ -546,7 +546,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
 
 export default function CarrierBidsPage() {
   const { t } = useTranslation();
-  const { bids: mockBids, updateBid, updateBidStatus } = useCarrierData();
+  const { updateBid, updateBidStatus } = useCarrierData();
   const { toast } = useToast();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -565,7 +565,7 @@ export default function CarrierBidsPage() {
     enabled: !!user && user.role === "carrier",
   });
   
-  // Convert real bids to CarrierBid format and merge with mock data
+  // Convert real bids to CarrierBid format (no mock data)
   const bids = useMemo(() => {
     const realBids: CarrierBid[] = realBidsData.map((bid) => {
       const load = bid.load as any;
@@ -621,13 +621,9 @@ export default function CarrierBidsPage() {
     };
     });
     
-    // Merge real bids with mock bids, prioritizing real bids
-    const realBidIds = new Set(realBids.map(b => b.bidId));
-    const realLoadIds = new Set(realBids.map(b => b.loadId));
-    const filteredMockBids = mockBids.filter(b => !realBidIds.has(b.bidId) && !realLoadIds.has(b.loadId));
-    
-    return [...realBids, ...filteredMockBids];
-  }, [realBidsData, mockBids]);
+    // Return only real bids from the API (no mock data)
+    return realBids;
+  }, [realBidsData]);
   
   // Auto-open negotiation dialog when navigating from notification with ?load= parameter
   useEffect(() => {

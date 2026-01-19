@@ -182,19 +182,31 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
 
   if (shipment.status === "delivered" || shipment.endOtpVerified) {
     return (
-      <Card className="border-green-200 dark:border-green-800">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+      <>
+        <Card className="border-green-200 dark:border-green-800">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="font-medium text-green-700 dark:text-green-400">Trip Completed</p>
+                <p className="text-sm text-muted-foreground">Delivery confirmed via OTP verification</p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium text-green-700 dark:text-green-400">Trip Completed</p>
-              <p className="text-sm text-muted-foreground">Delivery confirmed via OTP verification</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        {loadData?.shipperId && (
+          <ShipperRatingDialog
+            open={ratingDialogOpen}
+            onOpenChange={setRatingDialogOpen}
+            shipmentId={shipment.id}
+            loadId={shipment.loadId}
+            shipperId={loadData.shipperId}
+            shipperName={shipperData?.companyName || shipperData?.username || "Shipper"}
+          />
+        )}
+      </>
     );
   }
 

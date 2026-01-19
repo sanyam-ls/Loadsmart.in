@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "./queryClient";
-import type { Load, Bid, Truck, User, Shipment, Invoice, Notification, Document, CarrierProfile, NegotiationThread } from "@shared/schema";
+import type { Load, Bid, Truck, User, Shipment, Invoice, Notification, Document, CarrierProfile, NegotiationThread, Driver } from "@shared/schema";
 
 type LoadWithBids = Load & { bids?: Bid[]; bidCount?: number };
 type BidWithDetails = Bid & { carrier?: Partial<User>; load?: Load };
@@ -461,6 +461,13 @@ export function useSettlements() {
   return useQuery({
     queryKey: ['/api/settlements'],
     staleTime: 60000,
+  });
+}
+
+export function useDrivers() {
+  return useQuery<Driver[]>({
+    queryKey: ['/api/drivers'],
+    staleTime: 30000,
   });
 }
 

@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/stat-card";
 import { useCarrierData } from "@/lib/carrier-data-store";
-import { useShipments, useLoads, useSettlements } from "@/lib/api-hooks";
+import { useShipments, useLoads, useSettlements, useDrivers } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
 import { deriveRegion, buildRegionMetrics } from "@/lib/utils";
 import {
@@ -44,6 +44,7 @@ export default function CarrierRevenuePage() {
   const { data: allShipments = [] } = useShipments();
   const { data: allLoads = [] } = useLoads();
   const { data: allSettlements } = useSettlements();
+  const { data: allDrivers = [] } = useDrivers();
   
   const isSoloDriver = carrierType === "solo";
   
@@ -165,6 +166,46 @@ export default function CarrierRevenuePage() {
         lastLoadDate: format(shipper.lastDelivery, 'MMM dd, yyyy'),
         reliabilityScore: 95 // Default score for completed loads
       }));
+
+    // Calculate revenue by driver from delivered shipments with assigned drivers
+    const driverRevenueMap: Record<string, { 
+      driverId: string; 
+      driverName: string; 
+      revenue: number; 
+      trips: number;
+    }> = {};
+    
+    myShipments.forEach((s: Shipment) => {
+      const load = allLoads.find((l: Load) => l.id === s.loadId);
+      const shipmentDriverId = s.driverId;
+      if (load && shipmentDriverId) {
+        const driver = allDrivers.find(d => d.id === shipmentDriverId);
+        const driverName = driver?.name || 'Unknown Driver';
+        const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
+        
+        if (!driverRevenueMap[shipmentDriverId]) {
+          driverRevenueMap[shipmentDriverId] = {
+            driverId: shipmentDriverId,
+            driverName,
+            revenue: 0,
+            trips: 0
+          };
+        }
+        driverRevenueMap[shipmentDriverId].revenue += tripRevenue;
+        driverRevenueMap[shipmentDriverId].trips += 1;
+      }
+    });
+
+    const revenueByDriver = Object.values(driverRevenueMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .map((driver) => ({
+        driverId: driver.driverId,
+        driverName: driver.driverName,
+        revenue: driver.revenue,
+        trips: driver.trips,
+        avgPerTrip: driver.trips > 0 ? Math.round(driver.revenue / driver.trips) : 0,
+        safetyScore: 85 // Default safety score - can be enhanced with actual driver data
+      }));
     
     return {
       totalRevenue: totalRealRevenue || shipmentRevenue,
@@ -173,9 +214,10 @@ export default function CarrierRevenuePage() {
       revenueByRegion,
       revenueByTruckType,
       monthlyReports,
-      topShippers
+      topShippers,
+      revenueByDriver
     };
-  }, [allShipments, allLoads, allSettlements, user?.id]);
+  }, [allShipments, allLoads, allSettlements, allDrivers, user?.id]);
   
   const baseAnalytics = useMemo(() => getRevenueAnalytics(), [getRevenueAnalytics]);
   
@@ -209,6 +251,9 @@ export default function CarrierRevenuePage() {
       topShippers: realRevenueData.topShippers.length > 0 
         ? realRevenueData.topShippers 
         : baseAnalytics.topShippers,
+      revenueByDriver: realRevenueData.revenueByDriver.length > 0 
+        ? realRevenueData.revenueByDriver 
+        : baseAnalytics.revenueByDriver,
     };
   }, [baseAnalytics, realRevenueData, isSoloDriver]);
   

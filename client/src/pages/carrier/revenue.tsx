@@ -666,27 +666,135 @@ export default function CarrierRevenuePage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Trips Completed</CardTitle>
-                <CardDescription>Number of trips per month</CardDescription>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle className="text-lg">Trip Activity</CardTitle>
+                    <CardDescription>Daily trip completions over 30 days</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-6 flex-wrap">
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Total Trips</p>
+                      <p className="text-lg font-bold text-primary">{dailyRevenueData.daysWithRevenue}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">This Week</p>
+                      <p className="text-lg font-bold">
+                        {dailyRevenueData.chartData.slice(-7).filter(d => d.hasRevenue).length}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Avg/Week</p>
+                      <p className="text-lg font-bold">
+                        {(dailyRevenueData.daysWithRevenue / 4.3).toFixed(1)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                {monthlyChartData.length > 0 ? (
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyChartData}>
-                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 12 }} />
-                        <Tooltip />
-                        <Bar dataKey="trips" name="Trips" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                {dailyRevenueData.daysWithRevenue > 0 ? (
+                  <div className="space-y-4">
+                    {/* Trip timeline - showing each day */}
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={dailyRevenueData.chartData}>
+                          <defs>
+                            <linearGradient id="tripGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#8B5CF6" stopOpacity={1}/>
+                              <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0.6}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} vertical={false} />
+                          <XAxis 
+                            dataKey="date" 
+                            tick={{ fontSize: 10 }} 
+                            tickLine={false}
+                            axisLine={false}
+                            interval={4}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 10 }}
+                            tickLine={false}
+                            axisLine={false}
+                            width={30}
+                            allowDecimals={false}
+                          />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="bg-card border rounded-lg shadow-lg p-3">
+                                    <p className="font-medium text-sm mb-1">{data.fullDate}</p>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                      <span className="text-sm">
+                                        {data.hasRevenue ? 'Trip Completed' : 'No trips'}
+                                      </span>
+                                    </div>
+                                    {data.dayRevenue > 0 && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Earned: {formatCurrency(data.dayRevenue)}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar 
+                            dataKey={(d) => d.hasRevenue ? 1 : 0}
+                            name="Trips"
+                            fill="url(#tripGradient)"
+                            radius={[4, 4, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Weekly breakdown */}
+                    <div className="border-t pt-4">
+                      <p className="text-xs text-muted-foreground mb-3">Weekly Summary</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[0, 1, 2, 3].map(weekIdx => {
+                          const weekStart = weekIdx * 7;
+                          const weekData = dailyRevenueData.chartData.slice(weekStart, weekStart + 7);
+                          const weekTrips = weekData.filter(d => d.hasRevenue).length;
+                          const weekRevenue = weekData.reduce((sum, d) => sum + d.dayRevenue, 0);
+                          const weekLabel = weekIdx === 3 ? 'This Week' : `Week ${weekIdx + 1}`;
+                          
+                          return (
+                            <div key={weekIdx} className="p-2 rounded-lg bg-muted/50 text-center">
+                              <p className="text-xs text-muted-foreground">{weekLabel}</p>
+                              <p className="text-lg font-bold text-purple-500">{weekTrips}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatCurrency(weekRevenue)}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Activity heatmap legend */}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+                      <span>Less active</span>
+                      <div className="flex gap-1">
+                        <div className="w-3 h-3 rounded bg-muted/30" />
+                        <div className="w-3 h-3 rounded bg-purple-200" />
+                        <div className="w-3 h-3 rounded bg-purple-400" />
+                        <div className="w-3 h-3 rounded bg-purple-600" />
+                      </div>
+                      <span>More active</span>
+                    </div>
                   </div>
                 ) : (
                   <div className="h-80 flex items-center justify-center">
                     <div className="text-center text-muted-foreground">
                       <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
                       <p>No trips completed yet</p>
-                      <p className="text-sm">Complete trips to see monthly stats</p>
+                      <p className="text-sm">Complete trips to see activity stats</p>
                     </div>
                   </div>
                 )}

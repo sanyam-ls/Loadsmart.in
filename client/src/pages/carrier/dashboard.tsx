@@ -219,6 +219,35 @@ export default function CarrierDashboard() {
     };
   }, [allShipments, allSettlements, allLoads, user?.id, getRevenueAnalytics, mockCompletedTrips]);
 
+  // Calculate performance metrics from completed trips
+  const performanceMetrics = useMemo(() => {
+    const trips = mockCompletedTrips || [];
+    if (trips.length === 0) {
+      return null;
+    }
+
+    // Calculate on-time delivery rate
+    const onTimeCount = trips.filter(t => t.onTimeDelivery).length;
+    const onTimeRate = Math.round((onTimeCount / trips.length) * 100);
+
+    // Calculate average driver performance rating (out of 5)
+    const avgDriverRating = trips.reduce((sum, t) => sum + t.driverPerformanceRating, 0) / trips.length;
+
+    // Calculate average shipper rating (out of 5)
+    const avgShipperRating = trips.reduce((sum, t) => sum + t.shipperRating, 0) / trips.length;
+
+    // Calculate overall score (weighted average, out of 5)
+    const overallScore = (avgDriverRating * 0.4 + avgShipperRating * 0.3 + (onTimeRate / 100) * 5 * 0.3);
+
+    return {
+      onTimeRate,
+      reliabilityScore: avgDriverRating,
+      communicationScore: avgShipperRating,
+      overallScore,
+      totalTrips: trips.length
+    };
+  }, [mockCompletedTrips]);
+
   if (statsLoading || loadsLoading || isLoadingOnboarding) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -563,13 +592,95 @@ export default function CarrierDashboard() {
             </Tooltip>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center justify-center h-64">
-              <Star className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="font-medium text-muted-foreground">{t("dashboard.performanceDataUnavailable")}</p>
-              <p className="text-sm text-muted-foreground text-center mt-1">
-                {t("dashboard.completeMoreTrips")}
-              </p>
-            </div>
+            {performanceMetrics ? (
+              <div className="space-y-4">
+                {/* Overall Score */}
+                <div className="flex flex-col items-center justify-center py-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="h-8 w-8 text-yellow-500 fill-yellow-500" />
+                    <span className="text-3xl font-bold">{performanceMetrics.overallScore.toFixed(1)}</span>
+                    <span className="text-lg text-muted-foreground">/5.0</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Based on {performanceMetrics.totalTrips} completed trips
+                  </p>
+                </div>
+
+                {/* Individual Metrics */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Reliability</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>{performanceTooltips.reliability}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span className="font-semibold">{performanceMetrics.reliabilityScore.toFixed(1)}/5.0</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full" 
+                      style={{ width: `${(performanceMetrics.reliabilityScore / 5) * 100}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">On-Time Delivery</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>{performanceTooltips.onTime}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span className="font-semibold">{performanceMetrics.onTimeRate}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full" 
+                      style={{ width: `${performanceMetrics.onTimeRate}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Shipper Rating</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>{performanceTooltips.communication}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span className="font-semibold">{performanceMetrics.communicationScore.toFixed(1)}/5.0</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full" 
+                      style={{ width: `${(performanceMetrics.communicationScore / 5) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64">
+                <Star className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="font-medium text-muted-foreground">{t("dashboard.performanceDataUnavailable")}</p>
+                <p className="text-sm text-muted-foreground text-center mt-1">
+                  {t("dashboard.completeMoreTrips")}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

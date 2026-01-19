@@ -80,6 +80,9 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         queryClient.invalidateQueries({ queryKey: ["/api/carrier/bids"] });
         queryClient.invalidateQueries({ queryKey: ["/api/carrier/loads"] });
         queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/dashboard/stats"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/settlements"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
         
         const acceptHandlers = handlers.get("bid_accepted");
         acceptHandlers?.forEach(handler => handler(message));
@@ -98,6 +101,8 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
         queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/settlements"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/dashboard/stats"] });
         
         const invoiceHandlers = handlers.get("invoice_update");
         invoiceHandlers?.forEach(handler => handler(message));
@@ -132,6 +137,9 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
         queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/otp-queue"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/dashboard/stats"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/performance"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/settlements"] });
         
         const tripCompletedHandlers = handlers.get("trip_completed");
         tripCompletedHandlers?.forEach(handler => handler(message));

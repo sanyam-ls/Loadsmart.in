@@ -311,6 +311,17 @@ export const trucks = pgTable("trucks", {
   chassisNumber: text("chassis_number"), // Chassis number
   registrationNumber: text("registration_number"), // Registration certificate number (RC)
   bodyType: text("body_type"), // Body type (open, closed, container, etc.)
+  // Document expiry dates for Indian truck compliance
+  insuranceExpiry: timestamp("insurance_expiry"),
+  fitnessExpiry: timestamp("fitness_expiry"),
+  permitExpiry: timestamp("permit_expiry"),
+  pucExpiry: timestamp("puc_expiry"),
+  // Document URLs for Indian truck compliance
+  rcDocumentUrl: text("rc_document_url"), // Registration Certificate document
+  insuranceDocumentUrl: text("insurance_document_url"), // Insurance document
+  fitnessDocumentUrl: text("fitness_document_url"), // Fitness certificate document
+  permitDocumentUrl: text("permit_document_url"), // Permit document
+  pucDocumentUrl: text("puc_document_url"), // Pollution Under Control certificate
 });
 
 // Drivers table (for enterprise carriers)

@@ -312,7 +312,8 @@ export default function MyDocumentsPage() {
   // Group shipments by load number - show all loads, with or without documents
   const shipmentsByLoad: Record<number, ShipmentWithDocs> = {};
   carrierShipments.forEach((s: any) => {
-    const loadNum = s.load?.loadNumber || s.loadNumber;
+    // Use shipperLoadNumber from the load object (this is the LD-XXX number)
+    const loadNum = s.load?.shipperLoadNumber || s.load?.loadNumber || s.loadNumber;
     if (loadNum) {
       // Only add if not already exists, or if this one has more documents
       const existingDocs = shipmentsByLoad[loadNum]?.documents?.length || 0;

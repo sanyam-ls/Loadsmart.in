@@ -1,12 +1,13 @@
 import { useLocation, Redirect } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Truck, DollarSign, Package, Clock, TrendingUp, Route, Plus, ArrowRight, Star, MapPin, User, Info, Loader2, CheckCircle, XCircle, FileText, ShieldCheck, ShieldX, ShieldAlert, Eye, Bell, AlertTriangle, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
 import { useAuth } from "@/lib/auth-context";
-import { useTrucks, useLoads, useShipments } from "@/lib/api-hooks";
+import { useTrucks, useLoads, useShipments, useSettlements } from "@/lib/api-hooks";
+import { useCarrierData } from "@/lib/carrier-data-store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { connectMarketplace, onMarketplaceEvent, offMarketplaceEvent } from "@/lib/marketplace-socket";
@@ -175,6 +176,48 @@ export default function CarrierDashboard() {
   const { data: allTrucks } = useTrucks();
   const { data: allLoads, isLoading: loadsLoading } = useLoads();
   const { data: allShipments } = useShipments();
+  const { data: allSettlements } = useSettlements();
+  const { getRevenueAnalytics, completedTrips: mockCompletedTrips } = useCarrierData();
+
+  // Calculate combined revenue (API + mock data like Revenue page)
+  const combinedRevenueData = useMemo(() => {
+    const myShipments = (allShipments || []).filter((s: Shipment) => 
+      s.carrierId === user?.id && s.status === 'delivered'
+    );
+    
+    const carrierSettlements = Array.isArray(allSettlements) 
+      ? allSettlements.filter((s: any) => s.carrierId === user?.id && s.status === 'paid')
+      : [];
+    
+    // Calculate total real revenue from paid settlements
+    const totalSettlementRevenue = carrierSettlements.reduce((sum: number, s: any) => 
+      sum + parseFloat(s.carrierPayoutAmount?.toString() || '0'), 0
+    );
+    
+    // Calculate revenue from delivered shipments (fallback if no settlements)
+    const shipmentRevenue = myShipments.reduce((sum: number, s: Shipment) => {
+      const load = (allLoads || []).find((l: Load) => l.id === s.loadId);
+      return sum + (load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0);
+    }, 0);
+
+    // Get mock data revenue
+    const mockRevenue = getRevenueAnalytics();
+    const mockTotalRevenue = mockRevenue?.totalRevenue || 0;
+    const mockCompletedCount = mockCompletedTrips?.length || 0;
+
+    // Combine API revenue with mock data
+    const realRevenue = totalSettlementRevenue > 0 ? totalSettlementRevenue : shipmentRevenue;
+    const totalRevenue = realRevenue + mockTotalRevenue;
+    const totalTrips = myShipments.length + mockCompletedCount;
+    
+    return {
+      totalRevenue,
+      totalTrips,
+      hasData: totalRevenue > 0 || totalTrips > 0,
+      realTrips: myShipments.length,
+      mockTrips: mockCompletedCount
+    };
+  }, [allShipments, allSettlements, allLoads, user?.id, getRevenueAnalytics, mockCompletedTrips]);
 
   if (statsLoading || loadsLoading || isLoadingOnboarding) {
     return (
@@ -194,8 +237,10 @@ export default function CarrierDashboard() {
   const pendingBidsCount = dashboardStats?.pendingBidsCount || 0;
   const activeTripsCount = dashboardStats?.activeTripsCount || 0;
   const driversEnRoute = dashboardStats?.driversEnRoute || 0;
-  const currentMonthRevenue = dashboardStats?.currentMonthRevenue || 0;
-  const hasRevenueData = dashboardStats?.hasRevenueData || false;
+  
+  // Use combined revenue data (API + mock data) for consistency with Revenue page
+  const currentMonthRevenue = combinedRevenueData.totalRevenue;
+  const hasRevenueData = combinedRevenueData.hasData;
 
   const trucks = (allTrucks || []).filter((t: TruckType) => t.carrierId === user?.id);
   const loads = allLoads || [];
@@ -439,7 +484,7 @@ export default function CarrierDashboard() {
             title={t("dashboard.monthlyRevenue")}
             value={currentMonthRevenue > 0 ? formatCurrency(currentMonthRevenue) : t("dashboard.noData")}
             icon={DollarSign}
-            subtitle={hasRevenueData ? `${dashboardStats?.completedTripsThisMonth || 0} ${t("dashboard.tripsCompleted")}` : t("dashboard.completeTripsToEarn")}
+            subtitle={hasRevenueData ? `${combinedRevenueData.totalTrips} ${t("dashboard.tripsCompleted")}` : t("dashboard.completeTripsToEarn")}
           />
         </div>
       </div>

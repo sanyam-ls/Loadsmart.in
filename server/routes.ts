@@ -7298,6 +7298,27 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   });
 
+  // GET /api/carrier/documents - Get all carrier documents (compliance docs)
+  app.get("/api/carrier/documents", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Get all documents for this carrier that are NOT shipment documents
+      const allDocs = await storage.getDocumentsByUser(user.id);
+      
+      // Filter to only include compliance documents (no load_id)
+      const complianceDocs = allDocs.filter(doc => !doc.loadId);
+      
+      res.json(complianceDocs);
+    } catch (error) {
+      console.error("Get carrier documents error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // POST /api/carrier/documents - Upload a new document
   app.post("/api/carrier/documents", requireAuth, async (req, res) => {
     try {

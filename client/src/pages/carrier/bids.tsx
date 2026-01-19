@@ -216,8 +216,8 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
           message: `Counter offer: Rs. ${parseInt(counterAmount).toLocaleString("en-IN")}`,
         });
         setShowCounterInput(false);
-        // Invalidate carrier bids cache
-        queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
+        // Invalidate and immediately refetch carrier bids cache
+        await queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
         toast({ title: "Counter Sent", description: `Your counter offer of ${formatCurrency(parseInt(counterAmount))} has been sent.` });
       } else {
         // For regular messages, use the negotiate endpoint
@@ -226,6 +226,8 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
           message: newMessage,
         });
         setNewMessage("");
+        // Invalidate and immediately refetch carrier bids cache
+        await queryClient.invalidateQueries({ queryKey: ['/api/carrier/bids'] });
         toast({ title: "Message Sent", description: "Your message has been sent to the admin." });
       }
     } catch {

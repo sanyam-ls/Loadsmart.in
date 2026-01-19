@@ -344,26 +344,49 @@ export default function CarrierRevenuePage() {
                   <CardContent>
                     <ScrollArea className="h-[400px]">
                       <div className="space-y-3">
-                        {analytics.monthlyReports.slice(0, 6).flatMap((month, monthIdx) => 
-                          Array.from({ length: month.tripsCompleted > 5 ? 5 : month.tripsCompleted }, (_, tripIdx) => {
-                            const tripRevenue = month.avgRevenuePerTrip * (0.9 + Math.random() * 0.2);
-                            const platformFee = tripRevenue * 0.1;
-                            const netPayout = tripRevenue - platformFee;
+                        {(() => {
+                          // Get delivered shipments with their load data
+                          const deliveredShipments = allShipments
+                            .filter((s: Shipment) => s.carrierId === user?.id && s.status === 'delivered')
+                            .slice(0, 10);
+                          
+                          if (deliveredShipments.length === 0) {
                             return (
-                              <div key={`${monthIdx}-${tripIdx}`} className="p-4 rounded-lg bg-muted/50 flex items-center justify-between gap-4 flex-wrap">
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Truck className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                <p>No completed trips yet</p>
+                                <p className="text-sm">Complete deliveries to see your earnings</p>
+                              </div>
+                            );
+                          }
+                          
+                          return deliveredShipments.map((shipment: Shipment, idx: number) => {
+                            const load = allLoads.find((l: Load) => l.id === shipment.loadId);
+                            const grossRevenue = load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) : 0;
+                            const carrierPayout = grossRevenue * 0.85; // 85% carrier share
+                            const platformFee = grossRevenue * 0.15; // 15% platform fee
+                            const route = load 
+                              ? `${(load as any).pickupCity || 'Origin'} to ${(load as any).dropoffCity || 'Destination'}`
+                              : 'Route details unavailable';
+                            const completedDate = shipment.completedAt 
+                              ? format(new Date(shipment.completedAt), 'MMM dd, yyyy')
+                              : 'Recently';
+                            
+                            return (
+                              <div key={shipment.id} className="p-4 rounded-lg bg-muted/50 flex items-center justify-between gap-4 flex-wrap" data-testid={`trip-payout-${idx}`}>
                                 <div className="flex items-center gap-3">
                                   <div className="p-2 rounded-lg bg-primary/10">
                                     <Truck className="h-4 w-4 text-primary" />
                                   </div>
                                   <div>
-                                    <p className="font-medium">Trip #{monthIdx * 5 + tripIdx + 1}</p>
-                                    <p className="text-xs text-muted-foreground">{month.month}</p>
+                                    <p className="font-medium text-sm">{route}</p>
+                                    <p className="text-xs text-muted-foreground">{completedDate}</p>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-4 flex-wrap">
                                   <div className="text-right">
                                     <p className="text-xs text-muted-foreground">Gross</p>
-                                    <p className="font-medium">{formatCurrency(tripRevenue)}</p>
+                                    <p className="font-medium">{formatCurrency(grossRevenue)}</p>
                                   </div>
                                   <div className="text-right">
                                     <p className="text-xs text-muted-foreground">Deduction</p>
@@ -371,14 +394,14 @@ export default function CarrierRevenuePage() {
                                   </div>
                                   <div className="text-right">
                                     <p className="text-xs text-muted-foreground">Net</p>
-                                    <p className="font-bold text-green-600">{formatCurrency(netPayout)}</p>
+                                    <p className="font-bold text-green-600">{formatCurrency(carrierPayout)}</p>
                                   </div>
                                   <Badge variant="default">Paid</Badge>
                                 </div>
                               </div>
                             );
-                          })
-                        )}
+                          });
+                        })()}
                       </div>
                     </ScrollArea>
                   </CardContent>

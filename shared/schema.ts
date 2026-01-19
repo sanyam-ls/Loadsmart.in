@@ -322,6 +322,9 @@ export const drivers = pgTable("drivers", {
   email: text("email"),
   licenseNumber: text("license_number"),
   licenseExpiry: timestamp("license_expiry"),
+  licenseImageUrl: text("license_image_url"),
+  aadhaarNumber: text("aadhaar_number"),
+  aadhaarImageUrl: text("aadhaar_image_url"),
   status: text("status").default("available"), // available, on_trip, inactive
   assignedTruckId: varchar("assigned_truck_id").references(() => trucks.id),
   createdAt: timestamp("created_at").defaultNow(),

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { 
   User, Phone, AlertTriangle, Plus, Search, Calendar, 
-  Trash2, Pencil, Loader2, CheckCircle, XCircle, Truck
+  Trash2, Pencil, Loader2, CheckCircle, XCircle, Truck, FileText, CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DocumentUpload } from "@/components/DocumentUpload";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,9 @@ const driverFormSchema = z.object({
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   licenseNumber: z.string().optional(),
   licenseExpiry: z.string().optional(),
+  licenseImageUrl: z.string().optional(),
+  aadhaarNumber: z.string().optional(),
+  aadhaarImageUrl: z.string().optional(),
   status: z.enum(["available", "on_trip", "inactive"]).default("available"),
 });
 
@@ -98,6 +102,9 @@ export default function CarrierDriversPage() {
       email: "",
       licenseNumber: "",
       licenseExpiry: "",
+      licenseImageUrl: "",
+      aadhaarNumber: "",
+      aadhaarImageUrl: "",
       status: "available",
     },
   });
@@ -108,6 +115,9 @@ export default function CarrierDriversPage() {
         ...data,
         licenseExpiry: data.licenseExpiry ? new Date(data.licenseExpiry).toISOString() : null,
         email: data.email || null,
+        licenseImageUrl: data.licenseImageUrl || null,
+        aadhaarNumber: data.aadhaarNumber || null,
+        aadhaarImageUrl: data.aadhaarImageUrl || null,
       });
     },
     onSuccess: () => {
@@ -126,6 +136,9 @@ export default function CarrierDriversPage() {
       return apiRequest("PATCH", `/api/drivers/${id}`, {
         ...data,
         licenseExpiry: data.licenseExpiry ? new Date(data.licenseExpiry).toISOString() : undefined,
+        licenseImageUrl: data.licenseImageUrl || null,
+        aadhaarNumber: data.aadhaarNumber || null,
+        aadhaarImageUrl: data.aadhaarImageUrl || null,
       });
     },
     onSuccess: () => {
@@ -199,6 +212,9 @@ export default function CarrierDriversPage() {
       email: "",
       licenseNumber: "",
       licenseExpiry: "",
+      licenseImageUrl: "",
+      aadhaarNumber: "",
+      aadhaarImageUrl: "",
       status: "available",
     });
     setIsAddDialogOpen(true);
@@ -211,6 +227,9 @@ export default function CarrierDriversPage() {
       email: driver.email || "",
       licenseNumber: driver.licenseNumber || "",
       licenseExpiry: driver.licenseExpiry ? format(new Date(driver.licenseExpiry), "yyyy-MM-dd") : "",
+      licenseImageUrl: driver.licenseImageUrl || "",
+      aadhaarNumber: driver.aadhaarNumber || "",
+      aadhaarImageUrl: driver.aadhaarImageUrl || "",
       status: (driver.status as "available" | "on_trip" | "inactive") || "available",
     });
     setEditingDriver(driver);
@@ -409,9 +428,31 @@ export default function CarrierDriversPage() {
                     <span>Expires: {format(new Date(driver.licenseExpiry), "MMM d, yyyy")}</span>
                   </div>
                 )}
+                {driver.aadhaarNumber && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Aadhaar: {driver.aadhaarNumber}</span>
+                  </div>
+                )}
                 {driver.email && (
                   <div className="text-sm text-muted-foreground truncate">
                     {driver.email}
+                  </div>
+                )}
+                {(driver.licenseImageUrl || driver.aadhaarImageUrl) && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {driver.licenseImageUrl && (
+                      <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                        <FileText className="h-3 w-3 mr-1" />
+                        License Doc
+                      </Badge>
+                    )}
+                    {driver.aadhaarImageUrl && (
+                      <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                        <FileText className="h-3 w-3 mr-1" />
+                        Aadhaar Doc
+                      </Badge>
+                    )}
                   </div>
                 )}
                 <div className="flex justify-end gap-2 pt-2 border-t">
@@ -448,11 +489,11 @@ export default function CarrierDriversPage() {
           form.reset();
         }
       }}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDriver ? "Edit Driver" : "Add New Driver"}</DialogTitle>
             <DialogDescription>
-              {editingDriver ? "Update driver information" : "Add a new driver to your team"}
+              {editingDriver ? "Update driver information and documents" : "Add a new driver to your team with their documents"}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -517,6 +558,55 @@ export default function CarrierDriversPage() {
                     <FormLabel>License Expiry Date (Optional)</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} data-testid="input-driver-license-expiry" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="licenseImageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>License Image (Optional)</FormLabel>
+                    <FormControl>
+                      <DocumentUpload
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Upload license image"
+                        testId="upload-driver-license-image"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="aadhaarNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Aadhaar Number (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="1234-5678-9012" {...field} data-testid="input-driver-aadhaar" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="aadhaarImageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Aadhaar Card Image (Optional)</FormLabel>
+                    <FormControl>
+                      <DocumentUpload
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Upload Aadhaar card image"
+                        testId="upload-driver-aadhaar-image"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -16,10 +16,10 @@ import { useShipments, useLoads, useSettlements } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
 import { deriveRegion, buildRegionMetrics } from "@/lib/utils";
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine, CartesianGrid
 } from "recharts";
-import { format } from "date-fns";
+import { format, subDays, startOfDay, eachDayOfInterval, parseISO } from "date-fns";
 import type { Shipment, Load } from "@shared/schema";
 
 function formatCurrency(amount: number | undefined | null): string {
@@ -173,6 +173,88 @@ export default function CarrierRevenuePage() {
     profit: m.totalRevenue * (m.profitMargin / 100),
     trips: m.tripsCompleted
   }));
+
+  // Create daily revenue trend data (stock-market style) from actual shipments
+  const dailyRevenueData = useMemo(() => {
+    // Get delivered shipments for this carrier
+    const myDeliveredShipments = allShipments.filter((s: Shipment) => 
+      s.carrierId === user?.id && s.status === 'delivered' && s.completedAt
+    );
+
+    // Create date range for last 30 days
+    const today = startOfDay(new Date());
+    const thirtyDaysAgo = subDays(today, 30);
+    const dateRange = eachDayOfInterval({ start: thirtyDaysAgo, end: today });
+
+    // Map revenue to each day
+    const dailyRevenue: { [key: string]: number } = {};
+    dateRange.forEach(date => {
+      dailyRevenue[format(date, 'yyyy-MM-dd')] = 0;
+    });
+
+    // Accumulate revenue by completion date
+    myDeliveredShipments.forEach((shipment: Shipment) => {
+      if (!shipment.completedAt) return;
+      const completedDate = format(new Date(shipment.completedAt), 'yyyy-MM-dd');
+      const load = allLoads.find((l: Load) => l.id === shipment.loadId);
+      const revenue = load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
+      
+      if (dailyRevenue[completedDate] !== undefined) {
+        dailyRevenue[completedDate] += revenue;
+      }
+    });
+
+    // Calculate cumulative revenue and format for chart
+    let cumulativeRevenue = 0;
+    const chartData = dateRange.map((date, index) => {
+      const dateKey = format(date, 'yyyy-MM-dd');
+      const dayRevenue = dailyRevenue[dateKey];
+      cumulativeRevenue += dayRevenue;
+      
+      // Calculate change from previous day
+      const prevIndex = index > 0 ? index - 1 : 0;
+      const prevDateKey = format(dateRange[prevIndex], 'yyyy-MM-dd');
+      const prevDayCumulative = index > 0 
+        ? chartData && chartData[index - 1]?.cumulative || 0
+        : 0;
+      
+      return {
+        date: format(date, 'MMM dd'),
+        fullDate: format(date, 'MMM dd, yyyy'),
+        day: format(date, 'dd'),
+        dayRevenue,
+        cumulative: cumulativeRevenue,
+        change: index > 0 ? cumulativeRevenue - prevDayCumulative : 0,
+        hasRevenue: dayRevenue > 0
+      };
+    });
+
+    // Calculate total and average for metrics
+    const totalRevenue = cumulativeRevenue;
+    const avgDailyRevenue = totalRevenue / dateRange.length;
+    const maxDailyRevenue = Math.max(...Object.values(dailyRevenue));
+    const daysWithRevenue = Object.values(dailyRevenue).filter(r => r > 0).length;
+    
+    // Calculate week-over-week change
+    const last7Days = chartData.slice(-7);
+    const prev7Days = chartData.slice(-14, -7);
+    const last7Revenue = last7Days.reduce((sum, d) => sum + d.dayRevenue, 0);
+    const prev7Revenue = prev7Days.reduce((sum, d) => sum + d.dayRevenue, 0);
+    const weeklyChange = prev7Revenue > 0 
+      ? ((last7Revenue - prev7Revenue) / prev7Revenue) * 100 
+      : (last7Revenue > 0 ? 100 : 0);
+
+    return {
+      chartData,
+      totalRevenue,
+      avgDailyRevenue,
+      maxDailyRevenue,
+      daysWithRevenue,
+      weeklyChange,
+      last7Revenue,
+      prev7Revenue
+    };
+  }, [allShipments, allLoads, user?.id]);
 
   const truckTypeChartData = analytics.revenueByTruckType.map((t, i) => ({
     name: t.truckType,
@@ -413,49 +495,174 @@ export default function CarrierRevenuePage() {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
+            <Card className="col-span-full">
               <CardHeader>
-                <CardTitle className="text-lg">Monthly Revenue Trend</CardTitle>
-                <CardDescription>Revenue and profit over the past months</CardDescription>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle className="text-lg">Revenue Performance</CardTitle>
+                    <CardDescription>30-day cumulative earnings trend</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-6 flex-wrap">
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">This Week</p>
+                      <p className="text-lg font-bold">{formatCurrency(dailyRevenueData.last7Revenue)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Week Change</p>
+                      <div className="flex items-center gap-1 justify-end">
+                        {dailyRevenueData.weeklyChange >= 0 ? (
+                          <ArrowUpRight className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <ArrowDownRight className="h-4 w-4 text-red-600" />
+                        )}
+                        <span className={`text-lg font-bold ${dailyRevenueData.weeklyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {dailyRevenueData.weeklyChange >= 0 ? '+' : ''}{dailyRevenueData.weeklyChange.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Avg Daily</p>
+                      <p className="text-lg font-bold">{formatCurrency(dailyRevenueData.avgDailyRevenue)}</p>
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                {monthlyChartData.length > 0 ? (
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={monthlyChartData}>
-                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                        <YAxis 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(v) => `${(v / 100000).toFixed(0)}L`}
-                        />
-                        <Tooltip 
-                          formatter={(value: number) => formatCurrency(value)}
-                          labelStyle={{ color: "var(--foreground)" }}
-                        />
-                        <Legend />
-                        <Area 
-                          type="monotone" 
-                          dataKey="revenue" 
-                          name="Revenue"
-                          stroke="#3B82F6" 
-                          fill="#3B82F680"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="profit" 
-                          name="Profit"
-                          stroke="#10B981" 
-                          fill="#10B98180"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                {dailyRevenueData.totalRevenue > 0 ? (
+                  <div className="space-y-4">
+                    {/* Main cumulative chart - stock market style */}
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={dailyRevenueData.chartData}>
+                          <defs>
+                            <linearGradient id="cumulativeGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
+                              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.05}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                          <XAxis 
+                            dataKey="date" 
+                            tick={{ fontSize: 10 }} 
+                            tickLine={false}
+                            axisLine={false}
+                            interval={4}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 10 }}
+                            tickFormatter={(v) => v >= 100000 ? `${(v / 100000).toFixed(1)}L` : `${(v / 1000).toFixed(0)}K`}
+                            tickLine={false}
+                            axisLine={false}
+                            width={50}
+                          />
+                          <Tooltip 
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="bg-card border rounded-lg shadow-lg p-3 min-w-[180px]">
+                                    <p className="font-medium text-sm mb-2">{data.fullDate}</p>
+                                    <div className="space-y-1">
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-xs text-muted-foreground">Total Earnings</span>
+                                        <span className="text-sm font-bold text-primary">{formatCurrency(data.cumulative)}</span>
+                                      </div>
+                                      {data.dayRevenue > 0 && (
+                                        <div className="flex justify-between gap-4">
+                                          <span className="text-xs text-muted-foreground">Day Revenue</span>
+                                          <span className="text-sm font-semibold text-green-600">+{formatCurrency(data.dayRevenue)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <ReferenceLine 
+                            y={dailyRevenueData.avgDailyRevenue * 30} 
+                            stroke="#F59E0B" 
+                            strokeDasharray="5 5" 
+                            label={{ 
+                              value: 'Avg', 
+                              position: 'right', 
+                              fontSize: 10,
+                              fill: '#F59E0B'
+                            }} 
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="cumulative" 
+                            stroke="#3B82F6" 
+                            strokeWidth={2}
+                            fill="url(#cumulativeGradient)"
+                            dot={false}
+                            activeDot={{ r: 6, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                    
+                    {/* Daily revenue bars - shows individual trip days */}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">Daily Trip Revenue</p>
+                      <div className="h-20">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dailyRevenueData.chartData}>
+                            <XAxis dataKey="day" hide />
+                            <Tooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  if (data.dayRevenue === 0) return null;
+                                  return (
+                                    <div className="bg-card border rounded-lg shadow-lg p-2">
+                                      <p className="text-xs font-medium">{data.fullDate}</p>
+                                      <p className="text-sm font-bold text-green-600">{formatCurrency(data.dayRevenue)}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Bar 
+                              dataKey="dayRevenue" 
+                              fill="#10B981"
+                              radius={[2, 2, 0, 0]}
+                              opacity={0.8}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Quick stats */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t">
+                      <div className="text-center p-2 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground">30-Day Total</p>
+                        <p className="font-bold text-primary">{formatCurrency(dailyRevenueData.totalRevenue)}</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground">Active Days</p>
+                        <p className="font-bold">{dailyRevenueData.daysWithRevenue} days</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground">Best Day</p>
+                        <p className="font-bold text-green-600">{formatCurrency(dailyRevenueData.maxDailyRevenue)}</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground">Last Week</p>
+                        <p className="font-bold">{formatCurrency(dailyRevenueData.prev7Revenue)}</p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="h-80 flex items-center justify-center">
                     <div className="text-center text-muted-foreground">
                       <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No monthly data yet</p>
-                      <p className="text-sm">Complete trips to see revenue trends</p>
+                      <p>No revenue data yet</p>
+                      <p className="text-sm">Complete trips to see earnings trends</p>
                     </div>
                   </div>
                 )}

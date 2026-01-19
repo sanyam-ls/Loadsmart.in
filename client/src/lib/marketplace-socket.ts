@@ -82,6 +82,8 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
         queryClient.invalidateQueries({ queryKey: ["/api/carrier/dashboard/stats"] });
         queryClient.invalidateQueries({ queryKey: ["/api/settlements"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/settlements/carrier"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/performance"] });
         queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
         
         const acceptHandlers = handlers.get("bid_accepted");
@@ -102,6 +104,7 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         queryClient.invalidateQueries({ queryKey: ["/api/invoices/shipper"] });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
         queryClient.invalidateQueries({ queryKey: ["/api/settlements"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/settlements/carrier"] });
         queryClient.invalidateQueries({ queryKey: ["/api/carrier/dashboard/stats"] });
         
         const invoiceHandlers = handlers.get("invoice_update");
@@ -140,6 +143,7 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         queryClient.invalidateQueries({ queryKey: ["/api/carrier/dashboard/stats"] });
         queryClient.invalidateQueries({ queryKey: ["/api/carrier/performance"] });
         queryClient.invalidateQueries({ queryKey: ["/api/settlements"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/settlements/carrier"] });
         
         const tripCompletedHandlers = handlers.get("trip_completed");
         tripCompletedHandlers?.forEach(handler => handler(message));

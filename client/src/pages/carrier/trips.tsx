@@ -204,9 +204,16 @@ export default function TripsPage() {
 
   const activeTrips = useMemo(() => {
     // Use tracking shipments which include enriched load data
+    console.log("[Trips Debug] trackingShipments count:", trackingShipments.length);
+    console.log("[Trips Debug] user?.id:", user?.id);
+    
     const carrierShipments = trackingShipments.filter(
       (s: any) => s.carrierId === user?.id && s.status !== "delivered" && s.status !== "cancelled"
     );
+    
+    console.log("[Trips Debug] Filtered carrier shipments:", carrierShipments.length);
+    console.log("[Trips Debug] Shipment load numbers:", carrierShipments.map((s: any) => s.load?.shipperLoadNumber));
+    
     return carrierShipments.map((shipment: any) => {
       // Extract load from enriched tracking shipment, or fall back to loads array
       const enrichedLoad = shipment.load;

@@ -919,17 +919,25 @@ export async function registerRoutes(
         const carrierShipments = await storage.getShipmentsByCarrier(user.id);
         const allBids = await storage.getBidsByCarrier(user.id);
         
-        // Find trucks in active shipments
+        // Find trucks in active shipments (not in terminal status)
         const trucksInActiveShipments = new Set(
           carrierShipments
             .filter(s => s.truckId && !terminalStatuses.includes(s.status || ''))
             .map(s => s.truckId)
         );
         
-        // Find trucks in accepted bids
+        // Create a set of load IDs that have shipments in terminal status
+        const loadsWithCompletedShipments = new Set(
+          carrierShipments
+            .filter(s => terminalStatuses.includes(s.status || ''))
+            .map(s => s.loadId)
+        );
+        
+        // Find trucks in accepted bids where shipment is NOT yet completed
+        // If a bid's load has a shipment in terminal status, the truck should be available
         const trucksInAcceptedBids = new Set(
           allBids
-            .filter(b => b.truckId && b.status === 'accepted')
+            .filter(b => b.truckId && b.status === 'accepted' && !loadsWithCompletedShipments.has(b.loadId))
             .map(b => b.truckId)
         );
         
@@ -1029,17 +1037,25 @@ export async function registerRoutes(
       const carrierShipments = await storage.getShipmentsByCarrier(user.id);
       const allBids = await storage.getBidsByCarrier(user.id);
       
-      // Find drivers in active shipments
+      // Find drivers in active shipments (not in terminal status)
       const driversInActiveShipments = new Set(
         carrierShipments
           .filter(s => s.driverId && !terminalStatuses.includes(s.status || ''))
           .map(s => s.driverId)
       );
       
-      // Find drivers in accepted bids
+      // Create a set of load IDs that have shipments in terminal status
+      const loadsWithCompletedShipments = new Set(
+        carrierShipments
+          .filter(s => terminalStatuses.includes(s.status || ''))
+          .map(s => s.loadId)
+      );
+      
+      // Find drivers in accepted bids where shipment is NOT yet completed
+      // If a bid's load has a shipment in terminal status, the driver should be available
       const driversInAcceptedBids = new Set(
         allBids
-          .filter(b => b.driverId && b.status === 'accepted')
+          .filter(b => b.driverId && b.status === 'accepted' && !loadsWithCompletedShipments.has(b.loadId))
           .map(b => b.driverId)
       );
       

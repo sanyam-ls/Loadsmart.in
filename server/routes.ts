@@ -10931,6 +10931,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
               materialType: load.materialType,
               weight: load.weight,
               requiredTruckType: load.requiredTruckType,
+              finalPrice: load.finalPrice,
+              adminFinalPrice: load.adminFinalPrice,
+              shipperId: load.shipperId,
+              cargoType: load.goodsToBeCarried,
+              distance: load.distance,
             } : null,
             carrier: carrier ? {
               id: carrier.id,

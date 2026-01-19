@@ -7225,11 +7225,26 @@ RESPOND IN THIS EXACT JSON FORMAT:
       const activeShipments = allShipments.filter(s => activeStatuses.includes(s.status || ''));
       
       // Active trucks - those assigned to active shipments
-      const activeTruckIds = new Set(activeShipments.map(s => s.truckId).filter(Boolean));
-      const activeTruckCount = activeTruckIds.size;
+      // For solo drivers (1 truck), if they have active shipments, count the truck as active
+      let activeTruckCount = 0;
+      if (allTrucks.length === 1 && activeShipments.length > 0) {
+        // Solo driver with active shipments - their truck is active
+        activeTruckCount = 1;
+      } else {
+        // Fleet carrier - count trucks with truckId in shipments
+        const activeTruckIds = new Set(activeShipments.map(s => s.truckId).filter(Boolean));
+        activeTruckCount = activeTruckIds.size;
+      }
       
-      // Available trucks
-      const availableTruckCount = allTrucks.filter(t => t.isAvailable === true).length;
+      // Available trucks - for solo drivers, if they have active shipments, truck is not available
+      let availableTruckCount = 0;
+      if (allTrucks.length === 1) {
+        // Solo driver - truck is available only if no active shipments
+        availableTruckCount = activeShipments.length === 0 ? 1 : 0;
+      } else {
+        // Fleet carrier - count trucks marked as available
+        availableTruckCount = allTrucks.filter(t => t.isAvailable === true).length;
+      }
       
       // Pending bids
       const pendingBidsCount = allBids.filter(b => b.status === "pending" || b.status === "countered").length;

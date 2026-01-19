@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DocumentUpload } from "@/components/DocumentUpload";
+import { DocumentUploadWithCamera } from "@/components/DocumentUploadWithCamera";
 import {
   Select,
   SelectContent,
@@ -570,10 +570,11 @@ export default function CarrierDriversPage() {
                   <FormItem>
                     <FormLabel>License Image (Optional)</FormLabel>
                     <FormControl>
-                      <DocumentUpload
+                      <DocumentUploadWithCamera
                         value={field.value || ""}
                         onChange={field.onChange}
-                        placeholder="Upload license image"
+                        placeholder="Upload or capture license image"
+                        documentType="driver_license"
                         testId="upload-driver-license-image"
                       />
                     </FormControl>
@@ -601,10 +602,11 @@ export default function CarrierDriversPage() {
                   <FormItem>
                     <FormLabel>Aadhaar Card Image (Optional)</FormLabel>
                     <FormControl>
-                      <DocumentUpload
+                      <DocumentUploadWithCamera
                         value={field.value || ""}
                         onChange={field.onChange}
-                        placeholder="Upload Aadhaar card image"
+                        placeholder="Upload or capture Aadhaar card"
+                        documentType="driver_aadhaar"
                         testId="upload-driver-aadhaar-image"
                       />
                     </FormControl>

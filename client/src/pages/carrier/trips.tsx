@@ -541,7 +541,7 @@ export default function TripsPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-420px)]">
+            <ScrollArea className="h-[calc(100vh-320px)]">
               <div className="p-3 space-y-2">
                 {activeTrips.map((trip) => (
                   <div
@@ -578,10 +578,10 @@ export default function TripsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 flex flex-col h-[calc(100vh-200px)]">
           {selectedTrip ? (
             <>
-              <CardHeader className="pb-3 border-b border-border">
+              <CardHeader className="pb-3 border-b border-border flex-shrink-0">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -618,9 +618,9 @@ export default function TripsPage() {
                 </div>
               </CardHeader>
               
-              <CardContent className="p-0">
-                <Tabs value={detailTab} onValueChange={setDetailTab}>
-                  <TabsList className="w-full justify-start rounded-none border-b px-4 flex-wrap gap-1">
+              <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
+                <Tabs value={detailTab} onValueChange={setDetailTab} className="flex-1 flex flex-col overflow-hidden">
+                  <TabsList className="w-full justify-start rounded-none border-b px-4 flex-wrap gap-1 flex-shrink-0">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger 
                       value="map" 
@@ -637,7 +637,8 @@ export default function TripsPage() {
                     <TabsTrigger value="documents">Documents</TabsTrigger>
                   </TabsList>
                   
-                  <div className="p-4">
+                  <ScrollArea className="flex-1">
+                    <div className="p-4">
                     <TabsContent value="overview" className="mt-0 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <Card>
@@ -916,7 +917,8 @@ export default function TripsPage() {
                         </CardContent>
                       </Card>
                     </TabsContent>
-                  </div>
+                    </div>
+                  </ScrollArea>
                 </Tabs>
                 
                 <div className="border-t p-4">

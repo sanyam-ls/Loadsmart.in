@@ -1,8 +1,9 @@
 import { useMemo } from "react";
+import { useLocation } from "wouter";
 import { 
   TrendingUp, DollarSign, Truck, User, MapPin, Building2, 
   ArrowUpRight, ArrowDownRight, BarChart3, PieChart as PieChartIcon,
-  Clock, CheckCircle2, AlertCircle, Wallet
+  Clock, CheckCircle2, AlertCircle, Wallet, ChevronRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ function formatCurrency(amount: number | undefined | null): string {
 const CHART_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16"];
 
 export default function CarrierRevenuePage() {
+  const [, setLocation] = useLocation();
   const { getRevenueAnalytics, completedTrips: mockCompletedTrips } = useCarrierData();
   const { user, carrierType } = useAuth();
   const { data: allShipments = [] } = useShipments();
@@ -47,9 +49,13 @@ export default function CarrierRevenuePage() {
   
   // Calculate real revenue from settlements and shipments
   const realRevenueData = useMemo(() => {
-    const myShipments = allShipments.filter((s: Shipment) => 
-      s.carrierId === user?.id && s.status === 'delivered'
+    // Get ALL carrier shipments (all statuses) for region display
+    const allMyShipments = allShipments.filter((s: Shipment) => 
+      s.carrierId === user?.id
     );
+    // Get only delivered shipments for revenue calculation
+    const myShipments = allMyShipments.filter((s: Shipment) => s.status === 'delivered');
+    
     const carrierSettlements = Array.isArray(allSettlements) 
       ? allSettlements.filter((s: any) => s.carrierId === user?.id && s.status === 'paid')
       : [];
@@ -65,11 +71,10 @@ export default function CarrierRevenuePage() {
       return sum + (load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0);
     }, 0);
 
-    // Calculate revenue by region from shipments using shared utility
+    // Calculate revenue by region from ALL shipments (not just delivered) to show all regions
     const { revenueByRegion } = buildRegionMetrics(
-      myShipments.map(s => ({ loadId: s.loadId, status: s.status })),
-      allLoads.map(l => ({ id: l.id, dropoffCity: (l as any).dropoffCity, adminFinalPrice: l.adminFinalPrice })),
-      ['delivered']
+      allMyShipments.map(s => ({ loadId: s.loadId, status: s.status })),
+      allLoads.map(l => ({ id: l.id, dropoffCity: (l as any).dropoffCity, adminFinalPrice: l.adminFinalPrice }))
     );
 
     // For solo drivers, get their truck info for the truck revenue chart
@@ -537,28 +542,37 @@ export default function CarrierRevenuePage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Revenue by Region</CardTitle>
+                <CardDescription>Click a region to view trips</CardDescription>
               </CardHeader>
               <CardContent>
                 {regionChartData.length > 0 ? (
                   <ScrollArea className="h-64">
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {regionChartData.map((region) => (
-                        <div key={region.name} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium">{region.name}</span>
-                            <span>{formatCurrency(region.revenue)}</span>
+                        <div 
+                          key={region.name} 
+                          className="p-2 rounded-md hover-elevate cursor-pointer border border-transparent hover:border-border transition-colors"
+                          onClick={() => setLocation(`/carrier/history?region=${encodeURIComponent(region.name)}`)}
+                          data-testid={`region-item-${region.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-primary" />
+                              <span className="font-medium">{region.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{formatCurrency(region.revenue)}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {region.trips} {region.trips === 1 ? 'trip' : 'trips'}
+                              </Badge>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mt-1">
                             <Progress 
-                              value={(region.revenue / analytics.totalRevenue) * 100} 
-                              className="h-2 flex-1" 
+                              value={analytics.totalRevenue > 0 ? (region.revenue / analytics.totalRevenue) * 100 : 0} 
+                              className="h-1.5 flex-1" 
                             />
-                            <Badge 
-                              variant="outline"
-                              className={region.growth > 0 ? "text-green-600" : "text-red-600"}
-                            >
-                              {region.growth > 0 ? "+" : ""}{region.growth}%
-                            </Badge>
                           </div>
                         </div>
                       ))}

@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearch } from "wouter";
 import { 
   Search, Calendar, MapPin, Truck, User, Star, Clock, 
-  CheckCircle, TrendingUp, Fuel, DollarSign, ArrowRight, Filter
+  CheckCircle, TrendingUp, Fuel, DollarSign, ArrowRight, Filter, X
 } from "lucide-react";
+import { deriveRegion } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -80,6 +82,7 @@ function convertShipmentToCompletedTrip(
 export default function CarrierHistoryPage() {
   const { user, carrierType } = useAuth();
   const { toast } = useToast();
+  const searchString = useSearch();
   const { data: allShipments = [], refetch: refetchShipments } = useShipments();
   const { data: allLoads = [] } = useLoads();
   const { data: allTrucks = [] } = useTrucks();
@@ -91,10 +94,20 @@ export default function CarrierHistoryPage() {
     enabled: isEnterprise,
   });
   
+  // Get region filter from URL params
+  const urlParams = new URLSearchParams(searchString);
+  const regionFromUrl = urlParams.get('region') || "";
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState("all");
   const [loadTypeFilter, setLoadTypeFilter] = useState("all");
+  const [regionFilter, setRegionFilter] = useState(regionFromUrl);
   const [selectedTrip, setSelectedTrip] = useState<CompletedTrip | null>(null);
+  
+  // Update region filter when URL changes
+  useEffect(() => {
+    setRegionFilter(regionFromUrl);
+  }, [regionFromUrl]);
   
   // Real-time updates when trips are completed
   useEffect(() => {
@@ -149,9 +162,17 @@ export default function CarrierHistoryPage() {
       
       const matchesLoadType = loadTypeFilter === "all" || trip.loadType === loadTypeFilter;
       
-      return matchesSearch && matchesTime && matchesLoadType;
+      // Region filter - extract region from route (e.g., "Mumbai, Maharashtra" -> "Maharashtra")
+      let matchesRegion = true;
+      if (regionFilter) {
+        // Route format is "City, State to City, State"
+        const routeRegion = deriveRegion(trip.route.split(' to ')[1] || '');
+        matchesRegion = routeRegion.toLowerCase() === regionFilter.toLowerCase();
+      }
+      
+      return matchesSearch && matchesTime && matchesLoadType && matchesRegion;
     }).sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
-  }, [completedTrips, searchQuery, timeFilter, loadTypeFilter]);
+  }, [completedTrips, searchQuery, timeFilter, loadTypeFilter, regionFilter]);
 
   const loadTypes = useMemo(() => {
     const types = new Set(completedTrips.map(t => t.loadType));
@@ -177,8 +198,26 @@ export default function CarrierHistoryPage() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-history-title">Trip History</h1>
-          <p className="text-muted-foreground">{completedTrips.length} completed trips</p>
+          <p className="text-muted-foreground">
+            {completedTrips.length} completed trips
+            {regionFilter && ` in ${regionFilter}`}
+          </p>
         </div>
+        {regionFilter && (
+          <Badge 
+            variant="secondary" 
+            className="flex items-center gap-1 cursor-pointer"
+            onClick={() => {
+              setRegionFilter("");
+              window.history.replaceState({}, '', '/carrier/history');
+            }}
+            data-testid="badge-region-filter"
+          >
+            <MapPin className="h-3 w-3" />
+            {regionFilter}
+            <X className="h-3 w-3 ml-1" />
+          </Badge>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -13,6 +13,7 @@ import { StatCard } from "@/components/stat-card";
 import { useCarrierData } from "@/lib/carrier-data-store";
 import { useShipments, useLoads, useSettlements } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
+import { deriveRegion, buildRegionMetrics } from "@/lib/utils";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
@@ -64,41 +65,12 @@ export default function CarrierRevenuePage() {
       return sum + (load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0);
     }, 0);
 
-    // Calculate revenue by region from shipments for solo drivers
-    const regionRevenueMap: Record<string, { revenue: number; trips: number }> = {};
-    myShipments.forEach((s: Shipment) => {
-      const load = allLoads.find((l: Load) => l.id === s.loadId);
-      if (load) {
-        // Extract region from dropoff city - format is "City, State"
-        let region = 'Unknown';
-        const dropoffCity = (load as any).dropoffCity || '';
-        if (dropoffCity) {
-          // Try to extract state from "City, State" format
-          const parts = dropoffCity.split(',');
-          if (parts.length >= 2) {
-            region = parts[parts.length - 1].trim();
-          } else {
-            // Use the city name directly
-            region = dropoffCity.trim();
-          }
-        }
-        // Clean up region name
-        if (!region || region === '') region = 'Unknown';
-        
-        const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
-        if (!regionRevenueMap[region]) {
-          regionRevenueMap[region] = { revenue: 0, trips: 0 };
-        }
-        regionRevenueMap[region].revenue += tripRevenue;
-        regionRevenueMap[region].trips += 1;
-      }
-    });
-    const revenueByRegion = Object.entries(regionRevenueMap).map(([region, data]) => ({
-      region,
-      revenue: data.revenue,
-      trips: data.trips,
-      growth: 0
-    }));
+    // Calculate revenue by region from shipments using shared utility
+    const { revenueByRegion } = buildRegionMetrics(
+      myShipments.map(s => ({ loadId: s.loadId, status: s.status })),
+      allLoads.map(l => ({ id: l.id, dropoffCity: (l as any).dropoffCity, adminFinalPrice: l.adminFinalPrice })),
+      ['delivered']
+    );
 
     // For solo drivers, get their truck info for the truck revenue chart
     const truckRevenue = totalRealRevenue || shipmentRevenue;

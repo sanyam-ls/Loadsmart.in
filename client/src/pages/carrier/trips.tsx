@@ -117,7 +117,7 @@ function convertShipmentToTrip(
   }
 
   const totalDistance = typeof load?.distance === 'number' ? load.distance : 500;
-  const rate = (load as any)?.adminPrice || load?.finalPrice || 0;
+  const rate = parseFloat(load?.finalPrice || (load as any)?.adminFinalPrice || "0");
   const now = new Date();
   const createdAt = shipment.createdAt instanceof Date ? shipment.createdAt : new Date(shipment.createdAt || now);
 

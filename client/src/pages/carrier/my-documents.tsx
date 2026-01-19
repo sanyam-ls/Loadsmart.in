@@ -145,10 +145,12 @@ export default function MyDocumentsPage() {
     refetchOnWindowFocus: true,
   });
 
-  const { data: shipmentsData } = useQuery<any[]>({
+  const { data: shipmentsData, refetch: refetchShipments } = useQuery<any[]>({
     queryKey: ["/api/shipments/tracking"],
     enabled: !!user && user.role === "carrier",
-    staleTime: 5000,
+    staleTime: 2000,
+    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
+    refetchOnWindowFocus: true,
   });
 
   const uploadMutation = useMutation({
@@ -304,20 +306,27 @@ export default function MyDocumentsPage() {
   const driverDocs = allDocuments.filter(d => documentCategories.driver.includes(d.documentType));
   const tripDocs = allDocuments.filter(d => documentCategories.trip.includes(d.documentType));
 
+  // Get all carrier shipments (including ones without documents for display)
   const carrierShipments = (shipmentsData || []).filter(
-    (s: any) => s.carrierId === user?.id && s.documents && s.documents.length > 0
+    (s: any) => s.carrierId === user?.id
   );
 
+  // Group shipments by load number - show all loads, with or without documents
   const shipmentsByLoad: Record<number, ShipmentWithDocs> = {};
   carrierShipments.forEach((s: any) => {
     const loadNum = s.load?.loadNumber || s.loadNumber;
-    if (loadNum && s.documents?.length > 0) {
-      shipmentsByLoad[loadNum] = {
-        id: s.id,
-        loadNumber: loadNum,
-        status: s.status,
-        documents: s.documents,
-      };
+    if (loadNum) {
+      // Only add if not already exists, or if this one has more documents
+      const existingDocs = shipmentsByLoad[loadNum]?.documents?.length || 0;
+      const newDocs = s.documents?.length || 0;
+      if (!shipmentsByLoad[loadNum] || newDocs > existingDocs) {
+        shipmentsByLoad[loadNum] = {
+          id: s.id,
+          loadNumber: loadNum,
+          status: s.status,
+          documents: s.documents || [],
+        };
+      }
     }
   });
 
@@ -546,18 +555,22 @@ export default function MyDocumentsPage() {
                         ) : (
                           <Folder className="h-4 w-4 text-primary" />
                         )}
-                        <span className="font-medium text-sm">Load #{loadNum}</span>
+                        <span className="font-medium text-sm">LD-{String(loadNum).padStart(3, '0')}</span>
                         <Badge variant="outline" className="text-xs ml-2 capitalize">
                           {shipment.status.replace(/_/g, ' ')}
                         </Badge>
                         <Badge variant="secondary" className="ml-auto text-xs">
-                          {shipment.documents.length}
+                          {shipment.documents.length} {shipment.documents.length === 1 ? 'doc' : 'docs'}
                         </Badge>
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <div className="ml-6 mt-2 space-y-2 border-l border-muted pl-3">
-                        {shipment.documents.map(doc => renderShipmentDocument(doc))}
+                        {shipment.documents.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-2">No documents uploaded yet</p>
+                        ) : (
+                          shipment.documents.map(doc => renderShipmentDocument(doc))
+                        )}
                       </div>
                     </CollapsibleContent>
                   </Collapsible>

@@ -21,7 +21,9 @@ import {
   useVerifyOtp, 
   useOtpStatus 
 } from "@/lib/api-hooks";
-import type { Shipment } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import type { Shipment, Load } from "@shared/schema";
+import { ShipperRatingDialog } from "./shipper-rating-dialog";
 
 interface OtpStatusData {
   startOtpApproved?: boolean;
@@ -43,8 +45,19 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
   const [otpDialogOpen, setOtpDialogOpen] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpType, setOtpType] = useState<"trip_start" | "route_start" | "trip_end">("trip_start");
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
 
   const { data: otpStatusRaw, refetch: refetchStatus } = useOtpStatus(shipment.id);
+  
+  const { data: loadData } = useQuery<Load>({
+    queryKey: ["/api/loads", shipment.loadId],
+    enabled: !!shipment.loadId,
+  });
+
+  const { data: shipperData } = useQuery<{ id: string; companyName: string | null; username: string }>({
+    queryKey: ["/api/users", loadData?.shipperId],
+    enabled: !!loadData?.shipperId,
+  });
   const otpStatus = otpStatusRaw as OtpStatusData | undefined;
   const requestStartMutation = useRequestTripStartOtp();
   const requestRouteStartMutation = useRequestRouteStartOtp();
@@ -148,6 +161,10 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
       setOtpCode("");
       onStateChange?.();
       refetchStatus();
+      
+      if (otpType === "trip_end" && loadData?.shipperId) {
+        setRatingDialogOpen(true);
+      }
     } catch (error: any) {
       toast({
         title: "Verification Failed",
@@ -473,6 +490,17 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {loadData?.shipperId && (
+        <ShipperRatingDialog
+          open={ratingDialogOpen}
+          onOpenChange={setRatingDialogOpen}
+          shipmentId={shipment.id}
+          loadId={shipment.loadId}
+          shipperId={loadData.shipperId}
+          shipperName={shipperData?.companyName || shipperData?.username || "Shipper"}
+        />
+      )}
     </>
   );
 }

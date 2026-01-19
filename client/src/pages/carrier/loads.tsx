@@ -47,6 +47,7 @@ interface CarrierLoad {
   finalPrice: string | null;
   allowCounterBids: boolean | null;
   shipperName: string | null;
+  shipperId?: string | null;
   bidCount: number;
   myBid: any | null;
   postedByAdmin: boolean;
@@ -60,6 +61,11 @@ interface CarrierLoad {
   carrierAdvancePercent?: number | null;
   cargoDescription?: string | null;
   postedAt?: string | null;
+}
+
+interface ShipperRatingData {
+  averageRating: number | null;
+  totalRatings: number;
 }
 
 // Helper to get carrier display price (finalPrice = carrier payout price)
@@ -251,6 +257,26 @@ function formatCurrency(amount: number): string {
   return `Rs. ${amount.toLocaleString("en-IN")}`;
 }
 
+function ShipperRatingBadge({ shipperId }: { shipperId: string | null | undefined }) {
+  const { data: ratingData, isError } = useQuery<ShipperRatingData>({
+    queryKey: [`/api/shipper/${shipperId}/rating`],
+    enabled: !!shipperId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (!shipperId || isError || !ratingData || ratingData.totalRatings === 0) {
+    return null;
+  }
+
+  return (
+    <span className="inline-flex items-center gap-0.5 text-xs" data-testid={`shipper-rating-${shipperId}`}>
+      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+      <span className="font-medium">{ratingData.averageRating}</span>
+      <span className="text-muted-foreground">({ratingData.totalRatings})</span>
+    </span>
+  );
+}
+
 function getMatchScoreBadge(score: number) {
   if (score >= 90) return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
   if (score >= 75) return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
@@ -343,6 +369,7 @@ export default function CarrierLoadsPage() {
     finalPrice: string | null;
     allowCounterBids: boolean | null;
     shipperName: string | null;
+    shipperId: string | null;
     bidCount: number;
     myBid: any | null;
     postedByAdmin: boolean;
@@ -375,6 +402,7 @@ export default function CarrierLoadsPage() {
       finalPrice: load.finalPrice,
       allowCounterBids: load.allowCounterBids,
       shipperName: load.shipperName,
+      shipperId: load.shipperId,
       bidCount: load.bidCount || 0,
       myBid: load.myBid,
       postedByAdmin: load.postedByAdmin ?? true,
@@ -869,6 +897,7 @@ export default function CarrierLoadsPage() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Building2 className="h-4 w-4" />
                     <span>{load.shipperName}</span>
+                    <ShipperRatingBadge shipperId={load.shipperId} />
                   </div>
                 )}
                 
@@ -945,6 +974,7 @@ export default function CarrierLoadsPage() {
                             <span className="flex items-center gap-1">
                               <Building2 className="h-4 w-4" />
                               {load.shipperName}
+                              <ShipperRatingBadge shipperId={load.shipperId} />
                             </span>
                           )}
                           {load.weight && (

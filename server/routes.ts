@@ -11,7 +11,9 @@ import {
   insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema,
   trucks as trucksTable,
   carrierProfiles as carrierProfilesTable,
-  ratings
+  ratings,
+  shipperRatings,
+  insertShipperRatingSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -12909,6 +12911,146 @@ RESPOND IN THIS EXACT JSON FORMAT:
     } catch (error) {
       console.error("Verify email registration OTP error:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================
+  // SHIPPER RATINGS - Carriers rate shippers after trip completion
+  // =============================================
+
+  // Submit a rating for a shipper
+  app.post("/api/shipper-ratings", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can rate shippers" });
+      }
+
+      const parsed = insertShipperRatingSchema.safeParse({
+        ...req.body,
+        carrierId: userId,
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid rating data", details: parsed.error.errors });
+      }
+
+      const { shipperId, shipmentId, loadId, rating, review } = parsed.data;
+
+      // Verify the shipment exists and is delivered
+      const shipment = await storage.getShipment(shipmentId);
+      if (!shipment) {
+        return res.status(404).json({ error: "Shipment not found" });
+      }
+      if (shipment.carrierId !== userId) {
+        return res.status(403).json({ error: "You can only rate shippers for your own shipments" });
+      }
+      if (shipment.status !== "delivered") {
+        return res.status(400).json({ error: "Can only rate after delivery is complete" });
+      }
+
+      // Check if already rated
+      const existingRatings = await db.select().from(shipperRatings).where(eq(shipperRatings.shipmentId, shipmentId));
+      if (existingRatings.length > 0) {
+        return res.status(400).json({ error: "You have already rated this shipper for this shipment" });
+      }
+
+      // Insert the rating
+      const [newRating] = await db.insert(shipperRatings).values({
+        shipperId,
+        carrierId: userId,
+        shipmentId,
+        loadId,
+        rating,
+        review: review || null,
+      }).returning();
+
+      res.status(201).json(newRating);
+    } catch (error: any) {
+      console.error("Submit shipper rating error:", error);
+      res.status(500).json({ error: "Failed to submit rating" });
+    }
+  });
+
+  // Get average rating for a shipper
+  app.get("/api/shipper/:shipperId/rating", async (req, res) => {
+    try {
+      const { shipperId } = req.params;
+
+      const ratings = await db.select().from(shipperRatings).where(eq(shipperRatings.shipperId, shipperId));
+      
+      if (ratings.length === 0) {
+        return res.json({ 
+          averageRating: null, 
+          totalRatings: 0,
+          ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        });
+      }
+
+      const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+      const average = sum / ratings.length;
+
+      // Calculate rating distribution
+      const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      ratings.forEach(r => {
+        if (r.rating >= 1 && r.rating <= 5) {
+          distribution[r.rating as 1|2|3|4|5]++;
+        }
+      });
+
+      res.json({
+        averageRating: Math.round(average * 10) / 10,
+        totalRatings: ratings.length,
+        ratingDistribution: distribution
+      });
+    } catch (error: any) {
+      console.error("Get shipper rating error:", error);
+      res.status(500).json({ error: "Failed to get rating" });
+    }
+  });
+
+  // Get all ratings for a shipper (with details)
+  app.get("/api/shipper/:shipperId/ratings", async (req, res) => {
+    try {
+      const { shipperId } = req.params;
+
+      const ratings = await db.select().from(shipperRatings).where(eq(shipperRatings.shipperId, shipperId));
+      
+      // Get carrier names for the ratings
+      const ratingsWithCarrierNames = await Promise.all(
+        ratings.map(async (rating) => {
+          const carrier = await storage.getUser(rating.carrierId);
+          return {
+            ...rating,
+            carrierName: carrier?.companyName || carrier?.username || "Anonymous"
+          };
+        })
+      );
+
+      res.json(ratingsWithCarrierNames);
+    } catch (error: any) {
+      console.error("Get shipper ratings error:", error);
+      res.status(500).json({ error: "Failed to get ratings" });
+    }
+  });
+
+  // Check if carrier has already rated a shipment
+  app.get("/api/shipper-ratings/check/:shipmentId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { shipmentId } = req.params;
+
+      const existingRatings = await db.select().from(shipperRatings)
+        .where(eq(shipperRatings.shipmentId, shipmentId));
+      
+      const hasRated = existingRatings.some(r => r.carrierId === userId);
+
+      res.json({ hasRated });
+    } catch (error: any) {
+      console.error("Check rating error:", error);
+      res.status(500).json({ error: "Failed to check rating status" });
     }
   });
 

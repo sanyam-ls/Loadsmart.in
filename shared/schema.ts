@@ -1862,6 +1862,28 @@ export const insertShipperOnboardingRequestSchema = createInsertSchema(shipperOn
 export type InsertShipperOnboardingRequest = z.infer<typeof insertShipperOnboardingRequestSchema>;
 export type ShipperOnboardingRequest = typeof shipperOnboardingRequests.$inferSelect;
 
+// Shipper Ratings table - carriers rate shippers after trip completion
+export const shipperRatings = pgTable("shipper_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  shipperId: varchar("shipper_id").notNull().references(() => users.id),
+  carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  shipmentId: varchar("shipment_id").notNull().references(() => shipments.id),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  rating: integer("rating").notNull(), // 1-5 stars
+  review: text("review"), // Optional review text
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schema for shipper ratings
+export const insertShipperRatingSchema = createInsertSchema(shipperRatings).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for shipper ratings
+export type InsertShipperRating = z.infer<typeof insertShipperRatingSchema>;
+export type ShipperRating = typeof shipperRatings.$inferSelect;
+
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {
   vehicleId: string;

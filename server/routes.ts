@@ -7343,6 +7343,17 @@ RESPOND IN THIS EXACT JSON FORMAT:
         isVerified: false,
       });
 
+      // Broadcast to admins for real-time document verification updates
+      broadcastMarketplaceEvent("carrier_document_uploaded", {
+        carrierId: user.id,
+        carrierName: user.companyName || user.username,
+        documentId: newDoc.id,
+        documentType,
+        fileName,
+        isVerified: false,
+        uploadedAt: new Date().toISOString(),
+      });
+
       // Auto-create or update verification record when carrier uploads documents
       // This ensures the carrier appears in admin's verification queue
       let verification = await storage.getCarrierVerificationByCarrier(user.id);

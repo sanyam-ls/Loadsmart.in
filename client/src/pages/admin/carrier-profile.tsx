@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import {
   ArrowLeft,
   Building2,
@@ -107,6 +108,25 @@ export default function CarrierProfilePage() {
     queryKey: ["/api/admin/carriers", carrierId],
     enabled: !!carrierId,
   });
+
+  // Listen for real-time document uploads from this carrier
+  useEffect(() => {
+    if (!carrierId) return;
+
+    const unsubscribe = onMarketplaceEvent("carrier_document_uploaded", (data: any) => {
+      if (data.carrierId === carrierId) {
+        refetch();
+        toast({
+          title: "New Document Uploaded",
+          description: `${data.carrierName || 'Carrier'} uploaded a new ${data.documentType} document. Please review for verification.`,
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [carrierId, refetch, toast]);
 
   const verifyMutation = useMutation({
     mutationFn: async (isVerified: boolean) => {

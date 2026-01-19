@@ -156,6 +156,20 @@ export function connectMarketplace(role: "carrier" | "admin" | "shipper", userId
         documentUploadedHandlers?.forEach(handler => handler(message));
       }
 
+      // Handle carrier document uploads - notify admin for real-time verification
+      if (message.type === "carrier_document_uploaded") {
+        // Invalidate admin carrier queries to show new documents
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers"] });
+        if (message.carrierId) {
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/carriers", message.carrierId] });
+        }
+        // Also refresh verification queue
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
+        
+        const carrierDocHandlers = handlers.get("carrier_document_uploaded");
+        carrierDocHandlers?.forEach(handler => handler(message));
+      }
+
       const typeHandlers = handlers.get(message.type);
       if (typeHandlers) {
         typeHandlers.forEach(handler => handler(message));

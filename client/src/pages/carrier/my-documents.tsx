@@ -9,6 +9,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +39,14 @@ import {
   Trash2,
   File,
   X,
-  Loader2
+  Loader2,
+  FolderOpen,
+  Folder,
+  ChevronRight,
+  ChevronDown,
+  Truck,
+  User,
+  Package
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -52,6 +61,22 @@ interface Document {
   expiryDate: string | null;
   isVerified: boolean;
   createdAt: string;
+}
+
+interface ShipmentDocument {
+  id: string;
+  documentType: string;
+  fileName: string;
+  fileUrl: string;
+  status: string;
+  createdAt: string;
+}
+
+interface ShipmentWithDocs {
+  id: string;
+  loadNumber: number;
+  status: string;
+  documents: ShipmentDocument[];
 }
 
 interface ExpiryData {
@@ -75,15 +100,19 @@ const documentTypeLabels: Record<string, string> = {
   permit: "Road Permit",
   pan_card: "PAN Card",
   aadhar: "Aadhar Card",
+  aadhaar: "Aadhaar Card",
   pod: "Proof of Delivery",
   invoice: "Invoice",
+  lr_consignment: "LR/Consignment Note",
+  eway_bill: "E-Way Bill",
+  weighment_slip: "Weighment Slip",
   other: "Other Document",
 };
 
 const documentCategories = {
   truck: ["rc", "insurance", "fitness", "puc", "permit"],
-  driver: ["license", "pan_card", "aadhar"],
-  trip: ["pod", "invoice"],
+  driver: ["license", "pan_card", "aadhar", "aadhaar"],
+  trip: ["pod", "invoice", "lr_consignment", "eway_bill", "weighment_slip"],
 };
 
 function formatFileSize(bytes?: number): string {
@@ -102,12 +131,24 @@ export default function MyDocumentsPage() {
   const [selectedDocType, setSelectedDocType] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [expiryDate, setExpiryDate] = useState("");
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
+    truck: true,
+    driver: false,
+    loads: true,
+  });
+  const [expandedLoads, setExpandedLoads] = useState<Record<string, boolean>>({});
 
-  const { data, isLoading, error, refetch } = useQuery<ExpiryData>({
+  const { data, isLoading, error } = useQuery<ExpiryData>({
     queryKey: ["/api/carrier/documents/expiring"],
     enabled: !!user && user.role === "carrier",
     staleTime: 5000,
     refetchOnWindowFocus: true,
+  });
+
+  const { data: shipmentsData } = useQuery<any[]>({
+    queryKey: ["/api/shipments/tracking"],
+    enabled: !!user && user.role === "carrier",
+    staleTime: 5000,
   });
 
   const uploadMutation = useMutation({
@@ -170,7 +211,6 @@ export default function MyDocumentsPage() {
       return;
     }
 
-    // Convert file to base64 data URL for persistence
     const reader = new FileReader();
     reader.onload = () => {
       const base64Url = reader.result as string;
@@ -199,6 +239,14 @@ export default function MyDocumentsPage() {
 
   const handleDelete = (docId: string) => {
     deleteMutation.mutate(docId);
+  };
+
+  const toggleFolder = (folder: string) => {
+    setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }));
+  };
+
+  const toggleLoad = (loadId: string) => {
+    setExpandedLoads(prev => ({ ...prev, [loadId]: !prev[loadId] }));
   };
 
   if (carrierType === undefined) {
@@ -256,7 +304,24 @@ export default function MyDocumentsPage() {
   const driverDocs = allDocuments.filter(d => documentCategories.driver.includes(d.documentType));
   const tripDocs = allDocuments.filter(d => documentCategories.trip.includes(d.documentType));
 
-  const renderDocument = (doc: Document) => {
+  const carrierShipments = (shipmentsData || []).filter(
+    (s: any) => s.carrierId === user?.id && s.documents && s.documents.length > 0
+  );
+
+  const shipmentsByLoad: Record<number, ShipmentWithDocs> = {};
+  carrierShipments.forEach((s: any) => {
+    const loadNum = s.load?.loadNumber || s.loadNumber;
+    if (loadNum && s.documents?.length > 0) {
+      shipmentsByLoad[loadNum] = {
+        id: s.id,
+        loadNumber: loadNum,
+        status: s.status,
+        documents: s.documents,
+      };
+    }
+  });
+
+  const renderDocument = (doc: Document, compact = false) => {
     const daysUntilExpiry = doc.expiryDate 
       ? differenceInDays(new Date(doc.expiryDate), new Date()) 
       : null;
@@ -267,7 +332,7 @@ export default function MyDocumentsPage() {
     return (
       <div 
         key={doc.id}
-        className={`p-4 rounded-lg border cursor-pointer hover-elevate ${
+        className={`p-3 rounded-lg border cursor-pointer hover-elevate ${
           isExpired 
             ? "border-red-200 bg-red-50 dark:bg-red-950/20" 
             : isExpiringSoon 
@@ -277,72 +342,231 @@ export default function MyDocumentsPage() {
         onClick={() => handlePreview(doc)}
         data-testid={`card-document-${doc.id}`}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="flex-shrink-0">
               {isExpired ? (
-                <XCircle className="h-5 w-5 text-red-500" data-testid={`icon-expired-${doc.id}`} />
+                <XCircle className="h-4 w-4 text-red-500" />
               ) : doc.isVerified ? (
-                <CheckCircle className="h-5 w-5 text-green-500" data-testid={`icon-verified-${doc.id}`} />
+                <CheckCircle className="h-4 w-4 text-green-500" />
               ) : (
-                <Clock className="h-5 w-5 text-amber-500" data-testid={`icon-pending-${doc.id}`} />
+                <Clock className="h-4 w-4 text-amber-500" />
               )}
             </div>
-            <div>
-              <p className="font-medium" data-testid={`text-doc-type-${doc.id}`}>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-sm truncate">
                 {documentTypeLabels[doc.documentType] || doc.documentType}
               </p>
-              <p className="text-sm text-muted-foreground" data-testid={`text-doc-filename-${doc.id}`}>{doc.fileName}</p>
-              {doc.fileSize && (
-                <p className="text-xs text-muted-foreground">{formatFileSize(doc.fileSize)}</p>
-              )}
-              {doc.expiryDate && (
-                <p 
-                  className={`text-sm mt-1 flex items-center gap-1 ${
-                    isExpired 
-                      ? "text-red-600" 
-                      : isExpiringSoon 
-                        ? "text-amber-600"
-                        : "text-muted-foreground"
-                  }`}
-                  data-testid={`text-doc-expiry-${doc.id}`}
-                >
-                  <Calendar className="h-3 w-3" />
-                  {isExpired 
-                    ? `Expired ${Math.abs(daysUntilExpiry!)} days ago`
-                    : `Expires ${format(new Date(doc.expiryDate), "dd MMM yyyy")}`}
-                  {isExpiringSoon && !isExpired && ` (${daysUntilExpiry} days left)`}
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground truncate">{doc.fileName}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {isExpired && (
-              <Badge variant="destructive" data-testid={`badge-expired-${doc.id}`}>Expired</Badge>
+              <Badge variant="destructive" className="text-xs">Expired</Badge>
             )}
             {isExpiringSoon && !isExpired && (
-              <Badge className="bg-amber-500 text-white no-default-hover-elevate no-default-active-elevate" data-testid={`badge-expiring-${doc.id}`}>Expiring Soon</Badge>
+              <Badge className="bg-amber-500 text-white text-xs no-default-hover-elevate no-default-active-elevate">Expiring</Badge>
             )}
             {!isExpired && !isExpiringSoon && doc.isVerified && (
-              <Badge variant="default" data-testid={`badge-verified-${doc.id}`}>Verified</Badge>
+              <Badge variant="default" className="text-xs">Verified</Badge>
             )}
             {!doc.isVerified && !isExpired && (
-              <Badge variant="secondary" data-testid={`badge-pending-${doc.id}`}>Pending</Badge>
+              <Badge variant="secondary" className="text-xs">Pending</Badge>
             )}
             <Button 
               variant="ghost" 
               size="icon" 
+              className="h-7 w-7"
               onClick={(e) => {
                 e.stopPropagation();
                 window.open(doc.fileUrl, "_blank");
               }}
-              data-testid={`button-download-${doc.id}`}
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-3 w-3" />
             </Button>
           </div>
         </div>
       </div>
+    );
+  };
+
+  const renderShipmentDocument = (doc: ShipmentDocument) => {
+    return (
+      <div 
+        key={doc.id}
+        className="p-3 rounded-lg border cursor-pointer hover-elevate"
+        onClick={() => {
+          setSelectedDocument({
+            id: doc.id,
+            documentType: doc.documentType,
+            fileName: doc.fileName,
+            fileUrl: doc.fileUrl,
+            fileSize: undefined,
+            expiryDate: null,
+            isVerified: doc.status === "approved",
+            createdAt: doc.createdAt,
+          });
+          setPreviewDialogOpen(true);
+        }}
+        data-testid={`card-shipment-doc-${doc.id}`}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-sm truncate">
+                {documentTypeLabels[doc.documentType] || doc.documentType}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">{doc.fileName}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Badge 
+              variant={doc.status === "approved" ? "default" : "secondary"} 
+              className="text-xs capitalize"
+            >
+              {doc.status}
+            </Badge>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(doc.fileUrl, "_blank");
+              }}
+            >
+              <Download className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const FolderSection = ({ 
+    title, 
+    icon: Icon, 
+    folderId, 
+    documents, 
+    emptyMessage 
+  }: { 
+    title: string; 
+    icon: any; 
+    folderId: string; 
+    documents: Document[]; 
+    emptyMessage: string;
+  }) => (
+    <Collapsible 
+      open={expandedFolders[folderId]} 
+      onOpenChange={() => toggleFolder(folderId)}
+    >
+      <CollapsibleTrigger className="w-full">
+        <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
+          {expandedFolders[folderId] ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+          {expandedFolders[folderId] ? (
+            <FolderOpen className="h-5 w-5 text-amber-500" />
+          ) : (
+            <Folder className="h-5 w-5 text-amber-500" />
+          )}
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{title}</span>
+          <Badge variant="secondary" className="ml-auto text-xs">
+            {documents.length}
+          </Badge>
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
+          {documents.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">{emptyMessage}</p>
+          ) : (
+            documents.map(doc => renderDocument(doc, true))
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+
+  const LoadsFolderSection = () => {
+    const loadNumbers = Object.keys(shipmentsByLoad).map(Number).sort((a, b) => b - a);
+    const totalDocs = Object.values(shipmentsByLoad).reduce((sum, s) => sum + s.documents.length, 0);
+
+    return (
+      <Collapsible 
+        open={expandedFolders.loads} 
+        onOpenChange={() => toggleFolder("loads")}
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
+            {expandedFolders.loads ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+            {expandedFolders.loads ? (
+              <FolderOpen className="h-5 w-5 text-blue-500" />
+            ) : (
+              <Folder className="h-5 w-5 text-blue-500" />
+            )}
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">Loads</span>
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {totalDocs} docs in {loadNumbers.length} loads
+            </Badge>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
+            {loadNumbers.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">No load documents yet</p>
+            ) : (
+              loadNumbers.map(loadNum => {
+                const shipment = shipmentsByLoad[loadNum];
+                const isExpanded = expandedLoads[`load-${loadNum}`];
+                return (
+                  <Collapsible 
+                    key={loadNum}
+                    open={isExpanded}
+                    onOpenChange={() => toggleLoad(`load-${loadNum}`)}
+                  >
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center gap-2 p-2 rounded-lg hover-elevate border bg-muted/50">
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                        )}
+                        {isExpanded ? (
+                          <FolderOpen className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Folder className="h-4 w-4 text-primary" />
+                        )}
+                        <span className="font-medium text-sm">Load #{loadNum}</span>
+                        <Badge variant="outline" className="text-xs ml-2 capitalize">
+                          {shipment.status.replace(/_/g, ' ')}
+                        </Badge>
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          {shipment.documents.length}
+                        </Badge>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-6 mt-2 space-y-2 border-l border-muted pl-3">
+                        {shipment.documents.map(doc => renderShipmentDocument(doc))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     );
   };
 
@@ -363,7 +587,7 @@ export default function MyDocumentsPage() {
       </div>
     ) : (
       <div className="space-y-3">
-        {docs.map(renderDocument)}
+        {docs.map(doc => renderDocument(doc))}
       </div>
     )
   );
@@ -446,16 +670,46 @@ export default function MyDocumentsPage() {
         </Alert>
       )}
 
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs defaultValue="folders" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="folders" data-testid="tab-folders">Folders</TabsTrigger>
           <TabsTrigger value="all" data-testid="tab-all">All ({allDocuments.length})</TabsTrigger>
           <TabsTrigger value="truck" data-testid="tab-truck">Truck ({truckDocs.length})</TabsTrigger>
           <TabsTrigger value="driver" data-testid="tab-driver">Driver ({driverDocs.length})</TabsTrigger>
-          <TabsTrigger value="trip" data-testid="tab-trip">Trip ({tripDocs.length})</TabsTrigger>
           <TabsTrigger value="alerts" data-testid="tab-alerts">
             Alerts ({expired.length + expiringSoon.length})
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="folders" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Document Folders</CardTitle>
+              <CardDescription>Organize your documents by category</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[calc(100vh-450px)]">
+                <div className="space-y-3 pr-4">
+                  <FolderSection 
+                    title="Truck Documents"
+                    icon={Truck}
+                    folderId="truck"
+                    documents={truckDocs}
+                    emptyMessage="No truck documents uploaded"
+                  />
+                  <FolderSection 
+                    title="Driver Documents"
+                    icon={User}
+                    folderId="driver"
+                    documents={driverDocs}
+                    emptyMessage="No driver documents uploaded"
+                  />
+                  <LoadsFolderSection />
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="all" className="mt-4">
           <Card>
@@ -464,7 +718,11 @@ export default function MyDocumentsPage() {
               <CardDescription>View all your uploaded documents</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderDocumentList(allDocuments, "No documents uploaded yet")}
+              <ScrollArea className="h-[calc(100vh-450px)]">
+                <div className="pr-4">
+                  {renderDocumentList(allDocuments, "No documents uploaded yet")}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
@@ -476,7 +734,11 @@ export default function MyDocumentsPage() {
               <CardDescription>RC, Insurance, Fitness, PUC, and Permits</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderDocumentList(truckDocs, "No truck documents uploaded")}
+              <ScrollArea className="h-[calc(100vh-450px)]">
+                <div className="pr-4">
+                  {renderDocumentList(truckDocs, "No truck documents uploaded")}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
@@ -488,19 +750,11 @@ export default function MyDocumentsPage() {
               <CardDescription>License, PAN Card, and Aadhar</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderDocumentList(driverDocs, "No driver documents uploaded")}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="trip" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Trip Documents</CardTitle>
-              <CardDescription>PODs and Invoices from completed trips</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderDocumentList(tripDocs, "No trip documents uploaded")}
+              <ScrollArea className="h-[calc(100vh-450px)]">
+                <div className="pr-4">
+                  {renderDocumentList(driverDocs, "No driver documents uploaded")}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
@@ -515,17 +769,21 @@ export default function MyDocumentsPage() {
               <CardDescription>Expired or expiring documents</CardDescription>
             </CardHeader>
             <CardContent>
-              {expired.length === 0 && expiringSoon.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
-                  <p className="font-medium">All documents are valid!</p>
-                  <p className="text-sm text-muted-foreground">No documents require attention at this time</p>
+              <ScrollArea className="h-[calc(100vh-450px)]">
+                <div className="pr-4">
+                  {expired.length === 0 && expiringSoon.length === 0 ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
+                      <p className="font-medium">All documents are valid!</p>
+                      <p className="text-sm text-muted-foreground">No documents require attention at this time</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {[...expired, ...expiringSoon].map(doc => renderDocument(doc))}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {[...expired, ...expiringSoon].map(renderDocument)}
-                </div>
-              )}
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
@@ -673,7 +931,8 @@ export default function MyDocumentsPage() {
                    selectedDocument.fileUrl?.endsWith(".png") || 
                    selectedDocument.fileUrl?.endsWith(".jpg") || 
                    selectedDocument.fileUrl?.endsWith(".jpeg") ||
-                   selectedDocument.fileUrl?.startsWith("data:image/") ? (
+                   selectedDocument.fileUrl?.startsWith("data:image/") ||
+                   selectedDocument.fileUrl?.includes("/objects/") ? (
                     <img 
                       src={selectedDocument.fileUrl} 
                       alt={selectedDocument.fileName}
@@ -723,7 +982,23 @@ export default function MyDocumentsPage() {
 
               <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button 
-                  variant="destructive" 
+                  variant="outline"
+                  onClick={() => window.open(selectedDocument.fileUrl, "_blank")}
+                  data-testid="button-view-full"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Full Size
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => window.open(selectedDocument.fileUrl, "_blank")}
+                  data-testid="button-download-preview"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+                <Button 
+                  variant="destructive"
                   onClick={() => handleDelete(selectedDocument.id)}
                   disabled={deleteMutation.isPending}
                   data-testid="button-delete-document"
@@ -734,23 +1009,6 @@ export default function MyDocumentsPage() {
                     <Trash2 className="h-4 w-4 mr-2" />
                   )}
                   Delete
-                </Button>
-                <div className="flex-1" />
-                <Button 
-                  variant="outline"
-                  onClick={() => window.open(selectedDocument.fileUrl, "_blank")}
-                  data-testid="button-download-document"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.open(selectedDocument.fileUrl, "_blank")}
-                  data-testid="button-view-document"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Full
                 </Button>
               </DialogFooter>
             </>

@@ -803,49 +803,53 @@ export default function FleetPage() {
                     {filteredTrucks.map((truck) => {
                       const StatusIcon = statusConfig[truck.currentStatus].icon;
                       return (
-                        <TableRow key={truck.truckId} data-testid={`row-truck-${truck.truckId}`}>
-                          <TableCell className="font-medium">{truck.licensePlate}</TableCell>
-                          <TableCell>{truck.truckType}</TableCell>
-                          <TableCell>{truck.manufacturer}</TableCell>
-                          <TableCell>{truck.loadCapacity} T</TableCell>
-                          <TableCell className="max-w-[150px] truncate">{truck.currentLocation}</TableCell>
-                          <TableCell>{truck.assignedDriver || <span className="text-muted-foreground">Unassigned</span>}</TableCell>
-                          <TableCell>
-                            <Badge className={statusConfig[truck.currentStatus].color}>
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {statusConfig[truck.currentStatus].label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Progress value={truck.fuelLevel} className="w-16 h-2" />
-                              <span className={`text-xs ${truck.fuelLevel < 25 ? "text-red-500" : ""}`}>
-                                {truck.fuelLevel}%
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => openEditLocation(truck)} 
-                                data-testid={`button-edit-location-${truck.truckId}`}
-                                title="Edit Location"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={() => setSelectedTruck(truck)} data-testid={`button-view-${truck.truckId}`}>
+                        <Dialog key={truck.truckId}>
+                          <DialogTrigger asChild>
+                            <TableRow 
+                              className="cursor-pointer hover-elevate" 
+                              data-testid={`row-truck-${truck.truckId}`}
+                              onClick={() => setSelectedTruck(truck)}
+                            >
+                              <TableCell className="font-medium">{truck.licensePlate}</TableCell>
+                              <TableCell>{truck.truckType}</TableCell>
+                              <TableCell>{truck.manufacturer}</TableCell>
+                              <TableCell>{truck.loadCapacity} T</TableCell>
+                              <TableCell className="max-w-[150px] truncate">{truck.currentLocation}</TableCell>
+                              <TableCell>{truck.assignedDriver || <span className="text-muted-foreground">Unassigned</span>}</TableCell>
+                              <TableCell>
+                                <Badge className={statusConfig[truck.currentStatus].color}>
+                                  <StatusIcon className="h-3 w-3 mr-1" />
+                                  {statusConfig[truck.currentStatus].label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Progress value={truck.fuelLevel} className="w-16 h-2" />
+                                  <span className={`text-xs ${truck.fuelLevel < 25 ? "text-red-500" : ""}`}>
+                                    {truck.fuelLevel}%
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={(e) => { e.stopPropagation(); openEditLocation(truck); }} 
+                                    data-testid={`button-edit-location-${truck.truckId}`}
+                                    title="Edit Location"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" data-testid={`button-view-${truck.truckId}`} title="View Details">
                                     <Eye className="h-4 w-4" />
                                   </Button>
-                                </DialogTrigger>
-                                <TruckDetailDialog truck={truck} onDocumentUpdate={handleDocumentUpdate} />
-                              </Dialog>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </DialogTrigger>
+                          <TruckDetailDialog truck={truck} onDocumentUpdate={handleDocumentUpdate} />
+                        </Dialog>
                       );
                     })}
                   </TableBody>

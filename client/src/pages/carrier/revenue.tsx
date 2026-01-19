@@ -49,12 +49,10 @@ export default function CarrierRevenuePage() {
   
   // Calculate real revenue from settlements and shipments
   const realRevenueData = useMemo(() => {
-    // Get ALL carrier shipments (all statuses) for region display
-    const allMyShipments = allShipments.filter((s: Shipment) => 
-      s.carrierId === user?.id
-    );
     // Get only delivered shipments for revenue calculation
-    const myShipments = allMyShipments.filter((s: Shipment) => s.status === 'delivered');
+    const myShipments = allShipments.filter((s: Shipment) => 
+      s.carrierId === user?.id && s.status === 'delivered'
+    );
     
     const carrierSettlements = Array.isArray(allSettlements) 
       ? allSettlements.filter((s: any) => s.carrierId === user?.id && s.status === 'paid')
@@ -71,10 +69,17 @@ export default function CarrierRevenuePage() {
       return sum + (load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0);
     }, 0);
 
-    // Calculate revenue by region from ALL shipments (not just delivered) to show all regions
+    // Calculate revenue by region from DELIVERED shipments only (matches Trip History)
+    // Includes both pickup and dropoff regions for comprehensive view
     const { revenueByRegion } = buildRegionMetrics(
-      allMyShipments.map(s => ({ loadId: s.loadId, status: s.status })),
-      allLoads.map(l => ({ id: l.id, dropoffCity: (l as any).dropoffCity, adminFinalPrice: l.adminFinalPrice }))
+      myShipments.map(s => ({ loadId: s.loadId, status: s.status })),
+      allLoads.map(l => ({ 
+        id: l.id, 
+        pickupCity: (l as any).pickupCity, 
+        dropoffCity: (l as any).dropoffCity, 
+        adminFinalPrice: l.adminFinalPrice 
+      })),
+      ['delivered']
     );
 
     // For solo drivers, get their truck info for the truck revenue chart

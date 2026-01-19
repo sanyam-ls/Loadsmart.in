@@ -123,23 +123,28 @@ export default function CarrierHistoryPage() {
   const isSoloCarrier = user?.carrierType === 'solo';
 
   // Convert real delivered shipments to completed trips
-  const completedTrips = useMemo(() => {
+  // Also store the original load data for accurate region filtering
+  const { completedTrips, tripsWithLoadData } = useMemo(() => {
     const myShipments = allShipments.filter((s: Shipment) => 
       s.carrierId === user?.id && s.status === 'delivered'
     );
     
-    const realTrips: CompletedTrip[] = myShipments.map((shipment: Shipment) => {
+    const tripsData: Array<{ trip: CompletedTrip; load: Load | undefined }> = myShipments.map((shipment: Shipment) => {
       const load = allLoads.find((l: Load) => l.id === shipment.loadId);
-      return convertShipmentToCompletedTrip(shipment, load, drivers, allTrucks as DbTruck[]);
+      return {
+        trip: convertShipmentToCompletedTrip(shipment, load, drivers, allTrucks as DbTruck[]),
+        load
+      };
     });
     
-    // Solo carriers only see their actual trips (no mock data)
-    // Enterprise carriers also see only real trips for consistency
-    return realTrips;
+    return {
+      completedTrips: tripsData.map(t => t.trip),
+      tripsWithLoadData: tripsData
+    };
   }, [allShipments, allLoads, allTrucks, drivers, user?.id]);
 
   const filteredTrips = useMemo(() => {
-    return completedTrips.filter((trip) => {
+    return tripsWithLoadData.filter(({ trip, load }) => {
       const matchesSearch =
         trip.route.toLowerCase().includes(searchQuery.toLowerCase()) ||
         trip.tripId.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -162,17 +167,26 @@ export default function CarrierHistoryPage() {
       
       const matchesLoadType = loadTypeFilter === "all" || trip.loadType === loadTypeFilter;
       
-      // Region filter - extract region from route (e.g., "Mumbai, Maharashtra" -> "Maharashtra")
+      // Region filter - check if region appears in pickup or destination
       let matchesRegion = true;
       if (regionFilter) {
-        // Route format is "City, State to City, State"
-        const routeRegion = deriveRegion(trip.route.split(' to ')[1] || '');
-        matchesRegion = routeRegion.toLowerCase() === regionFilter.toLowerCase();
+        const filterLower = regionFilter.toLowerCase();
+        // Use actual load data for more accurate region matching
+        const pickupCity = (load as any)?.pickupCity || '';
+        const dropoffCity = (load as any)?.dropoffCity || '';
+        const pickupRegion = deriveRegion(pickupCity).toLowerCase();
+        const dropoffRegion = deriveRegion(dropoffCity).toLowerCase();
+        
+        // Match if filter matches pickup region, dropoff region, or appears in either city
+        matchesRegion = pickupRegion === filterLower || 
+                        dropoffRegion === filterLower ||
+                        pickupCity.toLowerCase().includes(filterLower) ||
+                        dropoffCity.toLowerCase().includes(filterLower);
       }
       
       return matchesSearch && matchesTime && matchesLoadType && matchesRegion;
-    }).sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
-  }, [completedTrips, searchQuery, timeFilter, loadTypeFilter, regionFilter]);
+    }).map(({ trip }) => trip).sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+  }, [tripsWithLoadData, searchQuery, timeFilter, loadTypeFilter, regionFilter]);
 
   const loadTypes = useMemo(() => {
     const types = new Set(completedTrips.map(t => t.loadType));
@@ -199,8 +213,9 @@ export default function CarrierHistoryPage() {
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-history-title">Trip History</h1>
           <p className="text-muted-foreground">
-            {completedTrips.length} completed trips
-            {regionFilter && ` in ${regionFilter}`}
+            {regionFilter 
+              ? `${filteredTrips.length} trips in ${regionFilter}` 
+              : `${completedTrips.length} completed trips`}
           </p>
         </div>
         {regionFilter && (

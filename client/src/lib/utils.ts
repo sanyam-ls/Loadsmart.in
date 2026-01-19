@@ -33,14 +33,15 @@ export function deriveRegion(location: string | undefined | null): string {
 /**
  * Builds region metrics from shipments and loads data.
  * Can be used for both active trips and revenue analytics.
+ * Includes BOTH pickup and dropoff regions for each trip.
  * @param shipments - Array of shipments
- * @param loads - Array of loads
+ * @param loads - Array of loads with pickup and dropoff cities
  * @param statusFilter - Optional array of statuses to filter by
  * @returns Object with region metrics and list of regions
  */
 export function buildRegionMetrics(
   shipments: Array<{ loadId: string; status: string }>,
-  loads: Array<{ id: string; dropoffCity?: string; adminFinalPrice?: string | number | null }>,
+  loads: Array<{ id: string; dropoffCity?: string; pickupCity?: string; adminFinalPrice?: string | number | null }>,
   statusFilter?: string[]
 ): { 
   regionList: string[]; 
@@ -55,16 +56,26 @@ export function buildRegionMetrics(
   filteredShipments.forEach(shipment => {
     const load = loads.find(l => l.id === shipment.loadId);
     if (load) {
-      const region = deriveRegion((load as any).dropoffCity);
+      const pickupRegion = deriveRegion((load as any).pickupCity);
+      const dropoffRegion = deriveRegion((load as any).dropoffCity);
       const tripRevenue = load.adminFinalPrice 
         ? parseFloat(load.adminFinalPrice.toString()) * 0.85 
         : 0;
       
-      if (!regionRevenueMap[region]) {
-        regionRevenueMap[region] = { revenue: 0, trips: 0 };
-      }
-      regionRevenueMap[region].revenue += tripRevenue;
-      regionRevenueMap[region].trips += 1;
+      // Count trip for both pickup and dropoff regions (if different)
+      const regions = new Set([pickupRegion, dropoffRegion]);
+      regions.forEach(region => {
+        if (region && region !== 'Unknown') {
+          if (!regionRevenueMap[region]) {
+            regionRevenueMap[region] = { revenue: 0, trips: 0 };
+          }
+          regionRevenueMap[region].trips += 1;
+          // Only add revenue to destination region (where delivery happens)
+          if (region === dropoffRegion) {
+            regionRevenueMap[region].revenue += tripRevenue;
+          }
+        }
+      });
     }
   });
   

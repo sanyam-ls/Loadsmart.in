@@ -60,11 +60,43 @@ export default function CarrierRevenuePage() {
       const load = allLoads.find((l: Load) => l.id === s.loadId);
       return sum + (load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0);
     }, 0);
+
+    // Calculate revenue by region from shipments for solo drivers
+    const regionRevenueMap: Record<string, { revenue: number; trips: number }> = {};
+    myShipments.forEach((s: Shipment) => {
+      const load = allLoads.find((l: Load) => l.id === s.loadId);
+      if (load) {
+        // Extract state from destination (e.g., "Mumbai, Maharashtra" -> "Maharashtra")
+        const region = load.deliveryLocation?.split(',').pop()?.trim() || 'Other';
+        const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
+        if (!regionRevenueMap[region]) {
+          regionRevenueMap[region] = { revenue: 0, trips: 0 };
+        }
+        regionRevenueMap[region].revenue += tripRevenue;
+        regionRevenueMap[region].trips += 1;
+      }
+    });
+    const revenueByRegion = Object.entries(regionRevenueMap).map(([region, data]) => ({
+      region,
+      revenue: data.revenue,
+      trips: data.trips,
+      growth: 0
+    }));
+
+    // For solo drivers, get their truck info for the truck revenue chart
+    const truckRevenue = totalRealRevenue || shipmentRevenue;
+    const revenueByTruckType = truckRevenue > 0 ? [{
+      truckType: 'My Truck',
+      revenue: truckRevenue,
+      trips: myShipments.length
+    }] : [];
     
     return {
       totalRevenue: totalRealRevenue || shipmentRevenue,
       completedTripsCount: myShipments.length,
-      hasRealData: myShipments.length > 0 || carrierSettlements.length > 0
+      hasRealData: myShipments.length > 0 || carrierSettlements.length > 0,
+      revenueByRegion,
+      revenueByTruckType
     };
   }, [allShipments, allLoads, allSettlements, user?.id]);
   
@@ -79,9 +111,9 @@ export default function CarrierRevenuePage() {
         ...baseAnalytics,
         totalRevenue: realRevenueData.totalRevenue,
         monthlyReports: [],
-        revenueByTruckType: [],
+        revenueByTruckType: realRevenueData.revenueByTruckType,
         revenueByDriver: [],
-        revenueByRegion: [],
+        revenueByRegion: realRevenueData.revenueByRegion,
         topShippers: [],
         bidWinRatio: 0,
         loadAcceptanceRate: 0,
@@ -420,33 +452,45 @@ export default function CarrierRevenuePage() {
                 <CardTitle className="text-lg">{isSoloDriver ? 'My Truck Revenue' : 'Revenue by Truck Type'}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={truckTypeChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={70}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {truckTypeChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2 justify-center">
-                  {truckTypeChartData.map((entry, idx) => (
-                    <Badge key={idx} style={{ backgroundColor: entry.color }} className="text-white">
-                      {entry.name}
-                    </Badge>
-                  ))}
-                </div>
+                {truckTypeChartData.length > 0 ? (
+                  <>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={truckTypeChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={70}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {truckTypeChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2 justify-center">
+                      {truckTypeChartData.map((entry, idx) => (
+                        <Badge key={idx} style={{ backgroundColor: entry.color }} className="text-white">
+                          {entry.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-48 flex items-center justify-center">
+                    <div className="text-center text-muted-foreground">
+                      <Truck className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No completed trips yet</p>
+                      <p className="text-sm">Complete trips to see revenue data</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -455,30 +499,40 @@ export default function CarrierRevenuePage() {
                 <CardTitle className="text-lg">Revenue by Region</CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-64">
-                  <div className="space-y-3">
-                    {regionChartData.map((region) => (
-                      <div key={region.name} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-medium">{region.name}</span>
-                          <span>{formatCurrency(region.revenue)}</span>
+                {regionChartData.length > 0 ? (
+                  <ScrollArea className="h-64">
+                    <div className="space-y-3">
+                      {regionChartData.map((region) => (
+                        <div key={region.name} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium">{region.name}</span>
+                            <span>{formatCurrency(region.revenue)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Progress 
+                              value={(region.revenue / analytics.totalRevenue) * 100} 
+                              className="h-2 flex-1" 
+                            />
+                            <Badge 
+                              variant="outline"
+                              className={region.growth > 0 ? "text-green-600" : "text-red-600"}
+                            >
+                              {region.growth > 0 ? "+" : ""}{region.growth}%
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Progress 
-                            value={(region.revenue / analytics.totalRevenue) * 100} 
-                            className="h-2 flex-1" 
-                          />
-                          <Badge 
-                            variant="outline"
-                            className={region.growth > 0 ? "text-green-600" : "text-red-600"}
-                          >
-                            {region.growth > 0 ? "+" : ""}{region.growth}%
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="h-64 flex items-center justify-center">
+                    <div className="text-center text-muted-foreground">
+                      <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No regional data yet</p>
+                      <p className="text-sm">Complete trips to see revenue by region</p>
+                    </div>
                   </div>
-                </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </div>

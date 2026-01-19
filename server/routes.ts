@@ -1656,10 +1656,17 @@ export async function registerRoutes(
           
           // Also check accepted/awarded bids that haven't created shipments yet
           const allBids = await storage.getBidsByCarrier(user.id);
-          const truckBidInProgress = allBids.find(b =>
-            b.truckId === req.body.truckId &&
-            b.status === 'accepted'
-          );
+          let truckBidInProgress = null;
+          for (const b of allBids) {
+            if (b.truckId === req.body.truckId && b.status === 'accepted') {
+              // Check if the load is still active (not delivered/completed)
+              const bidLoad = await storage.getLoad(b.loadId);
+              if (bidLoad && !terminalStatuses.includes(bidLoad.status || '')) {
+                truckBidInProgress = b;
+                break;
+              }
+            }
+          }
           if (truckBidInProgress) {
             const activeLoad = await storage.getLoad(truckBidInProgress.loadId);
             return res.status(400).json({ 
@@ -1682,11 +1689,18 @@ export async function registerRoutes(
           }
           
           // Also check accepted bids for driver
-          const allBids = await storage.getBidsByCarrier(user.id);
-          const driverBidInProgress = allBids.find(b =>
-            b.driverId === req.body.driverId &&
-            b.status === 'accepted'
-          );
+          const allDriverBids = await storage.getBidsByCarrier(user.id);
+          let driverBidInProgress = null;
+          for (const b of allDriverBids) {
+            if (b.driverId === req.body.driverId && b.status === 'accepted') {
+              // Check if the load is still active (not delivered/completed)
+              const bidLoad = await storage.getLoad(b.loadId);
+              if (bidLoad && !terminalStatuses.includes(bidLoad.status || '')) {
+                driverBidInProgress = b;
+                break;
+              }
+            }
+          }
           if (driverBidInProgress) {
             const activeLoad = await storage.getLoad(driverBidInProgress.loadId);
             return res.status(400).json({ 
@@ -4284,10 +4298,17 @@ RESPOND IN THIS EXACT JSON FORMAT:
             });
           }
           
-          // Check accepted bids without shipments yet
-          const truckBidInProgress = allBids.find(b =>
-            b.truckId === truck_id && b.status === 'accepted'
-          );
+          // Check accepted bids without shipments yet (only if load is still active)
+          let truckBidInProgress = null;
+          for (const b of allBids) {
+            if (b.truckId === truck_id && b.status === 'accepted') {
+              const bidLoad = await storage.getLoad(b.loadId);
+              if (bidLoad && !terminalStatuses.includes(bidLoad.status || '')) {
+                truckBidInProgress = b;
+                break;
+              }
+            }
+          }
           if (truckBidInProgress) {
             const activeLoad = await storage.getLoad(truckBidInProgress.loadId);
             return res.status(400).json({ 
@@ -4310,10 +4331,17 @@ RESPOND IN THIS EXACT JSON FORMAT:
             });
           }
           
-          // Check accepted bids for driver
-          const driverBidInProgress = allBids.find(b =>
-            b.driverId === driver_id && b.status === 'accepted'
-          );
+          // Check accepted bids for driver (only if load is still active)
+          let driverBidInProgress = null;
+          for (const b of allBids) {
+            if (b.driverId === driver_id && b.status === 'accepted') {
+              const bidLoad = await storage.getLoad(b.loadId);
+              if (bidLoad && !terminalStatuses.includes(bidLoad.status || '')) {
+                driverBidInProgress = b;
+                break;
+              }
+            }
+          }
           if (driverBidInProgress) {
             const activeLoad = await storage.getLoad(driverBidInProgress.loadId);
             return res.status(400).json({ 

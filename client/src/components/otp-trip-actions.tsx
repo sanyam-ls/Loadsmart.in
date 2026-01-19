@@ -40,12 +40,20 @@ interface OtpTripActionsProps {
   onStateChange?: () => void;
 }
 
+// Helper to check if a rating is pending for this shipment
+const getRatingPendingKey = (shipmentId: string) => `rating_pending_${shipmentId}`;
+
 export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripActionsProps) {
   const { toast } = useToast();
   const [otpDialogOpen, setOtpDialogOpen] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpType, setOtpType] = useState<"trip_start" | "route_start" | "trip_end">("trip_start");
-  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+  
+  // Check if there's a pending rating for this shipment (survives component remounts)
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(() => {
+    const pendingKey = getRatingPendingKey(shipment.id);
+    return sessionStorage.getItem(pendingKey) === "true";
+  });
 
   const { data: otpStatusRaw, refetch: refetchStatus } = useOtpStatus(shipment.id);
   
@@ -170,6 +178,9 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
       refetchStatus();
       
       if (otpType === "trip_end" && effectiveShipperId) {
+        // Store rating pending state in sessionStorage to survive component remounts
+        const pendingKey = getRatingPendingKey(shipment.id);
+        sessionStorage.setItem(pendingKey, "true");
         setRatingDialogOpen(true);
       }
     } catch (error: any) {
@@ -206,7 +217,13 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
         {effectiveShipperId && (
           <ShipperRatingDialog
             open={ratingDialogOpen}
-            onOpenChange={setRatingDialogOpen}
+            onOpenChange={(open) => {
+              setRatingDialogOpen(open);
+              if (!open) {
+                // Clear the pending state when dialog closes
+                sessionStorage.removeItem(getRatingPendingKey(shipment.id));
+              }
+            }}
             shipmentId={shipment.id}
             loadId={shipment.loadId}
             shipperId={effectiveShipperId}
@@ -513,7 +530,13 @@ export function OtpTripActions({ shipment, loadStatus, onStateChange }: OtpTripA
       {effectiveShipperId && (
         <ShipperRatingDialog
           open={ratingDialogOpen}
-          onOpenChange={setRatingDialogOpen}
+          onOpenChange={(open) => {
+            setRatingDialogOpen(open);
+            if (!open) {
+              // Clear the pending state when dialog closes
+              sessionStorage.removeItem(getRatingPendingKey(shipment.id));
+            }
+          }}
           shipmentId={shipment.id}
           loadId={shipment.loadId}
           shipperId={effectiveShipperId}

@@ -206,17 +206,12 @@ export default function CarrierRevenuePage() {
 
     // Calculate cumulative revenue and format for chart
     let cumulativeRevenue = 0;
+    let prevCumulative = 0;
     const chartData = dateRange.map((date, index) => {
       const dateKey = format(date, 'yyyy-MM-dd');
       const dayRevenue = dailyRevenue[dateKey];
+      prevCumulative = cumulativeRevenue;
       cumulativeRevenue += dayRevenue;
-      
-      // Calculate change from previous day
-      const prevIndex = index > 0 ? index - 1 : 0;
-      const prevDateKey = format(dateRange[prevIndex], 'yyyy-MM-dd');
-      const prevDayCumulative = index > 0 
-        ? chartData && chartData[index - 1]?.cumulative || 0
-        : 0;
       
       return {
         date: format(date, 'MMM dd'),
@@ -224,7 +219,7 @@ export default function CarrierRevenuePage() {
         day: format(date, 'dd'),
         dayRevenue,
         cumulative: cumulativeRevenue,
-        change: index > 0 ? cumulativeRevenue - prevDayCumulative : 0,
+        change: cumulativeRevenue - prevCumulative,
         hasRevenue: dayRevenue > 0
       };
     });

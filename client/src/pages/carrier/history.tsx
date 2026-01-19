@@ -181,20 +181,13 @@ export default function CarrierHistoryPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Trips Shown"
           value={stats.total}
           icon={CheckCircle}
           subtitle="Matching filters"
           testId="stat-filtered-trips"
-        />
-        <StatCard
-          title="Total Profit"
-          value={formatCurrency(stats.totalRevenue)}
-          icon={DollarSign}
-          subtitle="Net earnings"
-          testId="stat-total-profit"
         />
         <StatCard
           title="On-Time Rate"
@@ -314,17 +307,9 @@ export default function CarrierHistoryPage() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Profit</p>
-                          <p className="text-xl font-bold text-green-600">
-                            {formatCurrency(trip.profitEarned)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                          <span className="font-medium">{trip.shipperRating.toFixed(1)}</span>
-                        </div>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <span className="font-medium">{trip.shipperRating.toFixed(1)}</span>
                       </div>
                     </div>
                   </div>
@@ -407,20 +392,6 @@ export default function CarrierHistoryPage() {
                   </CardContent>
                 </Card>
               </div>
-              
-              <Card className="border-green-500">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Profit Earned</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {formatCurrency(selectedTrip.profitEarned)}
-                      </p>
-                    </div>
-                    <CheckCircle className="h-8 w-8 text-green-500" />
-                  </div>
-                </CardContent>
-              </Card>
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="p-3 rounded-md bg-muted/50">

@@ -306,10 +306,8 @@ export default function MyDocumentsPage() {
   const driverDocs = allDocuments.filter(d => documentCategories.driver.includes(d.documentType));
   const tripDocs = allDocuments.filter(d => documentCategories.trip.includes(d.documentType));
 
-  // Get all carrier shipments (including ones without documents for display)
-  const carrierShipments = (shipmentsData || []).filter(
-    (s: any) => s.carrierId === user?.id
-  );
+  // Get all carrier shipments - backend already filters by current carrier
+  const carrierShipments = shipmentsData || [];
 
   // Group shipments by load number - show all loads, with or without documents
   const shipmentsByLoad: Record<number, ShipmentWithDocs> = {};

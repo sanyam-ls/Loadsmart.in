@@ -10696,6 +10696,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
             ...shipment,
             load: load ? {
               id: load.id,
+              loadNumber: load.loadNumber,
               shipperLoadNumber: load.shipperLoadNumber,
               adminReferenceNumber: load.adminReferenceNumber,
               pickupCity: load.pickupCity,

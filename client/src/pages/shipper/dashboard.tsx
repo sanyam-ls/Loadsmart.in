@@ -201,15 +201,15 @@ export default function ShipperDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-welcome">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-welcome">
             {t("dashboard.welcomeBack")}, {user?.companyName || user?.username}
           </h1>
-          <p className="text-muted-foreground">{t("shipper.loadOverview")}</p>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("shipper.loadOverview")}</p>
         </div>
-        <Button onClick={() => navigate("/shipper/post-load")} data-testid="button-post-load">
+        <Button onClick={() => navigate("/shipper/post-load")} data-testid="button-post-load" className="w-full sm:w-auto shrink-0">
           <Plus className="h-4 w-4 mr-2" />
           {t("shipper.postNewLoad")}
         </Button>

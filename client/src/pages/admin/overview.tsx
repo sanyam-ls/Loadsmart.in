@@ -230,16 +230,17 @@ export default function AdminOverview() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('admin.dashboard')}</h1>
-          <p className="text-muted-foreground">{t('admin.dashboardDescription')}</p>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold truncate">{t('admin.dashboard')}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{t('admin.dashboardDescription')}</p>
         </div>
         <Button 
           variant="outline" 
           onClick={handleRefresh}
           data-testid="button-refresh-data"
+          className="w-full sm:w-auto shrink-0"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           {t('admin.syncData')}

@@ -370,15 +370,19 @@ export default function MyDocumentsPage() {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {isExpired && (
-              <Badge variant="destructive" className="text-xs">Expired</Badge>
+              <Badge variant="destructive" className="text-xs">
+                Expired {Math.abs(daysUntilExpiry!)} days ago
+              </Badge>
             )}
             {isExpiringSoon && !isExpired && (
-              <Badge className="bg-amber-500 text-white text-xs no-default-hover-elevate no-default-active-elevate">Expiring</Badge>
+              <Badge className="bg-amber-500 text-white text-xs no-default-hover-elevate no-default-active-elevate">
+                {daysUntilExpiry === 0 ? "Expires today" : `${daysUntilExpiry} days left`}
+              </Badge>
             )}
             {!isExpired && !isExpiringSoon && doc.isVerified && (
               <Badge variant="default" className="text-xs">Verified</Badge>
             )}
-            {!doc.isVerified && !isExpired && (
+            {!doc.isVerified && !isExpired && !isExpiringSoon && (
               <Badge variant="secondary" className="text-xs">Pending</Badge>
             )}
             <Button 
@@ -464,41 +468,72 @@ export default function MyDocumentsPage() {
     folderId: string; 
     documents: Document[]; 
     emptyMessage: string;
-  }) => (
-    <Collapsible 
-      open={expandedFolders[folderId]} 
-      onOpenChange={() => toggleFolder(folderId)}
-    >
-      <CollapsibleTrigger className="w-full">
-        <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
-          {expandedFolders[folderId] ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          )}
-          {expandedFolders[folderId] ? (
-            <FolderOpen className="h-5 w-5 text-amber-500" />
-          ) : (
-            <Folder className="h-5 w-5 text-amber-500" />
-          )}
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">{title}</span>
-          <Badge variant="secondary" className="ml-auto text-xs">
-            {documents.length}
-          </Badge>
-        </div>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
-          {documents.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-2">{emptyMessage}</p>
-          ) : (
-            documents.map(doc => renderDocument(doc, true))
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
+  }) => {
+    // Count expiring and expired documents in this folder
+    const expiringCount = documents.filter(d => {
+      if (!d.expiryDate) return false;
+      const days = differenceInDays(new Date(d.expiryDate), new Date());
+      return days >= 0 && days <= 30;
+    }).length;
+    const expiredCount = documents.filter(d => {
+      if (!d.expiryDate) return false;
+      return differenceInDays(new Date(d.expiryDate), new Date()) < 0;
+    }).length;
+    const hasAlerts = expiringCount > 0 || expiredCount > 0;
+
+    return (
+      <Collapsible 
+        open={expandedFolders[folderId]} 
+        onOpenChange={() => toggleFolder(folderId)}
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className={`flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card ${
+            expiredCount > 0 ? "border-red-300 dark:border-red-800" : 
+            expiringCount > 0 ? "border-amber-300 dark:border-amber-700" : ""
+          }`}>
+            {expandedFolders[folderId] ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+            {expandedFolders[folderId] ? (
+              <FolderOpen className="h-5 w-5 text-amber-500" />
+            ) : (
+              <Folder className="h-5 w-5 text-amber-500" />
+            )}
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{title}</span>
+            {hasAlerts && (
+              <div className="flex items-center gap-1">
+                {expiredCount > 0 && (
+                  <Badge variant="destructive" className="text-xs">
+                    {expiredCount} expired
+                  </Badge>
+                )}
+                {expiringCount > 0 && (
+                  <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs">
+                    {expiringCount} expiring
+                  </Badge>
+                )}
+              </div>
+            )}
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {documents.length}
+            </Badge>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
+            {documents.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">{emptyMessage}</p>
+            ) : (
+              documents.map(doc => renderDocument(doc, true))
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  };
 
   const LoadsFolderSection = () => {
     const loadNumbers = Object.keys(shipmentsByLoad).map(Number).sort((a, b) => b - a);
@@ -673,11 +708,26 @@ export default function MyDocumentsPage() {
         <Alert variant={summary.expiredCount > 0 ? "destructive" : "default"} className={summary.expiredCount === 0 ? "border-amber-500 bg-amber-50 dark:bg-amber-950" : ""}>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>
-            {summary.expiredCount > 0 ? "Action Required: Documents Expired" : "Warning: Documents Expiring Soon"}
+            {summary.expiredCount > 0 ? "Action Required: Documents Expired" : "Reminder: Documents Expiring Soon"}
           </AlertTitle>
-          <AlertDescription>
-            {summary.expiredCount > 0 && `${summary.expiredCount} document(s) have expired and need immediate renewal. `}
-            {summary.expiringSoonCount > 0 && `${summary.expiringSoonCount} document(s) will expire within 30 days.`}
+          <AlertDescription className="space-y-2">
+            <p>
+              {summary.expiredCount > 0 && `${summary.expiredCount} document(s) have expired and need immediate renewal. `}
+              {summary.expiringSoonCount > 0 && `${summary.expiringSoonCount} document(s) will expire within 30 days.`}
+            </p>
+            <p className="text-sm">
+              Please upload updated versions of your truck and driver documents to maintain compliance and continue bidding on loads.
+            </p>
+            <Button 
+              variant={summary.expiredCount > 0 ? "secondary" : "outline"}
+              size="sm"
+              className="mt-2"
+              onClick={() => setUploadDialogOpen(true)}
+              data-testid="button-upload-from-alert"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Updated Documents
+            </Button>
           </AlertDescription>
         </Alert>
       )}

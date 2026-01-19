@@ -330,10 +330,6 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
                 <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrency(liveAdminCounter)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Est. Profit</span>
-              <span className="font-medium text-green-600">{formatCurrency(bid.estimatedProfit)}</span>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -611,8 +607,6 @@ export default function CarrierBidsPage() {
       carrierOffer: carrierCurrentOffer, // Use latest carrier counter offer
       currentRate: actualCurrentRate,
       shipperCounterRate: adminCounterOffer, // Admin's latest counter offer
-      estimatedRevenue: carrierCurrentOffer,
-      estimatedProfit: Math.round(carrierCurrentOffer * 0.2),
       requiredVehicleType: bid.load?.requiredTruckType || "Open - 17 Feet",
       bidStatus: (bid.status as CarrierBid["bidStatus"]) || "pending",
       timeLeftToRespond: 24,
@@ -932,9 +926,6 @@ export default function CarrierBidsPage() {
                       <div className="text-right space-y-1">
                         <div className="text-sm text-muted-foreground">{t("bids.yourBid")}</div>
                         <div className="text-xl font-bold">{formatCurrency(bid.currentRate)}</div>
-                        <div className="text-sm text-green-600 dark:text-green-400">
-                          +{formatCurrency(bid.estimatedProfit)} profit
-                        </div>
                       </div>
                       
                       <Dialog 

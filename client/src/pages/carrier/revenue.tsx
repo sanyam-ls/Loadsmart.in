@@ -69,8 +69,22 @@ export default function CarrierRevenuePage() {
     myShipments.forEach((s: Shipment) => {
       const load = allLoads.find((l: Load) => l.id === s.loadId);
       if (load) {
-        // Extract state from destination (e.g., "Mumbai, Maharashtra" -> "Maharashtra")
-        const region = load.deliveryLocation?.split(',').pop()?.trim() || 'Other';
+        // Extract region from dropoff city - format is "City, State"
+        let region = 'Unknown';
+        const dropoffCity = (load as any).dropoffCity || '';
+        if (dropoffCity) {
+          // Try to extract state from "City, State" format
+          const parts = dropoffCity.split(',');
+          if (parts.length >= 2) {
+            region = parts[parts.length - 1].trim();
+          } else {
+            // Use the city name directly
+            region = dropoffCity.trim();
+          }
+        }
+        // Clean up region name
+        if (!region || region === '') region = 'Unknown';
+        
         const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
         if (!regionRevenueMap[region]) {
           regionRevenueMap[region] = { revenue: 0, trips: 0 };

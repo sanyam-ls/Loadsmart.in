@@ -153,6 +153,22 @@ export default function MyDocumentsPage() {
     refetchOnWindowFocus: true,
   });
 
+  // Fetch drivers to get their documents (license, aadhaar images)
+  const { data: driversData } = useQuery<any[]>({
+    queryKey: ["/api/drivers"],
+    enabled: !!user && user.role === "carrier",
+    staleTime: 5000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Fetch trucks to get their documents (RC, insurance, etc.)
+  const { data: trucksData } = useQuery<any[]>({
+    queryKey: ["/api/trucks"],
+    enabled: !!user && user.role === "carrier",
+    staleTime: 5000,
+    refetchOnWindowFocus: true,
+  });
+
   const uploadMutation = useMutation({
     mutationFn: async (docData: { documentType: string; fileName: string; fileUrl: string; fileSize: number; expiryDate: string | null }) => {
       return apiRequest("POST", "/api/carrier/documents", docData);
@@ -302,8 +318,106 @@ export default function MyDocumentsPage() {
 
   const allDocuments = [...expired, ...expiringSoon, ...healthy];
   
-  const truckDocs = allDocuments.filter(d => documentCategories.truck.includes(d.documentType));
-  const driverDocs = allDocuments.filter(d => documentCategories.driver.includes(d.documentType));
+  // Convert driver documents (license, aadhaar images stored on driver records) to Document format
+  const driverDocumentsFromDrivers: Document[] = [];
+  (driversData || []).forEach((driver: any) => {
+    if (driver.licenseImageUrl) {
+      driverDocumentsFromDrivers.push({
+        id: `driver-license-${driver.id}`,
+        documentType: "license",
+        fileName: `${driver.name} - Driving License`,
+        fileUrl: driver.licenseImageUrl,
+        fileSize: undefined,
+        expiryDate: driver.licenseExpiry || null,
+        isVerified: true,
+        createdAt: driver.createdAt || new Date().toISOString(),
+      });
+    }
+    if (driver.aadhaarImageUrl) {
+      driverDocumentsFromDrivers.push({
+        id: `driver-aadhaar-${driver.id}`,
+        documentType: "aadhaar",
+        fileName: `${driver.name} - Aadhaar Card${driver.aadhaarNumber ? ` (${driver.aadhaarNumber})` : ''}`,
+        fileUrl: driver.aadhaarImageUrl,
+        fileSize: undefined,
+        expiryDate: null,
+        isVerified: true,
+        createdAt: driver.createdAt || new Date().toISOString(),
+      });
+    }
+  });
+
+  // Convert truck documents (RC, insurance, etc. stored on truck records) to Document format
+  const truckDocumentsFromTrucks: Document[] = [];
+  (trucksData || []).forEach((truck: any) => {
+    if (truck.rcDocumentUrl) {
+      truckDocumentsFromTrucks.push({
+        id: `truck-rc-${truck.id}`,
+        documentType: "rc",
+        fileName: `${truck.registrationNumber} - Registration Certificate`,
+        fileUrl: truck.rcDocumentUrl,
+        fileSize: undefined,
+        expiryDate: truck.rcExpiry || null,
+        isVerified: true,
+        createdAt: truck.createdAt || new Date().toISOString(),
+      });
+    }
+    if (truck.insuranceDocumentUrl) {
+      truckDocumentsFromTrucks.push({
+        id: `truck-insurance-${truck.id}`,
+        documentType: "insurance",
+        fileName: `${truck.registrationNumber} - Insurance`,
+        fileUrl: truck.insuranceDocumentUrl,
+        fileSize: undefined,
+        expiryDate: truck.insuranceExpiry || null,
+        isVerified: true,
+        createdAt: truck.createdAt || new Date().toISOString(),
+      });
+    }
+    if (truck.fitnessDocumentUrl) {
+      truckDocumentsFromTrucks.push({
+        id: `truck-fitness-${truck.id}`,
+        documentType: "fitness",
+        fileName: `${truck.registrationNumber} - Fitness Certificate`,
+        fileUrl: truck.fitnessDocumentUrl,
+        fileSize: undefined,
+        expiryDate: truck.fitnessExpiry || null,
+        isVerified: true,
+        createdAt: truck.createdAt || new Date().toISOString(),
+      });
+    }
+    if (truck.permitDocumentUrl) {
+      truckDocumentsFromTrucks.push({
+        id: `truck-permit-${truck.id}`,
+        documentType: "permit",
+        fileName: `${truck.registrationNumber} - Permit`,
+        fileUrl: truck.permitDocumentUrl,
+        fileSize: undefined,
+        expiryDate: truck.permitExpiry || null,
+        isVerified: true,
+        createdAt: truck.createdAt || new Date().toISOString(),
+      });
+    }
+    if (truck.pucDocumentUrl) {
+      truckDocumentsFromTrucks.push({
+        id: `truck-puc-${truck.id}`,
+        documentType: "puc",
+        fileName: `${truck.registrationNumber} - PUC Certificate`,
+        fileUrl: truck.pucDocumentUrl,
+        fileSize: undefined,
+        expiryDate: truck.pucExpiry || null,
+        isVerified: true,
+        createdAt: truck.createdAt || new Date().toISOString(),
+      });
+    }
+  });
+
+  // Merge documents from documents table with driver/truck documents
+  const truckDocsFromTable = allDocuments.filter(d => documentCategories.truck.includes(d.documentType));
+  const driverDocsFromTable = allDocuments.filter(d => documentCategories.driver.includes(d.documentType));
+  
+  const truckDocs = [...truckDocsFromTable, ...truckDocumentsFromTrucks];
+  const driverDocs = [...driverDocsFromTable, ...driverDocumentsFromDrivers];
   const tripDocs = allDocuments.filter(d => documentCategories.trip.includes(d.documentType));
 
   // Get all carrier shipments - backend already filters by current carrier
@@ -657,7 +771,7 @@ export default function MyDocumentsPage() {
                 <FileText className="h-5 w-5 text-blue-600 dark:text-blue-300" />
               </div>
               <div>
-                <p className="text-2xl font-bold" data-testid="text-total-docs">{summary.totalDocs}</p>
+                <p className="text-2xl font-bold" data-testid="text-total-docs">{summary.totalDocs + driverDocumentsFromDrivers.length + truckDocumentsFromTrucks.length}</p>
                 <p className="text-sm text-muted-foreground">Total Documents</p>
               </div>
             </div>
@@ -696,7 +810,7 @@ export default function MyDocumentsPage() {
                 <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-300" />
               </div>
               <div>
-                <p className="text-2xl font-bold" data-testid="text-healthy-count">{summary.healthyCount}</p>
+                <p className="text-2xl font-bold" data-testid="text-healthy-count">{summary.healthyCount + driverDocumentsFromDrivers.length + truckDocumentsFromTrucks.length}</p>
                 <p className="text-sm text-muted-foreground">Valid</p>
               </div>
             </div>

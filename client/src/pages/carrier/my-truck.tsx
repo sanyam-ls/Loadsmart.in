@@ -330,10 +330,10 @@ export default function MyTruckPage() {
   const ComplianceIcon = compliance.icon;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold" data-testid="text-page-title">My Truck</h1>
-        <Button variant="outline" onClick={() => navigate("/carrier/my-documents")} data-testid="button-manage-documents">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold" data-testid="text-page-title">My Truck</h1>
+        <Button variant="outline" onClick={() => navigate("/carrier/my-documents")} data-testid="button-manage-documents" className="w-full sm:w-auto">
           <FileText className="h-4 w-4 mr-2" />
           Manage Documents
         </Button>

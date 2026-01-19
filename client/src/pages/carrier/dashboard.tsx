@@ -248,7 +248,7 @@ export default function CarrierDashboard() {
   const pendingReview = onboardingStatus?.status === "pending" || onboardingStatus?.status === "under_review";
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Pending Review Banner */}
       {pendingReview && (
         <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20">
@@ -270,14 +270,14 @@ export default function CarrierDashboard() {
         </Card>
       )}
 
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-welcome">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-welcome">
             {t("dashboard.welcomeBack")}, {user?.companyName || user?.username}
           </h1>
-          <p className="text-muted-foreground">{t("dashboard.fleetOverview")}</p>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("dashboard.fleetOverview")}</p>
         </div>
-        <Button onClick={() => navigate("/carrier/add-truck")} data-testid="button-add-truck">
+        <Button onClick={() => navigate("/carrier/add-truck")} data-testid="button-add-truck" className="shrink-0 w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           {t("fleet.addTruck")}
         </Button>

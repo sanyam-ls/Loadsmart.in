@@ -769,11 +769,11 @@ export default function CarrierBidsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-bids-title">{t("carrier.bidTracking")}</h1>
-          <p className="text-muted-foreground">{t("carrier.bidTrackingDesc")}</p>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-bids-title">{t("carrier.bidTracking")}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("carrier.bidTrackingDesc")}</p>
         </div>
       </div>
       
@@ -820,7 +820,7 @@ export default function CarrierBidsPage() {
           />
         </div>
         <Select value={loadTypeFilter} onValueChange={setLoadTypeFilter}>
-          <SelectTrigger className="w-[180px]" data-testid="select-load-type">
+          <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-load-type">
             <SelectValue placeholder={t("loads.loadType")} />
           </SelectTrigger>
           <SelectContent>

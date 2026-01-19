@@ -208,10 +208,10 @@ export default function CarrierHistoryPage() {
   }, [filteredTrips]);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-history-title">Trip History</h1>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-history-title">Trip History</h1>
           <p className="text-muted-foreground">
             {regionFilter 
               ? `${filteredTrips.length} trips in ${regionFilter}` 

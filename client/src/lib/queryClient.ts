@@ -58,7 +58,7 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      staleTime: 5000, // 5 seconds default for fresher data
       retry: false,
     },
     mutations: {
@@ -66,3 +66,23 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Clear all cached data for faster fresh loads
+export function clearQueryCache() {
+  queryClient.clear();
+}
+
+// Invalidate all queries to trigger refetch
+export function invalidateAllQueries() {
+  queryClient.invalidateQueries();
+}
+
+// Clear specific query caches by key prefix
+export function clearCacheByPrefix(prefix: string) {
+  queryClient.removeQueries({ 
+    predicate: (query) => 
+      query.queryKey.some(key => 
+        typeof key === 'string' && key.startsWith(prefix)
+      )
+  });
+}

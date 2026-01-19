@@ -12,7 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   carrierType: "enterprise" | "solo" | undefined;
   login: (username: string, password: string) => Promise<boolean>;
-  register: (userData: { username: string; email: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string; city?: string }) => Promise<boolean>;
+  register: (userData: { username: string; email?: string; password: string; role: UserRole; companyName?: string; phone?: string; carrierType?: string; city?: string; otpId?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
   refreshUser: () => Promise<void>;
@@ -99,6 +99,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     // Clear all cached queries to ensure fresh data for next user
     queryClient.clear();
+    // Clear sessionStorage items (rating pending states, etc.)
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('rating_pending_')) {
+        sessionStorage.removeItem(key);
+      }
+    });
     setUser(null);
   };
 

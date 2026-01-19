@@ -923,12 +923,7 @@ export default function CarrierBidsPage() {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                       <div className="text-right space-y-1">
                         <div className="text-sm text-muted-foreground">{t("bids.yourBid")}</div>
-                        <div className="text-xl font-bold">{formatCurrency(bid.carrierOffer)}</div>
-                        {bid.shipperCounterRate && (
-                          <div className="text-sm text-amber-600 dark:text-amber-400">
-                            Admin: {formatCurrency(bid.shipperCounterRate)}
-                          </div>
-                        )}
+                        <div className="text-xl font-bold">{formatCurrency(bid.currentRate)}</div>
                         <div className="text-sm text-green-600 dark:text-green-400">
                           +{formatCurrency(bid.estimatedProfit)} profit
                         </div>

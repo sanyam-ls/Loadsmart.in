@@ -3,8 +3,10 @@ import { useLocation } from "wouter";
 import { 
   Plus, Search, Truck, MapPin, Package, Edit, Trash2, AlertTriangle, 
   CheckCircle, Clock, Wrench, Filter, ChevronDown, ChevronRight,
-  Fuel, Calendar, Shield, FileText, User, Settings, TrendingUp, Eye, Loader2, Pencil
+  Fuel, Calendar, Shield, FileText, User, Settings, TrendingUp, Eye, Loader2, Pencil,
+  Upload, ExternalLink
 } from "lucide-react";
+import { DocumentUploadWithCamera, parseDocumentValue } from "@/components/DocumentUploadWithCamera";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -75,10 +77,109 @@ function getDaysUntilExpiry(date: Date): number {
   return differenceInDays(new Date(date), new Date());
 }
 
-function TruckDetailDialog({ truck }: { truck: CarrierTruck }) {
-  const daysToInsurance = getDaysUntilExpiry(truck.insuranceExpiry);
-  const daysToFitness = getDaysUntilExpiry(truck.fitnessExpiry);
+interface TruckDocumentCardProps {
+  title: string;
+  icon: typeof Shield;
+  documentUrl: string | null;
+  expiryDate: Date;
+  documentType: string;
+  onUpload: (value: string) => void;
+  isUploading: boolean;
+}
+
+function TruckDocumentCard({ title, icon: Icon, documentUrl, expiryDate, documentType, onUpload, isUploading }: TruckDocumentCardProps) {
+  const daysLeft = getDaysUntilExpiry(expiryDate);
+  const isExpired = daysLeft < 0;
+  const isExpiringSoon = daysLeft >= 0 && daysLeft < 30;
+  
+  const getStatusColor = () => {
+    if (isExpired) return "text-red-500";
+    if (isExpiringSoon) return "text-amber-500";
+    return "text-green-500";
+  };
+  
+  const getBadgeClass = () => {
+    if (isExpired) return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+    if (isExpiringSoon) return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+    return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+  };
+  
+  const getBorderClass = () => {
+    if (isExpired) return "border-red-500";
+    if (isExpiringSoon) return "border-amber-500";
+    return "";
+  };
+  
+  const docMeta = documentUrl ? parseDocumentValue(documentUrl) : null;
+  
+  return (
+    <Card className={getBorderClass()}>
+      <CardContent className="pt-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3 flex-1">
+            <Icon className={`h-5 w-5 mt-0.5 ${getStatusColor()}`} />
+            <div className="flex-1 space-y-2">
+              <div>
+                <p className="font-medium">{title}</p>
+                <p className="text-sm text-muted-foreground">Expires: {formatDate(expiryDate)}</p>
+              </div>
+              
+              <div className="pt-2">
+                {docMeta ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      <FileText className="h-3 w-3 mr-1" />
+                      {docMeta.name}
+                    </Badge>
+                    <a 
+                      href={docMeta.path} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                      data-testid={`link-view-${documentType}`}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No document uploaded</p>
+                )}
+              </div>
+              
+              <div className="pt-1">
+                <DocumentUploadWithCamera
+                  value={documentUrl || ""}
+                  onChange={onUpload}
+                  placeholder={`Upload ${title}`}
+                  disabled={isUploading}
+                  testId={`upload-${documentType}`}
+                  documentType={documentType}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <Badge className={getBadgeClass()}>
+            {isExpired ? "Expired" : `${daysLeft} days left`}
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; onDocumentUpdate?: (truckId: string, field: string, value: string) => void }) {
   const daysToService = getDaysUntilExpiry(truck.nextServiceDue);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const handleDocumentUpload = (field: string) => (value: string) => {
+    if (onDocumentUpdate) {
+      setIsUploading(true);
+      onDocumentUpdate(truck.truckId, field, value);
+      setIsUploading(false);
+    }
+  };
   
   return (
     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -94,10 +195,10 @@ function TruckDetailDialog({ truck }: { truck: CarrierTruck }) {
       
       <Tabs defaultValue="overview" className="mt-4">
         <TabsList className="w-full grid grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="specs">Specifications</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+          <TabsTrigger value="specs" data-testid="tab-specs">Specifications</TabsTrigger>
+          <TabsTrigger value="documents" data-testid="tab-documents">Documents</TabsTrigger>
+          <TabsTrigger value="maintenance" data-testid="tab-maintenance">Maintenance</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="space-y-4 mt-4">
@@ -202,39 +303,55 @@ function TruckDetailDialog({ truck }: { truck: CarrierTruck }) {
         
         <TabsContent value="documents" className="space-y-4 mt-4">
           <div className="space-y-3">
-            <Card className={daysToInsurance < 0 ? "border-red-500" : daysToInsurance < 30 ? "border-amber-500" : ""}>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Shield className={`h-5 w-5 ${daysToInsurance < 0 ? "text-red-500" : daysToInsurance < 30 ? "text-amber-500" : "text-green-500"}`} />
-                    <div>
-                      <p className="font-medium">Insurance Certificate</p>
-                      <p className="text-sm text-muted-foreground">Expires: {formatDate(truck.insuranceExpiry)}</p>
-                    </div>
-                  </div>
-                  <Badge className={daysToInsurance < 0 ? "bg-red-100 text-red-700" : daysToInsurance < 30 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}>
-                    {daysToInsurance < 0 ? "Expired" : `${daysToInsurance} days left`}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <TruckDocumentCard
+              title="Registration Certificate (RC)"
+              icon={FileText}
+              documentUrl={truck.rcDocumentUrl}
+              expiryDate={truck.insuranceExpiry}
+              documentType="rc"
+              onUpload={handleDocumentUpload("rcDocumentUrl")}
+              isUploading={isUploading}
+            />
             
-            <Card className={daysToFitness < 0 ? "border-red-500" : daysToFitness < 30 ? "border-amber-500" : ""}>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className={`h-5 w-5 ${daysToFitness < 0 ? "text-red-500" : daysToFitness < 30 ? "text-amber-500" : "text-green-500"}`} />
-                    <div>
-                      <p className="font-medium">Fitness Certificate</p>
-                      <p className="text-sm text-muted-foreground">Expires: {formatDate(truck.fitnessExpiry)}</p>
-                    </div>
-                  </div>
-                  <Badge className={daysToFitness < 0 ? "bg-red-100 text-red-700" : daysToFitness < 30 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}>
-                    {daysToFitness < 0 ? "Expired" : `${daysToFitness} days left`}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <TruckDocumentCard
+              title="Insurance Certificate"
+              icon={Shield}
+              documentUrl={truck.insuranceDocumentUrl}
+              expiryDate={truck.insuranceExpiry}
+              documentType="insurance"
+              onUpload={handleDocumentUpload("insuranceDocumentUrl")}
+              isUploading={isUploading}
+            />
+            
+            <TruckDocumentCard
+              title="Fitness Certificate"
+              icon={CheckCircle}
+              documentUrl={truck.fitnessDocumentUrl}
+              expiryDate={truck.fitnessExpiry}
+              documentType="fitness"
+              onUpload={handleDocumentUpload("fitnessDocumentUrl")}
+              isUploading={isUploading}
+            />
+            
+            <TruckDocumentCard
+              title="Permit"
+              icon={FileText}
+              documentUrl={truck.permitDocumentUrl}
+              expiryDate={truck.permitExpiry}
+              documentType="permit"
+              onUpload={handleDocumentUpload("permitDocumentUrl")}
+              isUploading={isUploading}
+            />
+            
+            <TruckDocumentCard
+              title="PUC Certificate"
+              icon={Shield}
+              documentUrl={truck.pucDocumentUrl}
+              expiryDate={truck.pucExpiry}
+              documentType="puc"
+              onUpload={handleDocumentUpload("pucDocumentUrl")}
+              isUploading={isUploading}
+            />
           </div>
         </TabsContent>
         
@@ -337,6 +454,25 @@ export default function FleetPage() {
     }
   });
 
+  // Mutation to update truck documents
+  const updateDocumentMutation = useMutation({
+    mutationFn: async ({ truckId, field, value }: { truckId: string; field: string; value: string }) => {
+      return apiRequest("PATCH", `/api/trucks/${truckId}`, { [field]: value });
+    },
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+      toast({ title: "Document Updated", description: "Truck document has been uploaded successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to upload truck document.", variant: "destructive" });
+    }
+  });
+
+  const handleDocumentUpdate = (truckId: string, field: string, value: string) => {
+    updateDocumentMutation.mutate({ truckId, field, value });
+  };
+
   const openEditLocation = (truck: CarrierTruck) => {
     setEditingTruckId(truck.truckId);
     const currentLoc = truck.currentLocation || "";
@@ -390,10 +526,17 @@ export default function FleetPage() {
         odometerReading: 50000,
         assignedDriver: null,
         assignedDriverId: null,
-        insuranceExpiry: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-        fitnessExpiry: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
+        insuranceExpiry: t.insuranceExpiry ? new Date(t.insuranceExpiry) : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        fitnessExpiry: t.fitnessExpiry ? new Date(t.fitnessExpiry) : new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
+        permitExpiry: t.permitExpiry ? new Date(t.permitExpiry) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        pucExpiry: t.pucExpiry ? new Date(t.pucExpiry) : new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
         lastServiceDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         nextServiceDue: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        rcDocumentUrl: t.rcDocumentUrl || null,
+        insuranceDocumentUrl: t.insuranceDocumentUrl || null,
+        fitnessDocumentUrl: t.fitnessDocumentUrl || null,
+        permitDocumentUrl: t.permitDocumentUrl || null,
+        pucDocumentUrl: t.pucDocumentUrl || null,
       }));
     }
     // While loading, show mock data as placeholder
@@ -698,7 +841,7 @@ export default function FleetPage() {
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                 </DialogTrigger>
-                                <TruckDetailDialog truck={truck} />
+                                <TruckDetailDialog truck={truck} onDocumentUpdate={handleDocumentUpdate} />
                               </Dialog>
                             </div>
                           </TableCell>

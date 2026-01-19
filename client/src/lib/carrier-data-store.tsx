@@ -24,6 +24,8 @@ export interface CarrierTruck {
   chassisNumber: string;
   insuranceExpiry: Date;
   fitnessExpiry: Date;
+  permitExpiry: Date;
+  pucExpiry: Date;
   loadCapacity: number;
   bodyType: string;
   lastServiceDate: Date;
@@ -34,6 +36,12 @@ export interface CarrierTruck {
   currentLocation: string;
   fuelLevel: number;
   odometerReading: number;
+  // Document URLs for Indian truck compliance
+  rcDocumentUrl: string | null;
+  insuranceDocumentUrl: string | null;
+  fitnessDocumentUrl: string | null;
+  permitDocumentUrl: string | null;
+  pucDocumentUrl: string | null;
 }
 
 // Driver Types
@@ -401,6 +409,8 @@ function generateTrucks(count: number, drivers: CarrierDriver[]): CarrierTruck[]
       chassisNumber: `MAT${randomBetween(100000000, 999999999)}`,
       insuranceExpiry: new Date(Date.now() + randomBetween(-30, 365) * 24 * 60 * 60 * 1000),
       fitnessExpiry: new Date(Date.now() + randomBetween(-15, 180) * 24 * 60 * 60 * 1000),
+      permitExpiry: new Date(Date.now() + randomBetween(30, 365) * 24 * 60 * 60 * 1000),
+      pucExpiry: new Date(Date.now() + randomBetween(-10, 180) * 24 * 60 * 60 * 1000),
       loadCapacity: randomBetween(8, 40),
       bodyType: truckType,
       lastServiceDate: new Date(Date.now() - randomBetween(15, 90) * 24 * 60 * 60 * 1000),
@@ -410,7 +420,12 @@ function generateTrucks(count: number, drivers: CarrierDriver[]): CarrierTruck[]
       currentStatus: status,
       currentLocation: randomFrom(indianCities),
       fuelLevel: randomBetween(15, 95),
-      odometerReading: randomBetween(50000, 500000)
+      odometerReading: randomBetween(50000, 500000),
+      rcDocumentUrl: null,
+      insuranceDocumentUrl: null,
+      fitnessDocumentUrl: null,
+      permitDocumentUrl: null,
+      pucDocumentUrl: null,
     };
     
     if (assignedDriver) {

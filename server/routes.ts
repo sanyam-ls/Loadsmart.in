@@ -1092,7 +1092,13 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Driver not found" });
       }
 
-      const updated = await storage.updateDriver(req.params.id, req.body);
+      // Convert date string to Date object if present
+      const updateData = {
+        ...req.body,
+        licenseExpiry: req.body.licenseExpiry ? new Date(req.body.licenseExpiry) : undefined,
+      };
+
+      const updated = await storage.updateDriver(req.params.id, updateData);
       res.json(updated);
     } catch (error) {
       console.error("Update driver error:", error);

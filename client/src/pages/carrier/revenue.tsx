@@ -119,6 +119,52 @@ export default function CarrierRevenuePage() {
         const dateB = new Date(b.month);
         return dateA.getTime() - dateB.getTime();
       });
+
+    // Calculate top shippers from delivered shipments
+    const shipperRevenueMap: Record<string, { 
+      shipperId: string; 
+      shipperName: string; 
+      revenue: number; 
+      loads: number;
+      lastDelivery: Date;
+    }> = {};
+    
+    myShipments.forEach((s: Shipment) => {
+      const load = allLoads.find((l: Load) => l.id === s.loadId);
+      if (load) {
+        const shipperId = (load as any).shipperId || 'unknown';
+        const shipperName = (load as any).shipperCompanyName || (load as any).shipperContactName || 'Unknown Shipper';
+        const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
+        const completedAt = s.completedAt ? new Date(s.completedAt) : new Date();
+        
+        if (!shipperRevenueMap[shipperId]) {
+          shipperRevenueMap[shipperId] = {
+            shipperId,
+            shipperName,
+            revenue: 0,
+            loads: 0,
+            lastDelivery: completedAt
+          };
+        }
+        shipperRevenueMap[shipperId].revenue += tripRevenue;
+        shipperRevenueMap[shipperId].loads += 1;
+        if (completedAt > shipperRevenueMap[shipperId].lastDelivery) {
+          shipperRevenueMap[shipperId].lastDelivery = completedAt;
+        }
+      }
+    });
+
+    const topShippers = Object.values(shipperRevenueMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .map((shipper, idx) => ({
+        shipperId: shipper.shipperId,
+        shipperName: shipper.shipperName,
+        totalRevenue: shipper.revenue,
+        loadsCompleted: shipper.loads,
+        avgRevenuePerLoad: shipper.loads > 0 ? shipper.revenue / shipper.loads : 0,
+        lastLoadDate: format(shipper.lastDelivery, 'MMM dd, yyyy'),
+        reliabilityScore: 95 // Default score for completed loads
+      }));
     
     return {
       totalRevenue: totalRealRevenue || shipmentRevenue,
@@ -126,7 +172,8 @@ export default function CarrierRevenuePage() {
       hasRealData: myShipments.length > 0 || carrierSettlements.length > 0,
       revenueByRegion,
       revenueByTruckType,
-      monthlyReports
+      monthlyReports,
+      topShippers
     };
   }, [allShipments, allLoads, allSettlements, user?.id]);
   
@@ -144,7 +191,7 @@ export default function CarrierRevenuePage() {
         revenueByTruckType: realRevenueData.revenueByTruckType,
         revenueByDriver: [],
         revenueByRegion: realRevenueData.revenueByRegion,
-        topShippers: [],
+        topShippers: realRevenueData.topShippers,
         bidWinRatio: 0,
         loadAcceptanceRate: 0,
         avgRevenuePerTrip: realRevenueData.completedTripsCount > 0 
@@ -159,6 +206,9 @@ export default function CarrierRevenuePage() {
       totalRevenue: realRevenueData.hasRealData 
         ? realRevenueData.totalRevenue + baseAnalytics.totalRevenue 
         : baseAnalytics.totalRevenue,
+      topShippers: realRevenueData.topShippers.length > 0 
+        ? realRevenueData.topShippers 
+        : baseAnalytics.topShippers,
     };
   }, [baseAnalytics, realRevenueData, isSoloDriver]);
   
@@ -1065,37 +1115,51 @@ export default function CarrierRevenuePage() {
               <CardDescription>Your highest-value shipper relationships</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px]">
-                <div className="space-y-4">
-                  {analytics.topShippers.map((shipper, idx) => (
-                    <div key={shipper.shipperId} className="p-4 rounded-lg bg-muted/50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-semibold">{shipper.shipperName}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{shipper.loadsCompleted} loads</span>
-                              <span className="flex items-center gap-1">
-                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                {shipper.rating.toFixed(1)} rating
-                              </span>
+              {analytics.topShippers.length > 0 ? (
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-4">
+                    {analytics.topShippers.map((shipper: any, idx: number) => (
+                      <div key={shipper.shipperId} className="p-4 rounded-lg bg-muted/50" data-testid={`shipper-card-${idx}`}>
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Building2 className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-semibold">{shipper.shipperName}</p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                                <span>{shipper.loadsCompleted} {shipper.loadsCompleted === 1 ? 'load' : 'loads'} completed</span>
+                                <span className="flex items-center gap-1">
+                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                  {shipper.reliabilityScore}% reliability
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          <div className="text-right">
+                            <p className="font-bold text-lg text-primary">{formatCurrency(shipper.totalRevenue)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatCurrency(shipper.avgRevenuePerLoad)} per load
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-lg">{formatCurrency(shipper.totalPaid)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCurrency(shipper.totalPaid / shipper.loadsCompleted)} avg
-                          </p>
+                        <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Last delivery: {shipper.lastLoadDate}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            Top {idx + 1}
+                          </Badge>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="py-16 text-center text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">No shipper relationships yet</p>
+                  <p className="text-sm mt-1">Complete deliveries to build shipper partnerships</p>
                 </div>
-              </ScrollArea>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

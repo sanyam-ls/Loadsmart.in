@@ -12235,6 +12235,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
           load: load ? {
             id: load.id,
             adminReferenceNumber: load.adminReferenceNumber,
+            shipperLoadNumber: load.shipperLoadNumber,
             pickupCity: load.pickupCity,
             deliveryCity: load.dropoffCity,
             dropoffCity: load.dropoffCity,
@@ -12322,6 +12323,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
           load: load ? {
             id: load.id,
             adminReferenceNumber: load.adminReferenceNumber,
+            shipperLoadNumber: load.shipperLoadNumber,
             pickupCity: load.pickupCity,
             deliveryCity: load.dropoffCity,
             dropoffCity: load.dropoffCity,

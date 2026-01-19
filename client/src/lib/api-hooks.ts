@@ -520,6 +520,7 @@ export interface OtpRequest {
     deliveryCity?: string; 
     dropoffCity?: string;
     adminReferenceNumber?: number;
+    shipperLoadNumber?: number;
   };
   shipmentStatus?: string;
   approvedBy?: {
@@ -567,6 +568,7 @@ export interface ShipperOtpRequest {
     deliveryCity?: string; 
     dropoffCity?: string;
     adminReferenceNumber?: number;
+    shipperLoadNumber?: number;
   };
   shipmentStatus?: string;
   approvedBy?: {

@@ -26,9 +26,21 @@ import { useToast } from "@/hooks/use-toast";
 import { useOtpRequests, useApproveOtpRequest, useRejectOtpRequest, useRegenerateOtpRequest, type OtpRequest, invalidateOtpRequests } from "@/lib/api-hooks";
 import { formatDistanceToNow, format } from "date-fns";
 
-function formatLoadId(load?: { adminReferenceNumber?: number | null }): string {
+function formatLoadId(load?: { adminReferenceNumber?: number | null; shipperLoadNumber?: number | string | null; id?: string }): string {
   if (load?.adminReferenceNumber) {
     return `LD-${load.adminReferenceNumber}`;
+  }
+  if (load?.shipperLoadNumber) {
+    const ref = String(load.shipperLoadNumber);
+    // Avoid duplicating LD- prefix if already present
+    if (ref.startsWith("LD-") || ref.startsWith("ld-")) {
+      return ref.toUpperCase();
+    }
+    return `LD-${ref}`;
+  }
+  // Fallback to truncated load ID if available
+  if (load?.id) {
+    return `#${load.id.slice(0, 6)}`;
   }
   return "Unknown";
 }

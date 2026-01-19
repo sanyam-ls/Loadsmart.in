@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { type CarrierTrip } from "@/lib/carrier-data-store";
 import { format, addHours } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
-import { useShipments, useLoads } from "@/lib/api-hooks";
+import { useShipments, useLoads, useShipmentsTracking } from "@/lib/api-hooks";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import type { Shipment, Load, Driver, Truck as DbTruck } from "@shared/schema";
 import { OtpTripActions } from "@/components/otp-trip-actions";
@@ -173,6 +173,8 @@ export default function TripsPage() {
   const { user, carrierType } = useAuth();
   const { data: shipments = [], refetch: refetchShipments } = useShipments();
   const { data: loads = [] } = useLoads();
+  // Use enriched tracking data which includes load details for each shipment
+  const { data: trackingShipments = [], refetch: refetchTracking } = useShipmentsTracking();
   const [selectedTrip, setSelectedTrip] = useState<CarrierTrip | null>(null);
   const [detailTab, setDetailTab] = useState("overview");
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
@@ -201,12 +203,18 @@ export default function TripsPage() {
   });
 
   const activeTrips = useMemo(() => {
-    const carrierShipments = shipments.filter(s => s.carrierId === user?.id && s.status !== "delivered" && s.status !== "cancelled");
-    return carrierShipments.map(shipment => {
-      const load = loads.find(l => l.id === shipment.loadId);
+    // Use tracking shipments which include enriched load data
+    const carrierShipments = trackingShipments.filter(
+      (s: any) => s.carrierId === user?.id && s.status !== "delivered" && s.status !== "cancelled"
+    );
+    return carrierShipments.map((shipment: any) => {
+      // Extract load from enriched tracking shipment, or fall back to loads array
+      const enrichedLoad = shipment.load;
+      const fallbackLoad = loads.find(l => l.id === shipment.loadId);
+      const load = enrichedLoad || fallbackLoad;
       return convertShipmentToTrip(shipment, load, drivers, trucks);
     });
-  }, [shipments, loads, user?.id, drivers, trucks]);
+  }, [trackingShipments, loads, user?.id, drivers, trucks]);
 
   useEffect(() => {
     if (!selectedTrip && activeTrips.length > 0) {
@@ -217,28 +225,32 @@ export default function TripsPage() {
   useEffect(() => {
     const unsubApproved = onMarketplaceEvent("otp_approved", () => {
       refetchShipments();
+      refetchTracking();
       toast({ title: "OTP Approved", description: "Trip OTP has been verified" });
     });
     const unsubCompleted = onMarketplaceEvent("trip_completed", () => {
       refetchShipments();
+      refetchTracking();
       toast({ title: "Trip Completed", description: "Trip marked as delivered" });
     });
     const unsubRequested = onMarketplaceEvent("otp_requested", () => {
       refetchShipments();
+      refetchTracking();
     });
     return () => { unsubApproved(); unsubCompleted(); unsubRequested(); };
-  }, [refetchShipments, toast]);
+  }, [refetchShipments, refetchTracking, toast]);
 
   const matchedShipment = useMemo(() => {
     if (!selectedTrip) return null;
     const loadNum = selectedTrip.loadId.replace('LD-', '').replace(/^0+/, '');
-    return shipments.find(s => {
-      const load = loads.find(l => l.id === s.loadId);
+    // Use tracking shipments which include enriched load data
+    return trackingShipments.find((s: any) => {
+      const load = s.load || loads.find(l => l.id === s.loadId);
       return load?.shipperLoadNumber?.toString() === loadNum || 
              load?.adminReferenceNumber?.toString() === loadNum || 
              s.id === selectedTrip.tripId.replace('real-', '');
     });
-  }, [selectedTrip, shipments, loads]);
+  }, [selectedTrip, trackingShipments, loads]);
 
   const shipmentId = matchedShipment?.id;
   

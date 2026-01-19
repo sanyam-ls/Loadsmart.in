@@ -190,6 +190,15 @@ export function useShipments() {
   });
 }
 
+// Use enriched shipments with load data for trips page
+export function useShipmentsTracking() {
+  return useQuery<any[]>({
+    queryKey: ['/api/shipments/tracking'],
+    staleTime: 15000,
+    refetchInterval: 30000,
+  });
+}
+
 export function useShipment(id: string | undefined) {
   return useQuery<Shipment>({
     queryKey: ['/api/shipments', id],

@@ -591,6 +591,11 @@ export default function CarrierBidsPage() {
         ? Number(latestNegotiationAmount) 
         : carrierCurrentOffer;
       
+      // Calculate estimated revenue (85% of carrier offer - carrier share after platform fee)
+      const estimatedRev = carrierCurrentOffer * 0.85;
+      // Profit margin estimate (25% default)
+      const estimatedProf = estimatedRev * 0.25;
+      
       return {
       bidId: bid.id,
       loadId: bid.loadId,
@@ -611,6 +616,8 @@ export default function CarrierBidsPage() {
       bidStatus: (bid.status as CarrierBid["bidStatus"]) || "pending",
       timeLeftToRespond: 24,
       submittedAt: new Date(bid.createdAt || Date.now()),
+      estimatedRevenue: estimatedRev,
+      estimatedProfit: estimatedProf,
       negotiationHistory: [{
         id: `msg-${bid.id}-1`,
         sender: "carrier" as const,

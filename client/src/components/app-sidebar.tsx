@@ -65,7 +65,7 @@ const carrierItems: NavItem[] = [
   { titleKey: "nav.activeTrips", url: "/carrier/trips", icon: MapPin },
   { titleKey: "nav.tripHistory", url: "/carrier/history", icon: History },
   { titleKey: "nav.revenue", url: "/carrier/revenue", icon: DollarSign },
-  { titleKey: "nav.documents", url: "/carrier/documents", icon: FileText },
+  { titleKey: "nav.documents", url: "/carrier/my-documents", icon: FileText },
 ];
 
 const soloItems: NavItem[] = [

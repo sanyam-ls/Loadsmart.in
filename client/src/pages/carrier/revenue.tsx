@@ -20,7 +20,10 @@ import {
 import { format } from "date-fns";
 import type { Shipment, Load } from "@shared/schema";
 
-function formatCurrency(amount: number): string {
+function formatCurrency(amount: number | undefined | null): string {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return 'Rs. 0';
+  }
   if (amount >= 10000000) {
     return `Rs. ${(amount / 10000000).toFixed(2)} Cr`;
   }
@@ -90,13 +93,44 @@ export default function CarrierRevenuePage() {
       revenue: truckRevenue,
       trips: myShipments.length
     }] : [];
+
+    // Calculate monthly reports from shipments for solo drivers
+    const monthlyRevenueMap: Record<string, { revenue: number; trips: number }> = {};
+    myShipments.forEach((s: Shipment) => {
+      const load = allLoads.find((l: Load) => l.id === s.loadId);
+      if (load) {
+        // Group by month (e.g., "Jan 2026")
+        const deliveryDate = s.deliveryDate ? new Date(s.deliveryDate) : new Date();
+        const monthKey = format(deliveryDate, 'MMM yyyy');
+        const tripRevenue = load.adminFinalPrice ? parseFloat(load.adminFinalPrice) * 0.85 : 0;
+        if (!monthlyRevenueMap[monthKey]) {
+          monthlyRevenueMap[monthKey] = { revenue: 0, trips: 0 };
+        }
+        monthlyRevenueMap[monthKey].revenue += tripRevenue;
+        monthlyRevenueMap[monthKey].trips += 1;
+      }
+    });
+    const monthlyReports = Object.entries(monthlyRevenueMap)
+      .map(([month, data]) => ({
+        month,
+        totalRevenue: data.revenue,
+        tripsCompleted: data.trips,
+        profitMargin: 25 // Approximate profit margin
+      }))
+      .sort((a, b) => {
+        // Sort by date
+        const dateA = new Date(a.month);
+        const dateB = new Date(b.month);
+        return dateA.getTime() - dateB.getTime();
+      });
     
     return {
       totalRevenue: totalRealRevenue || shipmentRevenue,
       completedTripsCount: myShipments.length,
       hasRealData: myShipments.length > 0 || carrierSettlements.length > 0,
       revenueByRegion,
-      revenueByTruckType
+      revenueByTruckType,
+      monthlyReports
     };
   }, [allShipments, allLoads, allSettlements, user?.id]);
   
@@ -110,7 +144,7 @@ export default function CarrierRevenuePage() {
       return {
         ...baseAnalytics,
         totalRevenue: realRevenueData.totalRevenue,
-        monthlyReports: [],
+        monthlyReports: realRevenueData.monthlyReports,
         revenueByTruckType: realRevenueData.revenueByTruckType,
         revenueByDriver: [],
         revenueByRegion: realRevenueData.revenueByRegion,
@@ -366,36 +400,46 @@ export default function CarrierRevenuePage() {
                 <CardDescription>Revenue and profit over the past months</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyChartData}>
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(v) => `${(v / 100000).toFixed(0)}L`}
-                      />
-                      <Tooltip 
-                        formatter={(value: number) => formatCurrency(value)}
-                        labelStyle={{ color: "var(--foreground)" }}
-                      />
-                      <Legend />
-                      <Area 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        name="Revenue"
-                        stroke="#3B82F6" 
-                        fill="#3B82F680"
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="profit" 
-                        name="Profit"
-                        stroke="#10B981" 
-                        fill="#10B98180"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                {monthlyChartData.length > 0 ? (
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={monthlyChartData}>
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(v) => `${(v / 100000).toFixed(0)}L`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => formatCurrency(value)}
+                          labelStyle={{ color: "var(--foreground)" }}
+                        />
+                        <Legend />
+                        <Area 
+                          type="monotone" 
+                          dataKey="revenue" 
+                          name="Revenue"
+                          stroke="#3B82F6" 
+                          fill="#3B82F680"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="profit" 
+                          name="Profit"
+                          stroke="#10B981" 
+                          fill="#10B98180"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-80 flex items-center justify-center">
+                    <div className="text-center text-muted-foreground">
+                      <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No monthly data yet</p>
+                      <p className="text-sm">Complete trips to see revenue trends</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -405,16 +449,26 @@ export default function CarrierRevenuePage() {
                 <CardDescription>Number of trips per month</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyChartData}>
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="trips" name="Trips" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {monthlyChartData.length > 0 ? (
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={monthlyChartData}>
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Bar dataKey="trips" name="Trips" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-80 flex items-center justify-center">
+                    <div className="text-center text-muted-foreground">
+                      <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No trips completed yet</p>
+                      <p className="text-sm">Complete trips to see monthly stats</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

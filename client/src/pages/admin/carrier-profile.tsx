@@ -174,6 +174,14 @@ export default function CarrierProfilePage() {
     pod: "Proof of Delivery",
     lr: "Lorry Receipt",
     eway: "E-Way Bill",
+    eway_bill: "E-Way Bill",
+    loading_photos: "Loading Photos",
+    other: "Other Document",
+    truck_rc: "Truck RC",
+    truck_insurance: "Truck Insurance",
+    truck_fitness: "Truck Fitness",
+    truck_permit: "Truck Permit",
+    truck_puc: "Truck PUC",
   };
 
   const handleSync = () => {
@@ -585,6 +593,7 @@ export default function CarrierProfilePage() {
                     <TableRow>
                       <TableHead>Document</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Source</TableHead>
                       <TableHead>Uploaded</TableHead>
                       <TableHead>Expiry</TableHead>
                       <TableHead>Status</TableHead>
@@ -596,6 +605,15 @@ export default function CarrierProfilePage() {
                       <TableRow key={doc.id} data-testid={`row-document-${doc.id}`}>
                         <TableCell className="font-medium">{doc.fileName || doc.name}</TableCell>
                         <TableCell>{documentTypeLabels[doc.documentType] || doc.documentType || doc.type}</TableCell>
+                        <TableCell>
+                          {doc.source === 'truck' ? (
+                            <Badge variant="outline" className="text-xs">
+                              Truck: {doc.truckPlate}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">Shipment</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           {doc.createdAt ? format(new Date(doc.createdAt), "MMM dd, yyyy") : "N/A"}
                         </TableCell>
@@ -622,7 +640,7 @@ export default function CarrierProfilePage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {!doc.isVerified && (
+                            {!doc.isVerified && doc.source !== 'truck' && (
                               <>
                                 <Button
                                   size="icon"

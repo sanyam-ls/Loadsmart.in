@@ -2420,6 +2420,51 @@ export async function registerRoutes(
         carrierBids.some(bid => bid.loadId === load.id)
       );
 
+      // Extract truck documents from trucks and format them for display
+      const truckDocuments: any[] = [];
+      const parseDocUrl = (urlJson: any) => {
+        if (!urlJson) return null;
+        try {
+          if (typeof urlJson === 'string') {
+            const parsed = JSON.parse(urlJson);
+            return { path: parsed.path, name: parsed.name };
+          }
+          return urlJson;
+        } catch { return null; }
+      };
+      
+      for (const truck of trucks) {
+        const docTypes = [
+          { field: 'rcDocumentUrl', type: 'truck_rc', label: 'Registration Certificate', expiry: null },
+          { field: 'insuranceDocumentUrl', type: 'truck_insurance', label: 'Insurance Certificate', expiry: truck.insuranceExpiry },
+          { field: 'fitnessDocumentUrl', type: 'truck_fitness', label: 'Fitness Certificate', expiry: truck.fitnessExpiry },
+          { field: 'permitDocumentUrl', type: 'truck_permit', label: 'Permit', expiry: (truck as any).permitExpiry },
+          { field: 'pucDocumentUrl', type: 'truck_puc', label: 'PUC Certificate', expiry: (truck as any).pucExpiry },
+        ];
+        
+        for (const docType of docTypes) {
+          const docData = parseDocUrl((truck as any)[docType.field]);
+          if (docData) {
+            truckDocuments.push({
+              id: `${truck.id}-${docType.type}`,
+              userId: carrier.id,
+              documentType: docType.type,
+              fileName: docData.name || `${docType.label}`,
+              fileUrl: docData.path,
+              expiryDate: docType.expiry,
+              isVerified: true, // Truck docs are auto-verified
+              createdAt: truck.createdAt || new Date(),
+              truckId: truck.id,
+              truckPlate: truck.licensePlate,
+              source: 'truck',
+            });
+          }
+        }
+      }
+      
+      // Combine shipment documents with truck documents
+      const allDocuments = [...documents, ...truckDocuments];
+
       const { password: _, ...carrierWithoutPassword } = carrier;
       
       res.json({
@@ -2438,8 +2483,8 @@ export async function registerRoutes(
         },
         bids: carrierBids,
         bidCount: carrierBids.length,
-        documents,
-        documentCount: documents.length,
+        documents: allDocuments,
+        documentCount: allDocuments.length,
         trucks,
         truckCount: trucks.length,
         verification,

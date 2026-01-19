@@ -182,6 +182,7 @@ export default function TripsPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState<string>("lr_consignment");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [tripSortOrder, setTripSortOrder] = useState<"newest" | "oldest" | "status">("newest");
   
   // Camera capture states
   const [cameraMode, setCameraMode] = useState(false);
@@ -204,24 +205,35 @@ export default function TripsPage() {
 
   const activeTrips = useMemo(() => {
     // Use tracking shipments which include enriched load data
-    console.log("[Trips Debug] trackingShipments count:", trackingShipments.length);
-    console.log("[Trips Debug] user?.id:", user?.id);
-    
     const carrierShipments = trackingShipments.filter(
       (s: any) => s.carrierId === user?.id && s.status !== "delivered" && s.status !== "cancelled"
     );
     
-    console.log("[Trips Debug] Filtered carrier shipments:", carrierShipments.length);
-    console.log("[Trips Debug] Shipment load numbers:", carrierShipments.map((s: any) => s.load?.shipperLoadNumber));
+    // Sort based on selected sort order
+    const sortedShipments = [...carrierShipments].sort((a: any, b: any) => {
+      if (tripSortOrder === "newest") {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      } else if (tripSortOrder === "oldest") {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateA - dateB;
+      } else {
+        // Sort by status: in_transit first, then pickup_scheduled
+        const statusOrder: Record<string, number> = { in_transit: 0, pickup_scheduled: 1 };
+        return (statusOrder[a.status] ?? 2) - (statusOrder[b.status] ?? 2);
+      }
+    });
     
-    return carrierShipments.map((shipment: any) => {
+    return sortedShipments.map((shipment: any) => {
       // Extract load from enriched tracking shipment, or fall back to loads array
       const enrichedLoad = shipment.load;
       const fallbackLoad = loads.find(l => l.id === shipment.loadId);
       const load = enrichedLoad || fallbackLoad;
       return convertShipmentToTrip(shipment, load, drivers, trucks);
     });
-  }, [trackingShipments, loads, user?.id, drivers, trucks]);
+  }, [trackingShipments, loads, user?.id, drivers, trucks, tripSortOrder]);
 
   useEffect(() => {
     if (!selectedTrip && activeTrips.length > 0) {
@@ -514,7 +526,19 @@ export default function TripsPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Current Trips ({activeTrips.length})</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base">Current Trips ({activeTrips.length})</CardTitle>
+              <Select value={tripSortOrder} onValueChange={(v) => setTripSortOrder(v as typeof tripSortOrder)}>
+                <SelectTrigger className="w-28 h-8 text-xs" data-testid="select-trip-sort">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="oldest">Oldest</SelectItem>
+                  <SelectItem value="status">By Status</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[calc(100vh-420px)]">
@@ -640,8 +664,8 @@ export default function TripsPage() {
                         <Card>
                           <CardContent className="pt-4 space-y-2">
                             <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Profitability</span>
-                              <span className="font-medium text-green-600">{formatCurrency(selectedTrip.profitabilityEstimate)}</span>
+                              <span className="text-muted-foreground">Trip Rate</span>
+                              <span className="font-semibold text-primary">{formatCurrency(selectedTrip.rate)}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Total Distance</span>

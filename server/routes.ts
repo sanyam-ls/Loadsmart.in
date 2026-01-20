@@ -4466,10 +4466,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(404).json({ error: "Load not found" });
       }
 
-      // Verify this is a fixed-price load (no counter bids allowed)
-      if (load.allowCounterBids) {
-        return res.status(400).json({ error: "This load allows counter bids. Please use the bidding process." });
-      }
+      // Note: Direct accept is allowed for both fixed-price and negotiable loads
+      // When a carrier accepts at the listed price, they get immediate acceptance
 
       // Verify load is in a state that allows acceptance
       const acceptableStatuses = ["posted_to_carriers", "open_for_bid", "priced"];

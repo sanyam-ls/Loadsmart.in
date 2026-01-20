@@ -4449,6 +4449,171 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   });
 
+  // Carrier accepts fixed-price load directly - creates bid, invoice, and shipment immediately
+  app.post("/api/loads/:id/accept-direct", requireAuth, async (req, res) => {
+    try {
+      const loadId = req.params.id;
+      const user = await storage.getUser(req.session.userId!);
+      
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Only carriers can accept loads" });
+      }
+
+      const { truck_id, driver_id } = req.body;
+
+      const load = await storage.getLoad(loadId);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Verify this is a fixed-price load (no counter bids allowed)
+      if (load.allowCounterBids) {
+        return res.status(400).json({ error: "This load allows counter bids. Please use the bidding process." });
+      }
+
+      // Verify load is in a state that allows acceptance
+      const acceptableStatuses = ["posted_to_carriers", "open_for_bid", "priced"];
+      if (!acceptableStatuses.includes(load.status || "")) {
+        return res.status(400).json({ error: `Load is not available for acceptance (status: ${load.status})` });
+      }
+
+      // Use workflow service to check carrier eligibility
+      const canBid = await canUserBidOnLoad(user.id, loadId);
+      if (!canBid.allowed) {
+        return res.status(403).json({ error: canBid.reason });
+      }
+
+      // Fleet carrier restriction: truck and driver can only be assigned to one active load at a time
+      const carrierProfileForValidation = await storage.getCarrierProfile(user.id);
+      const isFleetCarrier = carrierProfileForValidation?.carrierType === 'enterprise' || carrierProfileForValidation?.carrierType === 'fleet';
+      
+      if (isFleetCarrier) {
+        const terminalStatuses = ['delivered', 'closed', 'cancelled', 'completed'];
+        const carrierShipments = await storage.getShipmentsByCarrier(user.id);
+        const allBids = await storage.getBidsByCarrier(user.id);
+        
+        // Check if truck is already assigned
+        if (truck_id) {
+          const truckInUse = carrierShipments.find(s => 
+            s.truckId === truck_id && !terminalStatuses.includes(s.status || '')
+          );
+          
+          if (truckInUse) {
+            const activeLoad = await storage.getLoad(truckInUse.loadId);
+            return res.status(400).json({ 
+              error: `This truck is already assigned to an active shipment (${activeLoad?.pickupCity || 'Unknown'} to ${activeLoad?.dropoffCity || 'Unknown'}).`
+            });
+          }
+          
+          for (const b of allBids) {
+            if (b.truckId === truck_id && b.status === 'accepted') {
+              const bidLoad = await storage.getLoad(b.loadId);
+              if (bidLoad && !terminalStatuses.includes(bidLoad.status || '')) {
+                return res.status(400).json({ 
+                  error: `This truck is already assigned to an accepted bid.`
+                });
+              }
+            }
+          }
+        }
+        
+        // Check if driver is already assigned
+        if (driver_id && driver_id !== 'unassigned') {
+          const driverInUse = carrierShipments.find(s => 
+            s.driverId === driver_id && !terminalStatuses.includes(s.status || '')
+          );
+          
+          if (driverInUse) {
+            return res.status(400).json({ 
+              error: `This driver is already assigned to an active shipment.`
+            });
+          }
+          
+          for (const b of allBids) {
+            if (b.driverId === driver_id && b.status === 'accepted') {
+              const bidLoad = await storage.getLoad(b.loadId);
+              if (bidLoad && !terminalStatuses.includes(bidLoad.status || '')) {
+                return res.status(400).json({ 
+                  error: `This driver is already assigned to an accepted bid.`
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Get the final price from the load
+      const acceptAmount = load.finalPrice || load.adminFinalPrice || "0";
+      if (parseFloat(acceptAmount) <= 0) {
+        return res.status(400).json({ error: "Load has no valid price set" });
+      }
+
+      // Get carrier type from profile
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      const carrierType = carrierProfile?.carrierType || 'enterprise';
+
+      // Step 1: Create the bid with the fixed price
+      const bid = await storage.createBid({
+        loadId: loadId,
+        carrierId: user.id,
+        truckId: truck_id || null,
+        driverId: driver_id && driver_id !== 'unassigned' ? driver_id : null,
+        amount: acceptAmount,
+        notes: `Direct acceptance of fixed-price load at Rs. ${parseFloat(acceptAmount).toLocaleString("en-IN")}`,
+        status: 'pending',
+        bidType: 'direct_acceptance',
+        carrierType: carrierType,
+        adminMediated: !!load.adminId,
+        approvalRequired: false,
+      });
+
+      console.log(`[Direct Accept] Bid created: ${bid.id} for load ${loadId} at Rs. ${acceptAmount}`);
+
+      // Step 2: Immediately accept the bid using workflow service
+      const acceptResult = await acceptBid(bid.id, user.id, parseFloat(acceptAmount));
+      
+      if (!acceptResult.success) {
+        console.error(`[Direct Accept] Failed to accept bid: ${acceptResult.error}`);
+        return res.status(500).json({ error: acceptResult.error || "Failed to complete acceptance" });
+      }
+
+      console.log(`[Direct Accept] Bid accepted! Shipment: ${acceptResult.shipmentId}, Invoice: ${acceptResult.invoiceId}`);
+
+      // Notify shipper
+      if (load.shipperId) {
+        await storage.createNotification({
+          userId: load.shipperId,
+          title: "Load Accepted",
+          message: `${user.companyName || user.username} has accepted your load from ${load.pickupCity} to ${load.dropoffCity}. Shipment created.`,
+          type: "success",
+          relatedLoadId: loadId,
+        });
+      }
+
+      // Notify admin
+      if (load.adminId) {
+        await storage.createNotification({
+          userId: load.adminId,
+          title: "Fixed Price Load Accepted",
+          message: `${user.companyName || user.username} accepted the fixed-price load ${load.pickupCity} to ${load.dropoffCity}`,
+          type: "info",
+          relatedLoadId: loadId,
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        bid: acceptResult.bid || bid,
+        shipmentId: acceptResult.shipmentId,
+        invoiceId: acceptResult.invoiceId,
+        message: "Load accepted successfully. Shipment and invoice created."
+      });
+    } catch (error) {
+      console.error("Direct accept load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Admin force-assigns carrier to load
   app.post("/api/admin/assign", requireAuth, async (req, res) => {
     try {

@@ -445,6 +445,22 @@ export default function CarrierLoadsPage() {
     },
   });
 
+  // Direct accept mutation for fixed-price loads - creates invoice and shipment immediately
+  const acceptDirectMutation = useMutation({
+    mutationFn: async (data: { load_id: string; truck_id?: string; driver_id?: string }) => {
+      return apiRequest('POST', `/api/loads/${data.load_id}/accept-direct`, {
+        truck_id: data.truck_id,
+        driver_id: data.driver_id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/carrier/loads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/carrier/shipments'] });
+      setSelectedTruckId("");
+      setSelectedDriverId("");
+    },
+  });
+
   const loadsWithScores = useMemo(() => {
     return loads.map(load => {
       const simState = load.isSimulated ? simulatedLoadStates[load.id] : undefined;
@@ -565,18 +581,33 @@ export default function CarrierLoadsPage() {
     }
     
     try {
-      await bidMutation.mutateAsync({
-        load_id: selectedLoad.id,
-        amount: price,
-        bid_type: 'admin_posted_acceptance',
-        ...(isEnterprise && selectedTruckId && { truck_id: selectedTruckId }),
-        ...(isEnterprise && selectedDriverId && { driver_id: selectedDriverId }),
-      });
-      
-      toast({
-        title: t("carrier.loadAccepted"),
-        description: t("carrier.loadAcceptedDesc", { price: formatCurrency(price) }),
-      });
+      // Only use direct accept for fixed-price loads - creates invoice and shipment immediately
+      if (selectedLoad.priceFixed) {
+        await acceptDirectMutation.mutateAsync({
+          load_id: selectedLoad.id,
+          ...(isEnterprise && selectedTruckId && { truck_id: selectedTruckId }),
+          ...(isEnterprise && selectedDriverId && { driver_id: selectedDriverId }),
+        });
+        
+        toast({
+          title: t("carrier.loadAccepted"),
+          description: `Load accepted at ${formatCurrency(price)}. Shipment created and ready for pickup.`,
+        });
+      } else {
+        // For negotiable loads where carrier matches the price, use bid submission
+        await bidMutation.mutateAsync({
+          load_id: selectedLoad.id,
+          amount: price,
+          bid_type: 'admin_posted_acceptance',
+          ...(isEnterprise && selectedTruckId && { truck_id: selectedTruckId }),
+          ...(isEnterprise && selectedDriverId && { driver_id: selectedDriverId }),
+        });
+        
+        toast({
+          title: t("carrier.loadAccepted"),
+          description: t("carrier.loadAcceptedDesc", { price: formatCurrency(price) }),
+        });
+      }
       setBidDialogOpen(false);
       setBidAmount("");
       setSelectedLoad(null);
@@ -1310,42 +1341,70 @@ export default function CarrierLoadsPage() {
                 </Card>
               )}
               
-              <div className="p-4 bg-muted/50 rounded-lg border">
-                <label className="text-sm font-medium mb-2 block">Your Bid Amount (Rs.)</label>
-                <Input
-                  type="number"
-                  placeholder={t("bids.enterBidAmount")}
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(e.target.value)}
-                  className="mb-3"
-                  data-testid="input-bid-amount"
-                />
-                <Button 
-                  className="w-full"
-                  onClick={() => {
-                    if (parseFloat(bidAmount) === getCarrierPrice(selectedLoad)) {
-                      handleAccept();
-                    } else {
-                      submitBid();
-                    }
-                  }}
-                  disabled={!bidAmount || bidMutation.isPending || (isEnterprise && !selectedTruckId)}
-                  data-testid="button-place-bid"
-                >
-                  {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Place Bid
-                </Button>
-                {isEnterprise && !selectedTruckId && (
-                  <p className="text-xs text-destructive mt-2">
-                    Please select a truck to place your bid.
+              {/* Fixed-price loads: Direct accept button */}
+              {selectedLoad.priceFixed ? (
+                <div className="p-4 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="font-medium">Fixed Price Load</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Accept this load at the fixed price. Shipment and invoice will be created immediately.
                   </p>
-                )}
-                {parseFloat(bidAmount) !== getCarrierPrice(selectedLoad) && bidAmount && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Different price will go through admin negotiation.
-                  </p>
-                )}
-              </div>
+                  <Button 
+                    className="w-full"
+                    onClick={handleAccept}
+                    disabled={acceptDirectMutation.isPending || (isEnterprise && !selectedTruckId)}
+                    data-testid="button-accept-load"
+                  >
+                    {acceptDirectMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Accept Load at {formatCurrency(getCarrierPrice(selectedLoad))}
+                  </Button>
+                  {isEnterprise && !selectedTruckId && (
+                    <p className="text-xs text-destructive mt-2">
+                      Please select a truck to accept this load.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                /* Negotiable loads: Bid input and place bid button */
+                <div className="p-4 bg-muted/50 rounded-lg border">
+                  <label className="text-sm font-medium mb-2 block">Your Bid Amount (Rs.)</label>
+                  <Input
+                    type="number"
+                    placeholder={t("bids.enterBidAmount")}
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(e.target.value)}
+                    className="mb-3"
+                    data-testid="input-bid-amount"
+                  />
+                  <Button 
+                    className="w-full"
+                    onClick={() => {
+                      if (parseFloat(bidAmount) === getCarrierPrice(selectedLoad)) {
+                        handleAccept();
+                      } else {
+                        submitBid();
+                      }
+                    }}
+                    disabled={!bidAmount || bidMutation.isPending || (isEnterprise && !selectedTruckId)}
+                    data-testid="button-place-bid"
+                  >
+                    {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Place Bid
+                  </Button>
+                  {isEnterprise && !selectedTruckId && (
+                    <p className="text-xs text-destructive mt-2">
+                      Please select a truck to place your bid.
+                    </p>
+                  )}
+                  {parseFloat(bidAmount) !== getCarrierPrice(selectedLoad) && bidAmount && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Different price will go through admin negotiation.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
           

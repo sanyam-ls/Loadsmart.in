@@ -120,6 +120,22 @@ export default function MyInfoPage() {
     enabled: !!user && user.role === "carrier" && carrierType === "solo",
   });
 
+  // Fetch real-time performance data
+  interface PerformanceData {
+    hasData: boolean;
+    totalTrips: number;
+    overallScore: number | null;
+    reliabilityScore: number | null;
+    communicationScore: number | null;
+    onTimeRate: number | null;
+    totalRatings: number;
+  }
+
+  const { data: performanceData } = useQuery<PerformanceData>({
+    queryKey: ["/api/carrier/performance"],
+    enabled: !!user && user.role === "carrier" && carrierType === "solo",
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
       return apiRequest("PATCH", "/api/carrier/solo/profile", data);
@@ -173,8 +189,9 @@ export default function MyInfoPage() {
               description: `${message.shipperName} rated you ${message.rating} out of 5 stars${message.review ? `: "${message.review}"` : ""}. Your average rating is now ${message.averageRating}.`,
             });
             
-            // Refresh profile data to show updated rating
+            // Refresh profile and performance data to show updated rating
             queryClient.invalidateQueries({ queryKey: ["/api/carrier/solo/profile"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/carrier/performance"] });
           }
         } catch (error) {
           console.error("WebSocket message parse error:", error);
@@ -442,7 +459,9 @@ export default function MyInfoPage() {
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-lg bg-muted/50 text-center" data-testid="stat-rating">
                 <p className="text-3xl font-bold text-primary" data-testid="text-rating">
-                  {parseFloat(stats.rating).toFixed(1)}
+                  {performanceData?.overallScore !== null && performanceData?.overallScore !== undefined 
+                    ? performanceData.overallScore.toFixed(1)
+                    : parseFloat(stats.rating).toFixed(1)}
                 </p>
                 <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
                   <Star className="h-3 w-3" /> Rating
@@ -450,7 +469,7 @@ export default function MyInfoPage() {
               </div>
               <div className="p-4 rounded-lg bg-muted/50 text-center" data-testid="stat-completed-trips">
                 <p className="text-3xl font-bold" data-testid="text-completed-trips">
-                  {stats.completedTrips}
+                  {performanceData?.totalTrips ?? stats.completedTrips}
                 </p>
                 <p className="text-sm text-muted-foreground">Trips Completed</p>
               </div>
@@ -471,31 +490,35 @@ export default function MyInfoPage() {
               </div>
             )}
 
-            {carrierProfile && (
-              <div className="pt-4 border-t mt-4 space-y-2" data-testid="section-scores">
-                <p className="text-sm font-medium">Performance Scores</p>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center" data-testid="score-reliability">
-                    <span className="text-sm text-muted-foreground">Reliability</span>
-                    <span className="font-medium" data-testid="text-reliability-score">
-                      {parseFloat(carrierProfile.reliabilityScore).toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center" data-testid="score-communication">
-                    <span className="text-sm text-muted-foreground">Communication</span>
-                    <span className="font-medium" data-testid="text-communication-score">
-                      {parseFloat(carrierProfile.communicationScore).toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center" data-testid="score-ontime">
-                    <span className="text-sm text-muted-foreground">On-Time Delivery</span>
-                    <span className="font-medium" data-testid="text-ontime-score">
-                      {parseFloat(carrierProfile.onTimeScore).toFixed(0)}%
-                    </span>
-                  </div>
+            <div className="pt-4 border-t mt-4 space-y-2" data-testid="section-scores">
+              <p className="text-sm font-medium">Performance Scores</p>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center" data-testid="score-reliability">
+                  <span className="text-sm text-muted-foreground">Reliability</span>
+                  <span className="font-medium" data-testid="text-reliability-score">
+                    {performanceData?.reliabilityScore !== null && performanceData?.reliabilityScore !== undefined 
+                      ? `${performanceData.reliabilityScore}/5.0` 
+                      : "N/A"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center" data-testid="score-communication">
+                  <span className="text-sm text-muted-foreground">Communication</span>
+                  <span className="font-medium" data-testid="text-communication-score">
+                    {performanceData?.communicationScore !== null && performanceData?.communicationScore !== undefined 
+                      ? `${performanceData.communicationScore}/5.0` 
+                      : "N/A"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center" data-testid="score-ontime">
+                  <span className="text-sm text-muted-foreground">On-Time Delivery</span>
+                  <span className="font-medium" data-testid="text-ontime-score">
+                    {performanceData?.onTimeRate !== null && performanceData?.onTimeRate !== undefined 
+                      ? `${performanceData.onTimeRate}%` 
+                      : "N/A"}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>

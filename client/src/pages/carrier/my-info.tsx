@@ -188,6 +188,39 @@ export default function MyInfoPage() {
               title: "New Rating Received",
               description: `${message.shipperName} rated you ${message.rating} out of 5 stars${message.review ? `: "${message.review}"` : ""}. Your average rating is now ${message.averageRating}.`,
             });
+
+            // Check for badge level upgrade and show special notification
+            if (message.badgeLevel) {
+              const badgeLabels: Record<string, string> = {
+                bronze: "Bronze",
+                silver: "Silver",
+                gold: "Gold",
+              };
+              const currentBadge = badgeLabels[message.badgeLevel] || message.badgeLevel;
+              
+              // Show badge progress info
+              if (message.qualifyingRatingsCount !== undefined) {
+                let progressMessage = "";
+                if (message.badgeLevel === "bronze" && message.qualifyingRatingsCount > 0) {
+                  const remaining = 250 - message.qualifyingRatingsCount;
+                  if (remaining > 0) {
+                    progressMessage = `${remaining} more 3.5+ star ratings to Silver badge`;
+                  }
+                } else if (message.badgeLevel === "silver") {
+                  const remaining = 550 - message.qualifyingRatingsCount;
+                  if (remaining > 0) {
+                    progressMessage = `${remaining} more 3.5+ star ratings to Gold badge`;
+                  }
+                }
+                
+                if (progressMessage) {
+                  toast({
+                    title: `${currentBadge} Driver`,
+                    description: progressMessage,
+                  });
+                }
+              }
+            }
             
             // Refresh profile and performance data to show updated rating
             queryClient.invalidateQueries({ queryKey: ["/api/carrier/solo/profile"] });

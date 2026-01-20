@@ -339,6 +339,8 @@ export function broadcastRatingReceived(carrierId: string, ratingData: {
   shipperName?: string;
   averageRating: number;
   totalRatings: number;
+  badgeLevel?: string;
+  qualifyingRatingsCount?: number;
 }): void {
   const message = {
     type: "rating_received",
@@ -348,6 +350,8 @@ export function broadcastRatingReceived(carrierId: string, ratingData: {
     shipperName: ratingData.shipperName,
     averageRating: ratingData.averageRating,
     totalRatings: ratingData.totalRatings,
+    badgeLevel: ratingData.badgeLevel,
+    qualifyingRatingsCount: ratingData.qualifyingRatingsCount,
     timestamp: new Date().toISOString(),
   };
 

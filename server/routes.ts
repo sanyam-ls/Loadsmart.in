@@ -13157,6 +13157,26 @@ RESPOND IN THIS EXACT JSON FORMAT:
       const averageRating = allRatings.reduce((sum, r) => sum + r.rating, 0) / allRatings.length;
       const roundedAverage = Math.round(averageRating * 10) / 10;
 
+      // Count ratings with 3.5+ stars for badge level calculation
+      const qualifyingRatingsCount = allRatings.filter(r => r.rating >= 3.5).length;
+      
+      // Calculate badge level based on new standards:
+      // - Bronze: Default (less than 250 ratings with 3.5+ stars)
+      // - Silver: 250+ ratings with 3.5+ stars
+      // - Gold: 550+ ratings with 3.5+ stars
+      let newBadgeLevel = "bronze";
+      if (qualifyingRatingsCount >= 550) {
+        newBadgeLevel = "gold";
+      } else if (qualifyingRatingsCount >= 250) {
+        newBadgeLevel = "silver";
+      }
+
+      // Update carrier profile with new badge level
+      const carrierProfile = await storage.getCarrierProfile(carrierId);
+      if (carrierProfile && carrierProfile.badgeLevel !== newBadgeLevel) {
+        await storage.updateCarrierProfile(carrierId, { badgeLevel: newBadgeLevel });
+      }
+
       // Get shipper name for the notification
       const shipperName = user.companyName || user.username || "A shipper";
 
@@ -13167,6 +13187,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
         shipperName,
         averageRating: roundedAverage,
         totalRatings: allRatings.length,
+        badgeLevel: newBadgeLevel,
+        qualifyingRatingsCount,
       });
 
       res.json(newRating);

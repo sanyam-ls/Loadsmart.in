@@ -143,9 +143,26 @@ export default function LandingPage() {
             <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto" style={{ color: '#ACBBC6' }}>
               Connect shippers with trusted carriers. Post loads, track shipments, and manage your logistics operations - all in one platform.
             </p>
-            <div className="flex flex-wrap justify-center gap-8 mt-12">
+            <div className="flex flex-wrap justify-center gap-6 mt-12">
               {stats.map((stat, index) => (
-                <div key={index} className="text-center px-6 py-3">
+                <div 
+                  key={index} 
+                  className="text-center px-8 py-6 rounded-xl cursor-pointer transition-all duration-300 hover:scale-105"
+                  style={{ 
+                    backgroundColor: 'rgba(22, 37, 79, 0.6)',
+                    border: '1px solid rgba(102, 125, 157, 0.3)',
+                    boxShadow: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3), inset 0 0 20px rgba(0, 191, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.8)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = 'rgba(102, 125, 157, 0.3)';
+                  }}
+                  data-testid={`stat-card-${index}`}
+                >
                   <div className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</div>
                   <div className="text-sm" style={{ color: '#667D9D' }}>{stat.label}</div>
                 </div>

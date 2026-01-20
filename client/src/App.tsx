@@ -31,6 +31,7 @@ const PostLoadPage = lazy(() => import("@/pages/shipper").then(m => ({ default: 
 const ShipperLoadsPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.ShipperLoadsPage })));
 const LoadDetailPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.LoadDetailPage })));
 const TrackingPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.TrackingPage })));
+const DeliveredLoadsPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.DeliveredLoadsPage })));
 const ShipperDocumentsPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.ShipperDocumentsPage })));
 const ShipperInvoicesPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.ShipperInvoicesPage })));
 const ShipperOnboardingPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.ShipperOnboardingPage })));
@@ -150,6 +151,7 @@ function AppContent() {
                 <Route path="/shipper/loads" component={() => <ShipperOnboardingGate><ShipperLoadsPage /></ShipperOnboardingGate>} />
                 <Route path="/shipper/loads/:id" component={() => <ShipperOnboardingGate><LoadDetailPage /></ShipperOnboardingGate>} />
                 <Route path="/shipper/tracking" component={() => <ShipperOnboardingGate><TrackingPage /></ShipperOnboardingGate>} />
+                <Route path="/shipper/delivered" component={() => <ShipperOnboardingGate><DeliveredLoadsPage /></ShipperOnboardingGate>} />
                 <Route path="/shipper/documents" component={() => <ShipperOnboardingGate><ShipperDocumentsPage /></ShipperOnboardingGate>} />
                 <Route path="/shipper/invoices" component={() => <ShipperOnboardingGate><ShipperInvoicesPage /></ShipperOnboardingGate>} />
                 <Route path="/shipper/onboarding" component={ShipperOnboardingPage} />

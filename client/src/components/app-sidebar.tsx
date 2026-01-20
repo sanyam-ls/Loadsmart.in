@@ -21,6 +21,7 @@ import {
   ClipboardList,
   Key,
   UserCheck,
+  CheckCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -51,6 +52,7 @@ const shipperItems: NavItem[] = [
   { titleKey: "nav.myLoads", url: "/shipper/loads", icon: Package },
   { titleKey: "nav.memos", url: "/shipper/invoices", icon: FileText },
   { titleKey: "nav.tracking", url: "/shipper/tracking", icon: Route },
+  { titleKey: "nav.deliveredLoads", url: "/shipper/delivered", icon: CheckCircle },
   { titleKey: "nav.documents", url: "/shipper/documents", icon: FileText },
 ];
 

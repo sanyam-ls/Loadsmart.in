@@ -3,6 +3,7 @@ export { default as PostLoadPage } from "./post-load";
 export { default as ShipperLoadsPage } from "./loads";
 export { default as LoadDetailPage } from "./load-detail";
 export { default as TrackingPage } from "./tracking";
+export { default as DeliveredLoadsPage } from "./delivered-loads";
 export { default as ShipperDocumentsPage } from "./documents";
 export { default as ShipperInvoicesPage } from "./invoices";
 export { default as ShipperOnboardingPage } from "./onboarding";

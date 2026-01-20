@@ -603,14 +603,14 @@ export default function TrackingPage() {
     );
   }
 
-  if (shipments.length === 0) {
+  if (activeShipments.length === 0) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6">
         <h1 className="text-2xl font-bold mb-6">Track Shipments</h1>
         <EmptyState
           icon={MapPin}
-          title="No shipments to track"
-          description="Once a carrier picks up your load, you'll be able to track its journey in real-time here."
+          title="No active shipments"
+          description="All your shipments have been delivered. Check the Delivered Loads page for completed deliveries."
         />
       </div>
     );
@@ -643,7 +643,7 @@ export default function TrackingPage() {
           <CardContent className="p-0 flex-1 min-h-0">
             <ScrollArea className="h-full">
               <div className="p-3 space-y-2">
-                {shipments.map((shipment) => (
+                {activeShipments.map((shipment) => (
                   <div
                     key={shipment.id}
                     className={`p-4 rounded-lg cursor-pointer hover-elevate ${

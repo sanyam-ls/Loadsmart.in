@@ -1862,6 +1862,28 @@ export const insertShipperOnboardingRequestSchema = createInsertSchema(shipperOn
 export type InsertShipperOnboardingRequest = z.infer<typeof insertShipperOnboardingRequestSchema>;
 export type ShipperOnboardingRequest = typeof shipperOnboardingRequests.$inferSelect;
 
+// Carrier Ratings table - shippers rate carriers after delivery
+export const carrierRatings = pgTable("carrier_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  carrierId: varchar("carrier_id").notNull().references(() => users.id),
+  shipperId: varchar("shipper_id").notNull().references(() => users.id),
+  shipmentId: varchar("shipment_id").notNull().references(() => shipments.id),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  rating: integer("rating").notNull(), // 1-5 stars
+  review: text("review"), // Optional review text
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schema for carrier ratings
+export const insertCarrierRatingSchema = createInsertSchema(carrierRatings).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for carrier ratings
+export type InsertCarrierRating = z.infer<typeof insertCarrierRatingSchema>;
+export type CarrierRating = typeof carrierRatings.$inferSelect;
+
 // Shipper Ratings table - carriers rate shippers after trip completion
 export const shipperRatings = pgTable("shipper_ratings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin, Package, Truck, CheckCircle, Clock, FileText, 
   Navigation, Building, RefreshCw, Loader2, Eye, X, 
-  Download, Calendar, Search, ArrowRight
+  Download, Calendar, Search, ArrowRight, Star
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { CarrierRatingDialog } from "@/components/carrier-rating-dialog";
 import { format } from "date-fns";
 
 type ShipmentStage = "load_created" | "carrier_assigned" | "reached_pickup" | "loaded" | "in_transit" | "arrived_at_drop" | "delivered";
@@ -126,6 +127,9 @@ export default function DeliveredLoadsPage() {
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+  const [shipmentToRate, setShipmentToRate] = useState<DeliveredShipment | null>(null);
+  const [ratedShipments, setRatedShipments] = useState<Set<string>>(new Set());
 
   const { data: shipments = [], isLoading, refetch, isFetching } = useQuery<DeliveredShipment[]>({
     queryKey: ['/api/shipments/tracking'],
@@ -133,6 +137,45 @@ export default function DeliveredLoadsPage() {
   });
 
   const deliveredShipments = shipments.filter(s => s.currentStage === "delivered");
+
+  useEffect(() => {
+    async function checkRatings() {
+      const newRatedSet = new Set<string>();
+      for (const shipment of deliveredShipments) {
+        try {
+          const res = await fetch(`/api/carrier-ratings/check/${shipment.id}`, { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.hasRated) {
+              newRatedSet.add(shipment.id);
+            }
+          }
+        } catch (e) {
+          // Ignore errors for rating check
+        }
+      }
+      setRatedShipments(newRatedSet);
+    }
+    if (deliveredShipments.length > 0) {
+      checkRatings();
+    }
+  }, [deliveredShipments.length]);
+
+  function openRatingDialog(shipment: DeliveredShipment) {
+    setShipmentToRate(shipment);
+    setRatingDialogOpen(true);
+  }
+
+  function handleRatingSubmitted() {
+    if (shipmentToRate) {
+      setRatedShipments(prev => {
+        const newSet = new Set(Array.from(prev));
+        newSet.add(shipmentToRate.id);
+        return newSet;
+      });
+    }
+    setShipmentToRate(null);
+  }
   
   const filteredShipments = deliveredShipments.filter(s => {
     if (!searchQuery) return true;
@@ -396,6 +439,23 @@ export default function DeliveredLoadsPage() {
                           <span className="font-medium">{selectedShipment.truck?.registrationNumber || "N/A"}</span>
                         </div>
                       </div>
+                      <div className="mt-4">
+                        {ratedShipments.has(selectedShipment.id) ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span>You have rated this carrier</span>
+                          </div>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            onClick={() => openRatingDialog(selectedShipment)}
+                            data-testid="button-rate-carrier"
+                          >
+                            <Star className="h-4 w-4 mr-2" />
+                            Rate Carrier
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -481,6 +541,23 @@ export default function DeliveredLoadsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {shipmentToRate && (
+        <CarrierRatingDialog
+          open={ratingDialogOpen}
+          onOpenChange={setRatingDialogOpen}
+          shipmentId={shipmentToRate.id}
+          loadId={shipmentToRate.loadId}
+          carrierId={shipmentToRate.carrierId}
+          carrierName={
+            shipmentToRate.carrier?.carrierType === 'solo' 
+              ? (shipmentToRate.driver?.name || shipmentToRate.carrier?.username || "Carrier")
+              : (shipmentToRate.carrier?.companyName || "Carrier")
+          }
+          carrierType={shipmentToRate.carrier?.carrierType === 'solo' ? 'solo' : 'fleet'}
+          onRatingSubmitted={handleRatingSubmitted}
+        />
+      )}
     </div>
   );
 }

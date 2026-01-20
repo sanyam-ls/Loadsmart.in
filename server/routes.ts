@@ -39,7 +39,8 @@ import {
   broadcastNegotiationMessage,
   broadcastVerificationStatus,
   broadcastMarketplaceEvent,
-  broadcastToUser
+  broadcastToUser,
+  broadcastRatingReceived
 } from "./websocket-marketplace";
 import {
   getAllVehiclesTelemetry,
@@ -13150,6 +13151,23 @@ RESPOND IN THIS EXACT JSON FORMAT:
         rating,
         review: review || null,
       }).returning();
+
+      // Calculate new average rating for the carrier
+      const allRatings = await db.select().from(carrierRatings).where(eq(carrierRatings.carrierId, carrierId));
+      const averageRating = allRatings.reduce((sum, r) => sum + r.rating, 0) / allRatings.length;
+      const roundedAverage = Math.round(averageRating * 10) / 10;
+
+      // Get shipper name for the notification
+      const shipperName = user.companyName || user.username || "A shipper";
+
+      // Broadcast real-time rating notification to the carrier
+      broadcastRatingReceived(carrierId, {
+        rating,
+        review: review || undefined,
+        shipperName,
+        averageRating: roundedAverage,
+        totalRatings: allRatings.length,
+      });
 
       res.json(newRating);
     } catch (error: any) {

@@ -32,7 +32,7 @@ import {
   X,
   AlertTriangle
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
@@ -140,6 +140,61 @@ export default function MyInfoPage() {
       });
     },
   });
+
+  // WebSocket for real-time rating notifications
+  const wsRef = useRef<WebSocket | null>(null);
+  
+  useEffect(() => {
+    if (!user || user.role !== "carrier") return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws/marketplace`;
+
+    const connect = () => {
+      wsRef.current = new WebSocket(wsUrl);
+
+      wsRef.current.onopen = () => {
+        // Identify as carrier
+        wsRef.current?.send(JSON.stringify({
+          type: "identify",
+          role: "carrier",
+          userId: user.id,
+        }));
+      };
+
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          
+          if (message.type === "rating_received") {
+            // Show toast notification with the new rating
+            toast({
+              title: "New Rating Received",
+              description: `${message.shipperName} rated you ${message.rating} out of 5 stars${message.review ? `: "${message.review}"` : ""}. Your average rating is now ${message.averageRating}.`,
+            });
+            
+            // Refresh profile data to show updated rating
+            queryClient.invalidateQueries({ queryKey: ["/api/carrier/solo/profile"] });
+          }
+        } catch (error) {
+          console.error("WebSocket message parse error:", error);
+        }
+      };
+
+      wsRef.current.onclose = () => {
+        // Reconnect after a delay
+        setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [user, toast]);
 
   const handleEdit = () => {
     if (profile) {

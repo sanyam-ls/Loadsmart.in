@@ -331,3 +331,32 @@ export function broadcastToUser(userId: string, data: any): void {
   });
   console.log(`Broadcasted ${data.type || 'event'} to user ${userId} (${sentCount} connections)`);
 }
+
+// Broadcast new rating received to carrier
+export function broadcastRatingReceived(carrierId: string, ratingData: {
+  rating: number;
+  review?: string;
+  shipperName?: string;
+  averageRating: number;
+  totalRatings: number;
+}): void {
+  const message = {
+    type: "rating_received",
+    carrierId,
+    rating: ratingData.rating,
+    review: ratingData.review,
+    shipperName: ratingData.shipperName,
+    averageRating: ratingData.averageRating,
+    totalRatings: ratingData.totalRatings,
+    timestamp: new Date().toISOString(),
+  };
+
+  let sentCount = 0;
+  clients.forEach((client, ws) => {
+    if (ws.readyState === WebSocket.OPEN && client.role === "carrier" && client.userId === carrierId) {
+      sendToClient(ws, message);
+      sentCount++;
+    }
+  });
+  console.log(`Broadcasted rating_received to carrier ${carrierId} (${sentCount} connections)`);
+}

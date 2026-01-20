@@ -152,11 +152,11 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {roleCards.map((role) => (
               <div 
                 key={role.id} 
-                className="group relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+                className="group relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent min-h-[320px]"
                 onClick={() => handleRoleClick(role.link)}
                 onKeyDown={(e) => handleKeyDown(e, role.link)}
                 tabIndex={0}
@@ -171,15 +171,15 @@ export default function LandingPage() {
                 {role.id === "shipper" && (
                   <>
                     <div 
-                      className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                      className="absolute inset-0 bg-cover bg-right bg-no-repeat"
                       style={{ backgroundImage: `url(${shipperImage})` }}
                     />
-                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(6, 8, 23, 0.7) 0%, rgba(22, 37, 79, 0.9) 100%)' }} />
+                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.95) 0%, rgba(22, 37, 79, 0.7) 50%, rgba(22, 37, 79, 0.5) 100%)' }} />
                   </>
                 )}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(102, 125, 157, 0.2) 0%, transparent 100%)' }} />
                 
-                <div className="p-6 relative">
+                <div className="p-8 relative flex flex-col justify-center h-full max-w-xs">
                   <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: '#667D9D' }}>
                     <role.icon className="h-6 w-6 text-white" />
                   </div>
@@ -197,7 +197,7 @@ export default function LandingPage() {
                     ))}
                   </ul>
                   <div 
-                    className="w-full py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all group-hover:gap-3"
+                    className="w-fit py-2.5 px-6 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all group-hover:gap-3"
                     style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#16254F', border: '1px solid rgba(255, 255, 255, 0.8)' }}
                   >
                     Get Started

@@ -617,11 +617,11 @@ export default function TrackingPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+    <div className="p-4 h-full overflow-hidden">
+      <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Track Shipments</h1>
-          <p className="text-muted-foreground">Monitor your active shipments in real-time.</p>
+          <h1 className="text-xl font-bold">Track Shipments</h1>
+          <p className="text-sm text-muted-foreground">Monitor your active shipments in real-time.</p>
         </div>
         <Button 
           variant="outline" 
@@ -635,13 +635,13 @@ export default function TrackingPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Active Shipments ({activeShipments.length})</CardTitle>
+      <div className="grid gap-4 h-[calc(100vh-160px)] grid-cols-1 lg:grid-cols-[320px_1fr]">
+        <Card className="overflow-hidden flex flex-col min-h-0">
+          <CardHeader className="pb-2 flex-shrink-0">
+            <CardTitle className="text-sm">Active Shipments ({activeShipments.length})</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-300px)]">
+          <CardContent className="p-0 flex-1 min-h-0">
+            <ScrollArea className="h-full">
               <div className="p-3 space-y-2">
                 {shipments.map((shipment) => (
                   <div
@@ -687,10 +687,10 @@ export default function TrackingPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="overflow-hidden flex flex-col min-h-0">
           {selectedShipment ? (
             <>
-              <CardHeader className="pb-3 border-b border-border">
+              <CardHeader className="pb-3 border-b border-border flex-shrink-0">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div>
                     <CardTitle className="text-lg">
@@ -722,8 +722,8 @@ export default function TrackingPage() {
                 </div>
                 <Progress value={selectedShipment.progress} className="mt-4" />
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid gap-6 lg:grid-cols-2">
+              <CardContent className="p-0 flex-1 min-h-0 overflow-auto">
+                <div className="p-4 grid gap-4 lg:grid-cols-2">
                   <div>
                     <h3 className="font-semibold mb-4">Shipment Timeline</h3>
                     <div className="relative">

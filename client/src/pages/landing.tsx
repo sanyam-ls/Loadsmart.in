@@ -14,6 +14,7 @@ import {
   Clock,
   CheckCircle2
 } from "lucide-react";
+import shipperImage from "@assets/D29D77FD-38C9-494F-B81F-1C5943124B44_1768932398273.png";
 
 const roleCards = [
   {
@@ -167,6 +168,15 @@ export default function LandingPage() {
                   border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}
               >
+                {role.id === "shipper" && (
+                  <>
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                      style={{ backgroundImage: `url(${shipperImage})` }}
+                    />
+                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(6, 8, 23, 0.7) 0%, rgba(22, 37, 79, 0.9) 100%)' }} />
+                  </>
+                )}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(102, 125, 157, 0.2) 0%, transparent 100%)' }} />
                 
                 <div className="p-6 relative">

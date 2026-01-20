@@ -15,6 +15,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import shipperImage from "@assets/D29D77FD-38C9-494F-B81F-1C5943124B44_1768932398273.png";
+import staffImage from "@assets/PHOTO-2026-01-21-00-10-17_1768953323491.jpg";
 
 const roleCards = [
   {
@@ -173,6 +174,15 @@ export default function LandingPage() {
                     <div 
                       className="absolute inset-0 bg-cover bg-right bg-no-repeat"
                       style={{ backgroundImage: `url(${shipperImage})` }}
+                    />
+                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.95) 0%, rgba(22, 37, 79, 0.7) 50%, rgba(22, 37, 79, 0.5) 100%)' }} />
+                  </>
+                )}
+                {role.id === "admin" && (
+                  <>
+                    <div 
+                      className="absolute inset-0 bg-cover bg-right bg-no-repeat"
+                      style={{ backgroundImage: `url(${staffImage})` }}
                     />
                     <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.95) 0%, rgba(22, 37, 79, 0.7) 50%, rgba(22, 37, 79, 0.5) 100%)' }} />
                   </>

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState, useEffect } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -25,6 +25,7 @@ import { AdminVerificationBanner } from "@/components/admin-verification-banner"
 import AuthPage from "@/pages/auth";
 const NotFound = lazy(() => import("@/pages/not-found"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
+const LandingPage = lazy(() => import("@/pages/landing"));
 
 const ShipperDashboard = lazy(() => import("@/pages/shipper").then(m => ({ default: m.ShipperDashboard })));
 const PostLoadPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.PostLoadPage })));
@@ -89,6 +90,24 @@ function PageLoader() {
 function AppContent() {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 768 || 
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768 || 
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+    };
+
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   if (isLoading) {
     return (
@@ -101,7 +120,19 @@ function AppContent() {
     );
   }
 
-  if (!user && location !== "/auth") {
+  if (!user && location === "/" && !isMobile) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <LandingPage />
+      </Suspense>
+    );
+  }
+
+  if (!user && location !== "/auth" && location !== "/") {
+    return <Redirect to="/auth" />;
+  }
+
+  if (!user && location === "/" && isMobile) {
     return <Redirect to="/auth" />;
   }
 
@@ -110,7 +141,7 @@ function AppContent() {
     return <Redirect to={defaultRoute} />;
   }
 
-  if (location === "/auth") {
+  if (location === "/auth" || (location === "/" && !user)) {
     return <AuthPage />;
   }
 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Form,
   FormControl,
@@ -367,6 +367,13 @@ export default function MyInfoPage() {
           <CardContent className="space-y-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16" data-testid="avatar-user">
+                {profileUser.avatar && (
+                  <AvatarImage 
+                    src={profileUser.avatar} 
+                    alt={profileUser.username || "Driver"} 
+                    className="object-cover"
+                  />
+                )}
                 <AvatarFallback className="bg-primary/10 text-primary text-xl">
                   {profileUser.username?.slice(0, 2).toUpperCase()}
                 </AvatarFallback>

@@ -23,6 +23,7 @@ import fleetOwnerImage from "@assets/image_1768953860585.png";
 import heroVideo from "@assets/Loadlink_1768955038031.mp4";
 import ctaTruckImage from "@assets/PHOTO-2026-01-21-00-10-48_1768955240083.jpg";
 import ctaBackgroundImage from "@assets/image_1768955391086.png";
+import employeeSectionBg from "@assets/image_1769038855319.png";
 
 const roleCards = [
   {
@@ -374,8 +375,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 relative" style={{ backgroundColor: '#060817' }}>
-        <div className="container mx-auto px-4">
+      <section className="py-20 relative overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${employeeSectionBg})` }}
+        />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.95) 0%, rgba(6, 8, 23, 0.85) 50%, rgba(6, 8, 23, 0.75) 100%)' }} />
+        
+        <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
             <p className="text-sm font-medium mb-2" style={{ color: '#00BFFF' }}>Join Our Team</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
@@ -386,66 +393,66 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto items-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-8">
             <div 
-              className="relative h-[400px] rounded-xl overflow-hidden"
+              className="p-6 rounded-xl text-center"
               style={{ 
+                backgroundColor: 'rgba(22, 37, 79, 0.7)',
                 border: '1px solid rgba(0, 191, 255, 0.3)',
-                boxShadow: '0 0 30px rgba(0, 191, 255, 0.1)'
+                backdropFilter: 'blur(8px)'
               }}
             >
-              <img 
-                src={staffImage} 
-                alt="FreightFlow Team" 
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6, 8, 23, 0.8) 0%, transparent 50%)' }} />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
+                <Users className="h-6 w-6" style={{ color: '#00BFFF' }} />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Collaborative Culture</h3>
+              <p className="text-sm" style={{ color: '#ACBBC6' }}>Work with passionate people who care about making logistics better for everyone.</p>
             </div>
-
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
-                  <Users className="h-5 w-5" style={{ color: '#00BFFF' }} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Collaborative Culture</h3>
-                  <p className="text-sm" style={{ color: '#ACBBC6' }}>Work with passionate people who care about making logistics better for everyone.</p>
-                </div>
+            
+            <div 
+              className="p-6 rounded-xl text-center"
+              style={{ 
+                backgroundColor: 'rgba(22, 37, 79, 0.7)',
+                border: '1px solid rgba(0, 191, 255, 0.3)',
+                backdropFilter: 'blur(8px)'
+              }}
+            >
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
+                <TrendingUp className="h-6 w-6" style={{ color: '#00BFFF' }} />
               </div>
-              
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
-                  <TrendingUp className="h-5 w-5" style={{ color: '#00BFFF' }} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Growth Opportunities</h3>
-                  <p className="text-sm" style={{ color: '#ACBBC6' }}>Learn new skills, take on challenges, and grow your career as we scale.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
-                  <Shield className="h-5 w-5" style={{ color: '#00BFFF' }} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Make an Impact</h3>
-                  <p className="text-sm" style={{ color: '#ACBBC6' }}>Your work directly helps thousands of shippers and carriers across India.</p>
-                </div>
-              </div>
-
-              <Button 
-                onClick={() => handleRoleClick('/auth?role=admin')}
-                className="mt-4"
-                style={{ 
-                  backgroundColor: '#00BFFF',
-                  color: '#060817'
-                }}
-                data-testid="button-staff-login"
-              >
-                Staff Login
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+              <h3 className="text-lg font-semibold text-white mb-2">Growth Opportunities</h3>
+              <p className="text-sm" style={{ color: '#ACBBC6' }}>Learn new skills, take on challenges, and grow your career as we scale.</p>
             </div>
+            
+            <div 
+              className="p-6 rounded-xl text-center"
+              style={{ 
+                backgroundColor: 'rgba(22, 37, 79, 0.7)',
+                border: '1px solid rgba(0, 191, 255, 0.3)',
+                backdropFilter: 'blur(8px)'
+              }}
+            >
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
+                <Shield className="h-6 w-6" style={{ color: '#00BFFF' }} />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Make an Impact</h3>
+              <p className="text-sm" style={{ color: '#ACBBC6' }}>Your work directly helps thousands of shippers and carriers across India.</p>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Button 
+              onClick={() => handleRoleClick('/auth?role=admin')}
+              className="px-8"
+              style={{ 
+                backgroundColor: '#00BFFF',
+                color: '#060817'
+              }}
+              data-testid="button-staff-login"
+            >
+              Staff Login
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
           </div>
         </div>
       </section>

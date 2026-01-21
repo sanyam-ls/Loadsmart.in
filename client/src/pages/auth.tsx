@@ -487,13 +487,13 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-gradient-to-br from-[#e8f4fc] via-[#d4e8f7] to-[#c5dff0] dark:from-[#0a0f1a] dark:via-[#0d1525] dark:to-[#060817]">
+      <div className="flex-1 flex flex-col bg-[#f5f5f7] dark:bg-[#060817]">
         <div className="flex justify-end gap-2 p-4">
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
         <div className="flex-1 flex items-center justify-center p-8">
-          <Card className="w-full max-w-md shadow-xl border-slate-200 dark:border-[#16254F]/50">
+          <Card className="w-full max-w-md shadow-xl bg-white dark:bg-[#0d1525] border-gray-200 dark:border-[#16254F]">
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4 lg:hidden">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">

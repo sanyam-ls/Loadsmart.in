@@ -37,17 +37,6 @@ const roleCards = [
     backDescription: "I post loads and connect with reliable carriers to move my freight. With FreightFlow, I can easily post unlimited shipments, get competitive bids from verified carriers, track my cargo in real-time, and manage all my shipping documents digitally. The platform helps me find the best rates while ensuring my goods reach their destination safely and on time."
   },
   {
-    id: "admin",
-    title: "FreightFlow Staff",
-    subtitle: "I work at FreightFlow",
-    description: "Manage operations, approve carriers, handle pricing, and oversee the marketplace.",
-    icon: Shield,
-    features: ["Full platform access", "Carrier verification", "Analytics dashboard"],
-    link: "/auth?role=admin",
-    backGreeting: "Hey, I am FreightFlow Staff!",
-    backDescription: "I ensure the marketplace runs smoothly by verifying carriers, managing load pricing, and overseeing all operations. My role involves approving new carriers, setting fair prices for shippers, resolving disputes, and using analytics to optimize the platform. I am the bridge that connects shippers with trusted carriers."
-  },
-  {
     id: "solo",
     title: "Solo Carrier",
     subtitle: "I am a Solo Carrier",
@@ -70,6 +59,18 @@ const roleCards = [
     backDescription: "I manage a fleet of trucks and drivers to handle multiple shipments. FreightFlow helps me assign drivers to loads, track all my vehicles in real-time, analyze revenue across my fleet, and scale my transportation business. With comprehensive analytics and fleet management tools, I can maximize efficiency and profitability."
   }
 ];
+
+const staffCard = {
+  id: "admin",
+  title: "FreightFlow Staff",
+  subtitle: "I work at FreightFlow",
+  description: "Manage operations, approve carriers, handle pricing, and oversee the marketplace.",
+  icon: Shield,
+  features: ["Full platform access", "Carrier verification", "Analytics dashboard"],
+  link: "/auth?role=admin",
+  backGreeting: "Hey, I am FreightFlow Staff!",
+  backDescription: "I ensure the marketplace runs smoothly by verifying carriers, managing load pricing, and overseeing all operations. My role involves approving new carriers, setting fair prices for shippers, resolving disputes, and using analytics to optimize the platform. I am the bridge that connects shippers with trusted carriers."
+};
 
 const features = [
   {
@@ -263,11 +264,10 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {roleCards.map((role) => {
               const isFlipped = flippedCards.has(role.id);
               const backgroundImage = role.id === "shipper" ? shipperImage : 
-                                     role.id === "admin" ? staffImage :
                                      role.id === "solo" ? soloDriverImage : fleetOwnerImage;
               return (
                 <div 
@@ -369,6 +369,113 @@ export default function LandingPage() {
                 </div>
               );
             })}
+          </div>
+
+          <div className="max-w-md mx-auto mt-8">
+            {(() => {
+              const role = staffCard;
+              const isFlipped = flippedCards.has(role.id);
+              const backgroundImage = staffImage;
+              return (
+                <div 
+                  key={role.id} 
+                  className="relative min-h-[380px]"
+                  style={{ perspective: '1000px' }}
+                  data-testid={`card-role-${role.id}`}
+                >
+                  <div 
+                    className="relative w-full h-full transition-transform duration-700"
+                    style={{ 
+                      transformStyle: 'preserve-3d',
+                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                    }}
+                  >
+                    <div 
+                      className="absolute inset-0 group overflow-hidden rounded-xl cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+                      onClick={() => toggleCardFlip(role.id)}
+                      onKeyDown={(e) => e.key === 'Enter' && toggleCardFlip(role.id)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Learn more about ${role.title}. Click to see details.`}
+                      style={{ 
+                        backgroundColor: '#16254F',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        backfaceVisibility: 'hidden'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 40px rgba(0, 191, 255, 0.5), 0 0 80px rgba(0, 191, 255, 0.25), inset 0 0 30px rgba(0, 191, 255, 0.08)';
+                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.7)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                    >
+                      <div 
+                        className="absolute inset-0 bg-cover bg-right bg-no-repeat"
+                        style={{ backgroundImage: `url(${backgroundImage})` }}
+                      />
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.95) 0%, rgba(22, 37, 79, 0.7) 50%, rgba(22, 37, 79, 0.5) 100%)' }} />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(102, 125, 157, 0.2) 0%, transparent 100%)' }} />
+                      
+                      <div className="p-8 relative flex flex-col justify-center h-full max-w-xs">
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: '#667D9D' }}>
+                          <role.icon className="h-6 w-6 text-white" aria-hidden="true" />
+                        </div>
+                        <p className="text-sm font-medium mb-1" style={{ color: '#667D9D' }}>{role.subtitle}</p>
+                        <h3 className="text-2xl font-bold text-white mb-3">{role.title}</h3>
+                        <p className="text-sm mb-4" style={{ color: '#ACBBC6' }}>
+                          {role.description}
+                        </p>
+                        <ul className="space-y-2 mb-6">
+                          {role.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-center gap-2 text-sm text-white/80">
+                              <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#667D9D' }} aria-hidden="true" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-xs" style={{ color: '#667D9D' }}>Click to learn more</p>
+                      </div>
+                    </div>
+                    
+                    <div 
+                      className="absolute inset-0 overflow-hidden rounded-xl cursor-pointer"
+                      onClick={() => toggleCardFlip(role.id)}
+                      style={{ 
+                        backgroundColor: '#16254F',
+                        border: '1px solid rgba(0, 191, 255, 0.5)',
+                        backfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                        boxShadow: '0 0 30px rgba(0, 191, 255, 0.3)'
+                      }}
+                    >
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #16254F 0%, #0a0f1f 100%)' }} />
+                      <div className="p-8 relative flex flex-col h-full">
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)', border: '1px solid rgba(0, 191, 255, 0.5)' }}>
+                          <role.icon className="h-6 w-6" style={{ color: '#00BFFF' }} aria-hidden="true" />
+                        </div>
+                        <h3 className="text-2xl font-bold mb-3" style={{ color: '#00BFFF' }}>{role.backGreeting}</h3>
+                        <p className="text-sm leading-relaxed flex-1" style={{ color: '#ACBBC6' }}>
+                          {role.backDescription}
+                        </p>
+                        <div className="mt-6 flex items-center gap-4">
+                          <Button 
+                            onClick={(e) => { e.stopPropagation(); handleRoleClick(role.link); }}
+                            className="bg-white text-gray-900 hover:bg-white/90"
+                            data-testid={`button-getstarted-${role.id}`}
+                          >
+                            Get Started
+                            <ArrowRight className="h-4 w-4 ml-2" />
+                          </Button>
+                          <span className="text-xs" style={{ color: '#667D9D' }}>Click to flip back</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </section>

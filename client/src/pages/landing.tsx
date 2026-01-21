@@ -401,6 +401,7 @@ export default function LandingPage() {
             {[
               {
                 id: 'culture',
+                subtitle: 'I am part of a',
                 title: 'Collaborative Culture',
                 description: 'Work with passionate people who care about making logistics better for everyone.',
                 image: collaborationImage,
@@ -409,6 +410,7 @@ export default function LandingPage() {
               },
               {
                 id: 'growth',
+                subtitle: 'I have',
                 title: 'Growth Opportunities',
                 description: 'Learn new skills, take on challenges, and grow your career as we scale.',
                 image: growthImage,
@@ -417,6 +419,7 @@ export default function LandingPage() {
               },
               {
                 id: 'impact',
+                subtitle: 'I can',
                 title: 'Make an Impact',
                 description: 'Your work directly helps thousands of shippers and carriers across India.',
                 image: impactImage,
@@ -428,7 +431,7 @@ export default function LandingPage() {
               return (
                 <div 
                   key={benefit.id}
-                  className="relative h-[320px]"
+                  className="relative h-[420px]"
                   style={{ perspective: '1000px' }}
                   data-testid={`card-benefit-${benefit.id}`}
                 >
@@ -440,22 +443,36 @@ export default function LandingPage() {
                     }}
                   >
                     <div 
-                      className="absolute inset-0 rounded-xl text-center overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02]"
                       onClick={() => toggleCardFlip(benefit.id)}
                       style={{ 
-                        backgroundColor: 'rgba(22, 37, 79, 0.7)',
+                        backgroundColor: 'rgba(22, 37, 79, 0.9)',
                         border: '1px solid rgba(0, 191, 255, 0.3)',
-                        backdropFilter: 'blur(8px)',
                         backfaceVisibility: 'hidden'
                       }}
                     >
-                      <div className="h-40 overflow-hidden">
+                      <div className="p-6 text-center">
+                        <p className="text-sm italic mb-1" style={{ color: '#00BFFF' }}>{benefit.subtitle}</p>
+                        <h3 className="text-2xl font-bold text-white mb-4">{benefit.title}</h3>
+                        <Button
+                          variant="outline"
+                          className="mb-4 px-8"
+                          style={{ 
+                            borderColor: '#00BFFF',
+                            color: '#00BFFF',
+                            backgroundColor: 'transparent'
+                          }}
+                          onClick={(e) => { e.stopPropagation(); toggleCardFlip(benefit.id); }}
+                          data-testid={`button-learn-${benefit.id}`}
+                        >
+                          LEARN MORE
+                        </Button>
+                      </div>
+                      <div className="h-48 overflow-hidden">
                         <img src={benefit.image} alt={benefit.title} className="w-full h-full object-cover" />
                       </div>
-                      <div className="p-5">
-                        <h3 className="text-lg font-semibold text-white mb-2">{benefit.title}</h3>
-                        <p className="text-sm mb-3" style={{ color: '#ACBBC6' }}>{benefit.description}</p>
-                        <p className="text-xs" style={{ color: '#00BFFF' }}>Click to learn more</p>
+                      <div className="p-4 text-center">
+                        <p className="text-sm" style={{ color: '#ACBBC6' }}>{benefit.description}</p>
                       </div>
                     </div>
                     

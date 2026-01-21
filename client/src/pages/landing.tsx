@@ -195,12 +195,14 @@ export default function LandingPage() {
         
         <div className="container mx-auto px-4 relative">
           <div className="max-w-4xl mx-auto text-center mb-16">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white tracking-tight">
-              Digital Freight Marketplace
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto" style={{ color: '#ACBBC6' }}>
-              Connect shippers with trusted carriers. Post loads, track shipments, and manage your logistics operations, all in one platform.
-            </p>
+            <div style={{ animation: 'heroLevitate 4s ease-in-out infinite' }}>
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white tracking-tight">
+                Digital Freight Marketplace
+              </h1>
+              <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto" style={{ color: '#ACBBC6' }}>
+                Connect shippers with trusted carriers. Post loads, track shipments, and manage your logistics operations, all in one platform.
+              </p>
+            </div>
             <div className="flex flex-wrap justify-center gap-6 mt-12">
               {stats.map((stat) => {
                 const isFlipped = flippedCards.has(`stat-${stat.id}`);
@@ -502,6 +504,10 @@ export default function LandingPage() {
           @keyframes pulse-glow {
             0%, 100% { box-shadow: 0 0 10px rgba(0, 191, 255, 0.2); }
             50% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.4), 0 0 30px rgba(0, 191, 255, 0.2); }
+          }
+          @keyframes heroLevitate {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); }
           }
         `}</style>
       </section>

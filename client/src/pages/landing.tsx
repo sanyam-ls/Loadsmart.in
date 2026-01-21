@@ -432,7 +432,7 @@ export default function LandingPage() {
                     }}
                   >
                     <div 
-                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] flex flex-col"
                       onClick={() => toggleCardFlip(benefit.id)}
                       style={{ 
                         backgroundColor: 'rgba(22, 37, 79, 0.9)',
@@ -440,12 +440,13 @@ export default function LandingPage() {
                         backfaceVisibility: 'hidden'
                       }}
                     >
-                      <div className="p-6 text-center">
+                      <div className="p-5 text-center">
                         <p className="text-sm italic mb-1" style={{ color: '#00BFFF' }}>{benefit.subtitle}</p>
-                        <h3 className="text-2xl font-bold text-white mb-4">{benefit.title}</h3>
+                        <h3 className="text-xl font-bold text-white mb-3">{benefit.title}</h3>
                         <Button
                           variant="outline"
-                          className="mb-4 px-8"
+                          className="px-6"
+                          size="sm"
                           style={{ 
                             borderColor: '#00BFFF',
                             color: '#00BFFF',
@@ -457,11 +458,11 @@ export default function LandingPage() {
                           LEARN MORE
                         </Button>
                       </div>
-                      <div className="h-48 overflow-hidden">
+                      <div className="h-44 overflow-hidden">
                         <img src={benefit.image} alt={benefit.title} className="w-full h-full object-cover" />
                       </div>
-                      <div className="p-4 text-center">
-                        <p className="text-sm" style={{ color: '#ACBBC6' }}>{benefit.description}</p>
+                      <div className="p-4 text-center flex-1 flex items-center justify-center">
+                        <p className="text-sm leading-relaxed" style={{ color: '#ACBBC6' }}>{benefit.description}</p>
                       </div>
                     </div>
                     

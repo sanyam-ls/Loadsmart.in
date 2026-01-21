@@ -288,7 +288,7 @@ export default function LandingPage() {
                     }}
                   >
                     <div 
-                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] flex flex-col"
                       onClick={() => toggleCardFlip(role.id)}
                       onKeyDown={(e) => e.key === 'Enter' && toggleCardFlip(role.id)}
                       tabIndex={0}
@@ -301,7 +301,7 @@ export default function LandingPage() {
                         boxShadow: '0 0 20px rgba(0, 191, 255, 0.15)'
                       }}
                     >
-                      <div className="p-6 text-center">
+                      <div className="p-5 text-center">
                         <p className="text-sm italic mb-1" style={{ color: '#00BFFF' }}>{role.subtitle}</p>
                         <h3 className="text-2xl font-bold text-white mb-4">{role.title}</h3>
                         <Button
@@ -318,11 +318,11 @@ export default function LandingPage() {
                           LEARN MORE
                         </Button>
                       </div>
-                      <div className="h-56 overflow-hidden">
+                      <div className="h-52 overflow-hidden">
                         <img src={backgroundImage} alt={role.title} className="w-full h-full object-cover" />
                       </div>
-                      <div className="p-5 text-center">
-                        <p className="text-sm" style={{ color: '#ACBBC6' }}>{role.description}</p>
+                      <div className="p-4 text-center flex-1 flex items-center justify-center">
+                        <p className="text-sm leading-relaxed" style={{ color: '#ACBBC6' }}>{role.description}</p>
                       </div>
                     </div>
                     

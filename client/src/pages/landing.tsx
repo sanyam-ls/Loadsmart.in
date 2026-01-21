@@ -95,10 +95,30 @@ const features = [
 ];
 
 const stats = [
-  { value: "10,000+", label: "Loads Delivered" },
-  { value: "500+", label: "Trusted Carriers" },
-  { value: "98%", label: "On-time Delivery" },
-  { value: "24/7", label: "Support Available" }
+  { 
+    id: "loads",
+    value: "10,000+", 
+    label: "Loads Delivered",
+    backDescription: "We have successfully facilitated over 10,000 shipments across India, connecting shippers with reliable carriers. Each load represents a business relationship built on trust and efficiency."
+  },
+  { 
+    id: "carriers",
+    value: "500+", 
+    label: "Trusted Carriers",
+    backDescription: "Our network includes more than 500 verified carriers, from solo owner-operators to large fleet companies. Every carrier is thoroughly vetted for compliance, insurance, and reliability."
+  },
+  { 
+    id: "delivery",
+    value: "98%", 
+    label: "On-time Delivery",
+    backDescription: "With real-time tracking and proactive communication, we maintain an exceptional 98% on-time delivery rate. Your cargo arrives when promised, every time."
+  },
+  { 
+    id: "support",
+    value: "24/7", 
+    label: "Support Available",
+    backDescription: "Our dedicated support team is available around the clock, 365 days a year. Whether it is a late-night pickup or an urgent query, we are always here to help."
+  }
 ];
 
 export default function LandingPage() {
@@ -182,29 +202,62 @@ export default function LandingPage() {
               Connect shippers with trusted carriers. Post loads, track shipments, and manage your logistics operations, all in one platform.
             </p>
             <div className="flex flex-wrap justify-center gap-6 mt-12">
-              {stats.map((stat, index) => (
-                <div 
-                  key={index} 
-                  className="text-center px-8 py-6 rounded-xl cursor-pointer transition-all duration-300 hover:scale-105"
-                  style={{ 
-                    backgroundColor: 'rgba(22, 37, 79, 0.6)',
-                    border: '1px solid rgba(102, 125, 157, 0.3)',
-                    boxShadow: 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3), inset 0 0 20px rgba(0, 191, 255, 0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.8)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = 'none';
-                    e.currentTarget.style.borderColor = 'rgba(102, 125, 157, 0.3)';
-                  }}
-                  data-testid={`stat-card-${index}`}
-                >
-                  <div className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</div>
-                  <div className="text-sm" style={{ color: '#667D9D' }}>{stat.label}</div>
-                </div>
-              ))}
+              {stats.map((stat) => {
+                const isFlipped = flippedCards.has(`stat-${stat.id}`);
+                return (
+                  <div 
+                    key={stat.id} 
+                    className="relative w-40 h-28"
+                    style={{ perspective: '1000px' }}
+                    data-testid={`stat-card-${stat.id}`}
+                  >
+                    <div 
+                      className="relative w-full h-full transition-transform duration-700"
+                      style={{ 
+                        transformStyle: 'preserve-3d',
+                        transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                      }}
+                    >
+                      <div 
+                        className="absolute inset-0 text-center px-4 py-4 rounded-xl cursor-pointer flex flex-col justify-center items-center"
+                        onClick={() => toggleCardFlip(`stat-${stat.id}`)}
+                        style={{ 
+                          backgroundColor: 'rgba(22, 37, 79, 0.6)',
+                          border: '1px solid rgba(102, 125, 157, 0.3)',
+                          backfaceVisibility: 'hidden'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3), inset 0 0 20px rgba(0, 191, 255, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.8)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = 'none';
+                          e.currentTarget.style.borderColor = 'rgba(102, 125, 157, 0.3)';
+                        }}
+                      >
+                        <div className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</div>
+                        <div className="text-sm" style={{ color: '#667D9D' }}>{stat.label}</div>
+                      </div>
+                      
+                      <div 
+                        className="absolute inset-0 px-3 py-3 rounded-xl cursor-pointer flex flex-col justify-center"
+                        onClick={() => toggleCardFlip(`stat-${stat.id}`)}
+                        style={{ 
+                          backgroundColor: '#16254F',
+                          border: '1px solid rgba(0, 191, 255, 0.5)',
+                          backfaceVisibility: 'hidden',
+                          transform: 'rotateY(180deg)',
+                          boxShadow: '0 0 20px rgba(0, 191, 255, 0.3)'
+                        }}
+                      >
+                        <p className="text-xs leading-relaxed text-center" style={{ color: '#ACBBC6' }}>
+                          {stat.backDescription}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

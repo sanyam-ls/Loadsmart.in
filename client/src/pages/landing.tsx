@@ -371,7 +371,10 @@ export default function LandingPage() {
             })}
           </div>
 
-          <div className="max-w-md mx-auto mt-8">
+          <div className="text-center mt-12 mb-4">
+            <p className="text-sm" style={{ color: '#667D9D' }}>For FreightFlow Employees</p>
+          </div>
+          <div className="max-w-lg mx-auto">
             {(() => {
               const role = staffCard;
               const isFlipped = flippedCards.has(role.id);

@@ -22,6 +22,7 @@ import soloDriverImage from "@assets/image_1768953524305.png";
 import fleetOwnerImage from "@assets/image_1768953860585.png";
 import heroVideo from "@assets/Loadlink_1768955038031.mp4";
 import ctaTruckImage from "@assets/PHOTO-2026-01-21-00-10-48_1768955240083.jpg";
+import ctaBackgroundImage from "@assets/image_1768955391086.png";
 
 const roleCards = [
   {
@@ -414,9 +415,18 @@ export default function LandingPage() {
         `}</style>
       </section>
 
-      <section className="py-20" style={{ backgroundColor: '#060817' }}>
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto rounded-2xl p-8 md:p-12 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #16254F 0%, #667D9D 100%)' }}>
+      <section className="py-20 relative" style={{ backgroundColor: '#060817' }}>
+        <div 
+          className="absolute inset-0"
+          style={{ 
+            backgroundImage: `url(${ctaBackgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.15
+          }}
+        />
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-5xl mx-auto rounded-2xl p-8 md:p-12 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(22, 37, 79, 0.95) 0%, rgba(102, 125, 157, 0.9) 100%)', backdropFilter: 'blur(8px)' }}>
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)' }} />
             <div className="relative flex flex-col lg:flex-row items-center gap-8">
               <div 

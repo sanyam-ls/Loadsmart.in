@@ -398,56 +398,86 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-8">
-            <div 
-              className="rounded-xl text-center overflow-hidden"
-              style={{ 
-                backgroundColor: 'rgba(22, 37, 79, 0.7)',
-                border: '1px solid rgba(0, 191, 255, 0.3)',
-                backdropFilter: 'blur(8px)'
-              }}
-            >
-              <div className="h-40 overflow-hidden">
-                <img src={collaborationImage} alt="Collaborative Culture" className="w-full h-full object-cover" />
-              </div>
-              <div className="p-5">
-                <h3 className="text-lg font-semibold text-white mb-2">Collaborative Culture</h3>
-                <p className="text-sm" style={{ color: '#ACBBC6' }}>Work with passionate people who care about making logistics better for everyone.</p>
-              </div>
-            </div>
-            
-            <div 
-              className="rounded-xl text-center overflow-hidden"
-              style={{ 
-                backgroundColor: 'rgba(22, 37, 79, 0.7)',
-                border: '1px solid rgba(0, 191, 255, 0.3)',
-                backdropFilter: 'blur(8px)'
-              }}
-            >
-              <div className="h-40 overflow-hidden">
-                <img src={growthImage} alt="Growth Opportunities" className="w-full h-full object-cover" />
-              </div>
-              <div className="p-5">
-                <h3 className="text-lg font-semibold text-white mb-2">Growth Opportunities</h3>
-                <p className="text-sm" style={{ color: '#ACBBC6' }}>Learn new skills, take on challenges, and grow your career as we scale.</p>
-              </div>
-            </div>
-            
-            <div 
-              className="rounded-xl text-center overflow-hidden"
-              style={{ 
-                backgroundColor: 'rgba(22, 37, 79, 0.7)',
-                border: '1px solid rgba(0, 191, 255, 0.3)',
-                backdropFilter: 'blur(8px)'
-              }}
-            >
-              <div className="h-40 overflow-hidden">
-                <img src={impactImage} alt="Make an Impact" className="w-full h-full object-cover" />
-              </div>
-              <div className="p-5">
-                <h3 className="text-lg font-semibold text-white mb-2">Make an Impact</h3>
-                <p className="text-sm" style={{ color: '#ACBBC6' }}>Your work directly helps thousands of shippers and carriers across India.</p>
-              </div>
-            </div>
+            {[
+              {
+                id: 'culture',
+                title: 'Collaborative Culture',
+                description: 'Work with passionate people who care about making logistics better for everyone.',
+                image: collaborationImage,
+                backTitle: 'Our Team Spirit',
+                backDetails: 'At FreightFlow, collaboration is at our core. We hold daily standups, weekly brainstorming sessions, and quarterly team retreats. Our open-door policy means everyone from interns to executives can share ideas. We celebrate wins together, learn from setbacks as a team, and support each other through every challenge.'
+              },
+              {
+                id: 'growth',
+                title: 'Growth Opportunities',
+                description: 'Learn new skills, take on challenges, and grow your career as we scale.',
+                image: growthImage,
+                backTitle: 'Your Career Path',
+                backDetails: 'We invest in your growth with annual learning budgets, mentorship programs, and clear promotion paths. Access to online courses, industry conferences, and cross-functional projects helps you expand your skillset. Many of our leaders started as individual contributors and grew with the company.'
+              },
+              {
+                id: 'impact',
+                title: 'Make an Impact',
+                description: 'Your work directly helps thousands of shippers and carriers across India.',
+                image: impactImage,
+                backTitle: 'Real-World Results',
+                backDetails: 'Every feature you build, every process you improve directly impacts thousands of businesses across India. Our platform moves millions of tons of freight annually, supporting livelihoods from solo truck owners to large enterprises. Your work creates real economic value and helps modernize India\'s logistics industry.'
+              }
+            ].map((benefit) => {
+              const isFlipped = flippedCards.has(benefit.id);
+              return (
+                <div 
+                  key={benefit.id}
+                  className="relative h-[320px]"
+                  style={{ perspective: '1000px' }}
+                  data-testid={`card-benefit-${benefit.id}`}
+                >
+                  <div 
+                    className="relative w-full h-full transition-transform duration-700"
+                    style={{ 
+                      transformStyle: 'preserve-3d',
+                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                    }}
+                  >
+                    <div 
+                      className="absolute inset-0 rounded-xl text-center overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+                      onClick={() => toggleCardFlip(benefit.id)}
+                      style={{ 
+                        backgroundColor: 'rgba(22, 37, 79, 0.7)',
+                        border: '1px solid rgba(0, 191, 255, 0.3)',
+                        backdropFilter: 'blur(8px)',
+                        backfaceVisibility: 'hidden'
+                      }}
+                    >
+                      <div className="h-40 overflow-hidden">
+                        <img src={benefit.image} alt={benefit.title} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="p-5">
+                        <h3 className="text-lg font-semibold text-white mb-2">{benefit.title}</h3>
+                        <p className="text-sm mb-3" style={{ color: '#ACBBC6' }}>{benefit.description}</p>
+                        <p className="text-xs" style={{ color: '#00BFFF' }}>Click to learn more</p>
+                      </div>
+                    </div>
+                    
+                    <div 
+                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer p-6 flex flex-col justify-center"
+                      onClick={() => toggleCardFlip(benefit.id)}
+                      style={{ 
+                        backgroundColor: 'rgba(22, 37, 79, 0.95)',
+                        border: '1px solid rgba(0, 191, 255, 0.5)',
+                        backfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                        boxShadow: '0 0 30px rgba(0, 191, 255, 0.2)'
+                      }}
+                    >
+                      <h3 className="text-xl font-bold mb-4" style={{ color: '#00BFFF' }}>{benefit.backTitle}</h3>
+                      <p className="text-sm leading-relaxed" style={{ color: '#ACBBC6' }}>{benefit.backDetails}</p>
+                      <p className="text-xs mt-4" style={{ color: '#667D9D' }}>Click to flip back</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="text-center">

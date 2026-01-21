@@ -487,7 +487,7 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-[#0a0f1a] dark:via-[#0d1525] dark:to-[#060817]">
+      <div className="flex-1 flex flex-col bg-gradient-to-br from-[#e8f4fc] via-[#d4e8f7] to-[#c5dff0] dark:from-[#0a0f1a] dark:via-[#0d1525] dark:to-[#060817]">
         <div className="flex justify-end gap-2 p-4">
           <LanguageSwitcher />
           <ThemeToggle />

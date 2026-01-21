@@ -151,13 +151,13 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#060817' }}>
-      <header className="sticky top-0 z-50 w-full border-b border-white/10 backdrop-blur-md" style={{ backgroundColor: 'rgba(6, 8, 23, 0.95)' }}>
+      <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md bg-white/95 dark:bg-[rgba(6,8,23,0.95)] border-gray-200 dark:border-white/10">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: '#667D9D' }}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#667D9D]">
               <Truck className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white tracking-wide">FreightFlow</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white tracking-wide">FreightFlow</span>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -165,14 +165,14 @@ export default function LandingPage() {
               variant="outline" 
               onClick={() => setLocation("/auth")} 
               data-testid="button-signin"
-              className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+              className="border-gray-300 dark:border-white/20 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10"
             >
               Sign In
             </Button>
             <Button 
               onClick={() => setLocation("/auth")} 
               data-testid="button-get-started"
-              className="bg-white text-gray-900 hover:bg-white/90"
+              className="bg-[#16254F] dark:bg-white text-white dark:text-gray-900 hover:bg-[#16254F]/90 dark:hover:bg-white/90"
             >
               Get Started
             </Button>
@@ -606,22 +606,22 @@ export default function LandingPage() {
         `}</style>
       </section>
 
-      <footer className="py-8" style={{ backgroundColor: '#060817', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+      <footer className="py-8 bg-white dark:bg-[#060817] border-t border-gray-200 dark:border-white/10">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: '#667D9D' }}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#667D9D]">
                 <Truck className="h-4 w-4 text-white" />
               </div>
-              <span className="font-semibold text-white">FreightFlow</span>
+              <span className="font-semibold text-gray-900 dark:text-white">FreightFlow</span>
             </div>
-            <p className="text-sm" style={{ color: '#667D9D' }}>
+            <p className="text-sm text-gray-500 dark:text-[#667D9D]">
               Digital Freight Marketplace. Connecting shippers with trusted carriers.
             </p>
-            <div className="flex items-center gap-4 text-sm" style={{ color: '#ACBBC6' }}>
-              <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
-              <span className="hover:text-white cursor-pointer transition-colors">Terms of Service</span>
-              <span className="hover:text-white cursor-pointer transition-colors">Contact</span>
+            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-[#ACBBC6]">
+              <span className="hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
+              <span className="hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors">Terms of Service</span>
+              <span className="hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors">Contact</span>
             </div>
           </div>
         </div>

@@ -51,6 +51,7 @@ const registerSchema = z.object({
   companyName: z.string().optional(),
   companyPhone: z.string().optional(),
   city: z.string().optional(),
+  address: z.string().optional(),
   phone: z.string().optional(),
   carrierType: z.enum(["solo", "enterprise"]).optional(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -197,7 +198,7 @@ export default function AuthPage() {
 
       if (response.ok && data.success) {
         setOtpVerified(true);
-        setVerifiedPhone(registerForm.getValues("phone"));
+        setVerifiedPhone(registerForm.getValues("phone") || "");
         toast({ title: "Phone Verified!", description: "Your phone number has been verified successfully." });
       } else {
         toast({ title: "Invalid OTP", description: data.error || "The code you entered doesn't match. Please try again.", variant: "destructive" });
@@ -226,6 +227,7 @@ export default function AuthPage() {
       companyName: "",
       companyPhone: "",
       city: "",
+      address: "",
       phone: "",
       carrierType: undefined,
     },
@@ -716,6 +718,23 @@ export default function AuthPage() {
                                 placeholder="you@company.com" 
                                 {...field} 
                                 data-testid="input-register-email" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="address"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Address</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Enter your full address" 
+                                {...field} 
+                                data-testid="input-register-address" 
                               />
                             </FormControl>
                             <FormMessage />

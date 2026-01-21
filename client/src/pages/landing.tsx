@@ -21,6 +21,7 @@ import staffImage from "@assets/PHOTO-2026-01-21-00-10-17_1768953323491.jpg";
 import soloDriverImage from "@assets/image_1768953524305.png";
 import fleetOwnerImage from "@assets/image_1768953860585.png";
 import heroVideo from "@assets/Loadlink_1768955038031.mp4";
+import ctaTruckImage from "@assets/PHOTO-2026-01-21-00-10-48_1768955240083.jpg";
 
 const roleCards = [
   {
@@ -415,38 +416,66 @@ export default function LandingPage() {
 
       <section className="py-20" style={{ backgroundColor: '#060817' }}>
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto rounded-2xl p-8 md:p-12 text-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #16254F 0%, #667D9D 100%)' }}>
+          <div className="max-w-5xl mx-auto rounded-2xl p-8 md:p-12 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #16254F 0%, #667D9D 100%)' }}>
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)' }} />
-            <div className="relative">
-              <Users className="h-12 w-12 mx-auto mb-4 text-white/80" />
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-                Ready to get started?
-              </h2>
-              <p className="text-lg mb-8 max-w-xl mx-auto text-white/80">
-                Join thousands of shippers and carriers already using FreightFlow to streamline their logistics operations.
-              </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <Button 
-                  size="lg" 
-                  onClick={() => setLocation("/auth")}
-                  data-testid="button-cta-signup"
-                  className="bg-white text-gray-900 hover:bg-white/90"
-                >
-                  Create Free Account
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="border-white/30 text-white hover:bg-white/10"
-                  onClick={() => setLocation("/auth")}
-                  data-testid="button-cta-signin"
-                >
-                  Sign In
-                </Button>
+            <div className="relative flex flex-col lg:flex-row items-center gap-8">
+              <div 
+                className="w-full lg:w-1/2 rounded-xl overflow-hidden transition-all duration-500 cursor-pointer group"
+                style={{ animation: 'levitate 3s ease-in-out infinite' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 40px rgba(0, 191, 255, 0.7), 0 0 80px rgba(0, 191, 255, 0.4), 0 20px 60px rgba(0, 0, 0, 0.5)';
+                  e.currentTarget.style.transform = 'translateY(-10px) scale(1.02)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.3)';
+                  e.currentTarget.style.transform = '';
+                }}
+                data-testid="cta-truck-image"
+              >
+                <img 
+                  src={ctaTruckImage} 
+                  alt="LoadSmart truck at warehouse" 
+                  className="w-full h-64 lg:h-80 object-cover"
+                />
+              </div>
+              <div className="w-full lg:w-1/2 text-center lg:text-left">
+                <Users className="h-12 w-12 mb-4 text-white/80 mx-auto lg:mx-0" aria-hidden="true" />
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+                  Ready to get started?
+                </h2>
+                <p className="text-lg mb-8 text-white/80">
+                  Join thousands of shippers and carriers already using FreightFlow to streamline their logistics operations.
+                </p>
+                <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                  <Button 
+                    size="lg" 
+                    onClick={() => setLocation("/auth")}
+                    data-testid="button-cta-signup"
+                    className="bg-white text-gray-900 hover:bg-white/90"
+                  >
+                    Create Free Account
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="border-white/30 text-white hover:bg-white/10"
+                    onClick={() => setLocation("/auth")}
+                    data-testid="button-cta-signin"
+                  >
+                    Sign In
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
+        
+        <style>{`
+          @keyframes levitate {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+          }
+        `}</style>
       </section>
 
       <footer className="py-8" style={{ backgroundColor: '#060817', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>

@@ -12,7 +12,7 @@ import {
   MapPin,
   FileText,
   TrendingUp,
-  Clock,
+  IndianRupee,
   CheckCircle2,
   X
 } from "lucide-react";
@@ -78,7 +78,7 @@ const features = [
     description: "Secure document sharing, POD uploads, and instant invoice generation."
   },
   {
-    icon: Clock,
+    icon: IndianRupee,
     title: "Fast Payments",
     description: "Quick carrier payouts with transparent pricing and advance payment options."
   }

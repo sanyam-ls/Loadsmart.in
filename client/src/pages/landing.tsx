@@ -158,7 +158,7 @@ export default function LandingPage() {
               Digital Freight Marketplace
             </h1>
             <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto" style={{ color: '#ACBBC6' }}>
-              Connect shippers with trusted carriers. Post loads, track shipments, and manage your logistics operations - all in one platform.
+              Connect shippers with trusted carriers. Post loads, track shipments, and manage your logistics operations, all in one platform.
             </p>
             <div className="flex flex-wrap justify-center gap-6 mt-12">
               {stats.map((stat, index) => (

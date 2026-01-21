@@ -187,6 +187,14 @@ export default function LandingPage() {
                   backgroundColor: '#16254F',
                   border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 40px rgba(0, 191, 255, 0.5), 0 0 80px rgba(0, 191, 255, 0.25), inset 0 0 30px rgba(0, 191, 255, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.7)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                }}
               >
                 {role.id === "shipper" && (
                   <>

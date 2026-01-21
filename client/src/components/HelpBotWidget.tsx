@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { MessageCircle, X, Send, Phone, Mail, Loader2, Minus } from "lucide-react";
+import { MessageCircle, X, Send, Phone, Mail, Loader2, Minus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -180,183 +180,304 @@ export function HelpBotWidget() {
 
   const widgetContent = (
     <div id="helpbot-portal-root">
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.4), 0 0 40px rgba(0, 191, 255, 0.2); }
+          50% { box-shadow: 0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-3px); }
+        }
+        .chat-bubble-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+        .chat-bubble-float {
+          animation: float 3s ease-in-out infinite;
+        }
+        .futuristic-border {
+          background: linear-gradient(135deg, rgba(0, 191, 255, 0.3), rgba(22, 37, 79, 0.8));
+        }
+        .glass-effect {
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+        }
+      `}</style>
+      
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-[9999] bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+          className="fixed bottom-6 right-6 h-16 w-16 rounded-full z-[9999] flex items-center justify-center transition-all duration-300 hover:scale-110 chat-bubble-glow chat-bubble-float"
+          style={{ 
+            background: 'linear-gradient(135deg, #00BFFF, #0080FF)',
+            boxShadow: '0 0 20px rgba(0, 191, 255, 0.4), 0 0 40px rgba(0, 191, 255, 0.2), inset 0 1px 0 rgba(255,255,255,0.2)'
+          }}
           data-testid="button-helpbot-open"
         >
-          <MessageCircle className="h-6 w-6" />
+          <Sparkles className="h-7 w-7 text-white" />
         </button>
       ) : (
-        <div className="fixed bottom-6 right-6 w-96 h-[500px] bg-background border rounded-lg shadow-2xl flex flex-col z-[9999]">
-      <div className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5" />
-          <span className="font-semibold">FreightFlow Help</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            onClick={handleMinimize}
-            title="Minimize chat"
-            data-testid="button-helpbot-minimize"
+        <div 
+          className="fixed bottom-6 right-6 w-[380px] h-[550px] rounded-2xl flex flex-col z-[9999] overflow-hidden glass-effect"
+          style={{
+            background: 'linear-gradient(180deg, #060817 0%, #0d1525 50%, #060817 100%)',
+            border: '1px solid rgba(0, 191, 255, 0.3)',
+            boxShadow: '0 0 40px rgba(0, 191, 255, 0.15), 0 25px 50px -12px rgba(0, 0, 0, 0.8)'
+          }}
+        >
+          {/* Header */}
+          <div 
+            className="flex items-center justify-between p-4 border-b"
+            style={{ 
+              background: 'linear-gradient(90deg, rgba(0, 191, 255, 0.15), rgba(22, 37, 79, 0.4))',
+              borderColor: 'rgba(0, 191, 255, 0.2)'
+            }}
           >
-            <Minus className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            onClick={handleClose}
-            title="Close and end chat"
-            data-testid="button-helpbot-close"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        {messages.length === 0 ? (
-          <div className="text-center space-y-4 pt-8">
-            <div className="text-4xl">
-              <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground" />
+            <div className="flex items-center gap-3">
+              <div 
+                className="h-10 w-10 rounded-xl flex items-center justify-center"
+                style={{ 
+                  background: 'linear-gradient(135deg, #00BFFF, #0080FF)',
+                  boxShadow: '0 0 15px rgba(0, 191, 255, 0.5)'
+                }}
+              >
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <span className="font-semibold text-white text-lg">AI Assistant</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-xs text-[#667D9D]">Online</span>
+                </div>
+              </div>
             </div>
-            <h3 className="font-semibold text-lg">How can we help you?</h3>
-            <p className="text-sm text-muted-foreground">
-              Ask me anything about FreightFlow, or connect with our support team.
-            </p>
-            <div className="flex flex-wrap gap-2 justify-center pt-4">
+            <div className="flex items-center gap-1">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setInput("How do I post a load?")}
-                data-testid="button-helpbot-quick-post-load"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-[#667D9D] hover:text-white hover:bg-white/10 rounded-lg"
+                onClick={handleMinimize}
+                title="Minimize chat"
+                data-testid="button-helpbot-minimize"
               >
-                Post a load
+                <Minus className="h-4 w-4" />
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setInput("How do I track my shipment?")}
-                data-testid="button-helpbot-quick-track"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-[#667D9D] hover:text-white hover:bg-white/10 rounded-lg"
+                onClick={handleClose}
+                title="Close and end chat"
+                data-testid="button-helpbot-close"
               >
-                Track shipment
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setInput("What documents do I need?")}
-                data-testid="button-helpbot-quick-docs"
-              >
-                Required docs
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex",
-                  message.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
-                <div
-                  className={cn(
-                    "max-w-[80%] rounded-lg px-4 py-2",
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : message.isError
-                        ? "bg-destructive/10 text-destructive border border-destructive/20"
-                        : "bg-muted"
-                  )}
+
+          {/* Messages Area */}
+          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+            {messages.length === 0 ? (
+              <div className="text-center space-y-6 pt-8">
+                <div 
+                  className="h-20 w-20 mx-auto rounded-2xl flex items-center justify-center"
+                  style={{ 
+                    background: 'linear-gradient(135deg, rgba(0, 191, 255, 0.2), rgba(22, 37, 79, 0.4))',
+                    border: '1px solid rgba(0, 191, 255, 0.3)',
+                    boxShadow: '0 0 30px rgba(0, 191, 255, 0.2)'
+                  }}
                 >
-                  <p className="text-sm whitespace-pre-wrap">
-                    {message.content || (isLoading && message.role === "assistant" ? "Thinking..." : "")}
+                  <MessageCircle className="h-10 w-10" style={{ color: '#00BFFF' }} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xl text-white mb-2">How can I help you?</h3>
+                  <p className="text-sm text-[#667D9D] max-w-xs mx-auto">
+                    Ask me anything about FreightFlow, or connect with our support team.
                   </p>
                 </div>
-              </div>
-            ))}
-            {isLoading && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-lg px-4 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="flex flex-wrap gap-2 justify-center pt-2">
+                  {[
+                    { label: "Post a load", query: "How do I post a load?" },
+                    { label: "Track shipment", query: "How do I track my shipment?" },
+                    { label: "Required docs", query: "What documents do I need?" }
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => setInput(item.query)}
+                      className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105"
+                      style={{
+                        background: 'rgba(0, 191, 255, 0.1)',
+                        border: '1px solid rgba(0, 191, 255, 0.3)',
+                        color: '#00BFFF'
+                      }}
+                      data-testid={`button-helpbot-quick-${item.label.toLowerCase().replace(' ', '-')}`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
-          </div>
-        )}
-      </ScrollArea>
-
-      {showContactInfo && (
-        <div className="px-4 py-3 bg-muted/50 border-t">
-          <p className="text-sm font-medium mb-2">Contact Support</p>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              <span>+91 1800-XXX-XXXX</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              <span>support@freightflow.in</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="p-4 border-t">
-        <div className="flex gap-2 mb-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs"
-            onClick={() => setShowContactInfo(!showContactInfo)}
-            data-testid="button-helpbot-contact"
-          >
-            <Phone className="h-3 w-3 mr-1" />
-            Contact Support
-          </Button>
-          {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs"
-              onClick={startNewConversation}
-              data-testid="button-helpbot-new-chat"
-            >
-              New Chat
-            </Button>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your question..."
-            disabled={isLoading}
-            className="flex-1"
-            data-testid="input-helpbot-message"
-          />
-          <Button
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
-            size="icon"
-            data-testid="button-helpbot-send"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <div className="space-y-4">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={cn(
+                      "flex",
+                      message.role === "user" ? "justify-end" : "justify-start"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-2xl px-4 py-3",
+                        message.role === "user"
+                          ? ""
+                          : message.isError
+                            ? ""
+                            : ""
+                      )}
+                      style={
+                        message.role === "user"
+                          ? {
+                              background: 'linear-gradient(135deg, #00BFFF, #0080FF)',
+                              boxShadow: '0 4px 15px rgba(0, 191, 255, 0.3)'
+                            }
+                          : message.isError
+                            ? {
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                color: '#fca5a5'
+                              }
+                            : {
+                                background: 'rgba(22, 37, 79, 0.6)',
+                                border: '1px solid rgba(0, 191, 255, 0.15)'
+                              }
+                      }
+                    >
+                      <p className={cn(
+                        "text-sm whitespace-pre-wrap",
+                        message.role === "user" ? "text-white" : message.isError ? "" : "text-[#ACBBC6]"
+                      )}>
+                        {message.content || (isLoading && message.role === "assistant" ? "Thinking..." : "")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                  <div className="flex justify-start">
+                    <div 
+                      className="rounded-2xl px-4 py-3"
+                      style={{
+                        background: 'rgba(22, 37, 79, 0.6)',
+                        border: '1px solid rgba(0, 191, 255, 0.15)'
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#00BFFF' }} />
+                        <span className="text-sm text-[#667D9D]">Thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </Button>
-        </div>
-      </div>
+          </ScrollArea>
+
+          {/* Contact Info */}
+          {showContactInfo && (
+            <div 
+              className="px-4 py-3 border-t"
+              style={{ 
+                background: 'rgba(22, 37, 79, 0.4)',
+                borderColor: 'rgba(0, 191, 255, 0.15)'
+              }}
+            >
+              <p className="text-sm font-medium mb-2 text-white">Contact Support</p>
+              <div className="space-y-2 text-sm text-[#667D9D]">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" style={{ color: '#00BFFF' }} />
+                  <span>+91 1800-XXX-XXXX</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" style={{ color: '#00BFFF' }} />
+                  <span>support@freightflow.in</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Input Area */}
+          <div 
+            className="p-4 border-t"
+            style={{ borderColor: 'rgba(0, 191, 255, 0.15)' }}
+          >
+            <div className="flex gap-2 mb-3">
+              <button
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: 'rgba(0, 191, 255, 0.1)',
+                  color: '#00BFFF'
+                }}
+                onClick={() => setShowContactInfo(!showContactInfo)}
+                data-testid="button-helpbot-contact"
+              >
+                <Phone className="h-3 w-3" />
+                Contact
+              </button>
+              {messages.length > 0 && (
+                <button
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                  style={{
+                    background: 'rgba(102, 125, 157, 0.2)',
+                    color: '#667D9D'
+                  }}
+                  onClick={startNewConversation}
+                  data-testid="button-helpbot-new-chat"
+                >
+                  New Chat
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <div 
+                className="flex-1 relative rounded-xl overflow-hidden"
+                style={{ 
+                  background: 'rgba(22, 37, 79, 0.6)',
+                  border: '1px solid rgba(0, 191, 255, 0.2)'
+                }}
+              >
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message..."
+                  disabled={isLoading}
+                  className="w-full bg-transparent px-4 py-3 text-sm text-white placeholder-[#667D9D] outline-none"
+                  data-testid="input-helpbot-message"
+                />
+              </div>
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                className="h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                style={{
+                  background: input.trim() && !isLoading 
+                    ? 'linear-gradient(135deg, #00BFFF, #0080FF)' 
+                    : 'rgba(22, 37, 79, 0.6)',
+                  boxShadow: input.trim() && !isLoading 
+                    ? '0 0 20px rgba(0, 191, 255, 0.4)' 
+                    : 'none'
+                }}
+                data-testid="button-helpbot-send"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                ) : (
+                  <Send className="h-5 w-5 text-white" />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

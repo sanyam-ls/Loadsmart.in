@@ -192,8 +192,8 @@ export default function LandingPage() {
         >
           <source src={heroVideo} type="video/mp4" />
         </video>
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(6, 8, 23, 0.85) 0%, rgba(22, 37, 79, 0.75) 50%, rgba(6, 8, 23, 0.85) 100%)' }} />
-        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(102, 125, 157, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(22, 37, 79, 0.5) 0%, transparent 50%)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(6, 8, 23, 0.7) 0%, rgba(22, 37, 79, 0.5) 50%, rgba(6, 8, 23, 0.7) 100%)' }} />
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(0, 191, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(0, 191, 255, 0.1) 0%, transparent 50%)' }} />
         
         <div className="container mx-auto px-4 relative">
           <div className="max-w-4xl mx-auto text-center mb-16">
@@ -293,16 +293,17 @@ export default function LandingPage() {
                       aria-label={`Learn more about ${role.title}. Click to see details.`}
                       style={{ 
                         backgroundColor: '#16254F',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        backfaceVisibility: 'hidden'
+                        border: '1px solid rgba(0, 191, 255, 0.3)',
+                        backfaceVisibility: 'hidden',
+                        boxShadow: '0 0 20px rgba(0, 191, 255, 0.15)'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 0 40px rgba(0, 191, 255, 0.5), 0 0 80px rgba(0, 191, 255, 0.25), inset 0 0 30px rgba(0, 191, 255, 0.08)';
-                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.7)';
+                        e.currentTarget.style.boxShadow = '0 0 50px rgba(0, 191, 255, 0.6), 0 0 100px rgba(0, 191, 255, 0.3), inset 0 0 40px rgba(0, 191, 255, 0.1)';
+                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.8)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = 'none';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 191, 255, 0.15)';
+                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.3)';
                       }}
                     >
                       <div 
@@ -313,23 +314,23 @@ export default function LandingPage() {
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(102, 125, 157, 0.2) 0%, transparent 100%)' }} />
                       
                       <div className="p-8 relative flex flex-col justify-center h-full max-w-xs">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: '#667D9D' }}>
-                          <role.icon className="h-6 w-6 text-white" aria-hidden="true" />
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)', border: '1px solid rgba(0, 191, 255, 0.4)' }}>
+                          <role.icon className="h-6 w-6" style={{ color: '#00BFFF' }} aria-hidden="true" />
                         </div>
-                        <p className="text-sm font-medium mb-1" style={{ color: '#667D9D' }}>{role.subtitle}</p>
+                        <p className="text-sm font-medium mb-1" style={{ color: '#00BFFF' }}>{role.subtitle}</p>
                         <h3 className="text-2xl font-bold text-white mb-3">{role.title}</h3>
                         <p className="text-sm mb-4" style={{ color: '#ACBBC6' }}>
                           {role.description}
                         </p>
                         <ul className="space-y-2 mb-6">
                           {role.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-white/80">
-                              <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#667D9D' }} aria-hidden="true" />
+                            <li key={idx} className="flex items-center gap-2 text-sm text-white/90">
+                              <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#00BFFF' }} aria-hidden="true" />
                               <span>{feature}</span>
                             </li>
                           ))}
                         </ul>
-                        <p className="text-xs" style={{ color: '#667D9D' }}>Click to learn more</p>
+                        <p className="text-xs" style={{ color: '#00BFFF' }}>Click to learn more</p>
                       </div>
                     </div>
                     
@@ -380,7 +381,7 @@ export default function LandingPage() {
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${employeeSectionBg})` }}
         />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.95) 0%, rgba(6, 8, 23, 0.85) 50%, rgba(6, 8, 23, 0.75) 100%)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.85) 0%, rgba(6, 8, 23, 0.7) 50%, rgba(6, 8, 23, 0.6) 100%)' }} />
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
@@ -457,9 +458,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 relative" style={{ backgroundColor: '#0a0f1f' }}>
-        <div className="container mx-auto px-4">
+      <section className="py-20 relative" style={{ backgroundColor: '#0a1225' }}>
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 30% 70%, rgba(0, 191, 255, 0.06) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(0, 191, 255, 0.04) 0%, transparent 50%)' }} />
+        <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
+            <p className="text-sm font-medium mb-2" style={{ color: '#00BFFF' }}>Our Platform</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
               Grow your business for the long haul
             </h2>
@@ -495,22 +498,22 @@ export default function LandingPage() {
                     aria-expanded={activeFeature === index}
                     style={{ 
                       backgroundColor: activeFeature === index ? 'rgba(0, 191, 255, 0.3)' : 'rgba(22, 37, 79, 0.9)',
-                      border: activeFeature === index ? '2px solid rgba(0, 191, 255, 0.8)' : '2px solid rgba(102, 125, 157, 0.5)',
+                      border: activeFeature === index ? '2px solid rgba(0, 191, 255, 0.8)' : '2px solid rgba(0, 191, 255, 0.4)',
                       boxShadow: activeFeature === index 
-                        ? '0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3)' 
-                        : 'none',
+                        ? '0 0 40px rgba(0, 191, 255, 0.7), 0 0 80px rgba(0, 191, 255, 0.4)' 
+                        : '0 0 15px rgba(0, 191, 255, 0.2)',
                       animation: 'pulse-glow 2s ease-in-out infinite'
                     }}
                     onMouseEnter={(e) => {
                       if (activeFeature !== index) {
-                        e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 191, 255, 0.5), 0 0 40px rgba(0, 191, 255, 0.2)';
-                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.6)';
+                        e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3)';
+                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.7)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (activeFeature !== index) {
-                        e.currentTarget.style.boxShadow = 'none';
-                        e.currentTarget.style.borderColor = 'rgba(102, 125, 157, 0.5)';
+                        e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 191, 255, 0.2)';
+                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.4)';
                       }
                     }}
                     data-testid={`truck-icon-${index}`}
@@ -596,18 +599,19 @@ export default function LandingPage() {
         `}</style>
       </section>
 
-      <section className="py-20 relative" style={{ backgroundColor: '#060817' }}>
+      <section className="py-20 relative" style={{ backgroundColor: '#0a1225' }}>
         <div 
           className="absolute inset-0"
           style={{ 
             backgroundImage: `url(${ctaBackgroundImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            opacity: 0.15
+            opacity: 0.25
           }}
         />
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(0, 191, 255, 0.08) 0%, transparent 70%)' }} />
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-5xl mx-auto rounded-2xl p-8 md:p-12 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(22, 37, 79, 0.95) 0%, rgba(102, 125, 157, 0.9) 100%)', backdropFilter: 'blur(8px)' }}>
+          <div className="max-w-5xl mx-auto rounded-2xl p-8 md:p-12 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(22, 37, 79, 0.95) 0%, rgba(102, 125, 157, 0.9) 100%)', backdropFilter: 'blur(8px)', border: '1px solid rgba(0, 191, 255, 0.3)', boxShadow: '0 0 40px rgba(0, 191, 255, 0.15)' }}>
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)' }} />
             <div className="relative flex flex-col lg:flex-row items-center gap-8">
               <div 
@@ -690,12 +694,12 @@ export default function LandingPage() {
         `}</style>
       </section>
 
-      <footer className="py-8 bg-white dark:bg-[#060817] border-t border-gray-200 dark:border-white/10">
+      <footer className="py-8 bg-white dark:bg-[#0a1225] border-t border-gray-200 dark:border-[rgba(0,191,255,0.2)]">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#667D9D]">
-                <Truck className="h-4 w-4 text-white" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)', border: '1px solid rgba(0, 191, 255, 0.4)' }}>
+                <Truck className="h-4 w-4" style={{ color: '#00BFFF' }} />
               </div>
               <span className="font-semibold text-gray-900 dark:text-white">FreightFlow</span>
             </div>

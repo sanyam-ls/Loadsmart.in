@@ -20,7 +20,7 @@ import shipperImage from "@assets/D29D77FD-38C9-494F-B81F-1C5943124B44_176893239
 import staffImage from "@assets/PHOTO-2026-01-21-00-10-17_1768953323491.jpg";
 import soloDriverImage from "@assets/image_1768953524305.png";
 import fleetOwnerImage from "@assets/image_1768953860585.png";
-import heroVideo from "@assets/VIDEO-2026-01-21-00-13-02_1768954212443.mp4";
+import heroVideo from "@assets/Loadlink_1768955038031.mp4";
 
 const roleCards = [
   {

@@ -18,6 +18,7 @@ import shipperImage from "@assets/D29D77FD-38C9-494F-B81F-1C5943124B44_176893239
 import staffImage from "@assets/PHOTO-2026-01-21-00-10-17_1768953323491.jpg";
 import soloDriverImage from "@assets/image_1768953524305.png";
 import fleetOwnerImage from "@assets/image_1768953860585.png";
+import heroVideo from "@assets/VIDEO-2026-01-21-00-13-02_1768954212443.mp4";
 
 const roleCards = [
   {
@@ -134,7 +135,16 @@ export default function LandingPage() {
       </header>
 
       <section className="relative overflow-hidden py-20 md:py-32">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #060817 0%, #16254F 50%, #060817 100%)' }} />
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src={heroVideo} type="video/mp4" />
+        </video>
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(6, 8, 23, 0.85) 0%, rgba(22, 37, 79, 0.75) 50%, rgba(6, 8, 23, 0.85) 100%)' }} />
         <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(102, 125, 157, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(22, 37, 79, 0.5) 0%, transparent 50%)' }} />
         
         <div className="container mx-auto px-4 relative">

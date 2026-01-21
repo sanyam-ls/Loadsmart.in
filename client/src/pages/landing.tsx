@@ -371,114 +371,81 @@ export default function LandingPage() {
             })}
           </div>
 
-          <div className="text-center mt-12 mb-4">
-            <p className="text-sm" style={{ color: '#667D9D' }}>For FreightFlow Employees</p>
+        </div>
+      </section>
+
+      <section className="py-20 relative" style={{ backgroundColor: '#060817' }}>
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <p className="text-sm font-medium mb-2" style={{ color: '#00BFFF' }}>Join Our Team</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+              What It's Like Working at FreightFlow
+            </h2>
+            <p className="text-lg max-w-2xl mx-auto" style={{ color: '#ACBBC6' }}>
+              Be part of a team that's revolutionizing India's logistics industry. We're building the future of freight, one load at a time.
+            </p>
           </div>
-          <div className="max-w-lg mx-auto">
-            {(() => {
-              const role = staffCard;
-              const isFlipped = flippedCards.has(role.id);
-              const backgroundImage = staffImage;
-              return (
-                <div 
-                  key={role.id} 
-                  className="relative min-h-[380px]"
-                  style={{ perspective: '1000px' }}
-                  data-testid={`card-role-${role.id}`}
-                >
-                  <div 
-                    className="relative w-full h-full transition-transform duration-700"
-                    style={{ 
-                      transformStyle: 'preserve-3d',
-                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
-                    }}
-                  >
-                    <div 
-                      className="absolute inset-0 group overflow-hidden rounded-xl cursor-pointer transition-all duration-300 hover:scale-[1.02]"
-                      onClick={() => toggleCardFlip(role.id)}
-                      onKeyDown={(e) => e.key === 'Enter' && toggleCardFlip(role.id)}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`Learn more about ${role.title}. Click to see details.`}
-                      style={{ 
-                        backgroundColor: '#16254F',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        backfaceVisibility: 'hidden'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 0 40px rgba(0, 191, 255, 0.5), 0 0 80px rgba(0, 191, 255, 0.25), inset 0 0 30px rgba(0, 191, 255, 0.08)';
-                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.7)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = 'none';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                      }}
-                    >
-                      <div 
-                        className="absolute inset-0 bg-cover bg-right bg-no-repeat"
-                        style={{ backgroundImage: `url(${backgroundImage})` }}
-                      />
-                      <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.95) 0%, rgba(22, 37, 79, 0.7) 50%, rgba(22, 37, 79, 0.5) 100%)' }} />
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(102, 125, 157, 0.2) 0%, transparent 100%)' }} />
-                      
-                      <div className="p-8 relative flex flex-col justify-center h-full max-w-xs">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: '#667D9D' }}>
-                          <role.icon className="h-6 w-6 text-white" aria-hidden="true" />
-                        </div>
-                        <p className="text-sm font-medium mb-1" style={{ color: '#667D9D' }}>{role.subtitle}</p>
-                        <h3 className="text-2xl font-bold text-white mb-3">{role.title}</h3>
-                        <p className="text-sm mb-4" style={{ color: '#ACBBC6' }}>
-                          {role.description}
-                        </p>
-                        <ul className="space-y-2 mb-6">
-                          {role.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-white/80">
-                              <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#667D9D' }} aria-hidden="true" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="text-xs" style={{ color: '#667D9D' }}>Click to learn more</p>
-                      </div>
-                    </div>
-                    
-                    <div 
-                      className="absolute inset-0 overflow-hidden rounded-xl cursor-pointer"
-                      onClick={() => toggleCardFlip(role.id)}
-                      style={{ 
-                        backgroundColor: '#16254F',
-                        border: '1px solid rgba(0, 191, 255, 0.5)',
-                        backfaceVisibility: 'hidden',
-                        transform: 'rotateY(180deg)',
-                        boxShadow: '0 0 30px rgba(0, 191, 255, 0.3)'
-                      }}
-                    >
-                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #16254F 0%, #0a0f1f 100%)' }} />
-                      <div className="p-8 relative flex flex-col h-full">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)', border: '1px solid rgba(0, 191, 255, 0.5)' }}>
-                          <role.icon className="h-6 w-6" style={{ color: '#00BFFF' }} aria-hidden="true" />
-                        </div>
-                        <h3 className="text-2xl font-bold mb-3" style={{ color: '#00BFFF' }}>{role.backGreeting}</h3>
-                        <p className="text-sm leading-relaxed flex-1" style={{ color: '#ACBBC6' }}>
-                          {role.backDescription}
-                        </p>
-                        <div className="mt-6 flex items-center gap-4">
-                          <Button 
-                            onClick={(e) => { e.stopPropagation(); handleRoleClick(role.link); }}
-                            className="bg-white text-gray-900 hover:bg-white/90"
-                            data-testid={`button-getstarted-${role.id}`}
-                          >
-                            Get Started
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                          </Button>
-                          <span className="text-xs" style={{ color: '#667D9D' }}>Click to flip back</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto items-center">
+            <div 
+              className="relative h-[400px] rounded-xl overflow-hidden"
+              style={{ 
+                border: '1px solid rgba(0, 191, 255, 0.3)',
+                boxShadow: '0 0 30px rgba(0, 191, 255, 0.1)'
+              }}
+            >
+              <img 
+                src={staffImage} 
+                alt="FreightFlow Team" 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6, 8, 23, 0.8) 0%, transparent 50%)' }} />
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
+                  <Users className="h-5 w-5" style={{ color: '#00BFFF' }} />
                 </div>
-              );
-            })()}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-1">Collaborative Culture</h3>
+                  <p className="text-sm" style={{ color: '#ACBBC6' }}>Work with passionate people who care about making logistics better for everyone.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
+                  <TrendingUp className="h-5 w-5" style={{ color: '#00BFFF' }} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-1">Growth Opportunities</h3>
+                  <p className="text-sm" style={{ color: '#ACBBC6' }}>Learn new skills, take on challenges, and grow your career as we scale.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
+                  <Shield className="h-5 w-5" style={{ color: '#00BFFF' }} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-1">Make an Impact</h3>
+                  <p className="text-sm" style={{ color: '#ACBBC6' }}>Your work directly helps thousands of shippers and carriers across India.</p>
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => handleRoleClick('/auth?role=admin')}
+                className="mt-4"
+                style={{ 
+                  backgroundColor: '#00BFFF',
+                  color: '#060817'
+                }}
+                data-testid="button-staff-login"
+              >
+                Staff Login
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
           </div>
         </div>
       </section>

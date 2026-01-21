@@ -295,21 +295,22 @@ export default function LandingPage() {
                       role="button"
                       aria-label={`Learn more about ${role.title}. Click to see details.`}
                       style={{ 
-                        backgroundColor: '#ffffff',
-                        border: '1px solid rgba(0, 191, 255, 0.3)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
                         backfaceVisibility: 'hidden',
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+                        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
+                        backdropFilter: 'blur(10px)'
                       }}
                     >
                       <div className="p-5 text-center">
-                        <p className="text-sm italic mb-1" style={{ color: '#0066CC' }}>{role.subtitle}</p>
-                        <h3 className="text-2xl font-bold mb-4" style={{ color: '#1a1a2e' }}>{role.title}</h3>
+                        <p className="text-sm italic mb-1" style={{ color: '#00BFFF' }}>{role.subtitle}</p>
+                        <h3 className="text-2xl font-bold mb-4 text-white">{role.title}</h3>
                         <Button
                           variant="outline"
                           className="mb-4 px-8"
                           style={{ 
-                            borderColor: '#0066CC',
-                            color: '#0066CC',
+                            borderColor: '#00BFFF',
+                            color: '#00BFFF',
                             backgroundColor: 'transparent'
                           }}
                           onClick={(e) => { e.stopPropagation(); toggleCardFlip(role.id); }}
@@ -322,7 +323,7 @@ export default function LandingPage() {
                         <img src={backgroundImage} alt={role.title} className="w-full h-full object-cover" />
                       </div>
                       <div className="p-4 text-center flex-1 flex items-center justify-center">
-                        <p className="text-sm leading-relaxed" style={{ color: '#4a5568' }}>{role.description}</p>
+                        <p className="text-sm leading-relaxed" style={{ color: '#ACBBC6' }}>{role.description}</p>
                       </div>
                     </div>
                     

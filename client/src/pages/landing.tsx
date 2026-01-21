@@ -99,25 +99,25 @@ const stats = [
     id: "loads",
     value: "10,000+", 
     label: "Loads Delivered",
-    backDescription: "We have successfully facilitated over 10,000 shipments across India, connecting shippers with reliable carriers. Each load represents a business relationship built on trust and efficiency."
+    backDescription: "Over 10,000 shipments facilitated across India, connecting shippers with reliable carriers."
   },
   { 
     id: "carriers",
     value: "500+", 
     label: "Trusted Carriers",
-    backDescription: "Our network includes more than 500 verified carriers, from solo owner-operators to large fleet companies. Every carrier is thoroughly vetted for compliance, insurance, and reliability."
+    backDescription: "500+ verified carriers in our network, from solo operators to large fleet companies."
   },
   { 
     id: "delivery",
     value: "98%", 
     label: "On-time Delivery",
-    backDescription: "With real-time tracking and proactive communication, we maintain an exceptional 98% on-time delivery rate. Your cargo arrives when promised, every time."
+    backDescription: "Real-time tracking ensures 98% on-time delivery. Your cargo arrives when promised."
   },
   { 
     id: "support",
     value: "24/7", 
     label: "Support Available",
-    backDescription: "Our dedicated support team is available around the clock, 365 days a year. Whether it is a late-night pickup or an urgent query, we are always here to help."
+    backDescription: "Dedicated support available around the clock, 365 days a year for any query."
   }
 ];
 
@@ -207,7 +207,7 @@ export default function LandingPage() {
                 return (
                   <div 
                     key={stat.id} 
-                    className="relative w-40 h-28"
+                    className="relative w-44 h-32"
                     style={{ perspective: '1000px' }}
                     data-testid={`stat-card-${stat.id}`}
                   >
@@ -240,7 +240,7 @@ export default function LandingPage() {
                       </div>
                       
                       <div 
-                        className="absolute inset-0 px-3 py-3 rounded-xl cursor-pointer flex flex-col justify-center"
+                        className="absolute inset-0 px-3 py-3 rounded-xl cursor-pointer flex flex-col justify-center overflow-hidden"
                         onClick={() => toggleCardFlip(`stat-${stat.id}`)}
                         style={{ 
                           backgroundColor: '#16254F',
@@ -250,7 +250,7 @@ export default function LandingPage() {
                           boxShadow: '0 0 20px rgba(0, 191, 255, 0.3)'
                         }}
                       >
-                        <p className="text-xs leading-relaxed text-center" style={{ color: '#ACBBC6' }}>
+                        <p className="text-[11px] leading-tight text-center" style={{ color: '#ACBBC6' }}>
                           {stat.backDescription}
                         </p>
                       </div>

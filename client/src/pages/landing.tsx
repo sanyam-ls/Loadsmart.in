@@ -399,7 +399,7 @@ export default function LandingPage() {
             
             <div className="flex justify-around items-center mt-4">
               {features.map((feature, index) => (
-                <span key={index} className="text-sm font-medium text-center max-w-[120px]" style={{ color: activeFeature === index ? '#00BFFF' : '#667D9D' }}>
+                <span key={index} className="text-lg font-semibold text-center max-w-[160px]" style={{ color: activeFeature === index ? '#00BFFF' : '#ACBBC6' }}>
                   {feature.title}
                 </span>
               ))}

@@ -276,7 +276,7 @@ export default function LandingPage() {
               return (
                 <div 
                   key={role.id} 
-                  className="relative min-h-[380px]"
+                  className="relative h-[480px]"
                   style={{ perspective: '1000px' }}
                   data-testid={`card-role-${role.id}`}
                 >
@@ -288,52 +288,41 @@ export default function LandingPage() {
                     }}
                   >
                     <div 
-                      className="absolute inset-0 group overflow-hidden rounded-xl cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02]"
                       onClick={() => toggleCardFlip(role.id)}
                       onKeyDown={(e) => e.key === 'Enter' && toggleCardFlip(role.id)}
                       tabIndex={0}
                       role="button"
                       aria-label={`Learn more about ${role.title}. Click to see details.`}
                       style={{ 
-                        backgroundColor: '#16254F',
+                        backgroundColor: 'rgba(22, 37, 79, 0.9)',
                         border: '1px solid rgba(0, 191, 255, 0.3)',
                         backfaceVisibility: 'hidden',
                         boxShadow: '0 0 20px rgba(0, 191, 255, 0.15)'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 0 50px rgba(0, 191, 255, 0.6), 0 0 100px rgba(0, 191, 255, 0.3), inset 0 0 40px rgba(0, 191, 255, 0.1)';
-                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.8)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 191, 255, 0.15)';
-                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.3)';
-                      }}
                     >
-                      <div 
-                        className="absolute inset-0 bg-cover bg-right bg-no-repeat"
-                        style={{ backgroundImage: `url(${backgroundImage})` }}
-                      />
-                      <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(6, 8, 23, 0.95) 0%, rgba(22, 37, 79, 0.7) 50%, rgba(22, 37, 79, 0.5) 100%)' }} />
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(102, 125, 157, 0.2) 0%, transparent 100%)' }} />
-                      
-                      <div className="p-8 relative flex flex-col justify-center h-full max-w-xs">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)', border: '1px solid rgba(0, 191, 255, 0.4)' }}>
-                          <role.icon className="h-6 w-6" style={{ color: '#00BFFF' }} aria-hidden="true" />
-                        </div>
-                        <p className="text-sm font-medium mb-1" style={{ color: '#00BFFF' }}>{role.subtitle}</p>
-                        <h3 className="text-2xl font-bold text-white mb-3">{role.title}</h3>
-                        <p className="text-sm mb-4" style={{ color: '#ACBBC6' }}>
-                          {role.description}
-                        </p>
-                        <ul className="space-y-2 mb-6">
-                          {role.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-white/90">
-                              <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#00BFFF' }} aria-hidden="true" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="text-xs" style={{ color: '#00BFFF' }}>Click to learn more</p>
+                      <div className="p-6 text-center">
+                        <p className="text-sm italic mb-1" style={{ color: '#00BFFF' }}>{role.subtitle}</p>
+                        <h3 className="text-2xl font-bold text-white mb-4">{role.title}</h3>
+                        <Button
+                          variant="outline"
+                          className="mb-4 px-8"
+                          style={{ 
+                            borderColor: '#00BFFF',
+                            color: '#00BFFF',
+                            backgroundColor: 'transparent'
+                          }}
+                          onClick={(e) => { e.stopPropagation(); toggleCardFlip(role.id); }}
+                          data-testid={`button-learn-${role.id}`}
+                        >
+                          LEARN MORE
+                        </Button>
+                      </div>
+                      <div className="h-56 overflow-hidden">
+                        <img src={backgroundImage} alt={role.title} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="p-5 text-center">
+                        <p className="text-sm" style={{ color: '#ACBBC6' }}>{role.description}</p>
                       </div>
                     </div>
                     

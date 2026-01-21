@@ -546,7 +546,28 @@ export default function LandingPage() {
                 />
               </div>
               <div className="w-full lg:w-1/2 text-center lg:text-left">
-                <Users className="h-12 w-12 mb-4 text-white/80 mx-auto lg:mx-0" aria-hidden="true" />
+                <svg viewBox="0 0 64 64" className="h-14 w-14 mb-4 mx-auto lg:mx-0" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="personGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#00BFFF" />
+                      <stop offset="100%" stopColor="#0066CC" />
+                    </linearGradient>
+                    <linearGradient id="personGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#FFFFFF" />
+                      <stop offset="100%" stopColor="#ACBBC6" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="22" cy="16" r="10" fill="url(#personGrad1)" />
+                  <ellipse cx="22" cy="14" rx="3" ry="2" fill="rgba(255,255,255,0.3)" />
+                  <path d="M6 52 C6 38 14 32 22 32 C30 32 38 38 38 52 L38 56 L6 56 Z" fill="url(#personGrad1)" />
+                  <rect x="10" y="40" width="24" height="2" rx="1" fill="rgba(255,255,255,0.2)" />
+                  <circle cx="42" cy="20" r="8" fill="url(#personGrad2)" />
+                  <ellipse cx="42" cy="18" rx="2.5" ry="1.5" fill="rgba(0,191,255,0.3)" />
+                  <path d="M30 56 C30 44 36 38 42 38 C48 38 54 44 54 56 L54 58 L30 58 Z" fill="url(#personGrad2)" />
+                  <rect x="34" y="48" width="16" height="2" rx="1" fill="rgba(0,191,255,0.2)" />
+                  <path d="M36 28 C38 26 40 26 42 28" stroke="#00BFFF" strokeWidth="2" fill="none" strokeLinecap="round" />
+                  <path d="M20 28 C22 26 24 26 26 28" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" />
+                </svg>
                 <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
                   Ready to get started?
                 </h2>

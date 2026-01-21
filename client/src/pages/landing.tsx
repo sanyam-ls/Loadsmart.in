@@ -311,7 +311,7 @@ export default function LandingPage() {
                 <div key={index} className="relative">
                   <button
                     onClick={() => setActiveFeature(activeFeature === index ? null : index)}
-                    className="relative z-10 w-20 h-20 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110"
+                    className="relative z-10 w-24 h-24 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110"
                     aria-label={`Learn more about ${feature.title}`}
                     aria-expanded={activeFeature === index}
                     style={{ 
@@ -336,7 +336,30 @@ export default function LandingPage() {
                     }}
                     data-testid={`truck-icon-${index}`}
                   >
-                    <Truck className="h-8 w-8 text-white" aria-hidden="true" />
+                    <svg viewBox="0 0 64 40" className="w-14 h-10" aria-hidden="true">
+                      <defs>
+                        <linearGradient id={`truckGrad${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#00BFFF" />
+                          <stop offset="100%" stopColor="#0066CC" />
+                        </linearGradient>
+                        <linearGradient id={`cabGrad${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#ffffff" />
+                          <stop offset="100%" stopColor="#ccddee" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="2" y="8" width="38" height="22" rx="2" fill={`url(#truckGrad${index})`} stroke="#00BFFF" strokeWidth="1" />
+                      <rect x="6" y="12" width="8" height="6" rx="1" fill="rgba(255,255,255,0.3)" />
+                      <rect x="16" y="12" width="8" height="6" rx="1" fill="rgba(255,255,255,0.3)" />
+                      <rect x="26" y="12" width="8" height="6" rx="1" fill="rgba(255,255,255,0.3)" />
+                      <path d="M40 14 L40 30 L56 30 L56 22 L50 14 Z" fill={`url(#cabGrad${index})`} stroke="#00BFFF" strokeWidth="1" />
+                      <rect x="44" y="18" width="8" height="6" rx="1" fill="#87CEEB" stroke="#00BFFF" strokeWidth="0.5" />
+                      <circle cx="14" cy="32" r="5" fill="#333" stroke="#555" strokeWidth="2" />
+                      <circle cx="14" cy="32" r="2" fill="#888" />
+                      <circle cx="48" cy="32" r="5" fill="#333" stroke="#555" strokeWidth="2" />
+                      <circle cx="48" cy="32" r="2" fill="#888" />
+                      <rect x="52" y="24" width="4" height="2" rx="1" fill="#FF4444" />
+                      <rect x="52" y="27" width="4" height="2" rx="1" fill="#FF4444" />
+                    </svg>
                   </button>
                   
                   {activeFeature === index && (

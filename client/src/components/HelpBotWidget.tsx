@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { MessageCircle, X, Send, Phone, Mail, Loader2, Minus, Sparkles } from "lucide-react";
+import { MessageCircle, X, Send, Phone, Mail, Loader2, Minus, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -214,7 +214,7 @@ export function HelpBotWidget() {
           }}
           data-testid="button-helpbot-open"
         >
-          <Sparkles className="h-7 w-7 text-white" />
+          <MessageCircle className="h-7 w-7 text-white" />
         </button>
       ) : (
         <div 
@@ -241,10 +241,10 @@ export function HelpBotWidget() {
                   boxShadow: '0 0 15px rgba(0, 191, 255, 0.5)'
                 }}
               >
-                <Sparkles className="h-5 w-5 text-white" />
+                <Bot className="h-5 w-5 text-white" />
               </div>
               <div>
-                <span className="font-semibold text-white text-lg">AI Assistant</span>
+                <span className="font-semibold text-white text-lg">Priya</span>
                 <div className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
                   <span className="text-xs text-[#667D9D]">Online</span>

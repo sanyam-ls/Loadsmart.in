@@ -24,6 +24,9 @@ import heroVideo from "@assets/Loadlink_1768955038031.mp4";
 import ctaTruckImage from "@assets/PHOTO-2026-01-21-00-10-48_1768955240083.jpg";
 import ctaBackgroundImage from "@assets/image_1768955391086.png";
 import employeeSectionBg from "@assets/image_1769038855319.png";
+import collaborationImage from "@assets/generated_images/team_collaboration_office_scene.png";
+import growthImage from "@assets/generated_images/career_growth_staircase_visual.png";
+import impactImage from "@assets/generated_images/logistics_impact_partnership_scene.png";
 
 const roleCards = [
   {
@@ -394,50 +397,56 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-8">
             <div 
-              className="p-6 rounded-xl text-center"
+              className="rounded-xl text-center overflow-hidden"
               style={{ 
                 backgroundColor: 'rgba(22, 37, 79, 0.7)',
                 border: '1px solid rgba(0, 191, 255, 0.3)',
                 backdropFilter: 'blur(8px)'
               }}
             >
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
-                <Users className="h-6 w-6" style={{ color: '#00BFFF' }} />
+              <div className="h-40 overflow-hidden">
+                <img src={collaborationImage} alt="Collaborative Culture" className="w-full h-full object-cover" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Collaborative Culture</h3>
-              <p className="text-sm" style={{ color: '#ACBBC6' }}>Work with passionate people who care about making logistics better for everyone.</p>
+              <div className="p-5">
+                <h3 className="text-lg font-semibold text-white mb-2">Collaborative Culture</h3>
+                <p className="text-sm" style={{ color: '#ACBBC6' }}>Work with passionate people who care about making logistics better for everyone.</p>
+              </div>
             </div>
             
             <div 
-              className="p-6 rounded-xl text-center"
+              className="rounded-xl text-center overflow-hidden"
               style={{ 
                 backgroundColor: 'rgba(22, 37, 79, 0.7)',
                 border: '1px solid rgba(0, 191, 255, 0.3)',
                 backdropFilter: 'blur(8px)'
               }}
             >
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
-                <TrendingUp className="h-6 w-6" style={{ color: '#00BFFF' }} />
+              <div className="h-40 overflow-hidden">
+                <img src={growthImage} alt="Growth Opportunities" className="w-full h-full object-cover" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Growth Opportunities</h3>
-              <p className="text-sm" style={{ color: '#ACBBC6' }}>Learn new skills, take on challenges, and grow your career as we scale.</p>
+              <div className="p-5">
+                <h3 className="text-lg font-semibold text-white mb-2">Growth Opportunities</h3>
+                <p className="text-sm" style={{ color: '#ACBBC6' }}>Learn new skills, take on challenges, and grow your career as we scale.</p>
+              </div>
             </div>
             
             <div 
-              className="p-6 rounded-xl text-center"
+              className="rounded-xl text-center overflow-hidden"
               style={{ 
                 backgroundColor: 'rgba(22, 37, 79, 0.7)',
                 border: '1px solid rgba(0, 191, 255, 0.3)',
                 backdropFilter: 'blur(8px)'
               }}
             >
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
-                <Shield className="h-6 w-6" style={{ color: '#00BFFF' }} />
+              <div className="h-40 overflow-hidden">
+                <img src={impactImage} alt="Make an Impact" className="w-full h-full object-cover" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Make an Impact</h3>
-              <p className="text-sm" style={{ color: '#ACBBC6' }}>Your work directly helps thousands of shippers and carriers across India.</p>
+              <div className="p-5">
+                <h3 className="text-lg font-semibold text-white mb-2">Make an Impact</h3>
+                <p className="text-sm" style={{ color: '#ACBBC6' }}>Your work directly helps thousands of shippers and carriers across India.</p>
+              </div>
             </div>
           </div>
 

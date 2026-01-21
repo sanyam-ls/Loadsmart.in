@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { 
@@ -12,7 +13,8 @@ import {
   FileText,
   TrendingUp,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  X
 } from "lucide-react";
 import shipperImage from "@assets/D29D77FD-38C9-494F-B81F-1C5943124B44_1768932398273.png";
 import staffImage from "@assets/PHOTO-2026-01-21-00-10-17_1768953323491.jpg";
@@ -91,6 +93,7 @@ const stats = [
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
+  const [activeFeature, setActiveFeature] = useState<number | null>(null);
 
   const handleRoleClick = (link: string) => {
     setLocation(link);
@@ -286,18 +289,105 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            {features.map((feature, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(102, 125, 157, 0.2)' }}>
-                  <feature.icon className="h-7 w-7" style={{ color: '#667D9D' }} />
-                </div>
-                <h3 className="text-lg font-semibold mb-2 text-white">{feature.title}</h3>
-                <p className="text-sm" style={{ color: '#ACBBC6' }}>{feature.description}</p>
+          <div className="relative max-w-6xl mx-auto">
+            <div 
+              className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-20 rounded-lg"
+              style={{ 
+                background: 'linear-gradient(to bottom, #2a2a2a 0%, #3d3d3d 50%, #2a2a2a 100%)',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)'
+              }}
+            >
+              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1 flex justify-around px-8">
+                {[...Array(20)].map((_, i) => (
+                  <div key={i} className="w-8 h-1 bg-yellow-400 rounded" style={{ opacity: 0.8 }} />
+                ))}
               </div>
-            ))}
+              <div className="absolute inset-x-0 top-2 h-0.5 bg-white/20" />
+              <div className="absolute inset-x-0 bottom-2 h-0.5 bg-white/20" />
+            </div>
+            
+            <div className="relative flex justify-around items-center py-16">
+              {features.map((feature, index) => (
+                <div key={index} className="relative">
+                  <button
+                    onClick={() => setActiveFeature(activeFeature === index ? null : index)}
+                    className="relative z-10 w-20 h-20 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110"
+                    aria-label={`Learn more about ${feature.title}`}
+                    aria-expanded={activeFeature === index}
+                    style={{ 
+                      backgroundColor: activeFeature === index ? 'rgba(0, 191, 255, 0.3)' : 'rgba(22, 37, 79, 0.9)',
+                      border: activeFeature === index ? '2px solid rgba(0, 191, 255, 0.8)' : '2px solid rgba(102, 125, 157, 0.5)',
+                      boxShadow: activeFeature === index 
+                        ? '0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3)' 
+                        : 'none',
+                      animation: 'pulse-glow 2s ease-in-out infinite'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeFeature !== index) {
+                        e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 191, 255, 0.5), 0 0 40px rgba(0, 191, 255, 0.2)';
+                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.6)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeFeature !== index) {
+                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.borderColor = 'rgba(102, 125, 157, 0.5)';
+                      }
+                    }}
+                    data-testid={`truck-icon-${index}`}
+                  >
+                    <Truck className="h-8 w-8 text-white" aria-hidden="true" />
+                  </button>
+                  
+                  {activeFeature === index && (
+                    <div 
+                      className="absolute z-20 w-72 p-6 rounded-xl transition-all duration-300"
+                      style={{ 
+                        backgroundColor: '#16254F',
+                        border: '1px solid rgba(0, 191, 255, 0.5)',
+                        boxShadow: '0 0 40px rgba(0, 191, 255, 0.3), 0 10px 40px rgba(0, 0, 0, 0.5)',
+                        top: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        marginTop: '1rem'
+                      }}
+                      data-testid={`feature-card-${index}`}
+                    >
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setActiveFeature(null); }}
+                        className="absolute top-3 right-3 text-white/60 hover:text-white transition-colors"
+                        aria-label="Close feature details"
+                        data-testid={`close-card-${index}`}
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)' }}>
+                        <feature.icon className="h-6 w-6" style={{ color: '#00BFFF' }} />
+                      </div>
+                      <h3 className="text-xl font-bold mb-3 text-white">{feature.title}</h3>
+                      <p className="text-sm leading-relaxed" style={{ color: '#ACBBC6' }}>{feature.description}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex justify-around items-center mt-4">
+              {features.map((feature, index) => (
+                <span key={index} className="text-sm font-medium text-center max-w-[120px]" style={{ color: activeFeature === index ? '#00BFFF' : '#667D9D' }}>
+                  {feature.title}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
+        
+        <style>{`
+          @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 191, 255, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.4), 0 0 30px rgba(0, 191, 255, 0.2); }
+          }
+        `}</style>
       </section>
 
       <section className="py-20" style={{ backgroundColor: '#060817' }}>

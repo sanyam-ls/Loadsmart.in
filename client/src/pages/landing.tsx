@@ -310,7 +310,7 @@ export default function LandingPage() {
                           variant="outline"
                           className="mb-4 px-8"
                           style={{ 
-                            borderColor: '#00BFFF',
+                            borderColor: '#FFFFFF',
                             color: '#FFFFFF',
                             backgroundColor: 'transparent'
                           }}
@@ -450,7 +450,7 @@ export default function LandingPage() {
                           className="px-6"
                           size="sm"
                           style={{ 
-                            borderColor: '#00BFFF',
+                            borderColor: '#FFFFFF',
                             color: '#FFFFFF',
                             backgroundColor: 'transparent'
                           }}

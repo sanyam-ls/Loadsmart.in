@@ -31,7 +31,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { DocumentUpload } from "@/components/DocumentUpload";
+import { DocumentUploadWithCamera } from "@/components/DocumentUploadWithCamera";
 import { useAuth } from "@/lib/auth-context";
 
 const soloFormSchema = z.object({
@@ -723,68 +723,74 @@ export default function CarrierOnboarding() {
                     <div className="grid gap-4">
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.aadhaarCard")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={soloForm.watch("aadhaarUrl") || ""}
                           onChange={(val) => {
                             soloForm.setValue("aadhaarUrl", val);
                             handleDocumentUpload("aadhaar", val);
                           }}
                           disabled={!canEdit}
+                          documentType="aadhaar_card"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.driverLicenseDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={soloForm.watch("licenseUrl") || ""}
                           onChange={(val) => {
                             soloForm.setValue("licenseUrl", val);
                             handleDocumentUpload("license", val);
                           }}
                           disabled={!canEdit}
+                          documentType="driver_license"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.permitDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={soloForm.watch("permitUrl") || ""}
                           onChange={(val) => {
                             soloForm.setValue("permitUrl", val);
                             handleDocumentUpload("permit", val);
                           }}
                           disabled={!canEdit}
+                          documentType="permit"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.rcDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={soloForm.watch("rcUrl") || ""}
                           onChange={(val) => {
                             soloForm.setValue("rcUrl", val);
                             handleDocumentUpload("rc", val);
                           }}
                           disabled={!canEdit}
+                          documentType="registration_certificate"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.insuranceDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={soloForm.watch("insuranceUrl") || ""}
                           onChange={(val) => {
                             soloForm.setValue("insuranceUrl", val);
                             handleDocumentUpload("insurance", val);
                           }}
                           disabled={!canEdit}
+                          documentType="insurance_certificate"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.fitnessDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={soloForm.watch("fitnessUrl") || ""}
                           onChange={(val) => {
                             soloForm.setValue("fitnessUrl", val);
                             handleDocumentUpload("fitness", val);
                           }}
                           disabled={!canEdit}
+                          documentType="fitness_certificate"
                         />
                       </div>
                     </div>
@@ -953,7 +959,7 @@ export default function CarrierOnboarding() {
                     <div className="grid gap-4">
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.incorporationDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={fleetForm.watch("incorporationUrl") || ""}
                           onChange={(val) => {
                             fleetForm.setValue("incorporationUrl", val);
@@ -964,57 +970,62 @@ export default function CarrierOnboarding() {
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.tradeLicenseDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={fleetForm.watch("tradeLicenseUrl") || ""}
                           onChange={(val) => {
                             fleetForm.setValue("tradeLicenseUrl", val);
                             handleDocumentUpload("trade_license", val);
                           }}
                           disabled={!canEdit}
+                          documentType="trade_license"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.addressProofDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={fleetForm.watch("addressProofUrl") || ""}
                           onChange={(val) => {
                             fleetForm.setValue("addressProofUrl", val);
                             handleDocumentUpload("address_proof", val);
                           }}
                           disabled={!canEdit}
+                          documentType="address_proof"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.panDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={fleetForm.watch("panUrl") || ""}
                           onChange={(val) => {
                             fleetForm.setValue("panUrl", val);
                             handleDocumentUpload("pan", val);
                           }}
                           disabled={!canEdit}
+                          documentType="pan_card"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.gstinDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={fleetForm.watch("gstinUrl") || ""}
                           onChange={(val) => {
                             fleetForm.setValue("gstinUrl", val);
                             handleDocumentUpload("gstin", val);
                           }}
                           disabled={!canEdit}
+                          documentType="gstin_certificate"
                         />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.tanDoc")} *</label>
-                        <DocumentUpload
+                        <DocumentUploadWithCamera
                           value={fleetForm.watch("tanUrl") || ""}
                           onChange={(val) => {
                             fleetForm.setValue("tanUrl", val);
                             handleDocumentUpload("tan", val);
                           }}
                           disabled={!canEdit}
+                          documentType="tan_certificate"
                         />
                       </div>
                     </div>

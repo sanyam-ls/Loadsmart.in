@@ -509,15 +509,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 relative" style={{ backgroundColor: '#0a1225' }}>
-        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 30% 70%, rgba(0, 191, 255, 0.06) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(0, 191, 255, 0.04) 0%, transparent 50%)' }} />
+      <section className="py-20 relative" style={{ 
+          backgroundImage: 'url(/attached_assets/image_1769041361015.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}>
+        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(255, 255, 255, 0.85)' }} />
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
             <p className="text-sm font-medium mb-2" style={{ color: '#00BFFF' }}>Our Platform</p>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#060817' }}>
               Grow your business for the long haul
             </h2>
-            <p className="text-lg max-w-2xl mx-auto" style={{ color: '#ACBBC6' }}>
+            <p className="text-lg max-w-2xl mx-auto" style={{ color: '#333333' }}>
               We match the right load to the right truck at the right price, with trusted insights and support from dock to dock and beyond.
             </p>
           </div>
@@ -630,7 +634,7 @@ export default function LandingPage() {
             
             <div className="flex justify-around items-center mt-4">
               {features.map((feature, index) => (
-                <span key={index} className="text-lg font-semibold text-center max-w-[160px]" style={{ color: activeFeature === index ? '#00BFFF' : '#ACBBC6' }}>
+                <span key={index} className="text-lg font-semibold text-center max-w-[160px]" style={{ color: activeFeature === index ? '#00BFFF' : '#333333' }}>
                   {feature.title}
                 </span>
               ))}

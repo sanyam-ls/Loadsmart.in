@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -59,6 +60,8 @@ const onboardingFormSchema = z.object({
   contactPersonPhone: z.string().min(10, "Phone is required"),
   contactPersonEmail: z.string().email("Valid email required"),
   gstCertificateUrl: z.string().optional(),
+  noGstCertificate: z.boolean().default(false),
+  alternativeDocumentType: z.string().optional(),
   alternativeAuthorizationUrl: z.string().optional(),
   panCardUrl: z.string().optional(),
   incorporationCertificateUrl: z.string().optional(),
@@ -113,6 +116,8 @@ export default function ShipperOnboarding() {
       contactPersonPhone: "",
       contactPersonEmail: "",
       gstCertificateUrl: "",
+      noGstCertificate: false,
+      alternativeDocumentType: "",
       alternativeAuthorizationUrl: "",
       panCardUrl: "",
       incorporationCertificateUrl: "",
@@ -153,6 +158,8 @@ export default function ShipperOnboarding() {
         contactPersonPhone: onboardingStatus.contactPersonPhone || "",
         contactPersonEmail: onboardingStatus.contactPersonEmail || "",
         gstCertificateUrl: onboardingStatus.gstCertificateUrl || "",
+        noGstCertificate: onboardingStatus.noGstCertificate || false,
+        alternativeDocumentType: onboardingStatus.alternativeDocumentType || "",
         alternativeAuthorizationUrl: onboardingStatus.alternativeAuthorizationUrl || "",
         panCardUrl: onboardingStatus.panCardUrl || "",
         incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || "",
@@ -273,7 +280,7 @@ export default function ShipperOnboarding() {
   const getTabWithError = (errors: any): string | null => {
     const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredLocality", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
-    const documentFields = ["gstCertificateUrl", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl"];
+    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl"];
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.some(key => businessFields.includes(key))) return "business";
@@ -1112,32 +1119,95 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                             placeholder={t("onboarding.noFileSelected")}
                             testId="upload-gst-certificate"
                             documentType="gst_certificate"
+                            disabled={form.watch("noGstCertificate")}
                           />
                         </FormControl>
                         <FormDescription>{t("onboarding.gstCertificateDesc")}</FormDescription>
                       </FormItem>
                     )}
                   />
+                  
                   <FormField
                     control={form.control}
-                    name="alternativeAuthorizationUrl"
+                    name="noGstCertificate"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>MSME / Alternative Authorization <span className="text-muted-foreground font-normal">(If no GST)</span></FormLabel>
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                         <FormControl>
-                          <DocumentUploadWithCamera
-                            value={field.value || ""}
-                            onChange={field.onChange}
-                            placeholder={t("onboarding.noFileSelected")}
-                            testId="upload-alternative-authorization"
-                            documentType="alternative_authorization"
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              if (!checked) {
+                                form.setValue("alternativeDocumentType", "");
+                                form.setValue("alternativeAuthorizationUrl", "");
+                              }
+                            }}
+                            data-testid="checkbox-no-gst"
                           />
                         </FormControl>
-                        <FormDescription>Upload MSME certificate, Udyam registration, or other govt. authorization if you don't have GST</FormDescription>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="cursor-pointer">
+                            I do not have GST Registration Certificate
+                          </FormLabel>
+                          <FormDescription>
+                            Check this if you don't have GST and want to upload an alternative document
+                          </FormDescription>
+                        </div>
                       </FormItem>
                     )}
                   />
                 </div>
+                
+                {form.watch("noGstCertificate") && (
+                  <div className="grid gap-4 md:grid-cols-2 p-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20">
+                    <FormField
+                      control={form.control}
+                      name="alternativeDocumentType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Alternative Document Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-alternative-doc-type">
+                                <SelectValue placeholder="Select document type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="msme_certificate">MSME Certificate</SelectItem>
+                              <SelectItem value="udyam_registration">Udyam Registration</SelectItem>
+                              <SelectItem value="shop_establishment">Shop & Establishment License</SelectItem>
+                              <SelectItem value="trade_license">Trade License</SelectItem>
+                              <SelectItem value="iec_certificate">IEC Certificate (Import/Export)</SelectItem>
+                              <SelectItem value="fssai_license">FSSAI License</SelectItem>
+                              <SelectItem value="other_govt_auth">Other Government Authorization</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>Select the type of authorization document you have</FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="alternativeAuthorizationUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Upload Document</FormLabel>
+                          <FormControl>
+                            <DocumentUploadWithCamera
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              placeholder={t("onboarding.noFileSelected")}
+                              testId="upload-alternative-authorization"
+                              documentType="alternative_authorization"
+                              disabled={!form.watch("alternativeDocumentType")}
+                            />
+                          </FormControl>
+                          <FormDescription>Upload the selected authorization document</FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}

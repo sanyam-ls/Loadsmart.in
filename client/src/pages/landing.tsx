@@ -324,7 +324,7 @@ export default function LandingPage() {
                         <img src={backgroundImage} alt={role.title} className="w-full h-full object-cover" />
                       </div>
                       <div className="p-4 text-center flex-1 flex items-center justify-center">
-                        <p className="text-sm leading-relaxed" style={{ color: '#ACBBC6' }}>{role.description}</p>
+                        <p className="text-sm leading-relaxed text-white">{role.description}</p>
                       </div>
                     </div>
                     
@@ -464,7 +464,7 @@ export default function LandingPage() {
                         <img src={benefit.image} alt={benefit.title} className="w-full h-full object-cover" />
                       </div>
                       <div className="p-4 text-center flex-1 flex items-center justify-center">
-                        <p className="text-sm leading-relaxed" style={{ color: '#ACBBC6' }}>{benefit.description}</p>
+                        <p className="text-sm leading-relaxed text-white">{benefit.description}</p>
                       </div>
                     </div>
                     

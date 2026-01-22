@@ -492,11 +492,13 @@ export default function LandingPage() {
 
           <div className="text-center">
             <Button 
+              variant="outline"
               onClick={() => handleRoleClick('/auth?role=admin')}
               className="px-8"
               style={{ 
-                backgroundColor: '#00BFFF',
-                color: '#060817'
+                backgroundColor: 'transparent',
+                borderColor: '#FFFFFF',
+                color: '#FFFFFF'
               }}
               data-testid="button-staff-login"
             >

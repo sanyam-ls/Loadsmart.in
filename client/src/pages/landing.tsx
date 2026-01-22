@@ -439,9 +439,11 @@ export default function LandingPage() {
                       onClick={() => toggleCardFlip(benefit.id)}
                       style={{ 
                         backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        border: '1px solid rgba(0, 191, 255, 0.4)',
                         backfaceVisibility: 'hidden',
-                        backdropFilter: 'blur(10px)'
+                        backdropFilter: 'blur(10px)',
+                        animation: 'card-pulse-neon 3s ease-in-out infinite',
+                        boxShadow: '0 0 20px rgba(0, 191, 255, 0.3), inset 0 0 10px rgba(0, 191, 255, 0.05)'
                       }}
                     >
                       <div className="p-5 text-center">
@@ -662,6 +664,16 @@ export default function LandingPage() {
           @keyframes pulse-glow-gold {
             0%, 100% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.3), inset 0 0 15px rgba(255, 215, 0, 0.1); }
             50% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8), 0 0 80px rgba(255, 215, 0, 0.5), inset 0 0 25px rgba(255, 215, 0, 0.2); }
+          }
+          @keyframes card-pulse-neon {
+            0%, 100% { 
+              box-shadow: 0 0 20px rgba(0, 191, 255, 0.3), 0 0 40px rgba(0, 191, 255, 0.15), inset 0 0 10px rgba(0, 191, 255, 0.05);
+              border-color: rgba(0, 191, 255, 0.4);
+            }
+            50% { 
+              box-shadow: 0 0 35px rgba(0, 191, 255, 0.5), 0 0 60px rgba(0, 191, 255, 0.25), inset 0 0 15px rgba(0, 191, 255, 0.1);
+              border-color: rgba(0, 191, 255, 0.7);
+            }
           }
           @keyframes heroLevitate {
             0%, 100% { transform: translateY(0px); }

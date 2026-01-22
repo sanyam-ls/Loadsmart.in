@@ -518,11 +518,11 @@ export default function LandingPage() {
         <div className="absolute inset-0" style={{ backgroundColor: 'rgba(255, 255, 255, 0.25)' }} />
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12" style={{ animation: 'heroLevitate 4s ease-in-out infinite' }}>
-            <p className="text-xl font-bold mb-2 text-white">Our Platform</p>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
+            <p className="text-xl font-bold mb-2 text-white" style={{ textShadow: '2px 2px 8px rgba(0, 0, 0, 0.8)' }}>Our Platform</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white" style={{ textShadow: '2px 2px 10px rgba(0, 0, 0, 0.8)' }}>
               Grow your business for the long haul
             </h2>
-            <p className="text-xl max-w-2xl mx-auto text-white">
+            <p className="text-xl max-w-2xl mx-auto text-white" style={{ textShadow: '1px 1px 6px rgba(0, 0, 0, 0.8)' }}>
               We match the right load to the right truck at the right price, with trusted insights and support from dock to dock and beyond.
             </p>
           </div>

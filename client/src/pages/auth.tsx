@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Truck, Eye, EyeOff, ArrowRight, Phone, Shield, CheckCircle, Loader2, KeyRound, Mail, ArrowLeft } from "lucide-react";
@@ -129,6 +129,14 @@ export default function AuthPage() {
   const { t } = useTranslation();
   const { login, register } = useAuth();
   const { toast } = useToast();
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.play().catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (otpCountdown > 0) {
@@ -440,11 +448,13 @@ export default function AuthPage() {
     <div className="min-h-screen flex">
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
         <video 
+          ref={videoRef}
           autoPlay 
           loop 
           muted 
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
+          onLoadedData={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
         >
           <source src="/assets/Loadlink_1768957478492.mp4" type="video/mp4" />
         </video>

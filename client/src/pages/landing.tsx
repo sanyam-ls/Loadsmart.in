@@ -510,11 +510,11 @@ export default function LandingPage() {
       </section>
 
       <section className="py-20 relative" style={{ 
-          backgroundImage: 'url(/attached_assets/image_1769041361015.png)',
+          backgroundImage: 'url(/attached_assets/image_1769041507484.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         }}>
-        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(255, 255, 255, 0.85)' }} />
+        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(255, 255, 255, 0.4)' }} />
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
             <p className="text-sm font-medium mb-2" style={{ color: '#00BFFF' }}>Our Platform</p>

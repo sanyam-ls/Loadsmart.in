@@ -515,7 +515,7 @@ export default function LandingPage() {
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         }}>
-        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }} />
+        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }} />
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12" style={{ animation: 'heroLevitate 4s ease-in-out infinite' }}>
             <p className="text-xl font-bold mb-2 text-white" style={{ textShadow: '2px 2px 8px rgba(0, 0, 0, 0.8)' }}>Our Platform</p>

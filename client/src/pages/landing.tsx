@@ -435,15 +435,13 @@ export default function LandingPage() {
                     }}
                   >
                     <div 
-                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] flex flex-col"
+                      className="absolute inset-0 rounded-xl overflow-visible cursor-pointer transition-all duration-300 hover:scale-[1.02] flex flex-col benefit-card-front"
                       onClick={() => toggleCardFlip(benefit.id)}
                       style={{ 
                         backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        border: '1px solid rgba(0, 191, 255, 0.4)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
                         backfaceVisibility: 'hidden',
-                        backdropFilter: 'blur(10px)',
-                        animation: 'card-pulse-neon 3s ease-in-out infinite',
-                        boxShadow: '0 0 20px rgba(0, 191, 255, 0.3), inset 0 0 10px rgba(0, 191, 255, 0.05)'
+                        backdropFilter: 'blur(10px)'
                       }}
                     >
                       <div className="p-5 text-center">
@@ -674,6 +672,11 @@ export default function LandingPage() {
               box-shadow: 0 0 35px rgba(0, 191, 255, 0.5), 0 0 60px rgba(0, 191, 255, 0.25), inset 0 0 15px rgba(0, 191, 255, 0.1);
               border-color: rgba(0, 191, 255, 0.7);
             }
+          }
+          .benefit-card-front:hover {
+            animation: card-pulse-neon 1.5s ease-in-out infinite !important;
+            border-color: rgba(0, 191, 255, 0.5) !important;
+            box-shadow: 0 0 25px rgba(0, 191, 255, 0.4), 0 0 50px rgba(0, 191, 255, 0.2) !important;
           }
           @keyframes heroLevitate {
             0%, 100% { transform: translateY(0px); }

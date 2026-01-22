@@ -27,6 +27,7 @@ import employeeSectionBg from "@assets/image_1769038855319.png";
 import collaborationImage from "@assets/generated_images/team_collaboration_office_scene.png";
 import growthImage from "@assets/generated_images/career_growth_staircase_visual.png";
 import impactImage from "@assets/generated_images/logistics_impact_partnership_scene.png";
+import platformBgImage from "@assets/image_1769041507484.png";
 
 const roleCards = [
   {
@@ -510,7 +511,7 @@ export default function LandingPage() {
       </section>
 
       <section className="py-20 relative" style={{ 
-          backgroundImage: 'url(/attached_assets/image_1769041507484.png)',
+          backgroundImage: `url(${platformBgImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         }}>

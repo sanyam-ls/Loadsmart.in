@@ -553,23 +553,25 @@ export default function LandingPage() {
                     aria-label={`Learn more about ${feature.title}`}
                     aria-expanded={activeFeature === index}
                     style={{ 
-                      backgroundColor: activeFeature === index ? 'rgba(0, 191, 255, 0.3)' : 'rgba(22, 37, 79, 0.9)',
-                      border: activeFeature === index ? '2px solid rgba(0, 191, 255, 0.8)' : '2px solid rgba(0, 191, 255, 0.4)',
+                      backgroundColor: activeFeature === index ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+                      backdropFilter: 'blur(10px)',
+                      WebkitBackdropFilter: 'blur(10px)',
+                      border: activeFeature === index ? '2px solid rgba(255, 255, 255, 0.6)' : '2px solid rgba(255, 255, 255, 0.3)',
                       boxShadow: activeFeature === index 
-                        ? '0 0 40px rgba(0, 191, 255, 0.7), 0 0 80px rgba(0, 191, 255, 0.4)' 
-                        : '0 0 15px rgba(0, 191, 255, 0.2)',
-                      animation: 'pulse-glow 2s ease-in-out infinite'
+                        ? '0 0 40px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1)' 
+                        : '0 0 15px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.05)',
+                      animation: 'pulse-glow-white 2s ease-in-out infinite'
                     }}
                     onMouseEnter={(e) => {
                       if (activeFeature !== index) {
-                        e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3)';
-                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.7)';
+                        e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 255, 255, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (activeFeature !== index) {
-                        e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 191, 255, 0.2)';
-                        e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.4)';
+                        e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                       }
                     }}
                     data-testid={`truck-icon-${index}`}
@@ -650,6 +652,10 @@ export default function LandingPage() {
           @keyframes pulse-glow {
             0%, 100% { box-shadow: 0 0 10px rgba(0, 191, 255, 0.2); }
             50% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.4), 0 0 30px rgba(0, 191, 255, 0.2); }
+          }
+          @keyframes pulse-glow-white {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.05); }
+            50% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.35), inset 0 0 15px rgba(255, 255, 255, 0.1); }
           }
           @keyframes heroLevitate {
             0%, 100% { transform: translateY(0px); }

@@ -214,7 +214,7 @@ export default function LandingPage() {
                 return (
                   <div 
                     key={stat.id} 
-                    className="relative w-44 h-32"
+                    className="relative w-52 h-40"
                     style={{ perspective: '1000px' }}
                     data-testid={`stat-card-${stat.id}`}
                   >
@@ -258,7 +258,7 @@ export default function LandingPage() {
                           boxShadow: '0 0 25px rgba(0, 191, 255, 0.4)'
                         }}
                       >
-                        <p className="text-[11px] leading-tight text-center text-white">
+                        <p className="text-sm leading-relaxed text-center text-white">
                           {stat.backDescription}
                         </p>
                       </div>

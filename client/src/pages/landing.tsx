@@ -204,7 +204,7 @@ export default function LandingPage() {
               <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white tracking-tight">
                 Digital Freight Marketplace
               </h1>
-              <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto" style={{ color: '#ACBBC6' }}>
+              <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto text-white">
                 Connect shippers with trusted carriers. Post loads, track shipments, and manage your logistics operations, all in one platform.
               </p>
             </div>

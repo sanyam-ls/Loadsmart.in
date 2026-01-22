@@ -227,21 +227,13 @@ export default function LandingPage() {
                       }}
                     >
                       <div 
-                        className="absolute inset-0 text-center px-4 py-4 rounded-xl cursor-pointer flex flex-col justify-center items-center"
+                        className="absolute inset-0 text-center px-4 py-4 rounded-xl cursor-pointer flex flex-col justify-center items-center benefit-card-front"
                         onClick={() => toggleCardFlip(`stat-${stat.id}`)}
                         style={{ 
                           backgroundColor: 'rgba(255, 255, 255, 0.15)',
                           border: '1px solid rgba(255, 255, 255, 0.3)',
                           backfaceVisibility: 'hidden',
                           backdropFilter: 'blur(10px)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 255, 255, 0.3)';
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.boxShadow = 'none';
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                         }}
                       >
                         <div className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</div>
@@ -290,7 +282,7 @@ export default function LandingPage() {
                     }}
                   >
                     <div 
-                      className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] flex flex-col"
+                      className="absolute inset-0 rounded-xl overflow-visible cursor-pointer transition-all duration-300 hover:scale-[1.02] flex flex-col benefit-card-front"
                       onClick={() => toggleCardFlip(role.id)}
                       onKeyDown={(e) => e.key === 'Enter' && toggleCardFlip(role.id)}
                       tabIndex={0}

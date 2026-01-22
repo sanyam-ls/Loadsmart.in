@@ -564,14 +564,16 @@ export default function LandingPage() {
                     }}
                     onMouseEnter={(e) => {
                       if (activeFeature !== index) {
-                        e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 255, 255, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                        e.currentTarget.style.boxShadow = '0 0 40px rgba(255, 215, 0, 0.7), 0 0 60px rgba(255, 215, 0, 0.4), inset 0 0 20px rgba(255, 215, 0, 0.15)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.7)';
+                        e.currentTarget.style.animation = 'pulse-glow-gold 1s ease-in-out infinite';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (activeFeature !== index) {
                         e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.05)';
                         e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                        e.currentTarget.style.animation = 'pulse-glow-white 2s ease-in-out infinite';
                       }
                     }}
                     data-testid={`truck-icon-${index}`}
@@ -656,6 +658,10 @@ export default function LandingPage() {
           @keyframes pulse-glow-white {
             0%, 100% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.05); }
             50% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.35), inset 0 0 15px rgba(255, 255, 255, 0.1); }
+          }
+          @keyframes pulse-glow-gold {
+            0%, 100% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.3), inset 0 0 15px rgba(255, 215, 0, 0.1); }
+            50% { box-shadow: 0 0 60px rgba(255, 215, 0, 0.8), 0 0 80px rgba(255, 215, 0, 0.5), inset 0 0 25px rgba(255, 215, 0, 0.2); }
           }
           @keyframes heroLevitate {
             0%, 100% { transform: translateY(0px); }

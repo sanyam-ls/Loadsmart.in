@@ -59,6 +59,7 @@ const onboardingFormSchema = z.object({
   contactPersonPhone: z.string().min(10, "Phone is required"),
   contactPersonEmail: z.string().email("Valid email required"),
   gstCertificateUrl: z.string().optional(),
+  alternativeAuthorizationUrl: z.string().optional(),
   panCardUrl: z.string().optional(),
   incorporationCertificateUrl: z.string().optional(),
   businessAddressProofUrl: z.string().optional(),
@@ -112,6 +113,7 @@ export default function ShipperOnboarding() {
       contactPersonPhone: "",
       contactPersonEmail: "",
       gstCertificateUrl: "",
+      alternativeAuthorizationUrl: "",
       panCardUrl: "",
       incorporationCertificateUrl: "",
       businessAddressProofUrl: "",
@@ -151,6 +153,7 @@ export default function ShipperOnboarding() {
         contactPersonPhone: onboardingStatus.contactPersonPhone || "",
         contactPersonEmail: onboardingStatus.contactPersonEmail || "",
         gstCertificateUrl: onboardingStatus.gstCertificateUrl || "",
+        alternativeAuthorizationUrl: onboardingStatus.alternativeAuthorizationUrl || "",
         panCardUrl: onboardingStatus.panCardUrl || "",
         incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || "",
         businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || "",
@@ -270,7 +273,7 @@ export default function ShipperOnboarding() {
   const getTabWithError = (errors: any): string | null => {
     const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredLocality", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
-    const documentFields = ["gstCertificateUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl"];
+    const documentFields = ["gstCertificateUrl", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl"];
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.some(key => businessFields.includes(key))) return "business";
@@ -1115,6 +1118,27 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="alternativeAuthorizationUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>MSME / Alternative Authorization <span className="text-muted-foreground font-normal">(If no GST)</span></FormLabel>
+                        <FormControl>
+                          <DocumentUploadWithCamera
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-alternative-authorization"
+                            documentType="alternative_authorization"
+                          />
+                        </FormControl>
+                        <FormDescription>Upload MSME certificate, Udyam registration, or other govt. authorization if you don't have GST</FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="panCardUrl"

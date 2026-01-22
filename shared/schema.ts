@@ -1805,6 +1805,7 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   
   // Compliance Documents (references to uploaded files)
   gstCertificateUrl: text("gst_certificate_url"),
+  alternativeAuthorizationUrl: text("alternative_authorization_url"), // MSME certificate or other govt authorization
   panCardUrl: text("pan_card_url"),
   incorporationCertificateUrl: text("incorporation_certificate_url"),
   cancelledChequeUrl: text("cancelled_cheque_url"),

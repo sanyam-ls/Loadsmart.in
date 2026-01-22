@@ -303,7 +303,7 @@ export default function LandingPage() {
                       }}
                     >
                       <div className="p-5 text-center">
-                        <p className="text-lg mb-1" style={{ color: '#00BFFF' }}>I am a</p>
+                        <p className="text-xl font-bold mb-1 text-white">I am a</p>
                         <h3 className="text-3xl font-bold mb-4 text-white">{role.title}</h3>
                         <Button
                           variant="outline"

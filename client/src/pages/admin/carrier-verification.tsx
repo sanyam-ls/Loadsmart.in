@@ -713,7 +713,7 @@ export default function CarrierVerificationPage() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <Label className="text-muted-foreground">Company Name</Label>
+                      <Label className="text-muted-foreground">{selectedVerification.carrierType === "solo" ? "Driver Name" : "Company Name"}</Label>
                       <p className="font-medium">{selectedVerification.carrier?.companyName || "N/A"}</p>
                     </div>
                     <div>

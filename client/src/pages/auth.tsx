@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -671,14 +672,17 @@ export default function AuthPage() {
                             name="city"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>City / Location</FormLabel>
+                                <FormLabel>Service Zones</FormLabel>
                                 <FormControl>
                                   <Input 
-                                    placeholder="e.g. Mumbai, Delhi" 
+                                    placeholder="e.g. Maharashtra, Gujarat, Delhi NCR" 
                                     {...field} 
                                     data-testid="input-register-city" 
                                   />
                                 </FormControl>
+                                <FormDescription className="text-xs">
+                                  Enter multiple states or cities separated by commas
+                                </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}

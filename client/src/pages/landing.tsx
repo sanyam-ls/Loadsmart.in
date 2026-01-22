@@ -379,7 +379,7 @@ export default function LandingPage() {
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
-            <p className="text-sm font-medium mb-2" style={{ color: '#00BFFF' }}>Join Our Team</p>
+            <p className="text-xl font-bold mb-2 text-white">Join Our Team</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
               What It's Like Working at FreightFlow
             </h2>
@@ -444,7 +444,7 @@ export default function LandingPage() {
                       }}
                     >
                       <div className="p-5 text-center">
-                        <p className="text-sm italic mb-1" style={{ color: '#00BFFF' }}>{benefit.subtitle}</p>
+                        <p className="text-lg italic mb-1 text-white">{benefit.subtitle}</p>
                         <h3 className="text-xl font-bold text-white mb-3">{benefit.title}</h3>
                         <Button
                           variant="outline"

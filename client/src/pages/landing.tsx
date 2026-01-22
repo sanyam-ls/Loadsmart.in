@@ -215,19 +215,19 @@ export default function LandingPage() {
                 return (
                   <div 
                     key={stat.id} 
-                    className="relative w-48 h-36"
+                    className="relative w-48 h-36 overflow-visible"
                     style={{ perspective: '1000px' }}
                     data-testid={`stat-card-${stat.id}`}
                   >
                     <div 
-                      className="relative w-full h-full transition-transform duration-700"
+                      className="relative w-full h-full transition-transform duration-700 overflow-visible"
                       style={{ 
                         transformStyle: 'preserve-3d',
                         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
                       }}
                     >
                       <div 
-                        className="absolute inset-0 text-center px-4 py-4 rounded-xl cursor-pointer flex flex-col justify-center items-center benefit-card-front"
+                        className="absolute inset-0 text-center px-4 py-4 rounded-xl cursor-pointer flex flex-col justify-center items-center overflow-visible benefit-card-front"
                         onClick={() => toggleCardFlip(`stat-${stat.id}`)}
                         style={{ 
                           backgroundColor: 'rgba(255, 255, 255, 0.15)',

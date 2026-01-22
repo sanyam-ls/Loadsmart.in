@@ -229,35 +229,37 @@ export default function LandingPage() {
                         className="absolute inset-0 text-center px-4 py-4 rounded-xl cursor-pointer flex flex-col justify-center items-center"
                         onClick={() => toggleCardFlip(`stat-${stat.id}`)}
                         style={{ 
-                          backgroundColor: 'rgba(22, 37, 79, 0.6)',
-                          border: '1px solid rgba(102, 125, 157, 0.3)',
-                          backfaceVisibility: 'hidden'
+                          backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          backfaceVisibility: 'hidden',
+                          backdropFilter: 'blur(10px)'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3), inset 0 0 20px rgba(0, 191, 255, 0.1)';
-                          e.currentTarget.style.borderColor = 'rgba(0, 191, 255, 0.8)';
+                          e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 255, 255, 0.3)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.boxShadow = 'none';
-                          e.currentTarget.style.borderColor = 'rgba(102, 125, 157, 0.3)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                         }}
                       >
                         <div className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</div>
-                        <div className="text-sm" style={{ color: '#667D9D' }}>{stat.label}</div>
+                        <div className="text-sm text-white/70">{stat.label}</div>
                       </div>
                       
                       <div 
                         className="absolute inset-0 px-3 py-3 rounded-xl cursor-pointer flex flex-col justify-center overflow-hidden"
                         onClick={() => toggleCardFlip(`stat-${stat.id}`)}
                         style={{ 
-                          backgroundColor: '#16254F',
-                          border: '1px solid rgba(0, 191, 255, 0.5)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          border: '1px solid rgba(255, 255, 255, 0.4)',
                           backfaceVisibility: 'hidden',
                           transform: 'rotateY(180deg)',
-                          boxShadow: '0 0 20px rgba(0, 191, 255, 0.3)'
+                          backdropFilter: 'blur(10px)',
+                          boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
                         }}
                       >
-                        <p className="text-[11px] leading-tight text-center" style={{ color: '#ACBBC6' }}>
+                        <p className="text-[11px] leading-tight text-center text-white">
                           {stat.backDescription}
                         </p>
                       </div>

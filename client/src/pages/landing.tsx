@@ -311,7 +311,7 @@ export default function LandingPage() {
                           className="mb-4 px-8"
                           style={{ 
                             borderColor: '#00BFFF',
-                            color: '#00BFFF',
+                            color: '#FFFFFF',
                             backgroundColor: 'transparent'
                           }}
                           onClick={(e) => { e.stopPropagation(); toggleCardFlip(role.id); }}
@@ -451,7 +451,7 @@ export default function LandingPage() {
                           size="sm"
                           style={{ 
                             borderColor: '#00BFFF',
-                            color: '#00BFFF',
+                            color: '#FFFFFF',
                             backgroundColor: 'transparent'
                           }}
                           onClick={(e) => { e.stopPropagation(); toggleCardFlip(benefit.id); }}

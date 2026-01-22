@@ -1142,7 +1142,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="incorporationCertificateUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.incorporationCertificate")}</FormLabel>
+                        <FormLabel>{t("onboarding.incorporationCertificate")} <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
                         <FormControl>
                           <DocumentUploadWithCamera
                             value={field.value || ""}

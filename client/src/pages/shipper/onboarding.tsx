@@ -993,7 +993,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="font-medium">{t("onboarding.tradeReferences")}</h4>
+                  <h4 className="font-medium">{t("onboarding.tradeReferences")} <span className="text-muted-foreground font-normal">(Optional)</span></h4>
                   <p className="text-sm text-muted-foreground">{t("onboarding.tradeReferencesDesc")}</p>
                   
                   <div className="grid gap-4 md:grid-cols-3">

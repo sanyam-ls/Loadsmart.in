@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { 
@@ -131,6 +131,20 @@ export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [activeFeature, setActiveFeature] = useState<number | null>(null);
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [welcomeCardFlipped, setWelcomeCardFlipped] = useState(false);
+
+  useEffect(() => {
+    // Show welcome popup after a short delay
+    const timer = setTimeout(() => {
+      setShowWelcomePopup(true);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const closeWelcomePopup = () => {
+    setShowWelcomePopup(false);
+  };
 
   const toggleCardFlip = (cardId: string) => {
     setFlippedCards(prev => {
@@ -157,6 +171,136 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#060817' }}>
+      {/* Welcome Popup */}
+      {showWelcomePopup && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(5px)' }}
+          onClick={closeWelcomePopup}
+          data-testid="welcome-popup-overlay"
+        >
+          <div 
+            className="relative"
+            onClick={(e) => e.stopPropagation()}
+            style={{ 
+              animation: 'welcomeSlideIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards',
+              perspective: '1000px'
+            }}
+          >
+            <div 
+              className="relative w-80 h-96 cursor-pointer"
+              onClick={() => setWelcomeCardFlipped(!welcomeCardFlipped)}
+              style={{ 
+                transformStyle: 'preserve-3d',
+                transition: 'transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                transform: welcomeCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+              }}
+              data-testid="welcome-card"
+            >
+              {/* Front of card */}
+              <div 
+                className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col items-center justify-center p-8"
+                style={{ 
+                  background: 'linear-gradient(135deg, rgba(22, 37, 79, 0.95) 0%, rgba(0, 102, 204, 0.9) 100%)',
+                  border: '2px solid rgba(0, 191, 255, 0.6)',
+                  boxShadow: '0 0 60px rgba(0, 191, 255, 0.5), 0 0 100px rgba(0, 191, 255, 0.3)',
+                  backfaceVisibility: 'hidden',
+                  animation: 'card-pulse-neon 2s ease-in-out infinite'
+                }}
+              >
+                <div className="w-24 h-24 mb-6 flex items-center justify-center">
+                  <svg viewBox="0 0 64 40" className="w-20 h-14" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="welcomeTruckGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#00BFFF" />
+                        <stop offset="100%" stopColor="#0066CC" />
+                      </linearGradient>
+                      <linearGradient id="welcomeCabGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" />
+                        <stop offset="100%" stopColor="#ccddee" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="2" y="8" width="38" height="22" rx="2" fill="url(#welcomeTruckGrad)" stroke="#00BFFF" strokeWidth="1" />
+                    <rect x="6" y="12" width="8" height="6" rx="1" fill="rgba(255,255,255,0.3)" />
+                    <rect x="16" y="12" width="8" height="6" rx="1" fill="rgba(255,255,255,0.3)" />
+                    <rect x="26" y="12" width="8" height="6" rx="1" fill="rgba(255,255,255,0.3)" />
+                    <path d="M40 14 L40 30 L56 30 L56 22 L50 14 Z" fill="url(#welcomeCabGrad)" stroke="#00BFFF" strokeWidth="1" />
+                    <rect x="44" y="18" width="8" height="6" rx="1" fill="#87CEEB" stroke="#00BFFF" strokeWidth="0.5" />
+                    <circle cx="14" cy="32" r="5" fill="#333" stroke="#555" strokeWidth="2" />
+                    <circle cx="14" cy="32" r="2" fill="#888" />
+                    <circle cx="48" cy="32" r="5" fill="#333" stroke="#555" strokeWidth="2" />
+                    <circle cx="48" cy="32" r="2" fill="#888" />
+                  </svg>
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-4 text-center">Hello There!</h2>
+                <p className="text-white/90 text-center text-lg leading-relaxed">
+                  Please flip the cards to get the touch and feel of our work.
+                </p>
+                <div className="mt-6 flex items-center gap-2 text-white/70">
+                  <span className="text-sm">Click to flip</span>
+                  <ArrowRight className="w-4 h-4 animate-pulse" />
+                </div>
+              </div>
+              
+              {/* Back of card */}
+              <div 
+                className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col items-center justify-center p-8"
+                style={{ 
+                  background: 'linear-gradient(135deg, #16254F 0%, #00BFFF 100%)',
+                  border: '2px solid rgba(255, 215, 0, 0.6)',
+                  boxShadow: '0 0 60px rgba(255, 215, 0, 0.4), 0 0 100px rgba(255, 215, 0, 0.2)',
+                  backfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)'
+                }}
+              >
+                <CheckCircle2 className="w-16 h-16 text-yellow-400 mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-4 text-center">Great Job!</h2>
+                <p className="text-white/90 text-center text-base leading-relaxed mb-6">
+                  Now explore our platform and discover how FreightFlow can transform your logistics experience.
+                </p>
+                <Button
+                  onClick={closeWelcomePopup}
+                  className="bg-white text-gray-900 hover:bg-white/90 px-8"
+                  data-testid="button-welcome-explore"
+                >
+                  Let's Explore
+                </Button>
+              </div>
+            </div>
+            
+            {/* Close button */}
+            <button
+              onClick={closeWelcomePopup}
+              className="absolute -top-4 -right-4 w-10 h-10 rounded-full flex items-center justify-center bg-white/10 border border-white/30 text-white hover:bg-white/20 transition-colors"
+              aria-label="Close welcome popup"
+              data-testid="button-close-welcome"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <style>{`
+        @keyframes welcomeSlideIn {
+          0% {
+            opacity: 0;
+            transform: translateX(-100vw) rotateY(-90deg);
+          }
+          60% {
+            opacity: 1;
+            transform: translateX(20px) rotateY(10deg);
+          }
+          80% {
+            transform: translateX(-10px) rotateY(-5deg);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0) rotateY(0deg);
+          }
+        }
+      `}</style>
+      
       <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md bg-white/95 dark:bg-[rgba(6,8,23,0.95)] border-gray-200 dark:border-white/10">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">

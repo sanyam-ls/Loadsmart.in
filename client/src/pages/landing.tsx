@@ -522,7 +522,7 @@ export default function LandingPage() {
             <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white" style={{ textShadow: '2px 2px 10px rgba(0, 0, 0, 0.8)' }}>
               Grow your business for the long haul
             </h2>
-            <p className="text-xl max-w-2xl mx-auto text-white" style={{ textShadow: '1px 1px 6px rgba(0, 0, 0, 0.8)' }}>
+            <p className="text-xl max-w-2xl mx-auto text-white font-semibold" style={{ textShadow: '2px 2px 10px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.7)' }}>
               We match the right load to the right truck at the right price, with trusted insights and support from dock to dock and beyond.
             </p>
           </div>

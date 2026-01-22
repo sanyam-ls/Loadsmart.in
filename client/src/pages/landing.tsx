@@ -515,14 +515,14 @@ export default function LandingPage() {
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         }}>
-        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(255, 255, 255, 0.4)' }} />
+        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} />
         <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-12">
-            <p className="text-sm font-medium mb-2" style={{ color: '#00BFFF' }}>Our Platform</p>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#060817' }}>
+          <div className="text-center mb-12" style={{ animation: 'heroLevitate 4s ease-in-out infinite' }}>
+            <p className="text-xl font-bold mb-2 text-white">Our Platform</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
               Grow your business for the long haul
             </h2>
-            <p className="text-lg max-w-2xl mx-auto" style={{ color: '#333333' }}>
+            <p className="text-xl max-w-2xl mx-auto text-white">
               We match the right load to the right truck at the right price, with trusted insights and support from dock to dock and beyond.
             </p>
           </div>
@@ -635,7 +635,7 @@ export default function LandingPage() {
             
             <div className="flex justify-around items-center mt-4">
               {features.map((feature, index) => (
-                <span key={index} className="text-lg font-semibold text-center max-w-[160px]" style={{ color: activeFeature === index ? '#00BFFF' : '#333333' }}>
+                <span key={index} className="text-lg font-semibold text-center max-w-[160px]" style={{ color: activeFeature === index ? '#00BFFF' : '#FFFFFF' }}>
                   {feature.title}
                 </span>
               ))}

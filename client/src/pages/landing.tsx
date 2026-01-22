@@ -251,12 +251,11 @@ export default function LandingPage() {
                         className="absolute inset-0 px-3 py-3 rounded-xl cursor-pointer flex flex-col justify-center overflow-hidden"
                         onClick={() => toggleCardFlip(`stat-${stat.id}`)}
                         style={{ 
-                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                          border: '1px solid rgba(255, 255, 255, 0.4)',
+                          background: 'linear-gradient(135deg, #16254F 0%, #0066CC 50%, #00BFFF 100%)',
+                          border: '1px solid rgba(0, 191, 255, 0.5)',
                           backfaceVisibility: 'hidden',
                           transform: 'rotateY(180deg)',
-                          backdropFilter: 'blur(10px)',
-                          boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
+                          boxShadow: '0 0 25px rgba(0, 191, 255, 0.4)'
                         }}
                       >
                         <p className="text-[11px] leading-tight text-center text-white">

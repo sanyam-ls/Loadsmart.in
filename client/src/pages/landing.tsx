@@ -437,9 +437,10 @@ export default function LandingPage() {
                       className="absolute inset-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] flex flex-col"
                       onClick={() => toggleCardFlip(benefit.id)}
                       style={{ 
-                        backgroundColor: 'rgba(22, 37, 79, 0.9)',
-                        border: '1px solid rgba(0, 191, 255, 0.3)',
-                        backfaceVisibility: 'hidden'
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        backfaceVisibility: 'hidden',
+                        backdropFilter: 'blur(10px)'
                       }}
                     >
                       <div className="p-5 text-center">

@@ -44,6 +44,7 @@ const onboardingFormSchema = z.object({
   panNumber: z.string().min(10).max(10, "PAN must be 10 characters"),
   gstinNumber: z.string().optional(),
   registeredAddress: z.string().min(1, "Address is required"),
+  registeredLocality: z.string().optional(),
   registeredCity: z.string().min(1, "City is required"),
   registeredCityCustom: z.string().optional(),
   registeredState: z.string().min(1, "State is required"),
@@ -96,6 +97,7 @@ export default function ShipperOnboarding() {
       cinNumber: "",
       incorporationDate: "",
       registeredAddress: "",
+      registeredLocality: "",
       registeredCity: "",
       registeredCityCustom: "",
       registeredState: "",
@@ -134,6 +136,7 @@ export default function ShipperOnboarding() {
         cinNumber: onboardingStatus.cinNumber || "",
         incorporationDate: onboardingStatus.incorporationDate ? onboardingStatus.incorporationDate.split('T')[0] : "",
         registeredAddress: onboardingStatus.registeredAddress || "",
+        registeredLocality: onboardingStatus.registeredLocality || "",
         registeredCity: onboardingStatus.registeredCity || "",
         registeredCityCustom: onboardingStatus.registeredCityCustom || "",
         registeredState: onboardingStatus.registeredState || "",
@@ -265,7 +268,7 @@ export default function ShipperOnboarding() {
 
   // Helper to determine which tab has the first error
   const getTabWithError = (errors: any): string | null => {
-    const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
+    const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredLocality", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
     const documentFields = ["gstCertificateUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl"];
 
@@ -639,7 +642,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="incorporationDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.incorporationDate")}</FormLabel>
+                        <FormLabel>{t("onboarding.incorporationDate")} <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
                         <FormControl>
                           <Input 
                             type="date" 
@@ -699,7 +702,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="cinNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.cin")}</FormLabel>
+                        <FormLabel>{t("onboarding.cin")} <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="U12345MH2020PTC123456" 
@@ -728,6 +731,23 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                             placeholder={t("onboarding.addressPlaceholder")} 
                             {...field} 
                             data-testid="input-address"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="registeredLocality"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Locality / Area <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g. Andheri West, Bandra, Connaught Place" 
+                            {...field} 
+                            data-testid="input-locality"
                           />
                         </FormControl>
                         <FormMessage />

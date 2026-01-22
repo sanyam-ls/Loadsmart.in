@@ -1784,6 +1784,7 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   
   // Registered Address (optional for draft, required on submission)
   registeredAddress: text("registered_address"),
+  registeredLocality: text("registered_locality"),
   registeredCity: text("registered_city"),
   registeredCityCustom: text("registered_city_custom"),
   registeredState: text("registered_state"),

@@ -208,13 +208,13 @@ export default function LandingPage() {
                 Connect shippers with trusted carriers. Post loads, track shipments, and manage your logistics operations, all in one platform.
               </p>
             </div>
-            <div className="flex flex-wrap justify-center gap-6 mt-12">
+            <div className="flex flex-nowrap justify-center gap-4 mt-12">
               {stats.map((stat) => {
                 const isFlipped = flippedCards.has(`stat-${stat.id}`);
                 return (
                   <div 
                     key={stat.id} 
-                    className="relative w-52 h-40"
+                    className="relative w-48 h-36"
                     style={{ perspective: '1000px' }}
                     data-testid={`stat-card-${stat.id}`}
                   >

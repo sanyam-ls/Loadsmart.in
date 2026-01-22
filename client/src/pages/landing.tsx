@@ -383,7 +383,7 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
               What It's Like Working at FreightFlow
             </h2>
-            <p className="text-lg max-w-2xl mx-auto" style={{ color: '#ACBBC6' }}>
+            <p className="text-xl max-w-2xl mx-auto text-white">
               Be part of a team that's revolutionizing India's logistics industry. We're building the future of freight, one load at a time.
             </p>
           </div>

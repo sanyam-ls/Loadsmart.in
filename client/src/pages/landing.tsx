@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { 
@@ -133,6 +133,28 @@ export default function LandingPage() {
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [welcomeCardFlipped, setWelcomeCardFlipped] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    // Preload video for faster playback
+    const video = videoRef.current;
+    if (video) {
+      // Preload the video data
+      video.load();
+      
+      // Start playing as soon as enough data is available
+      const handleCanPlay = () => {
+        setVideoLoaded(true);
+        video.play().catch(() => {
+          // Autoplay may be blocked, video will show poster
+        });
+      };
+      
+      video.addEventListener('canplaythrough', handleCanPlay);
+      return () => video.removeEventListener('canplaythrough', handleCanPlay);
+    }
+  }, []);
 
   useEffect(() => {
     // Show welcome popup after a short delay
@@ -331,12 +353,30 @@ export default function LandingPage() {
       </header>
 
       <section className="relative overflow-hidden py-20 md:py-32">
+        {/* Video loading placeholder */}
+        {!videoLoaded && (
+          <div 
+            className="absolute inset-0 w-full h-full"
+            style={{ 
+              background: 'linear-gradient(135deg, #060817 0%, #16254F 50%, #060817 100%)',
+            }}
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div 
+                className="w-16 h-16 rounded-full border-4 border-[#00BFFF] border-t-transparent"
+                style={{ animation: 'spin 1s linear infinite' }}
+              />
+            </div>
+          </div>
+        )}
         <video 
+          ref={videoRef}
           autoPlay 
           loop 
           muted 
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          preload="auto"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
         >
           <source src={heroVideo} type="video/mp4" />
         </video>

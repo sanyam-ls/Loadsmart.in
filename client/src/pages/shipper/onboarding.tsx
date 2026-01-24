@@ -185,6 +185,35 @@ export default function ShipperOnboarding() {
     }
   }, [onboardingStatus, form, user]);
 
+  // Pre-populate from user data when NO onboarding status exists yet (new users)
+  useEffect(() => {
+    if (!onboardingStatus && user) {
+      const initialData: Partial<OnboardingFormData> = {};
+      
+      if (user.companyName) {
+        initialData.legalCompanyName = user.companyName;
+      }
+      if (user.companyAddress) {
+        initialData.registeredAddress = user.companyAddress;
+      }
+      if (user.defaultPickupCity) {
+        initialData.registeredCity = user.defaultPickupCity;
+      }
+      if (user.phone) {
+        initialData.contactPersonPhone = user.phone;
+      }
+      if (user.email) {
+        initialData.contactPersonEmail = user.email;
+      }
+      
+      if (Object.keys(initialData).length > 0) {
+        Object.entries(initialData).forEach(([key, value]) => {
+          form.setValue(key as keyof OnboardingFormData, value as string);
+        });
+      }
+    }
+  }, [onboardingStatus, user, form]);
+
   // Auto-save mutation for drafts
   const autoSaveMutation = useMutation({
     mutationFn: async (data: Partial<OnboardingFormData>) => {

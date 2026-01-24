@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import type { UserRole } from "@shared/schema";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -749,10 +750,11 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Address</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Enter your full address" 
-                                {...field} 
-                                data-testid="input-register-address" 
+                              <AddressAutocomplete
+                                value={field.value || ""}
+                                onChange={field.onChange}
+                                placeholder="Search for your address"
+                                data-testid="input-register-address"
                               />
                             </FormControl>
                             <FormMessage />

@@ -33,6 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
 import { indianStates } from "@shared/indian-locations";
 import { DocumentUploadWithCamera } from "@/components/DocumentUploadWithCamera";
 
@@ -81,6 +82,7 @@ type OnboardingFormData = z.infer<typeof onboardingFormSchema>;
 export default function ShipperOnboarding() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("business");
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -139,14 +141,14 @@ export default function ShipperOnboarding() {
   useEffect(() => {
     if (onboardingStatus && (onboardingStatus.status === "draft" || onboardingStatus.status === "pending" || onboardingStatus.status === "under_review" || onboardingStatus.status === "on_hold" || onboardingStatus.status === "rejected")) {
       const draftData: Partial<OnboardingFormData> = {
-        legalCompanyName: onboardingStatus.legalCompanyName || "",
+        legalCompanyName: onboardingStatus.legalCompanyName || user?.companyName || "",
         tradeName: onboardingStatus.tradeName || "",
         businessType: onboardingStatus.businessType || "pvt_ltd",
         panNumber: onboardingStatus.panNumber || "",
         gstinNumber: onboardingStatus.gstinNumber || "",
         cinNumber: onboardingStatus.cinNumber || "",
         incorporationDate: onboardingStatus.incorporationDate ? onboardingStatus.incorporationDate.split('T')[0] : "",
-        registeredAddress: onboardingStatus.registeredAddress || "",
+        registeredAddress: onboardingStatus.registeredAddress || user?.companyAddress || "",
         registeredLocality: onboardingStatus.registeredLocality || "",
         registeredCity: onboardingStatus.registeredCity || "",
         registeredCityCustom: onboardingStatus.registeredCityCustom || "",
@@ -181,7 +183,7 @@ export default function ShipperOnboarding() {
       form.reset(draftData);
       lastSavedDataRef.current = JSON.stringify(draftData);
     }
-  }, [onboardingStatus, form]);
+  }, [onboardingStatus, form, user]);
 
   // Auto-save mutation for drafts
   const autoSaveMutation = useMutation({

@@ -150,7 +150,7 @@ export default function ShipperOnboarding() {
         incorporationDate: onboardingStatus.incorporationDate ? onboardingStatus.incorporationDate.split('T')[0] : "",
         registeredAddress: onboardingStatus.registeredAddress || user?.companyAddress || "",
         registeredLocality: onboardingStatus.registeredLocality || "",
-        registeredCity: onboardingStatus.registeredCity || "",
+        registeredCity: onboardingStatus.registeredCity || user?.defaultPickupCity || "",
         registeredCityCustom: onboardingStatus.registeredCityCustom || "",
         registeredState: onboardingStatus.registeredState || "",
         registeredCountry: onboardingStatus.registeredCountry || "India",

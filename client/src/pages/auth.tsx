@@ -300,6 +300,8 @@ export default function AuthPage() {
         password: data.password,
         role: data.role as UserRole,
         companyName: data.companyName,
+        companyAddress: data.address,
+        defaultPickupCity: data.city,
         phone: data.phone,
         carrierType: data.carrierType,
         city: data.city,

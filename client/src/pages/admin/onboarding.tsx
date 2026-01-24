@@ -434,6 +434,26 @@ export default function AdminOnboardingPage() {
                     </CardContent>
                   </Card>
                 </div>
+
+                <h4 className="font-medium mt-4">How did you hear about us?</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground">Referral Source</Label>
+                    <p className="font-medium">
+                      {selectedRequest?.request.referralSource === "google" && "Google"}
+                      {selectedRequest?.request.referralSource === "app_store" && "App Store"}
+                      {selectedRequest?.request.referralSource === "linkedin" && "LinkedIn"}
+                      {selectedRequest?.request.referralSource === "sales_person" && "Sales Person Reference"}
+                      {!selectedRequest?.request.referralSource && "-"}
+                    </p>
+                  </div>
+                  {selectedRequest?.request.referralSource === "sales_person" && (
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Sales Person Name</Label>
+                      <p className="font-medium">{selectedRequest?.request.referralSalesPersonName || "-"}</p>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="documents" className="space-y-4 mt-4">

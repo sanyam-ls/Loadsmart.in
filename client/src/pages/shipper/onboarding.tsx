@@ -72,6 +72,8 @@ const onboardingFormSchema = z.object({
   tradeReference2Company: z.string().optional(),
   tradeReference2Contact: z.string().optional(),
   tradeReference2Phone: z.string().optional(),
+  referralSource: z.string().optional(),
+  referralSalesPersonName: z.string().optional(),
 });
 
 type OnboardingFormData = z.infer<typeof onboardingFormSchema>;
@@ -128,6 +130,8 @@ export default function ShipperOnboarding() {
       tradeReference2Company: "",
       tradeReference2Contact: "",
       tradeReference2Phone: "",
+      referralSource: "",
+      referralSalesPersonName: "",
     },
   });
 
@@ -170,6 +174,8 @@ export default function ShipperOnboarding() {
         tradeReference2Company: onboardingStatus.tradeReference2Company || "",
         tradeReference2Contact: onboardingStatus.tradeReference2Contact || "",
         tradeReference2Phone: onboardingStatus.tradeReference2Phone || "",
+        referralSource: onboardingStatus.referralSource || "",
+        referralSalesPersonName: onboardingStatus.referralSalesPersonName || "",
       };
 
       form.reset(draftData);
@@ -1082,6 +1088,48 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                         </FormItem>
                       )}
                     />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-medium">How did you hear about us?</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="referralSource"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Referral Source</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-referral-source">
+                                <SelectValue placeholder="Select how you found us" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="google">Google</SelectItem>
+                              <SelectItem value="app_store">App Store</SelectItem>
+                              <SelectItem value="linkedin">LinkedIn</SelectItem>
+                              <SelectItem value="sales_person">Sales Person Reference</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    {form.watch("referralSource") === "sales_person" && (
+                      <FormField
+                        control={form.control}
+                        name="referralSalesPersonName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sales Person Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter sales person name" {...field} data-testid="input-sales-person-name" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
                 </div>
 

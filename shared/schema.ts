@@ -1821,6 +1821,10 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   tradeReference2Contact: text("trade_reference_2_contact"),
   tradeReference2Phone: text("trade_reference_2_phone"),
   
+  // Referral Source
+  referralSource: text("referral_source"), // google, app_store, linkedin, sales_person
+  referralSalesPersonName: text("referral_sales_person_name"), // Name of sales person if referralSource is sales_person
+  
   // Bank Details (for verification)
   bankName: text("bank_name"),
   bankAccountNumber: text("bank_account_number"),

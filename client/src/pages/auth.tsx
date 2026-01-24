@@ -130,6 +130,10 @@ export default function AuthPage() {
   const { login, register } = useAuth();
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Read tab parameter from URL to determine initial tab
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get("tab") === "register" ? "register" : "login";
 
   useEffect(() => {
     const video = videoRef.current;
@@ -517,7 +521,7 @@ export default function AuthPage() {
               <CardDescription>{t("auth.signInOrCreateAccount")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="login">
+              <Tabs defaultValue={initialTab}>
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login" data-testid="tab-login">{t("auth.signIn")}</TabsTrigger>
                   <TabsTrigger value="register" data-testid="tab-register">{t("auth.register")}</TabsTrigger>

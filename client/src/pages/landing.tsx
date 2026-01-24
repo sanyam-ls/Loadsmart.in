@@ -342,7 +342,7 @@ export default function LandingPage() {
               Sign In
             </Button>
             <Button 
-              onClick={() => setLocation("/auth")} 
+              onClick={() => setLocation("/auth?tab=register")} 
               data-testid="button-get-started"
               className="bg-[#16254F] dark:bg-white text-white dark:text-gray-900 hover:bg-[#16254F]/90 dark:hover:bg-white/90"
             >

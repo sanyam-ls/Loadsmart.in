@@ -927,7 +927,7 @@ export default function LandingPage() {
                 <div className="flex flex-wrap justify-center lg:justify-start gap-4">
                   <Button 
                     size="lg" 
-                    onClick={() => setLocation("/auth")}
+                    onClick={() => setLocation("/auth?tab=register")}
                     data-testid="button-cta-signup"
                     className="bg-white text-gray-900 hover:bg-white/90"
                   >

@@ -604,6 +604,53 @@ export default function CarrierLoadsPage() {
     }
   };
 
+  // Direct accept from card button - for solo carriers or when no truck/driver selection needed
+  const handleDirectAccept = async (load: CarrierLoad & { matchScore: number }) => {
+    const price = getCarrierPrice(load);
+    
+    if (load.isSimulated) {
+      handleSimulatedAccept(load, price);
+      return;
+    }
+    
+    // For enterprise carriers, open dialog to select truck/driver
+    if (isEnterprise) {
+      setSelectedLoad(load);
+      setBidAmount(price.toString());
+      setSelectedTruckId("");
+      setSelectedDriverId("");
+      setBidDialogOpen(true);
+      return;
+    }
+    
+    try {
+      await acceptDirectMutation.mutateAsync({
+        load_id: load.id,
+      });
+      
+      toast({
+        title: t("carrier.loadAccepted"),
+        description: `Load accepted at ${formatCurrency(price)}. Shipment created and ready for pickup.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: t("carrier.failedToAccept"),
+        description: err.message || t("carrier.couldNotAcceptLoad"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Open bid dialog for placing a counter bid
+  const handlePlaceBid = (load: CarrierLoad & { matchScore: number }) => {
+    setSelectedLoad(load);
+    const price = getCarrierPrice(load);
+    setBidAmount(price.toString());
+    setSelectedTruckId("");
+    setSelectedDriverId("");
+    setBidDialogOpen(true);
+  };
+
   const submitBid = async () => {
     if (!bidAmount || !selectedLoad) return;
     
@@ -770,16 +817,35 @@ export default function CarrierLoadsPage() {
                       <ArrowRight className="h-3 w-3" />
                       <span className="font-medium truncate">{load.destination}</span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-lg font-bold">{formatCurrency(getCarrierPrice(load))}</span>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleBid(load)} 
-                        data-testid={`button-bid-rec-${load.id}`}
-                        disabled={!!load.myBid}
-                      >
-                        {load.myBid ? "Bid Placed" : load.priceFixed ? "Accept" : "Bid Now"}
-                      </Button>
+                      <div className="flex gap-1">
+                        {load.myBid ? (
+                          <Button size="sm" disabled data-testid={`button-bid-rec-${load.id}`}>
+                            Bid Placed
+                          </Button>
+                        ) : (
+                          <>
+                            <Button 
+                              size="sm" 
+                              onClick={(e) => { e.stopPropagation(); handleDirectAccept(load); }} 
+                              data-testid={`button-accept-rec-${load.id}`}
+                            >
+                              Accept
+                            </Button>
+                            {!load.priceFixed && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={(e) => { e.stopPropagation(); handlePlaceBid(load); }} 
+                                data-testid={`button-bid-rec-${load.id}`}
+                              >
+                                Bid
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -926,22 +992,42 @@ export default function CarrierLoadsPage() {
                   </div>
                 )}
                 
-                <div className="flex items-center justify-between pt-2 border-t">
+                <div className="flex items-center justify-between pt-2 border-t gap-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Total Price</p>
                     <p className="text-xl font-bold">{formatCurrency(getCarrierPrice(load))}</p>
                   </div>
-                  <Button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBid(load);
-                    }} 
-                    data-testid={`button-bid-${load.id}`}
-                    variant={load.priceFixed ? "default" : "outline"}
-                    disabled={!!load.myBid}
-                  >
-                    {load.myBid ? "Bid Placed" : load.priceFixed ? "Accept" : "Place Bid"}
-                  </Button>
+                  <div className="flex gap-2">
+                    {load.myBid ? (
+                      <Button disabled data-testid={`button-bid-${load.id}`}>
+                        Bid Placed
+                      </Button>
+                    ) : (
+                      <>
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDirectAccept(load);
+                          }} 
+                          data-testid={`button-accept-${load.id}`}
+                        >
+                          Accept
+                        </Button>
+                        {!load.priceFixed && (
+                          <Button 
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePlaceBid(load);
+                            }} 
+                            data-testid={`button-bid-${load.id}`}
+                          >
+                            Place Bid
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
                 
                 {load.myBid && (
@@ -1016,13 +1102,31 @@ export default function CarrierLoadsPage() {
                           <p className="text-xs text-muted-foreground">Rate</p>
                           <p className="text-xl font-bold">{formatCurrency(getCarrierPrice(load))}</p>
                         </div>
-                        <Button 
-                          onClick={() => handleBid(load)} 
-                          data-testid={`button-bid-list-${load.id}`}
-                          disabled={!!load.myBid}
-                        >
-                          {load.myBid ? "Placed" : "Bid"}
-                        </Button>
+                        <div className="flex gap-2">
+                          {load.myBid ? (
+                            <Button disabled data-testid={`button-bid-list-${load.id}`}>
+                              Placed
+                            </Button>
+                          ) : (
+                            <>
+                              <Button 
+                                onClick={() => handleDirectAccept(load)} 
+                                data-testid={`button-accept-list-${load.id}`}
+                              >
+                                Accept
+                              </Button>
+                              {!load.priceFixed && (
+                                <Button 
+                                  variant="outline"
+                                  onClick={() => handlePlaceBid(load)} 
+                                  data-testid={`button-bid-list-${load.id}`}
+                                >
+                                  Bid
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1185,18 +1289,39 @@ export default function CarrierLoadsPage() {
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)} data-testid="button-close-detail">
               Close
             </Button>
-            <Button 
-              onClick={() => {
-                setDetailDialogOpen(false);
-                if (detailLoad) {
-                  handleBid(detailLoad as any);
-                }
-              }}
-              disabled={!!detailLoad?.myBid}
-              data-testid="button-bid-from-detail"
-            >
-              {detailLoad?.myBid ? "Bid Placed" : detailLoad?.priceFixed ? "Accept Load" : "Place Bid"}
-            </Button>
+            {detailLoad?.myBid ? (
+              <Button disabled data-testid="button-bid-from-detail">
+                Bid Placed
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  onClick={() => {
+                    setDetailDialogOpen(false);
+                    if (detailLoad) {
+                      handleDirectAccept(detailLoad as any);
+                    }
+                  }}
+                  data-testid="button-accept-from-detail"
+                >
+                  Accept Load
+                </Button>
+                {!detailLoad?.priceFixed && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setDetailDialogOpen(false);
+                      if (detailLoad) {
+                        handlePlaceBid(detailLoad as any);
+                      }
+                    }}
+                    data-testid="button-bid-from-detail"
+                  >
+                    Place Bid
+                  </Button>
+                )}
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

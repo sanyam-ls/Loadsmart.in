@@ -335,7 +335,7 @@ export default function CarrierOnboarding() {
         missingFields.push("Driver License Number (Identity tab)");
       }
       if (!values.permitType) {
-        missingFields.push("Permit Type (Identity tab)");
+        missingFields.push("Permit Type (Vehicle tab)");
       }
       
       // Check Vehicle tab fields
@@ -638,27 +638,6 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={soloForm.control}
-                      name="permitType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("carrierOnboarding.permitType")} *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-permit-type">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="national">{t("carrierOnboarding.nationalPermit")}</SelectItem>
-                              <SelectItem value="domestic">{t("carrierOnboarding.domesticPermit")}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -705,6 +684,27 @@ export default function CarrierOnboarding() {
                           <FormControl>
                             <Input {...field} disabled={!canEdit} data-testid="input-reg-number" />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={soloForm.control}
+                      name="permitType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("carrierOnboarding.permitType")} *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-permit-type">
+                                <SelectValue placeholder="Select permit type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="national">{t("carrierOnboarding.nationalPermit")}</SelectItem>
+                              <SelectItem value="domestic">{t("carrierOnboarding.domesticPermit")}</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}

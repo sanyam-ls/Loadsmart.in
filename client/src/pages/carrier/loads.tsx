@@ -1477,38 +1477,9 @@ export default function CarrierLoadsPage() {
                   )}
                 </div>
               ) : (
-                /* Negotiable loads: Both accept and bid options */
+                /* Negotiable loads: Counter bid option */
                 <div className="space-y-4">
-                  {/* Option 1: Accept at listed price */}
-                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-green-800 dark:text-green-300">Accept at Listed Price</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Accept immediately at the listed price. Shipment and invoice will be created.
-                    </p>
-                    <Button 
-                      className="w-full"
-                      variant="default"
-                      onClick={handleAccept}
-                      disabled={acceptDirectMutation.isPending || (isEnterprise && !selectedTruckId)}
-                      data-testid="button-accept-load"
-                    >
-                      {acceptDirectMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Accept at {formatCurrency(getCarrierPrice(selectedLoad))}
-                    </Button>
-                  </div>
-                  
-                  {/* Divider */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-muted-foreground uppercase">or</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  
-                  {/* Option 2: Place a counter bid */}
+                  {/* Place a counter bid */}
                   <div className="p-4 bg-muted/50 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
                       <Unlock className="h-5 w-5 text-muted-foreground" />

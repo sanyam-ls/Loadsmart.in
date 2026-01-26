@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Truck, MapPin, Package, FileText, ArrowRight, Upload, X, Loader2 } from "lucide-react";
+import { Truck, MapPin, Package, FileText, ArrowRight, Upload, X, Loader2, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ const truckFormSchema = z.object({
   registrationNumber: z.string().optional(),
   chassisNumber: z.string().optional(),
   bodyType: z.string().optional(),
+  permitType: z.enum(["national", "domestic"]).optional(),
 });
 
 type TruckFormData = z.infer<typeof truckFormSchema>;
@@ -113,6 +115,23 @@ export default function AddTruckPage() {
     setDocuments(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Fetch carrier onboarding data to auto-populate for solo carriers
+  interface OnboardingResponse {
+    id: string;
+    carrierId: string;
+    status: string;
+    carrierType: string;
+    licensePlateNumber?: string;
+    chassisNumber?: string;
+    uniqueRegistrationNumber?: string;
+    permitType?: string;
+  }
+  
+  const { data: onboardingData } = useQuery<OnboardingResponse>({
+    queryKey: ["/api/carrier/onboarding"],
+    enabled: isSoloCarrier,
+  });
+
   const form = useForm<TruckFormData>({
     resolver: zodResolver(truckFormSchema),
     defaultValues: {
@@ -129,8 +148,28 @@ export default function AddTruckPage() {
       registrationNumber: "",
       chassisNumber: "",
       bodyType: "",
+      permitType: undefined,
     },
   });
+
+  // Auto-populate form from onboarding data for solo carriers
+  useEffect(() => {
+    // Only auto-populate if this is a solo carrier and onboarding data is for solo type
+    if (isSoloCarrier && onboardingData && onboardingData.carrierType === "solo") {
+      if (onboardingData.licensePlateNumber) {
+        form.setValue("licensePlate", onboardingData.licensePlateNumber);
+      }
+      if (onboardingData.chassisNumber) {
+        form.setValue("chassisNumber", onboardingData.chassisNumber);
+      }
+      if (onboardingData.uniqueRegistrationNumber) {
+        form.setValue("registrationNumber", onboardingData.uniqueRegistrationNumber);
+      }
+      if (onboardingData.permitType === "national" || onboardingData.permitType === "domestic") {
+        form.setValue("permitType", onboardingData.permitType);
+      }
+    }
+  }, [isSoloCarrier, onboardingData, form]);
 
   // Watch the form values for cascading dropdowns
   const manufacturerId = form.watch("manufacturerId");
@@ -162,6 +201,7 @@ export default function AddTruckPage() {
           registrationNumber: data.registrationNumber || undefined,
           chassisNumber: data.chassisNumber || undefined,
           bodyType: data.bodyType || undefined,
+          permitType: data.permitType || undefined,
         }),
       });
 
@@ -408,6 +448,30 @@ export default function AddTruckPage() {
                   )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="permitType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Permit Type
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-permit-type">
+                          <SelectValue placeholder="Select permit type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="national">National Permit (All India)</SelectItem>
+                        <SelectItem value="domestic">State/Domestic Permit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 

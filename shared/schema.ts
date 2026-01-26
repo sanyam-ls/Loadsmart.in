@@ -311,6 +311,7 @@ export const trucks = pgTable("trucks", {
   chassisNumber: text("chassis_number"), // Chassis number
   registrationNumber: text("registration_number"), // Registration certificate number (RC)
   bodyType: text("body_type"), // Body type (open, closed, container, etc.)
+  permitType: text("permit_type"), // national or domestic
   // Document expiry dates for Indian truck compliance
   insuranceExpiry: timestamp("insurance_expiry"),
   fitnessExpiry: timestamp("fitness_expiry"),

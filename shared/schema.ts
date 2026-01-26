@@ -1372,6 +1372,8 @@ export const carrierVerificationDocTypes = [
   "pan",               // PAN Card
   "gstin",             // GSTIN Certificate
   "tan",               // TAN Certificate
+  // Bank documents (both solo and fleet)
+  "void_cheque",       // Void Cheque for bank verification
 ] as const;
 export type CarrierVerificationDocType = typeof carrierVerificationDocTypes[number];
 
@@ -1398,6 +1400,12 @@ export const carrierVerifications = pgTable("carrier_verifications", {
   panNumber: text("pan_number"),
   gstinNumber: text("gstin_number"),
   tanNumber: text("tan_number"),
+  
+  // Bank details (for both solo and fleet)
+  bankName: text("bank_name"),
+  bankAccountNumber: text("bank_account_number"),
+  bankIfscCode: text("bank_ifsc_code"),
+  bankAccountHolderName: text("bank_account_holder_name"),
   
   // Admin review fields
   reviewedBy: varchar("reviewed_by").references(() => users.id),

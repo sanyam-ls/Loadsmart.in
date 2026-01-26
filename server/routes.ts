@@ -9564,6 +9564,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
         bankBranchName: z.string().optional(),
         preferredPaymentTerms: z.enum(["cod", "net_7", "net_15", "net_30", "net_45"]).optional(),
         requestedCreditLimit: z.string().optional(),
+        referralSource: z.string().optional(),
+        referralSalesPersonName: z.string().optional(),
+        noGstCertificate: z.boolean().optional(),
+        alternativeDocumentType: z.string().optional(),
+        alternativeAuthorizationUrl: z.string().optional(),
       });
 
       const validatedData = onboardingSchema.parse(req.body);
@@ -9817,6 +9822,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
         bankBranchName: z.string().optional(),
         preferredPaymentTerms: z.string().optional(),
         requestedCreditLimit: z.string().optional(),
+        referralSource: z.string().optional(),
+        referralSalesPersonName: z.string().optional(),
+        noGstCertificate: z.boolean().optional(),
+        alternativeDocumentType: z.string().optional(),
+        alternativeAuthorizationUrl: z.string().optional(),
       });
 
       const validatedData = draftSchema.parse(req.body);
@@ -9884,6 +9894,17 @@ RESPOND IN THIS EXACT JSON FORMAT:
         incorporationCertificateUrl: z.string().optional(),
         cancelledChequeUrl: z.string().optional(),
         businessAddressProofUrl: z.string().optional(),
+        tradeReference1Company: z.string().optional(),
+        tradeReference1Contact: z.string().optional(),
+        tradeReference1Phone: z.string().optional(),
+        tradeReference2Company: z.string().optional(),
+        tradeReference2Contact: z.string().optional(),
+        tradeReference2Phone: z.string().optional(),
+        referralSource: z.string().optional(),
+        referralSalesPersonName: z.string().optional(),
+        noGstCertificate: z.boolean().optional(),
+        alternativeDocumentType: z.string().optional(),
+        alternativeAuthorizationUrl: z.string().optional(),
       });
 
       const validatedData = updateSchema.parse(req.body);

@@ -471,10 +471,14 @@ export default function AdminOnboardingPage() {
                           <p className="text-sm">
                             <span className="text-muted-foreground">Type: </span>
                             <span className="font-medium">
-                              {selectedRequest.request.alternativeDocumentType === "msme" && "MSME Certificate"}
-                              {selectedRequest.request.alternativeDocumentType === "udyam" && "Udyam Registration"}
-                              {selectedRequest.request.alternativeDocumentType === "shop_act" && "Shop Act License"}
-                              {selectedRequest.request.alternativeDocumentType === "other" && "Other Document"}
+                              {selectedRequest.request.alternativeDocumentType === "msme_certificate" && "MSME Certificate"}
+                              {selectedRequest.request.alternativeDocumentType === "udyam_registration" && "Udyam Registration"}
+                              {selectedRequest.request.alternativeDocumentType === "shop_establishment" && "Shop & Establishment License"}
+                              {selectedRequest.request.alternativeDocumentType === "trade_license" && "Trade License"}
+                              {selectedRequest.request.alternativeDocumentType === "iec_certificate" && "IEC Certificate"}
+                              {selectedRequest.request.alternativeDocumentType === "fssai_license" && "FSSAI License"}
+                              {selectedRequest.request.alternativeDocumentType === "other_govt_auth" && "Other Government Authorization"}
+                              {!["msme_certificate", "udyam_registration", "shop_establishment", "trade_license", "iec_certificate", "fssai_license", "other_govt_auth"].includes(selectedRequest.request.alternativeDocumentType || "") && selectedRequest.request.alternativeDocumentType}
                             </span>
                           </p>
                         )}

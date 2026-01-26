@@ -417,20 +417,26 @@ export default function AdminOnboardingPage() {
 
                 <Separator />
 
-                <h4 className="font-medium">{t("onboarding.tradeReferences")}</h4>
+                <h4 className="font-medium text-lg">{t("onboarding.tradeReferences")}</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="p-4 space-y-2">
-                      <p className="font-medium">{selectedRequest?.request.tradeReference1Company || "-"}</p>
-                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.tradeReference1Contact || "-"}</p>
-                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.tradeReference1Phone || "-"}</p>
+                  <Card className="border-2">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-muted-foreground">Reference 1</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-2">
+                      <p className="font-medium text-base">{selectedRequest?.request.tradeReference1Company || "-"}</p>
+                      <p className="text-sm"><span className="text-muted-foreground">Contact: </span>{selectedRequest?.request.tradeReference1Contact || "-"}</p>
+                      <p className="text-sm"><span className="text-muted-foreground">Phone: </span>{selectedRequest?.request.tradeReference1Phone || "-"}</p>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardContent className="p-4 space-y-2">
-                      <p className="font-medium">{selectedRequest?.request.tradeReference2Company || "-"}</p>
-                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.tradeReference2Contact || "-"}</p>
-                      <p className="text-sm text-muted-foreground">{selectedRequest?.request.tradeReference2Phone || "-"}</p>
+                  <Card className="border-2">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-muted-foreground">Reference 2</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-2">
+                      <p className="font-medium text-base">{selectedRequest?.request.tradeReference2Company || "-"}</p>
+                      <p className="text-sm"><span className="text-muted-foreground">Contact: </span>{selectedRequest?.request.tradeReference2Contact || "-"}</p>
+                      <p className="text-sm"><span className="text-muted-foreground">Phone: </span>{selectedRequest?.request.tradeReference2Phone || "-"}</p>
                     </CardContent>
                   </Card>
                 </div>

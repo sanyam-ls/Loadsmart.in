@@ -9049,6 +9049,55 @@ RESPOND IN THIS EXACT JSON FORMAT:
         }
       }
 
+      // Auto-create a truck with the vehicle info from verification (for both solo and enterprise carriers)
+      // Only requires license plate - chassis number is optional for truck creation
+      if (verification.licensePlateNumber) {
+        try {
+          // Check if a truck with this license plate already exists for this carrier
+          const existingTrucks = await storage.getTrucksByCarrier(verification.carrierId);
+          const truckExists = existingTrucks.some(t => t.licensePlate === verification.licensePlateNumber);
+          
+          if (!truckExists) {
+            // Find document URLs from verification documents
+            const rcDoc = verificationDocs.find(d => d.documentType === "rc");
+            const insuranceDoc = verificationDocs.find(d => d.documentType === "insurance");
+            const fitnessDoc = verificationDocs.find(d => d.documentType === "fitness");
+            
+            // Create the truck with all available info from verification
+            // Note: truckType and capacity use defaults since they aren't captured in verification
+            // Carrier can update these details in their fleet management
+            const newTruck = await storage.createTruck({
+              carrierId: verification.carrierId,
+              truckType: "Open Body", // Default - carrier should update in My Truck/Fleet
+              licensePlate: verification.licensePlateNumber,
+              capacity: 10, // Default capacity in tons - carrier should update
+              capacityUnit: "tons",
+              chassisNumber: verification.chassisNumber || undefined,
+              registrationNumber: verification.uniqueRegistrationNumber || undefined,
+              permitType: verification.permitType || "national",
+              rcDocumentUrl: rcDoc?.fileUrl || undefined,
+              insuranceDocumentUrl: insuranceDoc?.fileUrl || undefined,
+              fitnessDocumentUrl: fitnessDoc?.fileUrl || undefined,
+              isAvailable: true,
+            });
+            
+            console.log(`Auto-created truck ${newTruck.id} for ${verification.carrierType} carrier ${verification.carrierId}`);
+            
+            // Notify carrier to complete their truck profile
+            const docsAdded = [rcDoc, insuranceDoc, fitnessDoc].filter(Boolean).length;
+            await storage.createNotification({
+              userId: verification.carrierId,
+              title: "Truck Added to Your Fleet",
+              message: `Your truck (${verification.licensePlateNumber}) has been added with ${docsAdded} documents. Please update the truck type and capacity in your fleet settings.`,
+              type: "info",
+            });
+          }
+        } catch (truckError) {
+          // Log error but don't fail the approval - truck can be added manually later
+          console.error(`Failed to auto-create truck for ${verification.carrierType} carrier:`, truckError);
+        }
+      }
+
       // Create audit log
       await storage.createAuditLog({
         adminId: user.id,

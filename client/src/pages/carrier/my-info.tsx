@@ -418,12 +418,12 @@ export default function MyInfoPage() {
                     name="companyName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Display Name / Business Name</FormLabel>
+                        <FormLabel>Driver Name</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
-                            placeholder="Enter your business name"
-                            data-testid="input-company-name"
+                            placeholder="Enter your full name"
+                            data-testid="input-driver-name"
                           />
                         </FormControl>
                         <FormMessage />
@@ -468,11 +468,11 @@ export default function MyInfoPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3" data-testid="info-company">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-3" data-testid="info-driver-name">
+                  <User className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Business Name</p>
-                    <p className="font-medium" data-testid="text-company">
+                    <p className="text-sm text-muted-foreground">Driver Name</p>
+                    <p className="font-medium" data-testid="text-driver-name">
                       {profileUser.companyName || "Not provided"}
                     </p>
                   </div>

@@ -186,8 +186,8 @@ export default function CarrierOnboarding() {
       setCarrierType(type);
       
       if (type === "solo") {
-        soloForm.reset({
-          carrierType: "solo",
+        const formData = {
+          carrierType: "solo" as const,
           aadhaarNumber: onboardingStatus.aadhaarNumber || "",
           driverLicenseNumber: onboardingStatus.driverLicenseNumber || "",
           permitType: (onboardingStatus.permitType as "national" | "domestic") || "national",
@@ -205,10 +205,13 @@ export default function CarrierOnboarding() {
           bankIfscCode: onboardingStatus.bankIfscCode || "",
           bankAccountHolderName: onboardingStatus.bankAccountHolderName || "",
           voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
-        });
+        };
+        soloForm.reset(formData);
+        // Initialize lastSavedDataRef with loaded data to prevent unnecessary initial save
+        lastSavedDataRef.current = JSON.stringify(formData);
       } else {
-        fleetForm.reset({
-          carrierType: "enterprise",
+        const formData = {
+          carrierType: "enterprise" as const,
           incorporationType: (onboardingStatus.incorporationType as "pvt_ltd" | "llp" | "proprietorship" | "partnership") || "pvt_ltd",
           businessRegistrationNumber: onboardingStatus.businessRegistrationNumber || "",
           businessAddress: onboardingStatus.businessAddress || "",
@@ -227,7 +230,10 @@ export default function CarrierOnboarding() {
           bankIfscCode: onboardingStatus.bankIfscCode || "",
           bankAccountHolderName: onboardingStatus.bankAccountHolderName || "",
           voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
-        });
+        };
+        fleetForm.reset(formData);
+        // Initialize lastSavedDataRef with loaded data to prevent unnecessary initial save
+        lastSavedDataRef.current = JSON.stringify(formData);
       }
     }
   }, [onboardingStatus, soloForm, fleetForm]);

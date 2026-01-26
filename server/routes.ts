@@ -10373,6 +10373,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
           "aadhaar", "license", "permit", "rc", "insurance", "fitness",
           // Fleet/Company documents
           "incorporation", "trade_license", "address_proof", "pan", "gstin", "tan",
+          // Bank documents
+          "void_cheque",
           // Legacy types
           "gst", "aadhar", "fleet_proof", "other"
         ]),

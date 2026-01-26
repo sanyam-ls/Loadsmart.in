@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
-import { Truck, MapPin, Package, FileText, ArrowRight, Upload, X, Loader2, Shield } from "lucide-react";
+import { Truck, MapPin, Package, FileText, ArrowRight, Upload, X, Loader2, Shield, Check, ChevronsUpDown, Search } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { indianTruckManufacturers, getModelsByManufacturer } from "@shared/indian-truck-data";
@@ -85,6 +88,15 @@ export default function AddTruckPage() {
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isSoloCarrier = carrierType === "solo";
+  const [truckTypeOpen, setTruckTypeOpen] = useState(false);
+  
+  // Create a flat list of all truck types with category info for searching
+  const allTruckTypes = useMemo(() => {
+    return indianTruckTypes.map(type => ({
+      ...type,
+      categoryLabel: categoryLabels[type.category] || type.category,
+    }));
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -350,29 +362,59 @@ export default function AddTruckPage() {
                   control={form.control}
                   name="truckType"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Truck Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-truck-type">
-                            <SelectValue placeholder="Select truck type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-[300px]">
-                          {truckCategories.map((category) => (
-                            <SelectGroup key={category}>
-                              <SelectLabel className="text-xs font-semibold text-muted-foreground">
-                                {categoryLabels[category]}
-                              </SelectLabel>
-                              {truckTypesByCategory[category]?.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                  {type.label}
-                                </SelectItem>
+                      <Popover open={truckTypeOpen} onOpenChange={setTruckTypeOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={truckTypeOpen}
+                              className={cn(
+                                "w-full justify-between font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              data-testid="select-truck-type"
+                            >
+                              {field.value
+                                ? allTruckTypes.find((type) => type.value === field.value)?.label
+                                : "Select truck type"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search truck type..." />
+                            <CommandList className="max-h-[300px]">
+                              <CommandEmpty>No truck type found.</CommandEmpty>
+                              {truckCategories.map((category) => (
+                                <CommandGroup key={category} heading={categoryLabels[category]}>
+                                  {truckTypesByCategory[category]?.map((type) => (
+                                    <CommandItem
+                                      key={type.value}
+                                      value={`${type.label} ${categoryLabels[category]}`}
+                                      onSelect={() => {
+                                        field.onChange(type.value);
+                                        setTruckTypeOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          field.value === type.value ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {type.label}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
                               ))}
-                            </SelectGroup>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}

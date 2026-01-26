@@ -961,7 +961,7 @@ export default function CarrierOnboarding() {
                           <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit}>
                             <FormControl>
                               <SelectTrigger data-testid="select-incorporation">
-                                <SelectValue />
+                                <SelectValue placeholder="Select company type" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -982,7 +982,7 @@ export default function CarrierOnboarding() {
                         <FormItem>
                           <FormLabel>{t("carrierOnboarding.businessRegNumber")} *</FormLabel>
                           <FormControl>
-                            <Input {...field} disabled={!canEdit} data-testid="input-business-reg" />
+                            <Input {...field} placeholder="CIN / LLPIN / Registration Number" disabled={!canEdit} data-testid="input-business-reg" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -995,7 +995,7 @@ export default function CarrierOnboarding() {
                         <FormItem>
                           <FormLabel>{t("carrierOnboarding.businessAddress")} *</FormLabel>
                           <FormControl>
-                            <Input {...field} disabled={!canEdit} data-testid="input-business-address" />
+                            <Input {...field} placeholder="Registered office address" disabled={!canEdit} data-testid="input-business-address" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

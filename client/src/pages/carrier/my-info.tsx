@@ -91,7 +91,8 @@ type ProfileFormData = z.infer<typeof profileFormSchema>;
 const documentTypeLabels: Record<string, string> = {
   license: "Driving License",
   pan_card: "PAN Card",
-  aadhar: "Aadhar Card",
+  aadhar: "Aadhaar Card",
+  aadhaar: "Aadhaar Card",
 };
 
 const badgeLevelStyles: Record<string, string> = {

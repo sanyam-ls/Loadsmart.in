@@ -8005,7 +8005,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       
       const truck = trucks[0];
       const driverDocs = allDocs.filter(d => 
-        ["license", "pan_card", "aadhar"].includes(d.documentType)
+        ["license", "pan_card", "aadhar", "aadhaar"].includes(d.documentType)
       );
       const completedTrips = shipments.filter(s => s.status === "delivered").length;
       const totalTrips = shipments.length;

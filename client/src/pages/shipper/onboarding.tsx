@@ -37,6 +37,57 @@ import { useAuth } from "@/lib/auth-context";
 import { indianStates } from "@shared/indian-locations";
 import { DocumentUploadWithCamera } from "@/components/DocumentUploadWithCamera";
 
+// Helper function to parse address and extract state/city/pincode
+function parseAddressForDropdowns(address: string): { state: string; city: string; pincode: string } {
+  const result = { state: "", city: "", pincode: "" };
+  if (!address) return result;
+  
+  // Normalize the address for matching
+  const normalizedAddress = address.toLowerCase().trim();
+  
+  // Extract pincode (6 digit number)
+  const pincodeMatch = address.match(/\b(\d{6})\b/);
+  if (pincodeMatch) {
+    result.pincode = pincodeMatch[1];
+  }
+  
+  // Try to find matching state from indianStates list
+  for (const stateData of indianStates) {
+    const stateName = stateData.name.toLowerCase();
+    // Check if state name appears in the address
+    if (normalizedAddress.includes(stateName)) {
+      result.state = stateData.name;
+      
+      // Now try to find a matching city within this state
+      for (const cityData of stateData.cities) {
+        const cityName = cityData.name.toLowerCase();
+        if (normalizedAddress.includes(cityName)) {
+          result.city = cityData.name;
+          break;
+        }
+      }
+      break;
+    }
+  }
+  
+  // If no state found, try matching by city first (might help identify state)
+  if (!result.state) {
+    for (const stateData of indianStates) {
+      for (const cityData of stateData.cities) {
+        const cityName = cityData.name.toLowerCase();
+        if (normalizedAddress.includes(cityName)) {
+          result.state = stateData.name;
+          result.city = cityData.name;
+          break;
+        }
+      }
+      if (result.state) break;
+    }
+  }
+  
+  return result;
+}
+
 const onboardingFormSchema = z.object({
   legalCompanyName: z.string().min(1, "Company name is required"),
   tradeName: z.string().optional(),
@@ -140,6 +191,27 @@ export default function ShipperOnboarding() {
   // Pre-populate form with existing data (draft, pending, under_review, on_hold, rejected)
   useEffect(() => {
     if (onboardingStatus && (onboardingStatus.status === "draft" || onboardingStatus.status === "pending" || onboardingStatus.status === "under_review" || onboardingStatus.status === "on_hold" || onboardingStatus.status === "rejected")) {
+      // Get the address to use (from onboarding or user)
+      const addressToUse = onboardingStatus.registeredAddress || user?.companyAddress || "";
+      
+      // Parse address to extract state/city/pincode if not already set in onboarding
+      let parsedState = onboardingStatus.registeredState || "";
+      let parsedCity = onboardingStatus.registeredCity || "";
+      let parsedPincode = onboardingStatus.registeredPincode || "";
+      
+      // If state is empty but we have an address, try to parse it
+      if (!parsedState && addressToUse) {
+        const parsed = parseAddressForDropdowns(addressToUse);
+        if (parsed.state) parsedState = parsed.state;
+        if (parsed.city && !parsedCity) parsedCity = parsed.city;
+        if (parsed.pincode && !parsedPincode) parsedPincode = parsed.pincode;
+      }
+      
+      // Fallback to user's defaultPickupCity if city still empty
+      if (!parsedCity && user?.defaultPickupCity) {
+        parsedCity = user.defaultPickupCity;
+      }
+      
       const draftData: Partial<OnboardingFormData> = {
         legalCompanyName: onboardingStatus.legalCompanyName || user?.companyName || "",
         tradeName: onboardingStatus.tradeName || "",
@@ -148,13 +220,13 @@ export default function ShipperOnboarding() {
         gstinNumber: onboardingStatus.gstinNumber || "",
         cinNumber: onboardingStatus.cinNumber || "",
         incorporationDate: onboardingStatus.incorporationDate ? onboardingStatus.incorporationDate.split('T')[0] : "",
-        registeredAddress: onboardingStatus.registeredAddress || user?.companyAddress || "",
+        registeredAddress: addressToUse,
         registeredLocality: onboardingStatus.registeredLocality || "",
-        registeredCity: onboardingStatus.registeredCity || user?.defaultPickupCity || "",
+        registeredCity: parsedCity,
         registeredCityCustom: onboardingStatus.registeredCityCustom || "",
-        registeredState: onboardingStatus.registeredState || "",
+        registeredState: parsedState,
         registeredCountry: onboardingStatus.registeredCountry || "India",
-        registeredPincode: onboardingStatus.registeredPincode || "",
+        registeredPincode: parsedPincode,
         operatingRegions: onboardingStatus.operatingRegions || [],
         primaryCommodities: onboardingStatus.primaryCommodities || [],
         estimatedMonthlyLoads: onboardingStatus.estimatedMonthlyLoads || undefined,
@@ -195,8 +267,20 @@ export default function ShipperOnboarding() {
       }
       if (user.companyAddress) {
         initialData.registeredAddress = user.companyAddress;
+        
+        // Parse address to extract state/city/pincode for dropdowns
+        const parsed = parseAddressForDropdowns(user.companyAddress);
+        if (parsed.state) {
+          initialData.registeredState = parsed.state;
+        }
+        if (parsed.city) {
+          initialData.registeredCity = parsed.city;
+        }
+        if (parsed.pincode) {
+          initialData.registeredPincode = parsed.pincode;
+        }
       }
-      if (user.defaultPickupCity) {
+      if (user.defaultPickupCity && !initialData.registeredCity) {
         initialData.registeredCity = user.defaultPickupCity;
       }
       if (user.phone) {

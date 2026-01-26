@@ -43,7 +43,7 @@ const truckFormSchema = z.object({
   capacityUnit: z.string().default("tons"),
   currentLocationState: z.string().min(1, "State is required"),
   currentLocationCity: z.string().min(1, "City is required"),
-  isAvailable: z.boolean().default(true),
+  isAvailable: z.boolean().default(false),
   manufacturerId: z.string().min(1, "Manufacturer is required"),
   model: z.string().min(1, "Model is required"),
   year: z.string().min(1, "Year is required"),
@@ -153,7 +153,7 @@ export default function AddTruckPage() {
       capacityUnit: "tons",
       currentLocationState: "",
       currentLocationCity: "",
-      isAvailable: true,
+      isAvailable: false,
       manufacturerId: "",
       model: "",
       year: "",
@@ -569,6 +569,27 @@ export default function AddTruckPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="isAvailable"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <FormLabel className="text-base">Available for loads</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Mark this truck as available to receive load recommendations
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-available"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -629,27 +650,6 @@ export default function AddTruckPage() {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="isAvailable"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                      <FormLabel className="text-base">Available for loads</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Mark this truck as available to receive load recommendations
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        data-testid="switch-available"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
             </CardContent>
           </Card>
 

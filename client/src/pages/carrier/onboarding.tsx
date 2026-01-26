@@ -58,19 +58,22 @@ const soloFormSchema = z.object({
 
 const fleetFormSchema = z.object({
   carrierType: z.literal("enterprise"),
-  incorporationType: z.enum(["pvt_ltd", "llp", "proprietorship", "partnership"]),
-  businessRegistrationNumber: z.string().min(1, "Registration number is required"),
-  businessAddress: z.string().min(1, "Business address is required"),
+  // Identity tab fields
   panNumber: z.string().min(10, "PAN must be 10 characters").max(10),
-  gstinNumber: z.string().min(15, "GSTIN must be 15 characters").max(15),
-  tanNumber: z.string().min(10, "TAN must be 10 characters").max(10),
+  gstinNumber: z.string().optional(), // GSTIN is optional
+  businessAddress: z.string().min(1, "Business address is required"),
   fleetSize: z.number().int().min(1),
-  incorporationUrl: z.string().optional(),
-  tradeLicenseUrl: z.string().optional(),
-  addressProofUrl: z.string().optional(),
+  // Vehicle tab fields (for one truck)
+  licensePlateNumber: z.string().min(1, "License plate is required"),
+  chassisNumber: z.string().min(1, "Chassis number is required"),
+  uniqueRegistrationNumber: z.string().optional(),
+  permitType: z.enum(["national", "domestic"]),
+  // Document URLs
   panUrl: z.string().optional(),
   gstinUrl: z.string().optional(),
-  tanUrl: z.string().optional(),
+  rcUrl: z.string().optional(),
+  insuranceUrl: z.string().optional(),
+  fitnessUrl: z.string().optional(),
   // Bank details
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
@@ -159,19 +162,19 @@ export default function CarrierOnboarding() {
     resolver: zodResolver(fleetFormSchema),
     defaultValues: {
       carrierType: "enterprise",
-      incorporationType: "pvt_ltd",
-      businessRegistrationNumber: "",
-      businessAddress: "",
       panNumber: "",
       gstinNumber: "",
-      tanNumber: "",
+      businessAddress: "",
       fleetSize: 1,
-      incorporationUrl: "",
-      tradeLicenseUrl: "",
-      addressProofUrl: "",
+      licensePlateNumber: "",
+      chassisNumber: "",
+      uniqueRegistrationNumber: "",
+      permitType: "national",
       panUrl: "",
       gstinUrl: "",
-      tanUrl: "",
+      rcUrl: "",
+      insuranceUrl: "",
+      fitnessUrl: "",
       bankName: "",
       bankAccountNumber: "",
       bankIfscCode: "",
@@ -212,19 +215,19 @@ export default function CarrierOnboarding() {
       } else {
         const formData = {
           carrierType: "enterprise" as const,
-          incorporationType: (onboardingStatus.incorporationType as "pvt_ltd" | "llp" | "proprietorship" | "partnership") || "pvt_ltd",
-          businessRegistrationNumber: onboardingStatus.businessRegistrationNumber || "",
-          businessAddress: onboardingStatus.businessAddress || "",
           panNumber: onboardingStatus.panNumber || "",
           gstinNumber: onboardingStatus.gstinNumber || "",
-          tanNumber: onboardingStatus.tanNumber || "",
+          businessAddress: onboardingStatus.businessAddress || "",
           fleetSize: onboardingStatus.fleetSize || 1,
-          incorporationUrl: onboardingStatus.documents.find(d => d.documentType === "incorporation")?.fileUrl || "",
-          tradeLicenseUrl: onboardingStatus.documents.find(d => d.documentType === "trade_license")?.fileUrl || "",
-          addressProofUrl: onboardingStatus.documents.find(d => d.documentType === "address_proof")?.fileUrl || "",
+          licensePlateNumber: onboardingStatus.licensePlateNumber || "",
+          chassisNumber: onboardingStatus.chassisNumber || "",
+          uniqueRegistrationNumber: onboardingStatus.uniqueRegistrationNumber || "",
+          permitType: (onboardingStatus.permitType as "national" | "domestic") || "national",
           panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
           gstinUrl: onboardingStatus.documents.find(d => d.documentType === "gstin")?.fileUrl || "",
-          tanUrl: onboardingStatus.documents.find(d => d.documentType === "tan")?.fileUrl || "",
+          rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
+          insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
+          fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
           bankName: onboardingStatus.bankName || "",
           bankAccountNumber: onboardingStatus.bankAccountNumber || "",
           bankIfscCode: onboardingStatus.bankIfscCode || "",
@@ -415,26 +418,23 @@ export default function CarrierOnboarding() {
       const values = fleetForm.getValues();
       const missingFields: string[] = [];
       
-      // Check Business tab fields
-      if (!values.incorporationType) {
-        missingFields.push("Incorporation Type (Business tab)");
-      }
-      if (!values.businessRegistrationNumber) {
-        missingFields.push("Business Registration Number (Business tab)");
+      // Check Identity tab fields
+      if (!values.panNumber || values.panNumber.length < 10) {
+        missingFields.push("PAN Number (Identity tab)");
       }
       if (!values.businessAddress) {
-        missingFields.push("Business Address (Business tab)");
+        missingFields.push("Business Address (Identity tab)");
       }
       
-      // Check Compliance tab fields
-      if (!values.panNumber || values.panNumber.length < 10) {
-        missingFields.push("PAN Number (Compliance tab)");
+      // Check Vehicle tab fields
+      if (!values.licensePlateNumber) {
+        missingFields.push("License Plate Number (Vehicle tab)");
       }
-      if (!values.gstinNumber || values.gstinNumber.length < 15) {
-        missingFields.push("GSTIN Number (Compliance tab)");
+      if (!values.chassisNumber) {
+        missingFields.push("Chassis Number (Vehicle tab)");
       }
-      if (!values.tanNumber || values.tanNumber.length < 10) {
-        missingFields.push("TAN Number (Compliance tab)");
+      if (!values.permitType) {
+        missingFields.push("Permit Type (Vehicle tab)");
       }
       
       if (missingFields.length > 0) {
@@ -444,9 +444,9 @@ export default function CarrierOnboarding() {
           description: `Please fill in the following required fields: ${missingFields.join(", ")}`,
         });
         // Navigate to the appropriate tab
-        if (missingFields.some(f => f.includes("Business"))) {
+        if (missingFields.some(f => f.includes("Identity"))) {
           setActiveTab("identity");
-        } else if (missingFields.some(f => f.includes("Compliance"))) {
+        } else if (missingFields.some(f => f.includes("Vehicle"))) {
           setActiveTab("vehicle");
         }
         return;
@@ -928,12 +928,12 @@ export default function CarrierOnboarding() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="identity" className="gap-2">
-                  <Building2 className="h-4 w-4" />
-                  {t("carrierOnboarding.businessTab")}
+                  <IdCard className="h-4 w-4" />
+                  {t("carrierOnboarding.identityTab")}
                 </TabsTrigger>
                 <TabsTrigger value="vehicle" className="gap-2">
-                  <Shield className="h-4 w-4" />
-                  {t("carrierOnboarding.complianceTab")}
+                  <Truck className="h-4 w-4" />
+                  {t("carrierOnboarding.vehicleTab")}
                 </TabsTrigger>
                 <TabsTrigger value="bank" className="gap-2">
                   <CreditCard className="h-4 w-4" />
@@ -948,41 +948,31 @@ export default function CarrierOnboarding() {
               <TabsContent value="identity">
                 <Card>
                   <CardHeader>
-                    <CardTitle>{t("carrierOnboarding.businessInfo")}</CardTitle>
-                    <CardDescription>{t("carrierOnboarding.businessInfoDesc")}</CardDescription>
+                    <CardTitle>Business Information</CardTitle>
+                    <CardDescription>Provide your company identity details for verification</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <FormField
                       control={fleetForm.control}
-                      name="incorporationType"
+                      name="panNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("carrierOnboarding.incorporationType")} *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-incorporation">
-                                <SelectValue placeholder="Select company type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="pvt_ltd">{t("carrierOnboarding.pvtLtd")}</SelectItem>
-                              <SelectItem value="llp">{t("carrierOnboarding.llp")}</SelectItem>
-                              <SelectItem value="proprietorship">{t("carrierOnboarding.proprietorship")}</SelectItem>
-                              <SelectItem value="partnership">{t("carrierOnboarding.partnership")}</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>PAN Number *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="XXXXX0000X" maxLength={10} disabled={!canEdit} data-testid="input-fleet-pan" />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
                       control={fleetForm.control}
-                      name="businessRegistrationNumber"
+                      name="gstinNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("carrierOnboarding.businessRegNumber")} *</FormLabel>
+                          <FormLabel>GSTIN Number (Optional)</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="CIN / LLPIN / Registration Number" disabled={!canEdit} data-testid="input-business-reg" />
+                            <Input {...field} placeholder="22XXXXX0000X1Z5" maxLength={15} disabled={!canEdit} data-testid="input-fleet-gstin" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -993,9 +983,9 @@ export default function CarrierOnboarding() {
                       name="businessAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("carrierOnboarding.businessAddress")} *</FormLabel>
+                          <FormLabel>Business Address *</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Registered office address" disabled={!canEdit} data-testid="input-business-address" />
+                            <Input {...field} placeholder="Registered office address" disabled={!canEdit} data-testid="input-fleet-business-address" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1006,7 +996,7 @@ export default function CarrierOnboarding() {
                       name="fleetSize"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("carrierOnboarding.fleetSize")} *</FormLabel>
+                          <FormLabel>Fleet Size (Number of Trucks) *</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 
@@ -1029,18 +1019,18 @@ export default function CarrierOnboarding() {
               <TabsContent value="vehicle">
                 <Card>
                   <CardHeader>
-                    <CardTitle>{t("carrierOnboarding.taxCompliance")}</CardTitle>
-                    <CardDescription>{t("carrierOnboarding.taxComplianceDesc")}</CardDescription>
+                    <CardTitle>{t("carrierOnboarding.vehicleInfo")}</CardTitle>
+                    <CardDescription>Provide details for one of your trucks</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <FormField
                       control={fleetForm.control}
-                      name="panNumber"
+                      name="licensePlateNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("carrierOnboarding.panNumber")} *</FormLabel>
+                          <FormLabel>{t("carrierOnboarding.licensePlate")} *</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="XXXXX0000X" maxLength={10} disabled={!canEdit} data-testid="input-pan" />
+                            <Input {...field} placeholder="MH-01-AB-1234" disabled={!canEdit} data-testid="input-fleet-plate" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1048,12 +1038,12 @@ export default function CarrierOnboarding() {
                     />
                     <FormField
                       control={fleetForm.control}
-                      name="gstinNumber"
+                      name="chassisNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("carrierOnboarding.gstinNumber")} *</FormLabel>
+                          <FormLabel>{t("carrierOnboarding.chassisNumber")} *</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="22XXXXX0000X1Z5" maxLength={15} disabled={!canEdit} data-testid="input-gstin" />
+                            <Input {...field} placeholder="XXXXXXXXXXXXXXXXX" disabled={!canEdit} data-testid="input-fleet-chassis" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1061,13 +1051,34 @@ export default function CarrierOnboarding() {
                     />
                     <FormField
                       control={fleetForm.control}
-                      name="tanNumber"
+                      name="uniqueRegistrationNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("carrierOnboarding.tanNumber")} *</FormLabel>
+                          <FormLabel>{t("carrierOnboarding.registrationNumber")}</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="XXXX00000X" maxLength={10} disabled={!canEdit} data-testid="input-tan" />
+                            <Input {...field} placeholder="RC number" disabled={!canEdit} data-testid="input-fleet-reg-number" />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={fleetForm.control}
+                      name="permitType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("carrierOnboarding.permitType")} *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-fleet-permit-type">
+                                <SelectValue placeholder="Select permit type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="national">{t("carrierOnboarding.nationalPermit")}</SelectItem>
+                              <SelectItem value="domestic">{t("carrierOnboarding.domesticPermit")}</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1155,47 +1166,12 @@ export default function CarrierOnboarding() {
                 <Card>
                   <CardHeader>
                     <CardTitle>{t("carrierOnboarding.requiredDocs")}</CardTitle>
-                    <CardDescription>{t("carrierOnboarding.requiredDocsDescFleet")}</CardDescription>
+                    <CardDescription>Upload your company and vehicle documents for verification</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid gap-4">
                       <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.incorporationDoc")} *</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("incorporationUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("incorporationUrl", val);
-                            handleDocumentUpload("incorporation", val);
-                          }}
-                          disabled={!canEdit}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.tradeLicenseDoc")} *</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("tradeLicenseUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("tradeLicenseUrl", val);
-                            handleDocumentUpload("trade_license", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="trade_license"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.addressProofDoc")} *</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("addressProofUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("addressProofUrl", val);
-                            handleDocumentUpload("address_proof", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="address_proof"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.panDoc")} *</label>
+                        <label className="text-sm font-medium mb-2 block">PAN Card *</label>
                         <DocumentUploadWithCamera
                           value={fleetForm.watch("panUrl") || ""}
                           onChange={(val) => {
@@ -1207,7 +1183,7 @@ export default function CarrierOnboarding() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.gstinDoc")} *</label>
+                        <label className="text-sm font-medium mb-2 block">GSTIN Certificate (Optional)</label>
                         <DocumentUploadWithCamera
                           value={fleetForm.watch("gstinUrl") || ""}
                           onChange={(val) => {
@@ -1219,15 +1195,39 @@ export default function CarrierOnboarding() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.tanDoc")} *</label>
+                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.rcDoc")} *</label>
                         <DocumentUploadWithCamera
-                          value={fleetForm.watch("tanUrl") || ""}
+                          value={fleetForm.watch("rcUrl") || ""}
                           onChange={(val) => {
-                            fleetForm.setValue("tanUrl", val);
-                            handleDocumentUpload("tan", val);
+                            fleetForm.setValue("rcUrl", val);
+                            handleDocumentUpload("rc", val);
                           }}
                           disabled={!canEdit}
-                          documentType="tan_certificate"
+                          documentType="rc"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.insuranceDoc")} *</label>
+                        <DocumentUploadWithCamera
+                          value={fleetForm.watch("insuranceUrl") || ""}
+                          onChange={(val) => {
+                            fleetForm.setValue("insuranceUrl", val);
+                            handleDocumentUpload("insurance", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="insurance"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.fitnessDoc")} *</label>
+                        <DocumentUploadWithCamera
+                          value={fleetForm.watch("fitnessUrl") || ""}
+                          onChange={(val) => {
+                            fleetForm.setValue("fitnessUrl", val);
+                            handleDocumentUpload("fitness", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="fitness"
                         />
                       </div>
                     </div>

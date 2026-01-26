@@ -13195,6 +13195,127 @@ RESPOND IN THIS EXACT JSON FORMAT:
   });
 
   // =============================================
+  // OTP LOGIN - Login using phone OTP (no password required)
+  // =============================================
+
+  // Send OTP for login
+  app.post("/api/auth/login-otp/send", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) {
+        return res.status(400).json({ error: "Phone number is required" });
+      }
+
+      // Validate phone format
+      const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/;
+      const cleanedPhone = phone.replace(/[\s-]/g, "");
+      if (!phoneRegex.test(cleanedPhone)) {
+        return res.status(400).json({ error: "Invalid Indian phone number format" });
+      }
+
+      // Normalize phone number - try multiple formats for lookup
+      // Users might have stored their phone as +91XXXXXXXXXX or XXXXXXXXXX
+      const normalizedPhone = cleanedPhone.startsWith("+91") ? cleanedPhone : `+91 ${cleanedPhone}`;
+      const phoneWithoutCode = cleanedPhone.replace(/^\+91/, "");
+      
+      // Try finding user with different phone formats
+      let user = await storage.getUserByPhone(phone);
+      if (!user) {
+        user = await storage.getUserByPhone(normalizedPhone);
+      }
+      if (!user) {
+        user = await storage.getUserByPhone(phoneWithoutCode);
+      }
+      if (!user) {
+        user = await storage.getUserByPhone(`+91${phoneWithoutCode}`);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ error: "No account found with this phone number. Please register first." });
+      }
+
+      // Generate OTP
+      const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      const otp = await storage.createOtpVerification({
+        otpType: "login",
+        otpCode,
+        userId: user.id,
+        phoneNumber: phone,
+        validityMinutes: 10,
+        expiresAt,
+        status: "pending",
+      });
+
+      // Since no SMS service is configured, return OTP in response for demo
+      res.json({ 
+        success: true, 
+        message: "OTP sent to your phone",
+        otpId: otp.id,
+        otpCode: otpCode, // Displayed in-app for demo since no SMS service configured
+      });
+    } catch (error: any) {
+      console.error("Send login OTP error:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+
+  // Verify OTP and login
+  app.post("/api/auth/login-otp/verify", async (req, res) => {
+    try {
+      const { otpId, otpCode } = req.body;
+      if (!otpId || !otpCode) {
+        return res.status(400).json({ error: "OTP ID and code are required" });
+      }
+
+      // Verify OTP
+      const result = await storage.verifyOtp(otpId, otpCode);
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      // Validate OTP type is specifically for login (security: prevent cross-purpose OTP reuse)
+      if (result.otp?.otpType !== "login") {
+        return res.status(400).json({ error: "Invalid OTP type - this code cannot be used for login" });
+      }
+
+      // Get the user from OTP
+      if (!result.otp?.userId) {
+        return res.status(400).json({ error: "Invalid OTP - no user associated" });
+      }
+
+      const user = await storage.getUser(result.otp.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Create session
+      req.session.userId = user.id;
+      req.session.role = user.role;
+      
+      // Save session
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      // Return user data (excluding password)
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ 
+        success: true, 
+        message: "Login successful",
+        user: userWithoutPassword,
+      });
+    } catch (error) {
+      console.error("Verify login OTP error:", error);
+      res.status(500).json({ error: "Failed to verify OTP" });
+    }
+  });
+
+  // =============================================
   // SHIPPER RATINGS - Carriers rate shippers after trip completion
   // =============================================
 

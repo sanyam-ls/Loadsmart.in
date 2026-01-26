@@ -116,6 +116,17 @@ export default function AuthPage() {
   const [verifiedPhone, setVerifiedPhone] = useState("");
   
   
+  // Login method toggle (password vs OTP)
+  const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginOtpSent, setLoginOtpSent] = useState(false);
+  const [loginOtpId, setLoginOtpId] = useState("");
+  const [loginOtpCode, setLoginOtpCode] = useState("");
+  const [loginEnteredOtp, setLoginEnteredOtp] = useState("");
+  const [sendingLoginOtp, setSendingLoginOtp] = useState(false);
+  const [verifyingLoginOtp, setVerifyingLoginOtp] = useState(false);
+  const [loginOtpCountdown, setLoginOtpCountdown] = useState(0);
+  
   // Forgot password state
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [resetStep, setResetStep] = useState<"email" | "otp" | "password">("email");
@@ -149,6 +160,13 @@ export default function AuthPage() {
       return () => clearTimeout(timer);
     }
   }, [otpCountdown]);
+
+  useEffect(() => {
+    if (loginOtpCountdown > 0) {
+      const timer = setTimeout(() => setLoginOtpCountdown(loginOtpCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loginOtpCountdown]);
 
   
   const handleSendOtp = async () => {
@@ -221,6 +239,79 @@ export default function AuthPage() {
       toast({ title: "Error", description: "Failed to verify OTP. Please try again.", variant: "destructive" });
     } finally {
       setVerifyingOtp(false);
+    }
+  };
+
+  // Login OTP handlers
+  const handleSendLoginOtp = async () => {
+    if (!loginPhone.trim()) {
+      toast({ title: "Phone Required", description: "Please enter your phone number.", variant: "destructive" });
+      return;
+    }
+
+    const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/;
+    if (!phoneRegex.test(loginPhone.replace(/[\s-]/g, ""))) {
+      toast({ title: "Invalid Phone", description: "Please enter a valid Indian phone number.", variant: "destructive" });
+      return;
+    }
+
+    setSendingLoginOtp(true);
+    try {
+      const response = await fetch("/api/auth/login-otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: loginPhone }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setLoginOtpSent(true);
+        setLoginOtpCountdown(60);
+        setLoginOtpId(data.otpId);
+        setLoginOtpCode(data.otpCode);
+        toast({ 
+          title: "OTP Sent!", 
+          description: `Your login code is: ${data.otpCode}. This code is displayed here for demo purposes.`,
+          duration: 15000,
+        });
+      } else {
+        toast({ title: "Failed to send OTP", description: data.error || "Please try again.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to send OTP. Please try again.", variant: "destructive" });
+    } finally {
+      setSendingLoginOtp(false);
+    }
+  };
+
+  const handleVerifyLoginOtp = async () => {
+    if (!loginOtpId || loginEnteredOtp.length !== 6) {
+      toast({ title: "Invalid OTP", description: "Please enter the 6-digit code.", variant: "destructive" });
+      return;
+    }
+
+    setVerifyingLoginOtp(true);
+    try {
+      const response = await fetch("/api/auth/login-otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ otpId: loginOtpId, otpCode: loginEnteredOtp }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({ title: "Welcome back!", description: "You've been logged in successfully." });
+        window.location.href = "/";
+      } else {
+        toast({ title: "Invalid OTP", description: data.error || "The code you entered doesn't match. Please try again.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to verify OTP. Please try again.", variant: "destructive" });
+    } finally {
+      setVerifyingLoginOtp(false);
     }
   };
 
@@ -531,66 +622,207 @@ export default function AuthPage() {
                 </TabsList>
 
                 <TabsContent value="login">
-                  <Form {...loginForm}>
-                    <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-                      <FormField
-                        control={loginForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Username, Email or Phone</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter username, email or phone" {...field} data-testid="input-login-username" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={loginForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("auth.password")}</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type={showPassword ? "text" : "password"}
-                                  placeholder="Enter your password"
-                                  {...field}
-                                  data-testid="input-login-password"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute right-0 top-0 h-full"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                >
-                                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
-                        {isLoading ? t("common.loading") : t("auth.signIn")}
+                  <div className="space-y-4">
+                    <div className="flex gap-2 p-1 bg-muted rounded-lg">
+                      <Button
+                        type="button"
+                        variant={loginMethod === "password" ? "default" : "ghost"}
+                        className="flex-1"
+                        onClick={() => {
+                          setLoginMethod("password");
+                          setLoginOtpSent(false);
+                          setLoginEnteredOtp("");
+                        }}
+                        data-testid="button-login-password"
+                      >
+                        <KeyRound className="h-4 w-4 mr-2" />
+                        Password
                       </Button>
-                      <div className="text-center">
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          className="text-sm text-muted-foreground p-0 h-auto"
-                          onClick={handleForgotPasswordOpen}
-                          data-testid="link-forgot-password"
-                        >
-                          Forgot your password?
-                        </Button>
+                      <Button
+                        type="button"
+                        variant={loginMethod === "otp" ? "default" : "ghost"}
+                        className="flex-1"
+                        onClick={() => {
+                          setLoginMethod("otp");
+                          loginForm.reset();
+                        }}
+                        data-testid="button-login-otp"
+                      >
+                        <Phone className="h-4 w-4 mr-2" />
+                        Phone OTP
+                      </Button>
+                    </div>
+
+                    {loginMethod === "password" ? (
+                      <Form {...loginForm}>
+                        <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                          <FormField
+                            control={loginForm.control}
+                            name="username"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Username, Email or Phone</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Enter username, email or phone" {...field} data-testid="input-login-username" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={loginForm.control}
+                            name="password"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("auth.password")}</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input
+                                      type={showPassword ? "text" : "password"}
+                                      placeholder="Enter your password"
+                                      {...field}
+                                      data-testid="input-login-password"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-0 top-0 h-full"
+                                      onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
+                            {isLoading ? t("common.loading") : t("auth.signIn")}
+                          </Button>
+                          <div className="text-center">
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              className="text-sm text-muted-foreground p-0 h-auto"
+                              onClick={handleForgotPasswordOpen}
+                              data-testid="link-forgot-password"
+                            >
+                              Forgot your password?
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    ) : (
+                      <div className="space-y-4">
+                        {!loginOtpSent ? (
+                          <>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Phone Number</label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="tel"
+                                  placeholder="+91 9876543210"
+                                  value={loginPhone}
+                                  onChange={(e) => setLoginPhone(e.target.value)}
+                                  data-testid="input-login-phone"
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Enter the phone number registered with your account
+                              </p>
+                            </div>
+                            <Button 
+                              type="button" 
+                              className="w-full" 
+                              onClick={handleSendLoginOtp}
+                              disabled={sendingLoginOtp || !loginPhone.trim()}
+                              data-testid="button-send-login-otp"
+                            >
+                              {sendingLoginOtp ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <Phone className="h-4 w-4 mr-2" />
+                                  Send OTP
+                                </>
+                              )}
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-center p-4 bg-primary/10 rounded-lg">
+                              <Phone className="h-8 w-8 mx-auto mb-2 text-primary" />
+                              <p className="text-sm font-medium">OTP sent to {loginPhone}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Demo Code: <span className="font-mono font-bold">{loginOtpCode}</span>
+                              </p>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Enter 6-digit OTP</label>
+                              <Input
+                                type="text"
+                                placeholder="000000"
+                                maxLength={6}
+                                value={loginEnteredOtp}
+                                onChange={(e) => setLoginEnteredOtp(e.target.value.replace(/\D/g, ""))}
+                                className="text-center text-lg tracking-widest font-mono"
+                                data-testid="input-login-otp-code"
+                              />
+                            </div>
+                            <Button 
+                              type="button" 
+                              className="w-full" 
+                              onClick={handleVerifyLoginOtp}
+                              disabled={verifyingLoginOtp || loginEnteredOtp.length !== 6}
+                              data-testid="button-verify-login-otp"
+                            >
+                              {verifyingLoginOtp ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Verifying...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Verify & Sign In
+                                </>
+                              )}
+                            </Button>
+                            <div className="flex items-center justify-between text-sm">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setLoginOtpSent(false);
+                                  setLoginEnteredOtp("");
+                                }}
+                                data-testid="button-change-login-phone"
+                              >
+                                <ArrowLeft className="h-4 w-4 mr-1" />
+                                Change number
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleSendLoginOtp}
+                                disabled={loginOtpCountdown > 0 || sendingLoginOtp}
+                                data-testid="button-resend-login-otp"
+                              >
+                                {loginOtpCountdown > 0 ? `Resend in ${loginOtpCountdown}s` : "Resend OTP"}
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    </form>
-                  </Form>
+                    )}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="register">

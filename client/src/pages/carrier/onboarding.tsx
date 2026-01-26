@@ -1215,7 +1215,7 @@ export default function CarrierOnboarding() {
                   <CardContent className="space-y-6">
                     <div className="grid gap-4">
                       <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.aadhaarDoc")} *</label>
+                        <label className="text-sm font-medium mb-2 block">Aadhaar Card *</label>
                         <DocumentUploadWithCamera
                           value={fleetForm.watch("aadhaarUrl") || ""}
                           onChange={(val) => {
@@ -1227,7 +1227,7 @@ export default function CarrierOnboarding() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.licenseDoc")} *</label>
+                        <label className="text-sm font-medium mb-2 block">Driver's License *</label>
                         <DocumentUploadWithCamera
                           value={fleetForm.watch("licenseUrl") || ""}
                           onChange={(val) => {

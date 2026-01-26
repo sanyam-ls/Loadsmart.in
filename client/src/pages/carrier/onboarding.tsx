@@ -1011,6 +1011,7 @@ export default function CarrierOnboarding() {
                             <Input 
                               type="number" 
                               min={1} 
+                              placeholder="Number of trucks in your fleet"
                               {...field} 
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
                               disabled={!canEdit} 

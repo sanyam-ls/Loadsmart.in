@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Truck, Search, FileText, ChevronLeft, Eye, ExternalLink,
-  ShieldCheck, ShieldX, ShieldAlert, Clock,
+  ShieldCheck, ShieldX, ShieldAlert, Clock, CreditCard,
   CheckCircle, XCircle, User, Building2, MapPin, Phone,
   ChevronDown, Info, Image, FileType, Ruler, PauseCircle
 } from "lucide-react";
@@ -74,6 +74,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   pan_card: "PAN Card",
   gstin_certificate: "GSTIN Certificate",
   tan_certificate: "TAN Certificate",
+  void_cheque: "Void Cheque / Cancelled Cheque",
 };
 
 // Helper to get document display name
@@ -154,6 +155,11 @@ interface CarrierVerification {
   panNumber?: string;
   gstinNumber?: string;
   tanNumber?: string;
+  // Bank details
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfscCode?: string;
+  bankAccountHolderName?: string;
 }
 
 interface VerificationDocument {
@@ -848,6 +854,36 @@ export default function CarrierVerificationPage() {
                       <div>
                         <Label className="text-muted-foreground">Fleet Size</Label>
                         <p className="font-medium">{selectedVerification.fleetSize || 1} truck(s)</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Bank Details */}
+                {(selectedVerification.bankName || selectedVerification.bankAccountNumber || selectedVerification.bankIfscCode || selectedVerification.bankAccountHolderName) && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-green-600" />
+                        Bank Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="text-muted-foreground">Account Holder Name</Label>
+                        <p className="font-medium">{selectedVerification.bankAccountHolderName || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Bank Name</Label>
+                        <p className="font-medium">{selectedVerification.bankName || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Account Number</Label>
+                        <p className="font-medium">{selectedVerification.bankAccountNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">IFSC Code</Label>
+                        <p className="font-medium">{selectedVerification.bankIfscCode || "Not provided"}</p>
                       </div>
                     </CardContent>
                   </Card>

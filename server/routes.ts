@@ -10212,6 +10212,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
         panNumber: z.string().optional(),
         gstinNumber: z.string().optional(),
         tanNumber: z.string().optional(),
+        // Bank details (both solo and fleet)
+        bankName: z.string().optional(),
+        bankAccountNumber: z.string().optional(),
+        bankIfscCode: z.string().optional(),
+        bankAccountHolderName: z.string().optional(),
       });
 
       const updates = updateSchema.parse(req.body);

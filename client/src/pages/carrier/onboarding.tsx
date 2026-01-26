@@ -48,6 +48,12 @@ const soloFormSchema = z.object({
   rcUrl: z.string().optional(),
   insuranceUrl: z.string().optional(),
   fitnessUrl: z.string().optional(),
+  // Bank details
+  bankName: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
+  bankIfscCode: z.string().optional(),
+  bankAccountHolderName: z.string().optional(),
+  voidChequeUrl: z.string().optional(),
 });
 
 const fleetFormSchema = z.object({
@@ -65,6 +71,12 @@ const fleetFormSchema = z.object({
   panUrl: z.string().optional(),
   gstinUrl: z.string().optional(),
   tanUrl: z.string().optional(),
+  // Bank details
+  bankName: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
+  bankIfscCode: z.string().optional(),
+  bankAccountHolderName: z.string().optional(),
+  voidChequeUrl: z.string().optional(),
 });
 
 const formSchema = z.discriminatedUnion("carrierType", [soloFormSchema, fleetFormSchema]);
@@ -89,6 +101,11 @@ interface OnboardingResponse {
   panNumber?: string;
   gstinNumber?: string;
   tanNumber?: string;
+  // Bank details
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfscCode?: string;
+  bankAccountHolderName?: string;
   rejectionReason?: string;
   notes?: string;
   documents: Array<{
@@ -130,6 +147,11 @@ export default function CarrierOnboarding() {
       rcUrl: "",
       insuranceUrl: "",
       fitnessUrl: "",
+      bankName: "",
+      bankAccountNumber: "",
+      bankIfscCode: "",
+      bankAccountHolderName: "",
+      voidChequeUrl: "",
     },
   });
 
@@ -150,6 +172,11 @@ export default function CarrierOnboarding() {
       panUrl: "",
       gstinUrl: "",
       tanUrl: "",
+      bankName: "",
+      bankAccountNumber: "",
+      bankIfscCode: "",
+      bankAccountHolderName: "",
+      voidChequeUrl: "",
     },
   });
 
@@ -173,6 +200,11 @@ export default function CarrierOnboarding() {
           rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
           insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
           fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
+          bankName: onboardingStatus.bankName || "",
+          bankAccountNumber: onboardingStatus.bankAccountNumber || "",
+          bankIfscCode: onboardingStatus.bankIfscCode || "",
+          bankAccountHolderName: onboardingStatus.bankAccountHolderName || "",
+          voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
         });
       } else {
         fleetForm.reset({
@@ -190,6 +222,11 @@ export default function CarrierOnboarding() {
           panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
           gstinUrl: onboardingStatus.documents.find(d => d.documentType === "gstin")?.fileUrl || "",
           tanUrl: onboardingStatus.documents.find(d => d.documentType === "tan")?.fileUrl || "",
+          bankName: onboardingStatus.bankName || "",
+          bankAccountNumber: onboardingStatus.bankAccountNumber || "",
+          bankIfscCode: onboardingStatus.bankIfscCode || "",
+          bankAccountHolderName: onboardingStatus.bankAccountHolderName || "",
+          voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
         });
       }
     }
@@ -590,7 +627,7 @@ export default function CarrierOnboarding() {
         <Form {...soloForm} key="solo-form">
           <form>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="identity" className="gap-2">
                   <IdCard className="h-4 w-4" />
                   {t("carrierOnboarding.identityTab")}
@@ -598,6 +635,10 @@ export default function CarrierOnboarding() {
                 <TabsTrigger value="vehicle" className="gap-2">
                   <Truck className="h-4 w-4" />
                   {t("carrierOnboarding.vehicleTab")}
+                </TabsTrigger>
+                <TabsTrigger value="bank" className="gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Bank Details
                 </TabsTrigger>
                 <TabsTrigger value="documents" className="gap-2">
                   <FileText className="h-4 w-4" />
@@ -713,6 +754,81 @@ export default function CarrierOnboarding() {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="bank">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bank Account Details</CardTitle>
+                    <CardDescription>Enter your bank details for payment processing</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={soloForm.control}
+                      name="bankAccountHolderName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Holder Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Name as per bank records" disabled={!canEdit} data-testid="input-bank-holder-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={soloForm.control}
+                      name="bankName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., State Bank of India" disabled={!canEdit} data-testid="input-bank-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={soloForm.control}
+                      name="bankAccountNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter account number" disabled={!canEdit} data-testid="input-bank-account" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={soloForm.control}
+                      name="bankIfscCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IFSC Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., SBIN0001234" disabled={!canEdit} data-testid="input-bank-ifsc" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Void Cheque / Cancelled Cheque</label>
+                      <DocumentUploadWithCamera
+                        value={soloForm.watch("voidChequeUrl") || ""}
+                        onChange={(val) => {
+                          soloForm.setValue("voidChequeUrl", val);
+                          handleDocumentUpload("void_cheque", val);
+                        }}
+                        disabled={!canEdit}
+                        documentType="void_cheque"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="documents">
                 <Card>
                   <CardHeader>
@@ -804,14 +920,18 @@ export default function CarrierOnboarding() {
         <Form {...fleetForm} key="fleet-form">
           <form>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="identity" className="gap-2">
                   <Building2 className="h-4 w-4" />
                   {t("carrierOnboarding.businessTab")}
                 </TabsTrigger>
                 <TabsTrigger value="vehicle" className="gap-2">
-                  <CreditCard className="h-4 w-4" />
+                  <Shield className="h-4 w-4" />
                   {t("carrierOnboarding.complianceTab")}
+                </TabsTrigger>
+                <TabsTrigger value="bank" className="gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Bank Details
                 </TabsTrigger>
                 <TabsTrigger value="documents" className="gap-2">
                   <FileText className="h-4 w-4" />
@@ -945,6 +1065,81 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="bank">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bank Account Details</CardTitle>
+                    <CardDescription>Enter your company bank details for payment processing</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={fleetForm.control}
+                      name="bankAccountHolderName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Holder Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Company name as per bank records" disabled={!canEdit} data-testid="input-fleet-bank-holder-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={fleetForm.control}
+                      name="bankName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., State Bank of India" disabled={!canEdit} data-testid="input-fleet-bank-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={fleetForm.control}
+                      name="bankAccountNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter account number" disabled={!canEdit} data-testid="input-fleet-bank-account" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={fleetForm.control}
+                      name="bankIfscCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IFSC Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., SBIN0001234" disabled={!canEdit} data-testid="input-fleet-bank-ifsc" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Void Cheque / Cancelled Cheque</label>
+                      <DocumentUploadWithCamera
+                        value={fleetForm.watch("voidChequeUrl") || ""}
+                        onChange={(val) => {
+                          fleetForm.setValue("voidChequeUrl", val);
+                          handleDocumentUpload("void_cheque", val);
+                        }}
+                        disabled={!canEdit}
+                        documentType="void_cheque"
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

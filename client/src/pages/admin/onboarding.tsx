@@ -463,20 +463,25 @@ export default function AdminOnboardingPage() {
                     {selectedRequest?.request.gstCertificateUrl ? (
                       <DocumentLink value={selectedRequest.request.gstCertificateUrl} />
                     ) : selectedRequest?.request.noGstCertificate ? (
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <Badge variant="outline" className="text-amber-600 border-amber-300">
-                          No GST - Alternative Document Provided
+                          No GST - Alternative Document
                         </Badge>
                         {selectedRequest?.request.alternativeDocumentType && (
-                          <p className="text-sm font-medium">
-                            Type: {selectedRequest.request.alternativeDocumentType === "msme" && "MSME Certificate"}
-                            {selectedRequest.request.alternativeDocumentType === "udyam" && "Udyam Registration"}
-                            {selectedRequest.request.alternativeDocumentType === "shop_act" && "Shop Act License"}
-                            {selectedRequest.request.alternativeDocumentType === "other" && "Other Document"}
+                          <p className="text-sm">
+                            <span className="text-muted-foreground">Type: </span>
+                            <span className="font-medium">
+                              {selectedRequest.request.alternativeDocumentType === "msme" && "MSME Certificate"}
+                              {selectedRequest.request.alternativeDocumentType === "udyam" && "Udyam Registration"}
+                              {selectedRequest.request.alternativeDocumentType === "shop_act" && "Shop Act License"}
+                              {selectedRequest.request.alternativeDocumentType === "other" && "Other Document"}
+                            </span>
                           </p>
                         )}
-                        {selectedRequest?.request.alternativeAuthorizationUrl && (
+                        {selectedRequest?.request.alternativeAuthorizationUrl ? (
                           <DocumentLink value={selectedRequest.request.alternativeAuthorizationUrl} />
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Document not yet uploaded</p>
                         )}
                       </div>
                     ) : (

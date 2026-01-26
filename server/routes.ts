@@ -10287,8 +10287,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
           return res.status(400).json({ error: "Please fill all required fields" });
         }
       } else {
-        // Fleet/Enterprise requires: incorporation, trade_license, address_proof, pan, gstin, tan
-        const requiredFleetDocs = ["incorporation", "trade_license", "address_proof", "pan", "gstin", "tan"];
+        // Fleet/Enterprise requires: aadhaar, license, pan, rc, insurance, fitness (gstin is optional)
+        const requiredFleetDocs = ["aadhaar", "license", "pan", "rc", "insurance", "fitness"];
         const missingFleetDocs = requiredFleetDocs.filter(d => !docTypes.includes(d));
         if (missingFleetDocs.length > 0) {
           return res.status(400).json({ 
@@ -10296,8 +10296,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
             missingDocuments: missingFleetDocs 
           });
         }
-        // Validate required fields for fleet
-        if (!onboarding.panNumber || !onboarding.gstinNumber || !onboarding.businessAddress) {
+        // Validate required fields for fleet (matches solo structure + fleet-specific fields)
+        if (!onboarding.aadhaarNumber || !onboarding.driverLicenseNumber || !onboarding.panNumber || 
+            !onboarding.businessAddress || !onboarding.licensePlateNumber || !onboarding.chassisNumber) {
           return res.status(400).json({ error: "Please fill all required fields" });
         }
       }

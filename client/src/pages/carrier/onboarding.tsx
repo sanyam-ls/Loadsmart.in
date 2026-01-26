@@ -59,6 +59,8 @@ const soloFormSchema = z.object({
 const fleetFormSchema = z.object({
   carrierType: z.literal("enterprise"),
   // Identity tab fields
+  aadhaarNumber: z.string().min(12, "Aadhaar must be 12 digits").max(12),
+  driverLicenseNumber: z.string().min(1, "Driver license is required"),
   panNumber: z.string().min(10, "PAN must be 10 characters").max(10),
   gstinNumber: z.string().optional(), // GSTIN is optional
   businessAddress: z.string().min(1, "Business address is required"),
@@ -69,6 +71,8 @@ const fleetFormSchema = z.object({
   uniqueRegistrationNumber: z.string().optional(),
   permitType: z.enum(["national", "domestic"]),
   // Document URLs
+  aadhaarUrl: z.string().optional(),
+  licenseUrl: z.string().optional(),
   panUrl: z.string().optional(),
   gstinUrl: z.string().optional(),
   rcUrl: z.string().optional(),
@@ -162,6 +166,8 @@ export default function CarrierOnboarding() {
     resolver: zodResolver(fleetFormSchema),
     defaultValues: {
       carrierType: "enterprise",
+      aadhaarNumber: "",
+      driverLicenseNumber: "",
       panNumber: "",
       gstinNumber: "",
       businessAddress: "",
@@ -170,6 +176,8 @@ export default function CarrierOnboarding() {
       chassisNumber: "",
       uniqueRegistrationNumber: "",
       permitType: "national",
+      aadhaarUrl: "",
+      licenseUrl: "",
       panUrl: "",
       gstinUrl: "",
       rcUrl: "",
@@ -215,6 +223,8 @@ export default function CarrierOnboarding() {
       } else {
         const formData = {
           carrierType: "enterprise" as const,
+          aadhaarNumber: onboardingStatus.aadhaarNumber || "",
+          driverLicenseNumber: onboardingStatus.driverLicenseNumber || "",
           panNumber: onboardingStatus.panNumber || "",
           gstinNumber: onboardingStatus.gstinNumber || "",
           businessAddress: onboardingStatus.businessAddress || "",
@@ -223,6 +233,8 @@ export default function CarrierOnboarding() {
           chassisNumber: onboardingStatus.chassisNumber || "",
           uniqueRegistrationNumber: onboardingStatus.uniqueRegistrationNumber || "",
           permitType: (onboardingStatus.permitType as "national" | "domestic") || "national",
+          aadhaarUrl: onboardingStatus.documents.find(d => d.documentType === "aadhaar")?.fileUrl || "",
+          licenseUrl: onboardingStatus.documents.find(d => d.documentType === "license")?.fileUrl || "",
           panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
           gstinUrl: onboardingStatus.documents.find(d => d.documentType === "gstin")?.fileUrl || "",
           rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
@@ -419,6 +431,12 @@ export default function CarrierOnboarding() {
       const missingFields: string[] = [];
       
       // Check Identity tab fields
+      if (!values.aadhaarNumber || values.aadhaarNumber.length < 12) {
+        missingFields.push("Aadhaar Number (Identity tab)");
+      }
+      if (!values.driverLicenseNumber) {
+        missingFields.push("Driver License Number (Identity tab)");
+      }
       if (!values.panNumber || values.panNumber.length < 10) {
         missingFields.push("PAN Number (Identity tab)");
       }
@@ -948,10 +966,36 @@ export default function CarrierOnboarding() {
               <TabsContent value="identity">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Business Information</CardTitle>
-                    <CardDescription>Provide your company identity details for verification</CardDescription>
+                    <CardTitle>{t("carrierOnboarding.personalInfo")}</CardTitle>
+                    <CardDescription>{t("carrierOnboarding.personalInfoDesc")}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <FormField
+                      control={fleetForm.control}
+                      name="aadhaarNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("carrierOnboarding.aadhaarNumber")} *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="XXXX XXXX XXXX" maxLength={12} disabled={!canEdit} data-testid="input-fleet-aadhaar" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={fleetForm.control}
+                      name="driverLicenseNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("carrierOnboarding.driverLicense")} *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="DL-XXXXXXXXX" disabled={!canEdit} data-testid="input-fleet-license" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={fleetForm.control}
                       name="panNumber"
@@ -1166,10 +1210,34 @@ export default function CarrierOnboarding() {
                 <Card>
                   <CardHeader>
                     <CardTitle>{t("carrierOnboarding.requiredDocs")}</CardTitle>
-                    <CardDescription>Upload your company and vehicle documents for verification</CardDescription>
+                    <CardDescription>Upload your identity and vehicle documents for verification</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.aadhaarDoc")} *</label>
+                        <DocumentUploadWithCamera
+                          value={fleetForm.watch("aadhaarUrl") || ""}
+                          onChange={(val) => {
+                            fleetForm.setValue("aadhaarUrl", val);
+                            handleDocumentUpload("aadhaar", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="aadhaar"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.licenseDoc")} *</label>
+                        <DocumentUploadWithCamera
+                          value={fleetForm.watch("licenseUrl") || ""}
+                          onChange={(val) => {
+                            fleetForm.setValue("licenseUrl", val);
+                            handleDocumentUpload("license", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="license"
+                        />
+                      </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">PAN Card *</label>
                         <DocumentUploadWithCamera

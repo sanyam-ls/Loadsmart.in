@@ -56,10 +56,143 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, format } from "date-fns";
 import type { ShipperOnboardingRequest, User } from "@shared/schema";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface OnboardingWithUser {
   request: ShipperOnboardingRequest;
   user: User;
+}
+
+interface StatusSectionProps {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  count: number;
+  items: OnboardingWithUser[];
+  onReview: (item: OnboardingWithUser) => void;
+  getStatusBadge: (status: string) => React.ReactNode;
+  businessTypeLabels: Record<string, string>;
+  t: (key: string) => string;
+  testIdPrefix: string;
+}
+
+function StatusSection({
+  title,
+  description,
+  icon,
+  count,
+  items,
+  onReview,
+  getStatusBadge,
+  businessTypeLabels,
+  t,
+  testIdPrefix,
+}: StatusSectionProps) {
+  const [isOpen, setIsOpen] = useState(count > 0);
+
+  if (count === 0) {
+    return (
+      <Card className="opacity-60">
+        <CardHeader className="py-4">
+          <div className="flex items-center gap-3">
+            {icon}
+            <div className="flex-1">
+              <CardTitle className="text-base">{title}</CardTitle>
+              <CardDescription className="text-sm">{description}</CardDescription>
+            </div>
+            <Badge variant="secondary" className="text-muted-foreground">0</Badge>
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="py-4 cursor-pointer">
+            <div className="flex items-center gap-3">
+              {isOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+              {icon}
+              <div className="flex-1">
+                <CardTitle className="text-base">{title}</CardTitle>
+                <CardDescription className="text-sm">{description}</CardDescription>
+              </div>
+              <Badge variant="default">{count}</Badge>
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("onboarding.companyName")}</TableHead>
+                  <TableHead>{t("onboarding.contactName")}</TableHead>
+                  <TableHead>{t("onboarding.businessType")}</TableHead>
+                  <TableHead>{t("onboarding.submittedAt")}</TableHead>
+                  <TableHead>{t("common.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.request.id} data-testid={`row-${testIdPrefix}-${item.request.id}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <div className="font-medium">{item.request.legalCompanyName || "-"}</div>
+                          <div className="text-sm text-muted-foreground">{item.request.tradeName}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-sm">
+                          <span>{item.request.contactPersonName || "-"}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Phone className="h-3 w-3" />
+                          <span>{item.request.contactPersonPhone || "-"}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {item.request.businessType 
+                        ? t(businessTypeLabels[item.request.businessType] || item.request.businessType) 
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {item.request.submittedAt
+                        ? formatDistanceToNow(new Date(item.request.submittedAt), { addSuffix: true })
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onReview(item)}
+                        data-testid={`button-review-${testIdPrefix}-${item.request.id}`}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        {t("adminOnboarding.review")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
 }
 
 const businessTypeLabels: Record<string, string> = {
@@ -91,7 +224,6 @@ export default function AdminOnboardingPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedRequest, setSelectedRequest] = useState<OnboardingWithUser | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewData, setReviewData] = useState({
@@ -144,25 +276,31 @@ export default function AdminOnboardingPage() {
     );
   };
 
-  const filteredRequests = requests?.filter((item) => {
-    if (!item?.request) return false;
-    const matchesSearch =
-      !searchQuery ||
-      item.request.legalCompanyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.user?.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || item.request.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
   const statusCounts = {
     all: requests?.length || 0,
     draft: requests?.filter((r) => r.request?.status === "draft").length || 0,
-    pending: requests?.filter((r) => r.request?.status === "pending").length || 0,
-    under_review: requests?.filter((r) => r.request?.status === "under_review").length || 0,
+    // Include both pending and under_review in the pending count
+    pending: requests?.filter((r) => r.request?.status === "pending" || r.request?.status === "under_review").length || 0,
     approved: requests?.filter((r) => r.request?.status === "approved").length || 0,
     rejected: requests?.filter((r) => r.request?.status === "rejected").length || 0,
     on_hold: requests?.filter((r) => r.request?.status === "on_hold").length || 0,
+  };
+
+  const getFilteredByStatus = (status: string): OnboardingWithUser[] => {
+    return (requests || []).filter((item) => {
+      if (!item?.request) return false;
+      const matchesSearch =
+        !searchQuery ||
+        item.request.legalCompanyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.user?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // For "pending" section, also include "under_review" items
+      if (status === "pending") {
+        return matchesSearch && (item.request.status === "pending" || item.request.status === "under_review");
+      }
+      return matchesSearch && item.request.status === status;
+    });
   };
 
   const openReviewDialog = (item: OnboardingWithUser) => {
@@ -197,139 +335,130 @@ export default function AdminOnboardingPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
-        <Card className={statusFilter === "all" ? "border-primary" : ""}>
-          <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("all")}>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <Card>
+          <CardContent className="p-4">
             <div className="text-2xl font-bold">{statusCounts.all}</div>
             <div className="text-sm text-muted-foreground">{t("common.all")}</div>
           </CardContent>
         </Card>
-        <Card className={statusFilter === "draft" ? "border-primary" : ""}>
-          <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("draft")}>
-            <div className="text-2xl font-bold text-gray-500">{statusCounts.draft}</div>
-            <div className="text-sm text-muted-foreground">{t("onboarding.statusDraft")}</div>
-          </CardContent>
-        </Card>
-        <Card className={statusFilter === "pending" ? "border-primary" : ""}>
-          <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("pending")}>
+        <Card>
+          <CardContent className="p-4">
             <div className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</div>
-            <div className="text-sm text-muted-foreground">{t("onboarding.statusPending")}</div>
+            <div className="text-sm text-muted-foreground">Pending Review</div>
           </CardContent>
         </Card>
-        <Card className={statusFilter === "under_review" ? "border-primary" : ""}>
-          <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("under_review")}>
-            <div className="text-2xl font-bold text-blue-600">{statusCounts.under_review}</div>
-            <div className="text-sm text-muted-foreground">{t("onboarding.statusUnderReview")}</div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-gray-500">{statusCounts.draft}</div>
+            <div className="text-sm text-muted-foreground">Awaiting Submission</div>
           </CardContent>
         </Card>
-        <Card className={statusFilter === "approved" ? "border-primary" : ""}>
-          <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("approved")}>
+        <Card>
+          <CardContent className="p-4">
             <div className="text-2xl font-bold text-green-600">{statusCounts.approved}</div>
             <div className="text-sm text-muted-foreground">{t("onboarding.statusApproved")}</div>
           </CardContent>
         </Card>
-        <Card className={statusFilter === "rejected" ? "border-primary" : ""}>
-          <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("rejected")}>
+        <Card>
+          <CardContent className="p-4">
             <div className="text-2xl font-bold text-red-600">{statusCounts.rejected}</div>
             <div className="text-sm text-muted-foreground">{t("onboarding.statusRejected")}</div>
           </CardContent>
         </Card>
-        <Card className={statusFilter === "on_hold" ? "border-primary" : ""}>
-          <CardContent className="p-4 cursor-pointer" onClick={() => setStatusFilter("on_hold")}>
+        <Card>
+          <CardContent className="p-4">
             <div className="text-2xl font-bold text-orange-600">{statusCounts.on_hold}</div>
             <div className="text-sm text-muted-foreground">{t("onboarding.statusOnHold")}</div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle>{t("adminOnboarding.queue")}</CardTitle>
-            <CardDescription>{t("adminOnboarding.queueDesc")}</CardDescription>
-          </div>
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t("adminOnboarding.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-              data-testid="input-search"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : filteredRequests?.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t("adminOnboarding.noRequests")}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("onboarding.companyName")}</TableHead>
-                  <TableHead>{t("onboarding.contactName")}</TableHead>
-                  <TableHead>{t("common.status")}</TableHead>
-                  <TableHead>{t("onboarding.businessType")}</TableHead>
-                  <TableHead>{t("onboarding.submittedAt")}</TableHead>
-                  <TableHead>{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests?.map((item) => (
-                  <TableRow key={item.request.id} data-testid={`row-request-${item.request.id}`}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="font-medium">{item.request.legalCompanyName}</div>
-                          <div className="text-sm text-muted-foreground">{item.request.tradeName}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <span>{item.request.contactPersonName || "-"}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Phone className="h-3 w-3" />
-                          <span>{item.request.contactPersonPhone || "-"}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(item.request.status || "draft")}</TableCell>
-                    <TableCell>{item.request.businessType ? t(businessTypeLabels[item.request.businessType] || item.request.businessType) : "-"}</TableCell>
-                    <TableCell>
-                      {item.request.submittedAt
-                        ? formatDistanceToNow(new Date(item.request.submittedAt), { addSuffix: true })
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openReviewDialog(item)}
-                        data-testid={`button-review-${item.request.id}`}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        {t("adminOnboarding.review")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <div className="relative w-full max-w-sm mb-4">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder={t("adminOnboarding.searchPlaceholder")}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+          data-testid="input-search"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <StatusSection
+            title="Pending Review"
+            description="Submissions awaiting admin review"
+            icon={<Clock className="h-5 w-5 text-yellow-600" />}
+            count={statusCounts.pending}
+            items={getFilteredByStatus("pending")}
+            onReview={openReviewDialog}
+            getStatusBadge={getStatusBadge}
+            businessTypeLabels={businessTypeLabels}
+            t={t}
+            testIdPrefix="pending"
+          />
+
+          <StatusSection
+            title="Awaiting Submission"
+            description="Draft applications not yet submitted by shippers"
+            icon={<AlertCircle className="h-5 w-5 text-gray-500" />}
+            count={statusCounts.draft}
+            items={getFilteredByStatus("draft")}
+            onReview={openReviewDialog}
+            getStatusBadge={getStatusBadge}
+            businessTypeLabels={businessTypeLabels}
+            t={t}
+            testIdPrefix="draft"
+          />
+
+          <StatusSection
+            title="Approved"
+            description="Verified and approved shippers"
+            icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+            count={statusCounts.approved}
+            items={getFilteredByStatus("approved")}
+            onReview={openReviewDialog}
+            getStatusBadge={getStatusBadge}
+            businessTypeLabels={businessTypeLabels}
+            t={t}
+            testIdPrefix="approved"
+          />
+
+          <StatusSection
+            title="Rejected"
+            description="Applications that did not meet requirements"
+            icon={<XCircle className="h-5 w-5 text-red-600" />}
+            count={statusCounts.rejected}
+            items={getFilteredByStatus("rejected")}
+            onReview={openReviewDialog}
+            getStatusBadge={getStatusBadge}
+            businessTypeLabels={businessTypeLabels}
+            t={t}
+            testIdPrefix="rejected"
+          />
+
+          <StatusSection
+            title="On Hold"
+            description="Applications pending additional information"
+            icon={<AlertCircle className="h-5 w-5 text-orange-600" />}
+            count={statusCounts.on_hold}
+            items={getFilteredByStatus("on_hold")}
+            onReview={openReviewDialog}
+            getStatusBadge={getStatusBadge}
+            businessTypeLabels={businessTypeLabels}
+            t={t}
+            testIdPrefix="on-hold"
+          />
+        </div>
+      )}
 
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">

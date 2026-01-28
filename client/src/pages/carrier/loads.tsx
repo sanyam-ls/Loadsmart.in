@@ -1403,12 +1403,12 @@ export default function CarrierLoadsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {selectedLoad?.priceFixed ? "Accept Fixed Price Load" : "Place Your Bid"}
+              {selectedLoad?.priceFixed ? "Accept Fixed Price Load" : "Accept Load or Place Bid"}
             </DialogTitle>
             <DialogDescription>
               {selectedLoad?.priceFixed 
-                ? "Review the admin-priced load and accept to book immediately"
-                : "Submit a bid or counter-offer for this load"
+                ? "Review and accept this fixed-price load"
+                : "Accept at the carrier payout price or submit a counter-offer"
               }
             </DialogDescription>
           </DialogHeader>
@@ -1523,68 +1523,68 @@ export default function CarrierLoadsPage() {
                 </Card>
               )}
               
-              {/* Fixed-price loads: Only accept button */}
-              {selectedLoad.priceFixed ? (
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Lock className="h-5 w-5 text-primary" />
-                    <span className="font-medium">Fixed Price Load</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Accept this load at the fixed price. Shipment and invoice will be created immediately.
+              {/* Accept Load Section - Always show for all loads */}
+              <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-green-800 dark:text-green-300">Accept Load at Admin Price</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Accept this load at the carrier payout price. Shipment will be created immediately.
+                </p>
+                <div className="flex items-center justify-between mb-3 p-2 bg-background rounded">
+                  <span className="text-sm text-muted-foreground">Your Payout:</span>
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(getCarrierPrice(selectedLoad))}</span>
+                </div>
+                <Button 
+                  className="w-full"
+                  onClick={handleAccept}
+                  disabled={acceptDirectMutation.isPending || (isEnterprise && !selectedTruckId)}
+                  data-testid="button-accept-load"
+                >
+                  {acceptDirectMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirm Accept
+                </Button>
+                {isEnterprise && !selectedTruckId && (
+                  <p className="text-xs text-destructive mt-2">
+                    Please select a truck to accept this load.
                   </p>
-                  <Button 
-                    className="w-full"
-                    onClick={handleAccept}
-                    disabled={acceptDirectMutation.isPending || (isEnterprise && !selectedTruckId)}
-                    data-testid="button-accept-load"
-                  >
-                    {acceptDirectMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Accept Load at {formatCurrency(getCarrierPrice(selectedLoad))}
-                  </Button>
+                )}
+              </div>
+              
+              {/* Counter Bid Section - Only for negotiable loads */}
+              {!selectedLoad.priceFixed && (
+                <div className="p-4 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Unlock className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Or Place a Counter Bid</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Propose a different price. Admin will review your bid.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      placeholder={t("bids.enterBidAmount")}
+                      value={bidAmount}
+                      onChange={(e) => setBidAmount(e.target.value)}
+                      className="flex-1"
+                      data-testid="input-bid-amount"
+                    />
+                    <Button 
+                      variant="outline"
+                      onClick={submitBid}
+                      disabled={!bidAmount || bidMutation.isPending || (isEnterprise && !selectedTruckId)}
+                      data-testid="button-place-bid"
+                    >
+                      {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Place Bid
+                    </Button>
+                  </div>
                   {isEnterprise && !selectedTruckId && (
                     <p className="text-xs text-destructive mt-2">
-                      Please select a truck to accept this load.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                /* Negotiable loads: Counter bid option */
-                <div className="space-y-4">
-                  {/* Place a counter bid */}
-                  <div className="p-4 bg-muted/50 rounded-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Unlock className="h-5 w-5 text-muted-foreground" />
-                      <span className="font-medium">Place a Counter Bid</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Propose a different price. Admin will review your bid.
-                    </p>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        placeholder={t("bids.enterBidAmount")}
-                        value={bidAmount}
-                        onChange={(e) => setBidAmount(e.target.value)}
-                        className="flex-1"
-                        data-testid="input-bid-amount"
-                      />
-                      <Button 
-                        variant="outline"
-                        onClick={submitBid}
-                        disabled={!bidAmount || bidMutation.isPending || (isEnterprise && !selectedTruckId)}
-                        data-testid="button-place-bid"
-                      >
-                        {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        Place Bid
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {isEnterprise && !selectedTruckId && (
-                    <p className="text-xs text-destructive">
-                      Please select a truck to accept or bid on this load.
+                      Please select a truck to place a bid.
                     </p>
                   )}
                 </div>

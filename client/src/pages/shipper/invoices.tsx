@@ -80,9 +80,12 @@ interface DriverDetails {
 
 interface TruckDetails {
   id: string;
-  registrationNumber: string;
+  licensePlate?: string;
+  registrationNumber?: string;
   truckType?: string;
   capacity?: string;
+  make?: string;
+  model?: string;
 }
 
 interface Invoice {
@@ -94,8 +97,13 @@ interface Invoice {
   loadRoute?: string;
   pickupCity?: string;
   pickupAddress?: string;
+  pickupLocality?: string;
+  pickupLandmark?: string;
   dropoffCity?: string;
   dropoffAddress?: string;
+  dropoffLocality?: string;
+  dropoffLandmark?: string;
+  dropoffBusinessName?: string;
   cargoDescription?: string;
   weight?: string;
   loadStatus?: string;
@@ -706,10 +714,10 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                           <div className="grid grid-cols-2 gap-3">
                             {selectedInvoice.truck && (
                               <div>
-                                <Label className="text-xs text-muted-foreground">Truck Number</Label>
-                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-truck-number">
+                                <Label className="text-xs text-muted-foreground">Vehicle Number</Label>
+                                <p className="font-medium text-sm font-mono flex items-center gap-1" data-testid="text-truck-number">
                                   <Truck className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.truck.registrationNumber}
+                                  {selectedInvoice.truck.licensePlate || selectedInvoice.truck.registrationNumber || "N/A"}
                                 </p>
                               </div>
                             )}
@@ -721,6 +729,23 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                               </p>
                             </div>
                           </div>
+                          {/* Vehicle Details for Solo Driver */}
+                          {selectedInvoice.truck && (selectedInvoice.truck.make || selectedInvoice.truck.model || selectedInvoice.truck.truckType) && (
+                            <div className="bg-background/50 rounded-md p-2 mt-2">
+                              <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
+                              <div className="flex items-center gap-3 mt-1 text-sm">
+                                {selectedInvoice.truck.make && (
+                                  <span className="font-medium">{selectedInvoice.truck.make}</span>
+                                )}
+                                {selectedInvoice.truck.model && (
+                                  <span>{selectedInvoice.truck.model}</span>
+                                )}
+                                {selectedInvoice.truck.truckType && (
+                                  <span className="text-muted-foreground">({selectedInvoice.truck.truckType})</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </>
                       ) : (
                         <>
@@ -763,10 +788,10 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                           <div className="grid grid-cols-2 gap-3">
                             {selectedInvoice.truck && (
                               <div>
-                                <Label className="text-xs text-muted-foreground">Truck Number</Label>
-                                <p className="font-medium text-sm flex items-center gap-1" data-testid="text-truck-number">
+                                <Label className="text-xs text-muted-foreground">Vehicle Number</Label>
+                                <p className="font-medium text-sm font-mono flex items-center gap-1" data-testid="text-truck-number">
                                   <Truck className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.truck.registrationNumber}
+                                  {selectedInvoice.truck.licensePlate || selectedInvoice.truck.registrationNumber || "N/A"}
                                 </p>
                               </div>
                             )}
@@ -777,20 +802,66 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                               </div>
                             )}
                           </div>
+                          {/* Vehicle Details for Enterprise Carrier */}
+                          {selectedInvoice.truck && (selectedInvoice.truck.make || selectedInvoice.truck.model) && (
+                            <div className="bg-background/50 rounded-md p-2">
+                              <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
+                              <div className="flex items-center gap-3 mt-1 text-sm">
+                                {selectedInvoice.truck.make && (
+                                  <span className="font-medium">{selectedInvoice.truck.make}</span>
+                                )}
+                                {selectedInvoice.truck.model && (
+                                  <span>{selectedInvoice.truck.model}</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
                       
-                      {/* Route Display */}
+                      {/* Route Display - Full Details */}
                       {selectedInvoice.pickupCity && selectedInvoice.dropoffCity && (
-                        <div className="pt-2 border-t">
-                          <Label className="text-xs text-muted-foreground">Route</Label>
-                          <p className="text-sm font-medium flex items-center gap-2 mt-1">
-                            <MapPin className="h-3 w-3 text-green-600" />
-                            {selectedInvoice.pickupCity}
-                            <span className="text-muted-foreground">to</span>
-                            <MapPin className="h-3 w-3 text-red-600" />
-                            {selectedInvoice.dropoffCity}
-                          </p>
+                        <div className="pt-2 border-t space-y-3">
+                          <Label className="text-xs text-muted-foreground">Route Details</Label>
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Pickup Location */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                                <MapPin className="h-3 w-3" />
+                                Pickup
+                              </div>
+                              <p className="font-medium text-sm">{selectedInvoice.pickupCity}</p>
+                              {selectedInvoice.pickupLocality && (
+                                <p className="text-xs text-muted-foreground">{selectedInvoice.pickupLocality}</p>
+                              )}
+                              {selectedInvoice.pickupAddress && (
+                                <p className="text-xs text-muted-foreground">{selectedInvoice.pickupAddress}</p>
+                              )}
+                              {selectedInvoice.pickupLandmark && (
+                                <p className="text-xs text-muted-foreground">Near: {selectedInvoice.pickupLandmark}</p>
+                              )}
+                            </div>
+                            {/* Dropoff Location */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
+                                <MapPin className="h-3 w-3" />
+                                Dropoff
+                              </div>
+                              <p className="font-medium text-sm">{selectedInvoice.dropoffCity}</p>
+                              {selectedInvoice.dropoffBusinessName && (
+                                <p className="text-xs font-medium">{selectedInvoice.dropoffBusinessName}</p>
+                              )}
+                              {selectedInvoice.dropoffLocality && (
+                                <p className="text-xs text-muted-foreground">{selectedInvoice.dropoffLocality}</p>
+                              )}
+                              {selectedInvoice.dropoffAddress && (
+                                <p className="text-xs text-muted-foreground">{selectedInvoice.dropoffAddress}</p>
+                              )}
+                              {selectedInvoice.dropoffLandmark && (
+                                <p className="text-xs text-muted-foreground">Near: {selectedInvoice.dropoffLandmark}</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       )}
                       

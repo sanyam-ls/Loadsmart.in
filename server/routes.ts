@@ -5884,9 +5884,12 @@ RESPOND IN THIS EXACT JSON FORMAT:
             if (truckData) {
               truck = {
                 id: truckData.id,
+                licensePlate: truckData.licensePlate,
                 registrationNumber: truckData.registrationNumber,
                 truckType: truckData.truckType,
                 capacity: truckData.capacity,
+                make: truckData.make,
+                model: truckData.model,
               };
             }
           }
@@ -5904,10 +5907,16 @@ RESPOND IN THIS EXACT JSON FORMAT:
 
           return {
             ...invoice,
+            // Full route details
             pickupCity: load?.pickupCity,
             pickupAddress: load?.pickupAddress,
+            pickupLocality: load?.pickupLocality,
+            pickupLandmark: load?.pickupLandmark,
             dropoffCity: load?.dropoffCity,
             dropoffAddress: load?.dropoffAddress,
+            dropoffLocality: load?.dropoffLocality,
+            dropoffLandmark: load?.dropoffLandmark,
+            dropoffBusinessName: load?.dropoffBusinessName,
             loadRoute: `${load?.pickupCity || ''} to ${load?.dropoffCity || ''}`,
             shipperLoadNumber: load?.shipperLoadNumber || null,
             adminReferenceNumber: load?.adminReferenceNumber || null,

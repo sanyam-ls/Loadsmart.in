@@ -56,142 +56,98 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, format } from "date-fns";
 import type { ShipperOnboardingRequest, User } from "@shared/schema";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface OnboardingWithUser {
   request: ShipperOnboardingRequest;
   user: User;
 }
 
-interface StatusSectionProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  count: number;
+interface OnboardingTableProps {
   items: OnboardingWithUser[];
   onReview: (item: OnboardingWithUser) => void;
   getStatusBadge: (status: string) => React.ReactNode;
   businessTypeLabels: Record<string, string>;
   t: (key: string) => string;
   testIdPrefix: string;
+  emptyMessage: string;
 }
 
-function StatusSection({
-  title,
-  description,
-  icon,
-  count,
+function OnboardingTable({
   items,
   onReview,
   getStatusBadge,
   businessTypeLabels,
   t,
   testIdPrefix,
-}: StatusSectionProps) {
-  const [isOpen, setIsOpen] = useState(count > 0);
-
-  if (count === 0) {
+  emptyMessage,
+}: OnboardingTableProps) {
+  if (items.length === 0) {
     return (
-      <Card className="opacity-60">
-        <CardHeader className="py-4">
-          <div className="flex items-center gap-3">
-            {icon}
-            <div className="flex-1">
-              <CardTitle className="text-base">{title}</CardTitle>
-              <CardDescription className="text-sm">{description}</CardDescription>
-            </div>
-            <Badge variant="secondary" className="text-muted-foreground">0</Badge>
-          </div>
-        </CardHeader>
-      </Card>
+      <div className="p-8 text-center text-muted-foreground">
+        {emptyMessage}
+      </div>
     );
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="py-4 cursor-pointer">
-            <div className="flex items-center gap-3">
-              {isOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              {icon}
-              <div className="flex-1">
-                <CardTitle className="text-base">{title}</CardTitle>
-                <CardDescription className="text-sm">{description}</CardDescription>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{t("onboarding.companyName")}</TableHead>
+          <TableHead>{t("onboarding.contactName")}</TableHead>
+          <TableHead>{t("onboarding.businessType")}</TableHead>
+          <TableHead>{t("onboarding.submittedAt")}</TableHead>
+          <TableHead>{t("common.actions")}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((item) => (
+          <TableRow key={item.request.id} data-testid={`row-${testIdPrefix}-${item.request.id}`}>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <div className="font-medium">{item.request.legalCompanyName || "-"}</div>
+                  <div className="text-sm text-muted-foreground">{item.request.tradeName}</div>
+                </div>
               </div>
-              <Badge variant="default">{count}</Badge>
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("onboarding.companyName")}</TableHead>
-                  <TableHead>{t("onboarding.contactName")}</TableHead>
-                  <TableHead>{t("onboarding.businessType")}</TableHead>
-                  <TableHead>{t("onboarding.submittedAt")}</TableHead>
-                  <TableHead>{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.request.id} data-testid={`row-${testIdPrefix}-${item.request.id}`}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="font-medium">{item.request.legalCompanyName || "-"}</div>
-                          <div className="text-sm text-muted-foreground">{item.request.tradeName}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <span>{item.request.contactPersonName || "-"}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Phone className="h-3 w-3" />
-                          <span>{item.request.contactPersonPhone || "-"}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {item.request.businessType 
-                        ? t(businessTypeLabels[item.request.businessType] || item.request.businessType) 
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {item.request.submittedAt
-                        ? formatDistanceToNow(new Date(item.request.submittedAt), { addSuffix: true })
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onReview(item)}
-                        data-testid={`button-review-${testIdPrefix}-${item.request.id}`}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        {t("adminOnboarding.review")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
+            </TableCell>
+            <TableCell>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 text-sm">
+                  <span>{item.request.contactPersonName || "-"}</span>
+                </div>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Phone className="h-3 w-3" />
+                  <span>{item.request.contactPersonPhone || "-"}</span>
+                </div>
+              </div>
+            </TableCell>
+            <TableCell>
+              {item.request.businessType 
+                ? t(businessTypeLabels[item.request.businessType] || item.request.businessType) 
+                : "-"}
+            </TableCell>
+            <TableCell>
+              {item.request.submittedAt
+                ? formatDistanceToNow(new Date(item.request.submittedAt), { addSuffix: true })
+                : "-"}
+            </TableCell>
+            <TableCell>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onReview(item)}
+                data-testid={`button-review-${testIdPrefix}-${item.request.id}`}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                {t("adminOnboarding.review")}
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -335,130 +291,136 @@ export default function AdminOnboardingPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{statusCounts.all}</div>
-            <div className="text-sm text-muted-foreground">{t("common.all")}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</div>
-            <div className="text-sm text-muted-foreground">Pending Review</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-gray-500">{statusCounts.draft}</div>
-            <div className="text-sm text-muted-foreground">Awaiting Submission</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{statusCounts.approved}</div>
-            <div className="text-sm text-muted-foreground">{t("onboarding.statusApproved")}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">{statusCounts.rejected}</div>
-            <div className="text-sm text-muted-foreground">{t("onboarding.statusRejected")}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-orange-600">{statusCounts.on_hold}</div>
-            <div className="text-sm text-muted-foreground">{t("onboarding.statusOnHold")}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="p-0">
+          <Tabs defaultValue="pending" className="w-full">
+            <div className="flex items-center justify-between border-b px-4">
+              <TabsList className="h-auto p-1 bg-transparent">
+                <TabsTrigger 
+                  value="pending" 
+                  className="gap-2 data-[state=active]:bg-muted"
+                  data-testid="tab-pending"
+                >
+                  <Clock className="h-4 w-4" />
+                  Pending ({statusCounts.pending})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="draft" 
+                  className="gap-2 data-[state=active]:bg-muted"
+                  data-testid="tab-draft"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  Draft ({statusCounts.draft})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="approved" 
+                  className="gap-2 data-[state=active]:bg-muted"
+                  data-testid="tab-approved"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Approved ({statusCounts.approved})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="rejected" 
+                  className="gap-2 data-[state=active]:bg-muted"
+                  data-testid="tab-rejected"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Rejected ({statusCounts.rejected})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="on_hold" 
+                  className="gap-2 data-[state=active]:bg-muted"
+                  data-testid="tab-on-hold"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  On Hold ({statusCounts.on_hold})
+                </TabsTrigger>
+              </TabsList>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t("adminOnboarding.searchPlaceholder")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search"
+                />
+              </div>
+            </div>
 
-      <div className="relative w-full max-w-sm mb-4">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t("adminOnboarding.searchPlaceholder")}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-          data-testid="input-search"
-        />
-      </div>
+            {isLoading ? (
+              <div className="p-4 space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : (
+              <>
+                <TabsContent value="pending" className="m-0">
+                  <OnboardingTable
+                    items={getFilteredByStatus("pending")}
+                    onReview={openReviewDialog}
+                    getStatusBadge={getStatusBadge}
+                    businessTypeLabels={businessTypeLabels}
+                    t={t}
+                    testIdPrefix="pending"
+                    emptyMessage="No pending submissions"
+                  />
+                </TabsContent>
 
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <StatusSection
-            title="Pending Review"
-            description="Submissions awaiting admin review"
-            icon={<Clock className="h-5 w-5 text-yellow-600" />}
-            count={statusCounts.pending}
-            items={getFilteredByStatus("pending")}
-            onReview={openReviewDialog}
-            getStatusBadge={getStatusBadge}
-            businessTypeLabels={businessTypeLabels}
-            t={t}
-            testIdPrefix="pending"
-          />
+                <TabsContent value="draft" className="m-0">
+                  <OnboardingTable
+                    items={getFilteredByStatus("draft")}
+                    onReview={openReviewDialog}
+                    getStatusBadge={getStatusBadge}
+                    businessTypeLabels={businessTypeLabels}
+                    t={t}
+                    testIdPrefix="draft"
+                    emptyMessage="No draft applications"
+                  />
+                </TabsContent>
 
-          <StatusSection
-            title="Awaiting Submission"
-            description="Draft applications not yet submitted by shippers"
-            icon={<AlertCircle className="h-5 w-5 text-gray-500" />}
-            count={statusCounts.draft}
-            items={getFilteredByStatus("draft")}
-            onReview={openReviewDialog}
-            getStatusBadge={getStatusBadge}
-            businessTypeLabels={businessTypeLabels}
-            t={t}
-            testIdPrefix="draft"
-          />
+                <TabsContent value="approved" className="m-0">
+                  <OnboardingTable
+                    items={getFilteredByStatus("approved")}
+                    onReview={openReviewDialog}
+                    getStatusBadge={getStatusBadge}
+                    businessTypeLabels={businessTypeLabels}
+                    t={t}
+                    testIdPrefix="approved"
+                    emptyMessage="No approved shippers"
+                  />
+                </TabsContent>
 
-          <StatusSection
-            title="Approved"
-            description="Verified and approved shippers"
-            icon={<CheckCircle className="h-5 w-5 text-green-600" />}
-            count={statusCounts.approved}
-            items={getFilteredByStatus("approved")}
-            onReview={openReviewDialog}
-            getStatusBadge={getStatusBadge}
-            businessTypeLabels={businessTypeLabels}
-            t={t}
-            testIdPrefix="approved"
-          />
+                <TabsContent value="rejected" className="m-0">
+                  <OnboardingTable
+                    items={getFilteredByStatus("rejected")}
+                    onReview={openReviewDialog}
+                    getStatusBadge={getStatusBadge}
+                    businessTypeLabels={businessTypeLabels}
+                    t={t}
+                    testIdPrefix="rejected"
+                    emptyMessage="No rejected applications"
+                  />
+                </TabsContent>
 
-          <StatusSection
-            title="Rejected"
-            description="Applications that did not meet requirements"
-            icon={<XCircle className="h-5 w-5 text-red-600" />}
-            count={statusCounts.rejected}
-            items={getFilteredByStatus("rejected")}
-            onReview={openReviewDialog}
-            getStatusBadge={getStatusBadge}
-            businessTypeLabels={businessTypeLabels}
-            t={t}
-            testIdPrefix="rejected"
-          />
-
-          <StatusSection
-            title="On Hold"
-            description="Applications pending additional information"
-            icon={<AlertCircle className="h-5 w-5 text-orange-600" />}
-            count={statusCounts.on_hold}
-            items={getFilteredByStatus("on_hold")}
-            onReview={openReviewDialog}
-            getStatusBadge={getStatusBadge}
-            businessTypeLabels={businessTypeLabels}
-            t={t}
-            testIdPrefix="on-hold"
-          />
-        </div>
-      )}
+                <TabsContent value="on_hold" className="m-0">
+                  <OnboardingTable
+                    items={getFilteredByStatus("on_hold")}
+                    onReview={openReviewDialog}
+                    getStatusBadge={getStatusBadge}
+                    businessTypeLabels={businessTypeLabels}
+                    t={t}
+                    testIdPrefix="on-hold"
+                    emptyMessage="No applications on hold"
+                  />
+                </TabsContent>
+              </>
+            )}
+          </Tabs>
+        </CardContent>
+      </Card>
 
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">

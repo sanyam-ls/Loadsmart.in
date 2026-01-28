@@ -557,6 +557,29 @@ export default function AdminLoadDetailsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Carrier Memo - Shows when carrier is assigned */}
+            {(apiLoad?.assignedCarrier || apiLoad?.shipmentDetails) && (
+              <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">Carrier Memo</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Carrier Name</span>
+                    <span className="font-medium">{apiLoad?.assignedCarrier?.company || apiLoad?.assignedCarrier?.username || "Not assigned"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Vehicle Number</span>
+                    <span className="font-medium font-mono">{apiLoad?.shipmentDetails?.truck?.licensePlate || "Not assigned"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Driver Name</span>
+                    <span className="font-medium">{apiLoad?.shipmentDetails?.driver?.username || "Not assigned"}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {detailedLoad.description && (

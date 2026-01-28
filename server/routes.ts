@@ -11382,11 +11382,46 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   });
 
-  // GET /api/shipments/load/:loadId - Get shipment for a load
+  // GET /api/shipments/load/:loadId - Get shipment for a load with carrier, truck, driver details
   app.get("/api/shipments/load/:loadId", requireAuth, async (req, res) => {
     try {
       const shipment = await storage.getShipmentByLoad(req.params.loadId);
-      res.json(shipment || null);
+      if (!shipment) {
+        return res.json(null);
+      }
+
+      // Include carrier, truck, and driver details for Carrier Memo display
+      const [carrier, truck, driver] = await Promise.all([
+        storage.getUser(shipment.carrierId),
+        shipment.truckId ? storage.getTruck(shipment.truckId) : Promise.resolve(null),
+        shipment.driverId ? storage.getDriver(shipment.driverId) : Promise.resolve(null)
+      ]);
+
+      res.json({
+        ...shipment,
+        carrier: carrier ? {
+          id: carrier.id,
+          company: carrier.companyName,
+          username: carrier.username,
+          phone: carrier.phone,
+          email: carrier.email,
+          isVerified: carrier.isVerified
+        } : null,
+        truck: truck ? {
+          id: truck.id,
+          licensePlate: truck.licensePlate,
+          manufacturer: truck.make,
+          model: truck.model,
+          truckType: truck.truckType,
+          capacity: truck.capacity
+        } : null,
+        driver: driver ? {
+          id: driver.id,
+          username: driver.name,
+          phone: driver.phone,
+          licenseNumber: driver.licenseNumber
+        } : null
+      });
     } catch (error) {
       console.error("Get shipment by load error:", error);
       res.status(500).json({ error: "Internal server error" });

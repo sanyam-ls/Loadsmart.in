@@ -106,6 +106,32 @@ function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceN
 
 type LoadWithCarrier = Load & { assignedCarrier?: User | null };
 
+// Extended shipment type with carrier, truck, and driver details for Carrier Memo
+type ShipmentWithDetails = Shipment & {
+  carrier?: {
+    id: string;
+    company: string | null;
+    username: string | null;
+    phone: string | null;
+    email: string | null;
+    isVerified: boolean | null;
+  } | null;
+  truck?: {
+    id: string;
+    licensePlate: string | null;
+    manufacturer: string | null;
+    model: string | null;
+    truckType: string | null;
+    capacity: string | null;
+  } | null;
+  driver?: {
+    id: string;
+    username: string | null;
+    phone: string | null;
+    licenseNumber: string | null;
+  } | null;
+};
+
 export default function LoadDetailPage() {
   const [, navigate] = useLocation();
   const params = useParams<{ id: string }>();
@@ -119,7 +145,7 @@ export default function LoadDetailPage() {
     enabled: !!params.id,
   });
 
-  const { data: shipment } = useQuery<Shipment>({
+  const { data: shipment } = useQuery<ShipmentWithDetails>({
     queryKey: ["/api/shipments/load", params.id],
     enabled: !!params.id,
   });
@@ -646,6 +672,35 @@ export default function LoadDetailPage() {
                       Verified Carrier
                     </div>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Carrier Memo - Shows carrier, truck, driver summary when shipment exists */}
+          {shipment && (
+            <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">Carrier Memo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Carrier Name</span>
+                  <span className="font-medium" data-testid="text-carrier-name">
+                    {shipment.carrier?.company || shipment.carrier?.username || "Not assigned"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Vehicle Number</span>
+                  <span className="font-medium font-mono" data-testid="text-vehicle-number">
+                    {shipment.truck?.licensePlate || "Not assigned"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Driver Name</span>
+                  <span className="font-medium" data-testid="text-driver-name">
+                    {shipment.driver?.username || "Not assigned"}
+                  </span>
                 </div>
               </CardContent>
             </Card>

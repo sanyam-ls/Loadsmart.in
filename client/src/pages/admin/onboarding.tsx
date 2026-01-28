@@ -114,7 +114,7 @@ function OnboardingTable({
               </div>
             </TableCell>
             <TableCell>
-              {getStatusBadge(item.request.status)}
+              {getStatusBadge(item.request.status || "draft")}
             </TableCell>
             <TableCell>
               <div className="space-y-1">
@@ -297,28 +297,12 @@ export default function AdminOnboardingPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Tabs defaultValue="pending" className="w-full">
+          <Tabs defaultValue="approved" className="w-full">
             <div className="flex items-center justify-between border-b px-4">
               <TabsList className="h-auto p-1 bg-transparent">
                 <TabsTrigger 
-                  value="pending" 
-                  className="gap-2 data-[state=active]:bg-muted"
-                  data-testid="tab-pending"
-                >
-                  <Clock className="h-4 w-4" />
-                  Pending ({statusCounts.pending})
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="draft" 
-                  className="gap-2 data-[state=active]:bg-muted"
-                  data-testid="tab-draft"
-                >
-                  <AlertCircle className="h-4 w-4" />
-                  Draft ({statusCounts.draft})
-                </TabsTrigger>
-                <TabsTrigger 
                   value="approved" 
-                  className="gap-2 data-[state=active]:bg-muted"
+                  className="gap-2 data-[state=active]:bg-green-100 dark:data-[state=active]:bg-green-900/30 text-green-700 dark:text-green-400"
                   data-testid="tab-approved"
                 >
                   <CheckCircle className="h-4 w-4" />
@@ -326,7 +310,7 @@ export default function AdminOnboardingPage() {
                 </TabsTrigger>
                 <TabsTrigger 
                   value="rejected" 
-                  className="gap-2 data-[state=active]:bg-muted"
+                  className="gap-2 data-[state=active]:bg-red-100 dark:data-[state=active]:bg-red-900/30 text-red-700 dark:text-red-400"
                   data-testid="tab-rejected"
                 >
                   <XCircle className="h-4 w-4" />
@@ -334,11 +318,27 @@ export default function AdminOnboardingPage() {
                 </TabsTrigger>
                 <TabsTrigger 
                   value="on_hold" 
-                  className="gap-2 data-[state=active]:bg-muted"
+                  className="gap-2 data-[state=active]:bg-orange-100 dark:data-[state=active]:bg-orange-900/30 text-orange-700 dark:text-orange-400"
                   data-testid="tab-on-hold"
                 >
                   <AlertCircle className="h-4 w-4" />
                   On Hold ({statusCounts.on_hold})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="pending" 
+                  className="gap-2 data-[state=active]:bg-yellow-100 dark:data-[state=active]:bg-yellow-900/30 text-yellow-700 dark:text-yellow-500"
+                  data-testid="tab-pending"
+                >
+                  <Clock className="h-4 w-4" />
+                  Pending ({statusCounts.pending})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="draft" 
+                  className="gap-2 data-[state=active]:bg-cyan-100 dark:data-[state=active]:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"
+                  data-testid="tab-draft"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  Draft ({statusCounts.draft})
                 </TabsTrigger>
               </TabsList>
               <div className="relative w-64">
@@ -361,30 +361,6 @@ export default function AdminOnboardingPage() {
               </div>
             ) : (
               <>
-                <TabsContent value="pending" className="m-0">
-                  <OnboardingTable
-                    items={getFilteredByStatus("pending")}
-                    onReview={openReviewDialog}
-                    getStatusBadge={getStatusBadge}
-                    businessTypeLabels={businessTypeLabels}
-                    t={t}
-                    testIdPrefix="pending"
-                    emptyMessage="No pending submissions"
-                  />
-                </TabsContent>
-
-                <TabsContent value="draft" className="m-0">
-                  <OnboardingTable
-                    items={getFilteredByStatus("draft")}
-                    onReview={openReviewDialog}
-                    getStatusBadge={getStatusBadge}
-                    businessTypeLabels={businessTypeLabels}
-                    t={t}
-                    testIdPrefix="draft"
-                    emptyMessage="No draft applications"
-                  />
-                </TabsContent>
-
                 <TabsContent value="approved" className="m-0">
                   <OnboardingTable
                     items={getFilteredByStatus("approved")}
@@ -418,6 +394,30 @@ export default function AdminOnboardingPage() {
                     t={t}
                     testIdPrefix="on-hold"
                     emptyMessage="No applications on hold"
+                  />
+                </TabsContent>
+
+                <TabsContent value="pending" className="m-0">
+                  <OnboardingTable
+                    items={getFilteredByStatus("pending")}
+                    onReview={openReviewDialog}
+                    getStatusBadge={getStatusBadge}
+                    businessTypeLabels={businessTypeLabels}
+                    t={t}
+                    testIdPrefix="pending"
+                    emptyMessage="No pending submissions"
+                  />
+                </TabsContent>
+
+                <TabsContent value="draft" className="m-0">
+                  <OnboardingTable
+                    items={getFilteredByStatus("draft")}
+                    onReview={openReviewDialog}
+                    getStatusBadge={getStatusBadge}
+                    businessTypeLabels={businessTypeLabels}
+                    t={t}
+                    testIdPrefix="draft"
+                    emptyMessage="No draft applications"
                   />
                 </TabsContent>
               </>

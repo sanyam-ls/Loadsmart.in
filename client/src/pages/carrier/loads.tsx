@@ -1483,7 +1483,7 @@ export default function CarrierLoadsPage() {
                       
                       <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
                         <SelectTrigger data-testid="select-driver">
-                          <SelectValue placeholder="Assign Driver (Optional)" />
+                          <SelectValue placeholder="Assign Driver" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="unassigned">Assign Later</SelectItem>
@@ -1561,7 +1561,7 @@ export default function CarrierLoadsPage() {
                       
                       <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
                         <SelectTrigger data-testid="select-driver-bid">
-                          <SelectValue placeholder="Assign Driver (Optional)" />
+                          <SelectValue placeholder="Assign Driver" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="unassigned">Assign Later</SelectItem>

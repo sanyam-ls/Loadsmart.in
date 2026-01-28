@@ -94,6 +94,7 @@ function OnboardingTable({
       <TableHeader>
         <TableRow>
           <TableHead>{t("onboarding.companyName")}</TableHead>
+          <TableHead>Status</TableHead>
           <TableHead>{t("onboarding.contactName")}</TableHead>
           <TableHead>{t("onboarding.businessType")}</TableHead>
           <TableHead>{t("onboarding.submittedAt")}</TableHead>
@@ -111,6 +112,9 @@ function OnboardingTable({
                   <div className="text-sm text-muted-foreground">{item.request.tradeName}</div>
                 </div>
               </div>
+            </TableCell>
+            <TableCell>
+              {getStatusBadge(item.request.status)}
             </TableCell>
             <TableCell>
               <div className="space-y-1">

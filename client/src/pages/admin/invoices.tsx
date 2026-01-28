@@ -77,9 +77,12 @@ interface DriverDetails {
 
 interface TruckDetails {
   id: string;
-  registrationNumber: string;
+  licensePlate?: string;
+  registrationNumber?: string;
   truckType?: string;
   capacity?: number;
+  make?: string;
+  model?: string;
 }
 
 interface Invoice {
@@ -1041,13 +1044,21 @@ export default function AdminInvoicesPage() {
                               <Label className="text-xs text-muted-foreground font-semibold">Vehicle Information</Label>
                               <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div>
-                                  <span className="text-muted-foreground text-xs">Truck Number</span>
-                                  <p className="font-semibold">{selectedInvoice.truck.registrationNumber}</p>
+                                  <span className="text-muted-foreground text-xs">Vehicle Number</span>
+                                  <p className="font-semibold font-mono">{selectedInvoice.truck.licensePlate || selectedInvoice.truck.registrationNumber || "N/A"}</p>
                                 </div>
                                 {selectedInvoice.truck.truckType && (
                                   <div>
                                     <span className="text-muted-foreground text-xs">Truck Type</span>
-                                    <p className="font-medium">{selectedInvoice.truck.truckType}</p>
+                                    <p className="font-medium">{selectedInvoice.truck.truckType.replace(/_/g, ' ')}</p>
+                                  </div>
+                                )}
+                                {(selectedInvoice.truck.make || selectedInvoice.truck.model) && (
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Make / Model</span>
+                                    <p className="font-medium">
+                                      {selectedInvoice.truck.make || ''} {selectedInvoice.truck.model || ''}
+                                    </p>
                                   </div>
                                 )}
                                 {selectedInvoice.truck.capacity && (

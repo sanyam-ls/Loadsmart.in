@@ -5741,9 +5741,29 @@ RESPOND IN THIS EXACT JSON FORMAT:
             if (truckData) {
               truck = {
                 id: truckData.id,
+                licensePlate: truckData.licensePlate,
                 registrationNumber: truckData.registrationNumber,
                 truckType: truckData.truckType,
                 capacity: truckData.capacity,
+                make: truckData.make,
+                model: truckData.model,
+              };
+            }
+          }
+          
+          // If no truck found but we have a carrier, try getting their truck directly
+          if (!truck && carrierId) {
+            const carrierTrucks = await storage.getTrucksByCarrier(carrierId);
+            if (carrierTrucks.length > 0) {
+              const carrierTruck = carrierTrucks[0]; // Get first truck for the carrier
+              truck = {
+                id: carrierTruck.id,
+                licensePlate: carrierTruck.licensePlate,
+                registrationNumber: carrierTruck.registrationNumber,
+                truckType: carrierTruck.truckType,
+                capacity: carrierTruck.capacity,
+                make: carrierTruck.make,
+                model: carrierTruck.model,
               };
             }
           }

@@ -5894,23 +5894,20 @@ RESPOND IN THIS EXACT JSON FORMAT:
             }
           }
           
-          // If no truck found but we have a carrier, try getting their truck directly (for solo drivers)
+          // If no truck found but we have a carrier, try getting their truck directly
           if (!truck && carrierId) {
-            const carrierProfile = await storage.getCarrierProfile(carrierId);
-            if (carrierProfile?.carrierType === 'solo') {
-              const carrierTrucks = await storage.getTrucksByCarrier(carrierId);
-              if (carrierTrucks.length > 0) {
-                const soloTruck = carrierTrucks[0]; // Solo drivers have one truck
-                truck = {
-                  id: soloTruck.id,
-                  licensePlate: soloTruck.licensePlate,
-                  registrationNumber: soloTruck.registrationNumber,
-                  truckType: soloTruck.truckType,
-                  capacity: soloTruck.capacity,
-                  make: soloTruck.make,
-                  model: soloTruck.model,
-                };
-              }
+            const carrierTrucks = await storage.getTrucksByCarrier(carrierId);
+            if (carrierTrucks.length > 0) {
+              const carrierTruck = carrierTrucks[0]; // Get first truck for the carrier
+              truck = {
+                id: carrierTruck.id,
+                licensePlate: carrierTruck.licensePlate,
+                registrationNumber: carrierTruck.registrationNumber,
+                truckType: carrierTruck.truckType,
+                capacity: carrierTruck.capacity,
+                make: carrierTruck.make,
+                model: carrierTruck.model,
+              };
             }
           }
           

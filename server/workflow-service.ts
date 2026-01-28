@@ -390,7 +390,10 @@ export async function acceptBid(
       console.log(`${logPrefix} Invoice already exists: ${invoiceId.slice(0, 8)}`);
     } else {
       const invoiceNumber = await storage.generateInvoiceNumber();
-      const finalAmount = acceptedAmount || load.adminFinalPrice || "0";
+      // Invoice amount should use adminFinalPrice (shipper's gross price) - not carrier bid amount
+      // adminFinalPrice is the price set by admin for the shipper to pay
+      // acceptedAmount is what the carrier receives (after platform margin)
+      const finalAmount = load.adminFinalPrice || acceptedAmount || "0";
       
       const advancePercent = load.advancePaymentPercent || 0;
       const advanceAmount = advancePercent > 0 ? (parseFloat(finalAmount) * (advancePercent / 100)).toFixed(2) : null;

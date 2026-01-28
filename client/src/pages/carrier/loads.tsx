@@ -311,6 +311,7 @@ export default function CarrierLoadsPage() {
   const [loadTypeFilter, setLoadTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [bidDialogOpen, setBidDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"accept" | "bid">("accept");
   const [selectedLoad, setSelectedLoad] = useState<CarrierLoad | null>(null);
   const [bidAmount, setBidAmount] = useState("");
   const [simulatedLoadStates, setSimulatedLoadStates] = useState<Record<string, { myBid?: { amount: string }, status?: string }>>({});
@@ -647,6 +648,7 @@ export default function CarrierLoadsPage() {
       setBidAmount(price.toString());
       setSelectedTruckId("");
       setSelectedDriverId("");
+      setDialogMode("accept");
       setBidDialogOpen(true);
       return;
     }
@@ -676,6 +678,7 @@ export default function CarrierLoadsPage() {
     setBidAmount(price.toString());
     setSelectedTruckId("");
     setSelectedDriverId("");
+    setDialogMode("bid");
     setBidDialogOpen(true);
   };
 
@@ -1400,190 +1403,190 @@ export default function CarrierLoadsPage() {
       </Dialog>
 
       <Dialog open={bidDialogOpen} onOpenChange={setBidDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {selectedLoad?.priceFixed ? "Accept Fixed Price Load" : "Accept Load or Place Bid"}
+              {dialogMode === "accept" ? "Accept Load" : "Place Bid"}
             </DialogTitle>
             <DialogDescription>
-              {selectedLoad?.priceFixed 
-                ? "Review and accept this fixed-price load"
-                : "Accept at the carrier payout price or submit a counter-offer"
+              {dialogMode === "accept" 
+                ? "Confirm acceptance at the carrier payout price"
+                : "Submit your counter-offer for this load"
               }
             </DialogDescription>
           </DialogHeader>
           
           {selectedLoad && (
-            <div className="space-y-4 py-4">
-              <Card>
-                <CardContent className="pt-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Badge className={`${getMatchScoreBadge((selectedLoad as any).matchScore || 80)} no-default-hover-elevate no-default-active-elevate`}>
-                      <Target className="h-3 w-3 mr-1" />
-                      {(selectedLoad as any).matchScore || 80}% {t("carrier.match")}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">{formatLoadId(selectedLoad)}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{selectedLoad.origin}</span>
-                    <ArrowRight className="h-4 w-4" />
-                    <span>{selectedLoad.destination}</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    {selectedLoad.shipperName && (
-                      <div>
-                        <span className="text-muted-foreground">{t("loads.shipper")}:</span>
-                        <span className="ml-2 font-medium">{selectedLoad.shipperName}</span>
-                      </div>
-                    )}
-                    {selectedLoad.loadType && (
-                      <div>
-                        <span className="text-muted-foreground">Load {t("common.type")}:</span>
-                        <span className="ml-2 font-medium">{selectedLoad.loadType}</span>
-                      </div>
-                    )}
-                    {selectedLoad.weight && (
-                      <div>
-                        <span className="text-muted-foreground">{t("loads.weight")}:</span>
-                        <span className="ml-2 font-medium">{selectedLoad.weight} Tons</span>
-                      </div>
-                    )}
-                    {selectedLoad.estimatedDistance && (
-                      <div>
-                        <span className="text-muted-foreground">{t("loads.distance")}:</span>
-                        <span className="ml-2 font-medium">{selectedLoad.estimatedDistance} km</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-muted-foreground">Total Price</span>
-                    <span className="text-lg font-bold">{formatCurrency(getCarrierPrice(selectedLoad))}</span>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="space-y-4 py-2">
+              {/* Compact Load Summary */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-green-500" />
+                  <span className="font-medium">{selectedLoad.origin}</span>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  <MapPin className="h-4 w-4 text-red-500" />
+                  <span className="font-medium">{selectedLoad.destination}</span>
+                </div>
+                <span className="text-muted-foreground">{formatLoadId(selectedLoad)}</span>
+              </div>
               
-              {/* Truck and Driver Selection for Enterprise Carriers */}
-              {isEnterprise && (
-                <Card>
-                  <CardContent className="pt-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <Truck className="h-4 w-4" />
-                      Assign Resources
+              {/* Mode Toggle for negotiable loads */}
+              {!selectedLoad.priceFixed && (
+                <Tabs value={dialogMode} onValueChange={(v) => setDialogMode(v as "accept" | "bid")} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="accept" data-testid="tab-accept">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Accept
+                    </TabsTrigger>
+                    <TabsTrigger value="bid" data-testid="tab-bid">
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      Place Bid
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
+              
+              {/* Accept Mode View */}
+              {dialogMode === "accept" && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Your Payout</span>
+                      <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(getCarrierPrice(selectedLoad))}
+                      </span>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Select Truck *</label>
+                  </div>
+                  
+                  {/* Truck/Driver Selection for Enterprise */}
+                  {isEnterprise && (
+                    <div className="space-y-3">
                       <Select value={selectedTruckId} onValueChange={setSelectedTruckId}>
                         <SelectTrigger data-testid="select-truck">
-                          <SelectValue placeholder="Choose a truck for this load" />
+                          <Truck className="h-4 w-4 mr-2" />
+                          <SelectValue placeholder="Select Truck *" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableTrucks.length === 0 ? (
                             <div className="p-2 text-sm text-muted-foreground text-center">
-                              No available trucks. All trucks are assigned to active loads.
+                              No available trucks
                             </div>
                           ) : (
                             availableTrucks.map((truck) => (
                               <SelectItem key={truck.id} value={truck.id}>
-                                {truck.licensePlate} - {truck.make} {truck.model} ({truck.truckType})
+                                {truck.licensePlate} - {truck.truckType}
                               </SelectItem>
                             ))
                           )}
                         </SelectContent>
                       </Select>
-                      {trucks.length > 0 && availableTrucks.length === 0 && (
-                        <p className="text-xs text-amber-600">All your trucks are currently assigned to active shipments.</p>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Assign Driver (Optional)</label>
+                      
                       <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
                         <SelectTrigger data-testid="select-driver">
-                          <SelectValue placeholder="Choose a driver" />
+                          <SelectValue placeholder="Assign Driver (Optional)" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="unassigned">Assign Later</SelectItem>
                           {availableDrivers.map((driver) => (
                             <SelectItem key={driver.id} value={driver.id}>
-                              {driver.name} {driver.licenseNumber ? `(${driver.licenseNumber})` : ""}
+                              {driver.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {drivers.length > 0 && availableDrivers.length === 0 && (
-                        <p className="text-xs text-amber-600">All your drivers are currently assigned to active shipments.</p>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                  
+                  <Button 
+                    className="w-full"
+                    onClick={handleAccept}
+                    disabled={acceptDirectMutation.isPending || (isEnterprise && !selectedTruckId)}
+                    data-testid="button-accept-load"
+                  >
+                    {acceptDirectMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Confirm Accept at {formatCurrency(getCarrierPrice(selectedLoad))}
+                  </Button>
+                  {isEnterprise && !selectedTruckId && (
+                    <p className="text-xs text-destructive text-center">
+                      Please select a truck to accept this load.
+                    </p>
+                  )}
+                </div>
               )}
               
-              {/* Accept Load Section - Always show for all loads */}
-              <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <span className="font-medium text-green-800 dark:text-green-300">Accept Load at Admin Price</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Accept this load at the carrier payout price. Shipment will be created immediately.
-                </p>
-                <div className="flex items-center justify-between mb-3 p-2 bg-background rounded">
-                  <span className="text-sm text-muted-foreground">Your Payout:</span>
-                  <span className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(getCarrierPrice(selectedLoad))}</span>
-                </div>
-                <Button 
-                  className="w-full"
-                  onClick={handleAccept}
-                  disabled={acceptDirectMutation.isPending || (isEnterprise && !selectedTruckId)}
-                  data-testid="button-accept-load"
-                >
-                  {acceptDirectMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirm Accept
-                </Button>
-                {isEnterprise && !selectedTruckId && (
-                  <p className="text-xs text-destructive mt-2">
-                    Please select a truck to accept this load.
-                  </p>
-                )}
-              </div>
-              
-              {/* Counter Bid Section - Only for negotiable loads */}
-              {!selectedLoad.priceFixed && (
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Unlock className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-medium">Or Place a Counter Bid</span>
+              {/* Bid Mode View */}
+              {dialogMode === "bid" && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted/50 rounded-lg border">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-muted-foreground">Admin Price</span>
+                      <span className="text-lg font-medium">{formatCurrency(getCarrierPrice(selectedLoad))}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Your Bid Amount</label>
+                      <Input
+                        type="number"
+                        placeholder="Enter your bid"
+                        value={bidAmount}
+                        onChange={(e) => setBidAmount(e.target.value)}
+                        className="text-lg font-medium"
+                        data-testid="input-bid-amount"
+                      />
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Propose a different price. Admin will review your bid.
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      placeholder={t("bids.enterBidAmount")}
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
-                      className="flex-1"
-                      data-testid="input-bid-amount"
-                    />
-                    <Button 
-                      variant="outline"
-                      onClick={submitBid}
-                      disabled={!bidAmount || bidMutation.isPending || (isEnterprise && !selectedTruckId)}
-                      data-testid="button-place-bid"
-                    >
-                      {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      Place Bid
-                    </Button>
-                  </div>
+                  
+                  {/* Truck/Driver Selection for Enterprise */}
+                  {isEnterprise && (
+                    <div className="space-y-3">
+                      <Select value={selectedTruckId} onValueChange={setSelectedTruckId}>
+                        <SelectTrigger data-testid="select-truck-bid">
+                          <Truck className="h-4 w-4 mr-2" />
+                          <SelectValue placeholder="Select Truck *" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTrucks.length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              No available trucks
+                            </div>
+                          ) : (
+                            availableTrucks.map((truck) => (
+                              <SelectItem key={truck.id} value={truck.id}>
+                                {truck.licensePlate} - {truck.truckType}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                        <SelectTrigger data-testid="select-driver-bid">
+                          <SelectValue placeholder="Assign Driver (Optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Assign Later</SelectItem>
+                          {availableDrivers.map((driver) => (
+                            <SelectItem key={driver.id} value={driver.id}>
+                              {driver.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    className="w-full"
+                    onClick={submitBid}
+                    disabled={!bidAmount || bidMutation.isPending || (isEnterprise && !selectedTruckId)}
+                    data-testid="button-place-bid"
+                  >
+                    {bidMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Submit Bid at {bidAmount ? formatCurrency(parseInt(bidAmount)) : "..."}
+                  </Button>
                   {isEnterprise && !selectedTruckId && (
-                    <p className="text-xs text-destructive mt-2">
+                    <p className="text-xs text-destructive text-center">
                       Please select a truck to place a bid.
                     </p>
                   )}
@@ -1592,7 +1595,7 @@ export default function CarrierLoadsPage() {
             </div>
           )}
           
-          <DialogFooter className="gap-2">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setBidDialogOpen(false)} data-testid="button-cancel-bid">
               Cancel
             </Button>

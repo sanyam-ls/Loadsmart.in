@@ -40,6 +40,16 @@ interface CarrierLoad {
   id: string;
   origin: string;
   destination: string;
+  // Full address details
+  pickupAddress?: string | null;
+  pickupLocality?: string | null;
+  pickupLandmark?: string | null;
+  pickupCity?: string | null;
+  dropoffAddress?: string | null;
+  dropoffLocality?: string | null;
+  dropoffLandmark?: string | null;
+  dropoffBusinessName?: string | null;
+  dropoffCity?: string | null;
   loadType: string | null;
   weight: string | null;
   estimatedDistance: number | null;
@@ -372,6 +382,14 @@ export default function CarrierLoadsPage() {
     id: string;
     pickupCity: string;
     dropoffCity: string;
+    // Full address details
+    pickupAddress: string | null;
+    pickupLocality: string | null;
+    pickupLandmark: string | null;
+    dropoffAddress: string | null;
+    dropoffLocality: string | null;
+    dropoffLandmark: string | null;
+    dropoffBusinessName: string | null;
     requiredTruckType: string | null;
     weight: string | null;
     distance: number | null;
@@ -405,6 +423,16 @@ export default function CarrierLoadsPage() {
       id: load.id,
       origin: load.pickupCity || "Unknown",
       destination: load.dropoffCity || "Unknown",
+      // Full address details
+      pickupAddress: load.pickupAddress,
+      pickupLocality: load.pickupLocality,
+      pickupLandmark: load.pickupLandmark,
+      pickupCity: load.pickupCity,
+      dropoffAddress: load.dropoffAddress,
+      dropoffLocality: load.dropoffLocality,
+      dropoffLandmark: load.dropoffLandmark,
+      dropoffBusinessName: load.dropoffBusinessName,
+      dropoffCity: load.dropoffCity,
       loadType: load.requiredTruckType,
       weight: load.weight,
       estimatedDistance: load.distance || estimateDistanceFromCities(load.pickupCity, load.dropoffCity),
@@ -954,14 +982,33 @@ export default function CarrierLoadsPage() {
                   <span className="text-xs text-muted-foreground">{formatLoadId(load)}</span>
                 </div>
                 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-green-500" />
-                    <span className="font-medium">{load.origin}</span>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium">{load.origin}</div>
+                      {load.pickupLocality && (
+                        <div className="text-sm text-muted-foreground">{load.pickupLocality}</div>
+                      )}
+                      {load.pickupLandmark && (
+                        <div className="text-xs text-muted-foreground">Near: {load.pickupLandmark}</div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-red-500" />
-                    <span className="font-medium">{load.destination}</span>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium">{load.destination}</div>
+                      {load.dropoffBusinessName && (
+                        <div className="text-sm font-medium">{load.dropoffBusinessName}</div>
+                      )}
+                      {load.dropoffLocality && (
+                        <div className="text-sm text-muted-foreground">{load.dropoffLocality}</div>
+                      )}
+                      {load.dropoffLandmark && (
+                        <div className="text-xs text-muted-foreground">Near: {load.dropoffLandmark}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 

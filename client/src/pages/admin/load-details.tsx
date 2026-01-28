@@ -215,6 +215,17 @@ export default function AdminLoadDetailsPage() {
       shipperName: load.shipperCompanyName || load.shipperContactName || "Unknown Shipper",
       pickup: load.pickupCity,
       drop: load.dropoffCity,
+      // Full pickup address details
+      pickupAddress: load.pickupAddress || undefined,
+      pickupLocality: load.pickupLocality || undefined,
+      pickupLandmark: load.pickupLandmark || undefined,
+      pickupCity: load.pickupCity || undefined,
+      // Full dropoff address details
+      dropoffAddress: load.dropoffAddress || undefined,
+      dropoffLocality: load.dropoffLocality || undefined,
+      dropoffLandmark: load.dropoffLandmark || undefined,
+      dropoffBusinessName: load.dropoffBusinessName || undefined,
+      dropoffCity: load.dropoffCity || undefined,
       weight: parseFloat(String(load.weight)) || 0,
       weightUnit: load.weightUnit || "kg",
       type: load.requiredTruckType || "Any",
@@ -474,18 +485,47 @@ export default function AdminLoadDetailsPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Route Details</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-green-500" />
-                  <span className="text-muted-foreground">From:</span>
-                  <span className="font-medium">{detailedLoad.pickup}</span>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="text-muted-foreground text-sm">Pickup:</span>
+                      <div className="font-medium">{detailedLoad.pickupCity}</div>
+                      {detailedLoad.pickupLocality && (
+                        <div className="text-sm text-muted-foreground">{detailedLoad.pickupLocality}</div>
+                      )}
+                      {detailedLoad.pickupAddress && (
+                        <div className="text-sm text-muted-foreground">{detailedLoad.pickupAddress}</div>
+                      )}
+                      {detailedLoad.pickupLandmark && (
+                        <div className="text-sm text-muted-foreground">Near: {detailedLoad.pickupLandmark}</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-red-500" />
-                  <span className="text-muted-foreground">To:</span>
-                  <span className="font-medium">{detailedLoad.drop}</span>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="text-muted-foreground text-sm">Dropoff:</span>
+                      <div className="font-medium">{detailedLoad.dropoffCity}</div>
+                      {detailedLoad.dropoffBusinessName && (
+                        <div className="text-sm font-medium">{detailedLoad.dropoffBusinessName}</div>
+                      )}
+                      {detailedLoad.dropoffLocality && (
+                        <div className="text-sm text-muted-foreground">{detailedLoad.dropoffLocality}</div>
+                      )}
+                      {detailedLoad.dropoffAddress && (
+                        <div className="text-sm text-muted-foreground">{detailedLoad.dropoffAddress}</div>
+                      )}
+                      {detailedLoad.dropoffLandmark && (
+                        <div className="text-sm text-muted-foreground">Near: {detailedLoad.dropoffLandmark}</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between pt-2 border-t">
                   <span className="text-muted-foreground">Distance</span>
                   <span className="font-medium">{detailedLoad.distance} km</span>
                 </div>

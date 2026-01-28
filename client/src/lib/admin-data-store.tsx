@@ -24,6 +24,16 @@ export interface AdminLoad {
   shipperName: string;
   pickup: string;
   drop: string;
+  // Full address details
+  pickupAddress?: string;
+  pickupLocality?: string;
+  pickupLandmark?: string;
+  pickupCity?: string;
+  dropoffAddress?: string;
+  dropoffLocality?: string;
+  dropoffLandmark?: string;
+  dropoffBusinessName?: string;
+  dropoffCity?: string;
   weight: number;
   weightUnit: string;
   type: string;

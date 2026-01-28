@@ -711,41 +711,47 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                               </div>
                             )}
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            {selectedInvoice.truck && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Vehicle Number</Label>
-                                <p className="font-medium text-sm font-mono flex items-center gap-1" data-testid="text-truck-number">
-                                  <Truck className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.truck.licensePlate || selectedInvoice.truck.registrationNumber || "N/A"}
-                                </p>
-                              </div>
-                            )}
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Trips Completed</Label>
-                              <p className="text-sm flex items-center gap-1" data-testid="text-trips-completed">
-                                <Award className="h-3 w-3 text-green-600" />
-                                {selectedInvoice.carrier.tripsCompleted} trips
-                              </p>
-                            </div>
-                          </div>
-                          {/* Vehicle Details for Solo Driver */}
-                          {selectedInvoice.truck && (selectedInvoice.truck.make || selectedInvoice.truck.model || selectedInvoice.truck.truckType) && (
-                            <div className="bg-background/50 rounded-md p-2 mt-2">
-                              <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
-                              <div className="flex items-center gap-3 mt-1 text-sm">
-                                {selectedInvoice.truck.make && (
-                                  <span className="font-medium">{selectedInvoice.truck.make}</span>
-                                )}
-                                {selectedInvoice.truck.model && (
-                                  <span>{selectedInvoice.truck.model}</span>
-                                )}
+                          {/* Vehicle Information - Consistent with Admin Portal */}
+                          {selectedInvoice.truck && (
+                            <div className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-3 space-y-2">
+                              <Label className="text-xs text-muted-foreground font-semibold">Vehicle Information</Label>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Vehicle Number</span>
+                                  <p className="font-semibold font-mono" data-testid="text-truck-number">
+                                    {selectedInvoice.truck.licensePlate || selectedInvoice.truck.registrationNumber || "N/A"}
+                                  </p>
+                                </div>
                                 {selectedInvoice.truck.truckType && (
-                                  <span className="text-muted-foreground">({selectedInvoice.truck.truckType})</span>
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Truck Type</span>
+                                    <p className="font-medium">{selectedInvoice.truck.truckType.replace(/_/g, ' ')}</p>
+                                  </div>
+                                )}
+                                {(selectedInvoice.truck.make || selectedInvoice.truck.model) && (
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Make / Model</span>
+                                    <p className="font-medium">
+                                      {selectedInvoice.truck.make || ''} {selectedInvoice.truck.model || ''}
+                                    </p>
+                                  </div>
+                                )}
+                                {selectedInvoice.truck.capacity && (
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Capacity</span>
+                                    <p className="font-medium">{selectedInvoice.truck.capacity} MT</p>
+                                  </div>
                                 )}
                               </div>
                             </div>
                           )}
+                          {/* Trips Completed */}
+                          <div className="flex items-center gap-2 text-xs bg-green-50 dark:bg-green-900/20 rounded p-2">
+                            <Award className="h-3 w-3 text-green-600" />
+                            <span className="text-green-700 dark:text-green-400 font-medium" data-testid="text-trips-completed">
+                              {selectedInvoice.carrier.tripsCompleted} trips completed
+                            </span>
+                          </div>
                         </>
                       ) : (
                         <>
@@ -757,25 +763,16 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                                 {selectedInvoice.carrier.companyName || selectedInvoice.carrier.name}
                               </p>
                             </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Trips Completed</Label>
-                              <p className="text-sm flex items-center gap-1" data-testid="text-trips-completed">
-                                <Award className="h-3 w-3 text-green-600" />
-                                {selectedInvoice.carrier.tripsCompleted} trips
-                              </p>
-                            </div>
-                          </div>
-                          {selectedInvoice.driver && (
-                            <div className="bg-background/50 rounded-md p-2">
-                              <Label className="text-xs text-muted-foreground">Assigned Driver</Label>
-                              <div className="flex items-center gap-3 mt-1">
+                            {selectedInvoice.driver && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Assigned Driver</Label>
                                 <p className="font-medium text-sm flex items-center gap-1" data-testid="text-driver-name">
                                   <User className="h-3 w-3 text-muted-foreground" />
                                   {selectedInvoice.driver.name}
                                 </p>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                           {selectedInvoice.adminContact?.phone && (
                             <div className="bg-background/50 rounded-md p-2">
                               <Label className="text-xs text-muted-foreground">Support Contact</Label>
@@ -785,37 +782,47 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                               </div>
                             </div>
                           )}
-                          <div className="grid grid-cols-2 gap-3">
-                            {selectedInvoice.truck && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Vehicle Number</Label>
-                                <p className="font-medium text-sm font-mono flex items-center gap-1" data-testid="text-truck-number">
-                                  <Truck className="h-3 w-3 text-muted-foreground" />
-                                  {selectedInvoice.truck.licensePlate || selectedInvoice.truck.registrationNumber || "N/A"}
-                                </p>
-                              </div>
-                            )}
-                            {selectedInvoice.truck?.truckType && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Truck Type</Label>
-                                <p className="text-sm">{selectedInvoice.truck.truckType}</p>
-                              </div>
-                            )}
-                          </div>
-                          {/* Vehicle Details for Enterprise Carrier */}
-                          {selectedInvoice.truck && (selectedInvoice.truck.make || selectedInvoice.truck.model) && (
-                            <div className="bg-background/50 rounded-md p-2">
-                              <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
-                              <div className="flex items-center gap-3 mt-1 text-sm">
-                                {selectedInvoice.truck.make && (
-                                  <span className="font-medium">{selectedInvoice.truck.make}</span>
+                          {/* Vehicle Information - Consistent with Admin Portal */}
+                          {selectedInvoice.truck && (
+                            <div className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-3 space-y-2">
+                              <Label className="text-xs text-muted-foreground font-semibold">Vehicle Information</Label>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground text-xs">Vehicle Number</span>
+                                  <p className="font-semibold font-mono" data-testid="text-truck-number">
+                                    {selectedInvoice.truck.licensePlate || selectedInvoice.truck.registrationNumber || "N/A"}
+                                  </p>
+                                </div>
+                                {selectedInvoice.truck.truckType && (
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Truck Type</span>
+                                    <p className="font-medium">{selectedInvoice.truck.truckType.replace(/_/g, ' ')}</p>
+                                  </div>
                                 )}
-                                {selectedInvoice.truck.model && (
-                                  <span>{selectedInvoice.truck.model}</span>
+                                {(selectedInvoice.truck.make || selectedInvoice.truck.model) && (
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Make / Model</span>
+                                    <p className="font-medium">
+                                      {selectedInvoice.truck.make || ''} {selectedInvoice.truck.model || ''}
+                                    </p>
+                                  </div>
+                                )}
+                                {selectedInvoice.truck.capacity && (
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Capacity</span>
+                                    <p className="font-medium">{selectedInvoice.truck.capacity} MT</p>
+                                  </div>
                                 )}
                               </div>
                             </div>
                           )}
+                          {/* Trips Completed */}
+                          <div className="flex items-center gap-2 text-xs bg-green-50 dark:bg-green-900/20 rounded p-2">
+                            <Award className="h-3 w-3 text-green-600" />
+                            <span className="text-green-700 dark:text-green-400 font-medium" data-testid="text-trips-completed">
+                              {selectedInvoice.carrier.tripsCompleted} trips completed
+                            </span>
+                          </div>
                         </>
                       )}
                       

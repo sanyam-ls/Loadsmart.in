@@ -116,8 +116,8 @@ export default function AuthPage() {
   const [verifiedPhone, setVerifiedPhone] = useState("");
   
   
-  // Login method toggle (password vs OTP)
-  const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password");
+  // Login method toggle (password vs OTP) - OTP is default/primary
+  const [loginMethod, setLoginMethod] = useState<"password" | "otp">("otp");
   const [loginPhone, setLoginPhone] = useState("");
   const [loginOtpSent, setLoginOtpSent] = useState(false);
   const [loginOtpId, setLoginOtpId] = useState("");
@@ -626,6 +626,19 @@ export default function AuthPage() {
                     <div className="flex gap-2 p-1 bg-muted rounded-lg">
                       <Button
                         type="button"
+                        variant={loginMethod === "otp" ? "default" : "ghost"}
+                        className="flex-1"
+                        onClick={() => {
+                          setLoginMethod("otp");
+                          loginForm.reset();
+                        }}
+                        data-testid="button-login-otp"
+                      >
+                        <Phone className="h-4 w-4 mr-2" />
+                        Phone OTP
+                      </Button>
+                      <Button
+                        type="button"
                         variant={loginMethod === "password" ? "default" : "ghost"}
                         className="flex-1"
                         onClick={() => {
@@ -637,19 +650,6 @@ export default function AuthPage() {
                       >
                         <KeyRound className="h-4 w-4 mr-2" />
                         Password
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={loginMethod === "otp" ? "default" : "ghost"}
-                        className="flex-1"
-                        onClick={() => {
-                          setLoginMethod("otp");
-                          loginForm.reset();
-                        }}
-                        data-testid="button-login-otp"
-                      >
-                        <Phone className="h-4 w-4 mr-2" />
-                        Phone OTP
                       </Button>
                     </div>
 

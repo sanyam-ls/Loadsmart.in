@@ -5876,7 +5876,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
             }
           }
           
-          // Get truck details from shipment or winning bid
+          // Get truck details from shipment, winning bid, or carrier's truck (for solo drivers)
           let truckId = shipment?.truckId || winningBid?.truckId;
           
           if (truckId) {
@@ -5891,6 +5891,26 @@ RESPOND IN THIS EXACT JSON FORMAT:
                 make: truckData.make,
                 model: truckData.model,
               };
+            }
+          }
+          
+          // If no truck found but we have a carrier, try getting their truck directly (for solo drivers)
+          if (!truck && carrierId) {
+            const carrierProfile = await storage.getCarrierProfile(carrierId);
+            if (carrierProfile?.carrierType === 'solo') {
+              const carrierTrucks = await storage.getTrucksByCarrier(carrierId);
+              if (carrierTrucks.length > 0) {
+                const soloTruck = carrierTrucks[0]; // Solo drivers have one truck
+                truck = {
+                  id: soloTruck.id,
+                  licensePlate: soloTruck.licensePlate,
+                  registrationNumber: soloTruck.registrationNumber,
+                  truckType: soloTruck.truckType,
+                  capacity: soloTruck.capacity,
+                  make: soloTruck.make,
+                  model: soloTruck.model,
+                };
+              }
             }
           }
           

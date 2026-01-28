@@ -1226,12 +1226,38 @@ export default function CarrierLoadsPage() {
                     <span className="text-sm font-mono text-muted-foreground">{formatLoadId(detailLoad)}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-green-500" />
-                    <span className="font-medium">{detailLoad.origin}</span>
-                    <ArrowRight className="h-4 w-4" />
-                    <MapPin className="h-4 w-4 text-red-500" />
-                    <span className="font-medium">{detailLoad.destination}</span>
+                  {/* Full Route Details */}
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium">{detailLoad.origin}</div>
+                        {detailLoad.pickupLocality && (
+                          <div className="text-sm text-muted-foreground">{detailLoad.pickupLocality}</div>
+                        )}
+                        {detailLoad.pickupLandmark && (
+                          <div className="text-xs text-muted-foreground">Near: {detailLoad.pickupLandmark}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium">{detailLoad.destination}</div>
+                        {detailLoad.dropoffBusinessName && (
+                          <div className="text-sm font-medium">{detailLoad.dropoffBusinessName}</div>
+                        )}
+                        {detailLoad.dropoffLocality && (
+                          <div className="text-sm text-muted-foreground">{detailLoad.dropoffLocality}</div>
+                        )}
+                        {detailLoad.dropoffLandmark && (
+                          <div className="text-xs text-muted-foreground">Near: {detailLoad.dropoffLandmark}</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-sm">

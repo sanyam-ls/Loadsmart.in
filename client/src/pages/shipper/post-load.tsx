@@ -2091,7 +2091,7 @@ export default function PostLoadPage() {
                       name="deliveryDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Delivery Date (Optional)</FormLabel>
+                          <FormLabel>Delivery Date</FormLabel>
                           <FormControl>
                             <Input type="datetime-local" {...field} data-testid="input-delivery-date" />
                           </FormControl>

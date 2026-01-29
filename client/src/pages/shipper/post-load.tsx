@@ -1378,7 +1378,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Company Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="ABC Logistics Pvt Ltd" {...field} data-testid="input-shipper-company-name" />
+                            <Input placeholder="[e.g. ABC Logistics Pvt Ltd]" {...field} data-testid="input-shipper-company-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1391,7 +1391,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Contact Person Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Rajesh Kumar" {...field} data-testid="input-shipper-contact-name" />
+                            <Input placeholder="[e.g. Rajesh Kumar]" {...field} data-testid="input-shipper-contact-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1405,7 +1405,7 @@ export default function PostLoadPage() {
                       <FormItem>
                         <FormLabel>Company Address</FormLabel>
                         <FormControl>
-                          <Input placeholder="123 Industrial Area, Sector 5, Mumbai, MH 400001" {...field} data-testid="input-shipper-company-address" />
+                          <Input placeholder="[e.g. 123 Industrial Area, Sector 5]" {...field} data-testid="input-shipper-company-address" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1418,7 +1418,7 @@ export default function PostLoadPage() {
                       <FormItem>
                         <FormLabel>Phone Number</FormLabel>
                         <FormControl>
-                          <Input placeholder="+91 98765 43210" {...field} data-testid="input-shipper-phone" />
+                          <Input placeholder="[e.g. +91 98765 43210]" {...field} data-testid="input-shipper-phone" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1442,7 +1442,7 @@ export default function PostLoadPage() {
                       <FormItem>
                         <FormLabel>Street Address</FormLabel>
                         <FormControl>
-                          <Input placeholder="123 Warehouse Way" {...field} data-testid="input-pickup-address" />
+                          <Input placeholder="[e.g. 123 Warehouse Way]" {...field} data-testid="input-pickup-address" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1456,7 +1456,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Locality / Area</FormLabel>
                           <FormControl>
-                            <Input placeholder="Industrial Area, Sector 5" {...field} data-testid="input-pickup-locality" />
+                            <Input placeholder="[e.g. Industrial Area, Sector 5]" {...field} data-testid="input-pickup-locality" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1469,7 +1469,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Landmark</FormLabel>
                           <FormControl>
-                            <Input placeholder="Near ABC Factory" {...field} data-testid="input-pickup-landmark" />
+                            <Input placeholder="[e.g. Near ABC Factory]" {...field} data-testid="input-pickup-landmark" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1556,7 +1556,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Enter City Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your city name" {...field} data-testid="input-pickup-city-custom" />
+                            <Input placeholder="[e.g. Vapi]" {...field} data-testid="input-pickup-city-custom" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1581,7 +1581,7 @@ export default function PostLoadPage() {
                       <FormItem>
                         <FormLabel>Business Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="ABC Enterprises Pvt. Ltd." {...field} data-testid="input-dropoff-business-name" />
+                          <Input placeholder="[e.g. ABC Enterprises Pvt. Ltd.]" {...field} data-testid="input-dropoff-business-name" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1594,7 +1594,7 @@ export default function PostLoadPage() {
                       <FormItem>
                         <FormLabel>Street Address</FormLabel>
                         <FormControl>
-                          <Input placeholder="456 Distribution Center" {...field} data-testid="input-dropoff-address" />
+                          <Input placeholder="[e.g. 456 Distribution Center]" {...field} data-testid="input-dropoff-address" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1608,7 +1608,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Locality / Area</FormLabel>
                           <FormControl>
-                            <Input placeholder="Okhla Industrial Area" {...field} data-testid="input-dropoff-locality" />
+                            <Input placeholder="[e.g. Okhla Industrial Area]" {...field} data-testid="input-dropoff-locality" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1621,7 +1621,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Landmark</FormLabel>
                           <FormControl>
-                            <Input placeholder="Opposite Metro Station" {...field} data-testid="input-dropoff-landmark" />
+                            <Input placeholder="[e.g. Opposite Metro Station]" {...field} data-testid="input-dropoff-landmark" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1708,7 +1708,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Enter City Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your city name" {...field} data-testid="input-dropoff-city-custom" />
+                            <Input placeholder="[e.g. Vapi]" {...field} data-testid="input-dropoff-city-custom" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1734,7 +1734,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Receiver Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="John Doe" {...field} data-testid="input-receiver-name" />
+                            <Input placeholder="[e.g. Suresh Patel]" {...field} data-testid="input-receiver-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1747,7 +1747,7 @@ export default function PostLoadPage() {
                         <FormItem>
                           <FormLabel>Receiver Phone</FormLabel>
                           <FormControl>
-                            <Input placeholder="+91 98765 43210" {...field} data-testid="input-receiver-phone" />
+                            <Input placeholder="[e.g. +91 98765 43210]" {...field} data-testid="input-receiver-phone" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1761,7 +1761,7 @@ export default function PostLoadPage() {
                       <FormItem>
                         <FormLabel>Receiver Email (Optional)</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="receiver@example.com" {...field} data-testid="input-receiver-email" />
+                          <Input type="email" placeholder="[e.g. receiver@company.com]" {...field} data-testid="input-receiver-email" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1789,7 +1789,7 @@ export default function PostLoadPage() {
                             <div className="flex gap-2">
                               <Input 
                                 type="number" 
-                                placeholder="15" 
+                                placeholder="[e.g. 15]" 
                                 {...field}
                                 onBlur={(e) => { field.onBlur(); updateEstimation(); }}
                                 data-testid="input-weight"
@@ -1891,7 +1891,7 @@ export default function PostLoadPage() {
                         <FormLabel>Special Notes (Optional)</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Any special handling requirements, loading/unloading instructions, etc."
+                            placeholder="[e.g. Fragile goods, handle with care]"
                             {...field}
                             data-testid="input-special-notes"
                           />
@@ -1948,7 +1948,7 @@ export default function PostLoadPage() {
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
                                 type="number"
-                                placeholder="Enter your preferred rate per tonne"
+                                placeholder="[e.g. 2500]"
                                 className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 {...field}
                                 data-testid="input-price-per-ton"
@@ -1975,7 +1975,7 @@ export default function PostLoadPage() {
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
                                 type="number"
-                                placeholder="Enter your preferred fixed price"
+                                placeholder="[e.g. 45000]"
                                 className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 {...field}
                                 data-testid="input-fixed-price"
@@ -2003,7 +2003,7 @@ export default function PostLoadPage() {
                               type="text"
                               inputMode="numeric"
                               pattern="[0-9]*"
-                              placeholder="e.g. 30"
+                              placeholder="[e.g. 30]"
                               {...field}
                               onChange={(e) => {
                                 const value = e.target.value.replace(/[^0-9]/g, '');

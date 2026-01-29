@@ -57,11 +57,13 @@ const editLoadSchema = z.object({
   pickupLandmark: z.string().optional(),
   pickupCity: z.string().min(1, "Pickup city is required"),
   pickupState: z.string().optional(),
+  pickupPincode: z.string().optional(),
   dropoffAddress: z.string().min(1, "Dropoff address is required"),
   dropoffLocality: z.string().optional(),
   dropoffLandmark: z.string().optional(),
   dropoffCity: z.string().min(1, "Dropoff city is required"),
   dropoffState: z.string().optional(),
+  dropoffPincode: z.string().optional(),
   dropoffBusinessName: z.string().optional(),
   receiverName: z.string().min(1, "Receiver name is required"),
   receiverPhone: z.string().min(1, "Receiver phone is required"),
@@ -211,11 +213,13 @@ export default function LoadDetailPage() {
       pickupLandmark: "",
       pickupCity: "",
       pickupState: "",
+      pickupPincode: "",
       dropoffAddress: "",
       dropoffLocality: "",
       dropoffLandmark: "",
       dropoffCity: "",
       dropoffState: "",
+      dropoffPincode: "",
       dropoffBusinessName: "",
       receiverName: "",
       receiverPhone: "",
@@ -239,11 +243,13 @@ export default function LoadDetailPage() {
         pickupLandmark: load.pickupLandmark || "",
         pickupCity: load.pickupCity || "",
         pickupState: load.pickupState || "",
+        pickupPincode: load.pickupPincode || "",
         dropoffAddress: load.dropoffAddress || "",
         dropoffLocality: load.dropoffLocality || "",
         dropoffLandmark: load.dropoffLandmark || "",
         dropoffCity: load.dropoffCity || "",
         dropoffState: load.dropoffState || "",
+        dropoffPincode: load.dropoffPincode || "",
         dropoffBusinessName: load.dropoffBusinessName || "",
         receiverName: load.receiverName || "",
         receiverPhone: load.receiverPhone || "",
@@ -1084,6 +1090,19 @@ export default function LoadDetailPage() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={editForm.control}
+                      name="pickupPincode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pincode</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Pincode" {...field} data-testid="input-edit-pickup-pincode" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </div>
 
@@ -1154,6 +1173,19 @@ export default function LoadDetailPage() {
                           <FormLabel>State</FormLabel>
                           <FormControl>
                             <Input placeholder="State" {...field} data-testid="input-edit-dropoff-state" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="dropoffPincode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pincode</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Pincode" {...field} data-testid="input-edit-dropoff-pincode" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

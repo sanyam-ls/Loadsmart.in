@@ -366,6 +366,8 @@ export const loads = pgTable("loads", {
   pickupLocality: text("pickup_locality"),
   pickupLandmark: text("pickup_landmark"),
   pickupCity: text("pickup_city").notNull(),
+  pickupState: text("pickup_state"),
+  pickupPincode: text("pickup_pincode"),
   pickupLat: decimal("pickup_lat", { precision: 10, scale: 7 }),
   pickupLng: decimal("pickup_lng", { precision: 10, scale: 7 }),
   
@@ -375,6 +377,8 @@ export const loads = pgTable("loads", {
   dropoffLandmark: text("dropoff_landmark"),
   dropoffBusinessName: text("dropoff_business_name"),
   dropoffCity: text("dropoff_city").notNull(),
+  dropoffState: text("dropoff_state"),
+  dropoffPincode: text("dropoff_pincode"),
   dropoffLat: decimal("dropoff_lat", { precision: 10, scale: 7 }),
   dropoffLng: decimal("dropoff_lng", { precision: 10, scale: 7 }),
   distance: decimal("distance", { precision: 10, scale: 2 }),

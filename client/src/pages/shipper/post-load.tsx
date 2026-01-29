@@ -954,8 +954,8 @@ export default function PostLoadPage() {
         goodsToBeCarried: finalGoodsDescription,
         specialNotes: data.specialNotes || "",
         rateType: data.rateType,
-        shipperPricePerTon: data.rateType === "per_ton" ? data.shipperPricePerTon || null : null,
-        shipperFixedPrice: data.rateType === "fixed_price" ? data.shipperFixedPrice || null : null,
+        shipperPricePerTon: data.rateType === "per_ton" ? (data.shipperPricePerTon?.replace(/,/g, '') || null) : null,
+        shipperFixedPrice: data.rateType === "fixed_price" ? (data.shipperFixedPrice?.replace(/,/g, '') || null) : null,
         advancePaymentPercent: data.advancePaymentPercent ? parseInt(data.advancePaymentPercent) : null,
         requiredTruckType: truckType,
         pickupDate: data.pickupDate,
@@ -1975,9 +1975,15 @@ export default function PostLoadPage() {
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
-                                type="number"
-                                className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                type="text"
+                                inputMode="numeric"
+                                className="pl-10"
+                                placeholder="e.g. 1,50,000"
                                 {...field}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^0-9,]/g, '');
+                                  field.onChange(value);
+                                }}
                                 data-testid="input-price-per-ton"
                               />
                             </div>
@@ -2001,9 +2007,15 @@ export default function PostLoadPage() {
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
                               <Input
-                                type="number"
-                                className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                type="text"
+                                inputMode="numeric"
+                                className="pl-10"
+                                placeholder="e.g. 1,50,000"
                                 {...field}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^0-9,]/g, '');
+                                  field.onChange(value);
+                                }}
                                 data-testid="input-fixed-price"
                               />
                             </div>

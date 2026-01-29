@@ -75,6 +75,7 @@ const loadFormSchema = z.object({
   pickupState: z.string().min(1, "Pickup state is required"),
   pickupCity: z.string().min(2, "Pickup city is required"),
   pickupCityCustom: z.string().optional(),
+  pickupPincode: z.string().optional(),
   dropoffAddress: z.string().min(5, "Dropoff address is required"),
   dropoffLocality: z.string().optional(),
   dropoffLandmark: z.string().optional(),
@@ -82,6 +83,7 @@ const loadFormSchema = z.object({
   dropoffState: z.string().min(1, "Dropoff state is required"),
   dropoffCity: z.string().min(2, "Dropoff city is required"),
   dropoffCityCustom: z.string().optional(),
+  dropoffPincode: z.string().optional(),
   receiverName: z.string().min(2, "Receiver name is required"),
   receiverPhone: z.string().min(10, "Valid receiver phone number is required"),
   receiverEmail: z.string().email("Valid email is required").optional().or(z.literal("")),
@@ -683,6 +685,7 @@ export default function PostLoadPage() {
       pickupState: "",
       pickupCity: "",
       pickupCityCustom: "",
+      pickupPincode: "",
       dropoffAddress: "",
       dropoffLocality: "",
       dropoffLandmark: "",
@@ -690,6 +693,7 @@ export default function PostLoadPage() {
       dropoffState: "",
       dropoffCity: "",
       dropoffCityCustom: "",
+      dropoffPincode: "",
       receiverName: "",
       receiverPhone: "",
       receiverEmail: "",
@@ -1563,6 +1567,19 @@ export default function PostLoadPage() {
                       )}
                     />
                   )}
+                  <FormField
+                    control={form.control}
+                    name="pickupPincode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pincode</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter pincode" {...field} data-testid="input-pickup-pincode" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </CardContent>
               </Card>
 
@@ -1715,6 +1732,19 @@ export default function PostLoadPage() {
                       )}
                     />
                   )}
+                  <FormField
+                    control={form.control}
+                    name="dropoffPincode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pincode</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter pincode" {...field} data-testid="input-dropoff-pincode" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </CardContent>
               </Card>
 

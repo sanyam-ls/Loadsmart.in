@@ -1376,7 +1376,7 @@ export default function PostLoadPage() {
                       name="shipperCompanyName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Company Name <span className="text-muted-foreground font-normal">[e.g. ABC Logistics Pvt Ltd]</span></FormLabel>
+                          <FormLabel>Company Name</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-shipper-company-name" />
                           </FormControl>
@@ -1403,7 +1403,7 @@ export default function PostLoadPage() {
                     name="shipperCompanyAddress"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Company Address <span className="text-muted-foreground font-normal">[e.g. 123 Industrial Area, Sector 5]</span></FormLabel>
+                        <FormLabel>Company Address</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-shipper-company-address" />
                         </FormControl>
@@ -1440,7 +1440,7 @@ export default function PostLoadPage() {
                     name="pickupAddress"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Street Address <span className="text-muted-foreground font-normal">[e.g. 123 Warehouse Way]</span></FormLabel>
+                        <FormLabel>Street Address</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-pickup-address" />
                         </FormControl>
@@ -1454,7 +1454,7 @@ export default function PostLoadPage() {
                       name="pickupLocality"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Locality / Area <span className="text-muted-foreground font-normal">[e.g. Industrial Area]</span></FormLabel>
+                          <FormLabel>Locality / Area</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-pickup-locality" />
                           </FormControl>
@@ -1467,7 +1467,7 @@ export default function PostLoadPage() {
                       name="pickupLandmark"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark <span className="text-muted-foreground font-normal">[e.g. Near ABC Factory]</span></FormLabel>
+                          <FormLabel>Landmark</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-pickup-landmark" />
                           </FormControl>
@@ -1554,7 +1554,7 @@ export default function PostLoadPage() {
                       name="pickupCityCustom"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Enter City Name <span className="text-muted-foreground font-normal">[e.g. Vapi]</span></FormLabel>
+                          <FormLabel>Enter City Name</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-pickup-city-custom" />
                           </FormControl>
@@ -1579,7 +1579,7 @@ export default function PostLoadPage() {
                     name="dropoffBusinessName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Business Name <span className="text-muted-foreground font-normal">[e.g. ABC Enterprises]</span></FormLabel>
+                        <FormLabel>Business Name</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-dropoff-business-name" />
                         </FormControl>
@@ -1592,7 +1592,7 @@ export default function PostLoadPage() {
                     name="dropoffAddress"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Street Address <span className="text-muted-foreground font-normal">[e.g. 456 Distribution Center]</span></FormLabel>
+                        <FormLabel>Street Address</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-dropoff-address" />
                         </FormControl>
@@ -1606,7 +1606,7 @@ export default function PostLoadPage() {
                       name="dropoffLocality"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Locality / Area <span className="text-muted-foreground font-normal">[e.g. Okhla Industrial Area]</span></FormLabel>
+                          <FormLabel>Locality / Area</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-dropoff-locality" />
                           </FormControl>
@@ -1619,7 +1619,7 @@ export default function PostLoadPage() {
                       name="dropoffLandmark"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark <span className="text-muted-foreground font-normal">[e.g. Opposite Metro Station]</span></FormLabel>
+                          <FormLabel>Landmark</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-dropoff-landmark" />
                           </FormControl>
@@ -1706,7 +1706,7 @@ export default function PostLoadPage() {
                       name="dropoffCityCustom"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Enter City Name <span className="text-muted-foreground font-normal">[e.g. Vapi]</span></FormLabel>
+                          <FormLabel>Enter City Name</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-dropoff-city-custom" />
                           </FormControl>
@@ -1732,7 +1732,7 @@ export default function PostLoadPage() {
                       name="receiverName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Receiver Name <span className="text-muted-foreground font-normal">[e.g. Suresh Patel]</span></FormLabel>
+                          <FormLabel>Receiver Full Name</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-receiver-name" />
                           </FormControl>

@@ -1,19 +1,25 @@
 import { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { useAuth } from "@/lib/auth-context";
 import { 
   ChevronLeft, MapPin, Calendar, 
   Users, Copy, X, CheckCircle, AlertCircle, Star, FileText, Loader2,
   Building2, User as UserIcon, Phone, IndianRupee, Package, Truck, StickyNote,
-  Mail, Landmark, Navigation, Percent, Receipt, EyeOff, MessageCircle
+  Mail, Landmark, Navigation, Percent, Receipt, EyeOff, MessageCircle, Pencil, Save
 } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -22,9 +28,52 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Load, Shipment, User } from "@shared/schema";
+
+const editLoadSchema = z.object({
+  shipperContactName: z.string().optional(),
+  shipperCompanyAddress: z.string().optional(),
+  shipperPhone: z.string().optional(),
+  pickupAddress: z.string().min(1, "Pickup address is required"),
+  pickupLocality: z.string().optional(),
+  pickupLandmark: z.string().optional(),
+  pickupCity: z.string().min(1, "Pickup city is required"),
+  pickupState: z.string().optional(),
+  dropoffAddress: z.string().min(1, "Dropoff address is required"),
+  dropoffLocality: z.string().optional(),
+  dropoffLandmark: z.string().optional(),
+  dropoffCity: z.string().min(1, "Dropoff city is required"),
+  dropoffState: z.string().optional(),
+  dropoffBusinessName: z.string().optional(),
+  receiverName: z.string().min(1, "Receiver name is required"),
+  receiverPhone: z.string().min(1, "Receiver phone is required"),
+  receiverEmail: z.string().optional(),
+  weight: z.string().optional(),
+  goodsToBeCarried: z.string().optional(),
+  specialNotes: z.string().optional(),
+  pickupDate: z.string().optional(),
+  deliveryDate: z.string().optional(),
+});
+
+type EditLoadFormData = z.infer<typeof editLoadSchema>;
 
 function getStatusColor(status: string | null) {
   switch (status) {
@@ -139,6 +188,7 @@ export default function LoadDetailPage() {
   const { user } = useAuth();
   const [cancelDialog, setCancelDialog] = useState(false);
   const [unavailableDialog, setUnavailableDialog] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const { data: load, isLoading, error } = useQuery<LoadWithCarrier>({
     queryKey: ["/api/loads", params.id],
@@ -149,6 +199,108 @@ export default function LoadDetailPage() {
     queryKey: ["/api/shipments/load", params.id],
     enabled: !!params.id,
   });
+
+  const editForm = useForm<EditLoadFormData>({
+    resolver: zodResolver(editLoadSchema),
+    defaultValues: {
+      shipperContactName: "",
+      shipperCompanyAddress: "",
+      shipperPhone: "",
+      pickupAddress: "",
+      pickupLocality: "",
+      pickupLandmark: "",
+      pickupCity: "",
+      pickupState: "",
+      dropoffAddress: "",
+      dropoffLocality: "",
+      dropoffLandmark: "",
+      dropoffCity: "",
+      dropoffState: "",
+      dropoffBusinessName: "",
+      receiverName: "",
+      receiverPhone: "",
+      receiverEmail: "",
+      weight: "",
+      goodsToBeCarried: "",
+      specialNotes: "",
+      pickupDate: "",
+      deliveryDate: "",
+    },
+  });
+
+  useEffect(() => {
+    if (load && editSheetOpen) {
+      editForm.reset({
+        shipperContactName: load.shipperContactName || "",
+        shipperCompanyAddress: load.shipperCompanyAddress || "",
+        shipperPhone: load.shipperPhone || "",
+        pickupAddress: load.pickupAddress || "",
+        pickupLocality: load.pickupLocality || "",
+        pickupLandmark: load.pickupLandmark || "",
+        pickupCity: load.pickupCity || "",
+        pickupState: load.pickupState || "",
+        dropoffAddress: load.dropoffAddress || "",
+        dropoffLocality: load.dropoffLocality || "",
+        dropoffLandmark: load.dropoffLandmark || "",
+        dropoffCity: load.dropoffCity || "",
+        dropoffState: load.dropoffState || "",
+        dropoffBusinessName: load.dropoffBusinessName || "",
+        receiverName: load.receiverName || "",
+        receiverPhone: load.receiverPhone || "",
+        receiverEmail: load.receiverEmail || "",
+        weight: load.weight?.toString() || "",
+        goodsToBeCarried: load.goodsToBeCarried || "",
+        specialNotes: load.specialNotes || "",
+        pickupDate: load.pickupDate ? new Date(load.pickupDate).toISOString().slice(0, 16) : "",
+        deliveryDate: load.deliveryDate ? new Date(load.deliveryDate).toISOString().slice(0, 16) : "",
+      });
+    }
+  }, [load, editSheetOpen, editForm]);
+
+  const editMutation = useMutation({
+    mutationFn: async (data: EditLoadFormData) => {
+      const payload: Record<string, any> = {};
+      
+      for (const [key, value] of Object.entries(data)) {
+        if (value === "" || value === null || value === undefined) {
+          continue;
+        }
+        if (key === "weight" && typeof value === "string") {
+          const numVal = parseFloat(value);
+          if (!isNaN(numVal)) {
+            payload[key] = numVal;
+          }
+        } else if ((key === "pickupDate" || key === "deliveryDate") && typeof value === "string") {
+          const dateVal = new Date(value);
+          if (!isNaN(dateVal.getTime())) {
+            payload[key] = dateVal.toISOString();
+          }
+        } else {
+          payload[key] = value;
+        }
+      }
+      
+      return apiRequest("PATCH", `/api/loads/${params.id}`, payload);
+    },
+    onSuccess: () => {
+      toast({ title: "Load Updated", description: "Your changes have been saved successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/loads", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shipments/load", params.id] });
+      setEditSheetOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleEditSubmit = (data: EditLoadFormData) => {
+    editMutation.mutate(data);
+  };
 
   useEffect(() => {
     if (user?.id && user?.role === "shipper" && params.id) {
@@ -239,6 +391,7 @@ export default function LoadDetailPage() {
   const canCancel = !["cancelled", "delivered", "closed", "in_transit", "unavailable"].includes(load.status || "");
   const canMakeUnavailable = !["cancelled", "delivered", "closed", "in_transit", "awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "unavailable"].includes(load.status || "");
   const isFinalized = ["awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "in_transit", "delivered", "closed"].includes(load.status || "");
+  const canEdit = !["cancelled", "delivered", "closed", "in_transit", "unavailable"].includes(load.status || "");
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -257,7 +410,18 @@ export default function LoadDetailPage() {
             Created {formatTimeAgo(load.createdAt)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {canEdit && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => setEditSheetOpen(true)}
+              data-testid="button-edit-load"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm" 
@@ -788,6 +952,380 @@ export default function LoadDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
+        <SheetContent className="w-full sm:max-w-xl overflow-hidden p-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b">
+            <SheetTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Edit Load Details
+            </SheetTitle>
+            <SheetDescription>
+              Update the load information below. Changes will sync across all portals.
+            </SheetDescription>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100vh-180px)]">
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-6 px-6 py-4">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Shipper Contact</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="shipperContactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Person Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Contact name" {...field} data-testid="input-edit-shipper-contact" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="shipperPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Phone number" {...field} data-testid="input-edit-shipper-phone" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={editForm.control}
+                    name="shipperCompanyAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Company address" {...field} data-testid="input-edit-shipper-address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Pickup Location</h3>
+                  <FormField
+                    control={editForm.control}
+                    name="pickupAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Street address" {...field} data-testid="input-edit-pickup-address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="pickupLocality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Locality</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Locality/Area" {...field} data-testid="input-edit-pickup-locality" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="pickupLandmark"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Landmark</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nearby landmark" {...field} data-testid="input-edit-pickup-landmark" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="pickupCity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="City" {...field} data-testid="input-edit-pickup-city" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="pickupState"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>State</FormLabel>
+                          <FormControl>
+                            <Input placeholder="State" {...field} data-testid="input-edit-pickup-state" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Dropoff Location</h3>
+                  <FormField
+                    control={editForm.control}
+                    name="dropoffAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Street address" {...field} data-testid="input-edit-dropoff-address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="dropoffLocality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Locality</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Locality/Area" {...field} data-testid="input-edit-dropoff-locality" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="dropoffLandmark"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Landmark</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nearby landmark" {...field} data-testid="input-edit-dropoff-landmark" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="dropoffCity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="City" {...field} data-testid="input-edit-dropoff-city" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="dropoffState"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>State</FormLabel>
+                          <FormControl>
+                            <Input placeholder="State" {...field} data-testid="input-edit-dropoff-state" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={editForm.control}
+                    name="dropoffBusinessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Receiving business name" {...field} data-testid="input-edit-dropoff-business" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Receiver Details</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="receiverName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Receiver Full Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Full name" {...field} data-testid="input-edit-receiver-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="receiverPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Phone number" {...field} data-testid="input-edit-receiver-phone" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={editForm.control}
+                    name="receiverEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Email address" type="email" {...field} data-testid="input-edit-receiver-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Cargo Details</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="weight"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Weight (Tons)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Weight in tons" type="number" step="0.1" {...field} data-testid="input-edit-weight" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="goodsToBeCarried"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Goods Description</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Type of goods" {...field} data-testid="input-edit-goods" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={editForm.control}
+                    name="specialNotes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Special Notes</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Any special handling instructions..." className="resize-none" {...field} data-testid="input-edit-notes" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Schedule</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={editForm.control}
+                      name="pickupDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pickup Date & Time</FormLabel>
+                          <FormControl>
+                            <Input type="datetime-local" {...field} data-testid="input-edit-pickup-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="deliveryDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Delivery Date & Time</FormLabel>
+                          <FormControl>
+                            <Input type="datetime-local" {...field} data-testid="input-edit-delivery-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button type="button" variant="outline" onClick={() => setEditSheetOpen(false)} data-testid="button-cancel-edit">
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={editMutation.isPending} data-testid="button-save-edit">
+                    {editMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

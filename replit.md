@@ -71,6 +71,18 @@ New carriers complete a verification process based on their type ("Solo Operator
 
 The platform provides ML-powered truck type suggestions based on weight, commodity type, and market trends. It uses multi-factor analysis, commodity category mappings, and weight-based capacity matching, with an ensemble approach prioritizing AI suggestions (if confident), then market trends, and finally rule-based fallbacks. Recommendations include confidence scores and track their source (AI/ML, market, rule-based).
 
+### Shipper Edit Load Feature
+
+Shippers can edit load details directly from the load detail page via a side sheet/drawer interface. The Edit button appears only for loads in editable statuses (not `cancelled`, `delivered`, `closed`, `in_transit`, or `unavailable`). Editable fields include:
+- Shipper contact information (name, phone, company address)
+- Pickup location details (address, locality, landmark, city, state)
+- Dropoff location details (address, locality, landmark, city, state, business name)
+- Receiver details (full name, phone, email)
+- Cargo information (weight, goods description, special notes)
+- Schedule (pickup and delivery dates)
+
+Changes sync across all portals (shipper, admin, carrier) via query cache invalidation. The edit form validates required fields (pickup/dropoff addresses, cities, receiver name/phone) before saving.
+
 ## External Dependencies
 
 ### Frontend Libraries

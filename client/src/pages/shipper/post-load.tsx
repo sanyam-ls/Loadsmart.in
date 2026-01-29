@@ -1416,7 +1416,7 @@ export default function PostLoadPage() {
                     name="shipperPhone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number <span className="text-muted-foreground font-normal">[e.g. +91 98765 43210]</span></FormLabel>
+                        <FormLabel>Phone Number</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-shipper-phone" />
                         </FormControl>
@@ -1745,7 +1745,7 @@ export default function PostLoadPage() {
                       name="receiverPhone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Receiver Phone <span className="text-muted-foreground font-normal">[e.g. +91 98765 43210]</span></FormLabel>
+                          <FormLabel>Receiver Phone</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-receiver-phone" />
                           </FormControl>
@@ -1759,7 +1759,7 @@ export default function PostLoadPage() {
                     name="receiverEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Receiver Email (Optional) <span className="text-muted-foreground font-normal">[e.g. receiver@company.com]</span></FormLabel>
+                        <FormLabel>Receiver Email (Optional)</FormLabel>
                         <FormControl>
                           <Input type="email" {...field} data-testid="input-receiver-email" />
                         </FormControl>
@@ -1784,7 +1784,7 @@ export default function PostLoadPage() {
                       name="weight"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Weight <span className="text-muted-foreground font-normal">[e.g. 15 tons]</span></FormLabel>
+                          <FormLabel>Weight</FormLabel>
                           <FormControl>
                             <div className="flex gap-2">
                               <Input 
@@ -1887,7 +1887,7 @@ export default function PostLoadPage() {
                     name="specialNotes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Special Notes (Optional) <span className="text-muted-foreground font-normal">[e.g. Fragile goods, handle with care]</span></FormLabel>
+                        <FormLabel>Special Notes (Optional)</FormLabel>
                         <FormControl>
                           <Textarea
                             {...field}
@@ -1940,7 +1940,7 @@ export default function PostLoadPage() {
                       name="shipperPricePerTon"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Price per Tonne <span className="text-muted-foreground font-normal">[e.g. Rs. 2500]</span></FormLabel>
+                          <FormLabel>Price per Tonne</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
@@ -1966,7 +1966,7 @@ export default function PostLoadPage() {
                       name="shipperFixedPrice"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Fixed Price <span className="text-muted-foreground font-normal">[e.g. Rs. 45000]</span></FormLabel>
+                          <FormLabel>Fixed Price</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
@@ -1992,7 +1992,7 @@ export default function PostLoadPage() {
                     name="advancePaymentPercent"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Advance Payment Percentage <span className="text-muted-foreground font-normal">[e.g. 30%]</span></FormLabel>
+                        <FormLabel>Advance Payment Percentage</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Input

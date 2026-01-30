@@ -3,7 +3,7 @@ import { useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
 import { 
   Plus, Search, Filter, Package, LayoutGrid, List, MapPin, ArrowRight, 
-  Clock, DollarSign, Truck, MoreHorizontal, Edit, Copy, X, Eye, Loader2
+  Clock, DollarSign, Truck, MoreHorizontal, Edit, Copy, Eye, Loader2, RotateCcw
 } from "lucide-react";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { Button } from "@/components/ui/button";
@@ -119,7 +119,7 @@ export default function ShipperLoadsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; loadId: string | null }>({ open: false, loadId: null });
+  const [makeAvailableDialog, setMakeAvailableDialog] = useState<{ open: boolean; loadId: string | null }>({ open: false, loadId: null });
 
   const { data: allLoads, isLoading: loadsLoading } = useLoads();
   const { data: allBids } = useBids();
@@ -165,13 +165,13 @@ export default function ShipperLoadsPage() {
     }
   }, [user?.id, user?.role, toast]);
 
-  const handleCancel = async (loadId: string) => {
+  const handleMakeAvailable = async (loadId: string) => {
     try {
-      await transitionLoad.mutateAsync({ loadId, toStatus: 'cancelled' });
-      toast({ title: "Load cancelled", description: "The load has been cancelled successfully." });
-      setCancelDialog({ open: false, loadId: null });
+      await transitionLoad.mutateAsync({ loadId, toStatus: 'pending' });
+      toast({ title: "Load available", description: "The load has been made available again." });
+      setMakeAvailableDialog({ open: false, loadId: null });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to cancel load", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to make load available", variant: "destructive" });
     }
   };
 
@@ -423,14 +423,16 @@ export default function ShipperLoadsPage() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(load.id); }}>
                           <Copy className="h-4 w-4 mr-2" /> {t('common.duplicate') || 'Duplicate'}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={(e) => { e.stopPropagation(); setCancelDialog({ open: true, loadId: load.id }); }}
-                          disabled={load.status === "cancelled" || load.status === "delivered"}
-                        >
-                          <X className="h-4 w-4 mr-2" /> {t('loads.cancelLoad')}
-                        </DropdownMenuItem>
+                        {load.status === "unavailable" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={(e) => { e.stopPropagation(); setMakeAvailableDialog({ open: true, loadId: load.id }); }}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2" /> Make Available
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -469,12 +471,13 @@ export default function ShipperLoadsPage() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(load.id); }}>
                           <Copy className="h-4 w-4 mr-2" /> {t('common.duplicate') || 'Duplicate'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={(e) => { e.stopPropagation(); setCancelDialog({ open: true, loadId: load.id }); }}
-                        >
-                          <X className="h-4 w-4 mr-2" /> {t('common.cancel')}
-                        </DropdownMenuItem>
+                        {load.status === "unavailable" && (
+                          <DropdownMenuItem 
+                            onClick={(e) => { e.stopPropagation(); setMakeAvailableDialog({ open: true, loadId: load.id }); }}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-2" /> Make Available
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -525,27 +528,26 @@ export default function ShipperLoadsPage() {
         </div>
       )}
 
-      <Dialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, loadId: null })}>
+      <Dialog open={makeAvailableDialog.open} onOpenChange={(open) => setMakeAvailableDialog({ open, loadId: null })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('loads.cancelLoad')}</DialogTitle>
+            <DialogTitle>Make Load Available</DialogTitle>
             <DialogDescription>
-              {t('messages.confirmDelete')}
+              This will make the load available again for pricing and bidding. Are you sure you want to proceed?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelDialog({ open: false, loadId: null })}>
+            <Button variant="outline" onClick={() => setMakeAvailableDialog({ open: false, loadId: null })}>
               {t('common.cancel')}
             </Button>
             <Button 
-              variant="destructive" 
-              onClick={() => cancelDialog.loadId && handleCancel(cancelDialog.loadId)}
+              onClick={() => makeAvailableDialog.loadId && handleMakeAvailable(makeAvailableDialog.loadId)}
               disabled={transitionLoad.isPending}
             >
               {transitionLoad.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
-              {t('loads.cancelLoad')}
+              Make Available
             </Button>
           </DialogFooter>
         </DialogContent>

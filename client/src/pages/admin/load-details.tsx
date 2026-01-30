@@ -36,6 +36,9 @@ import {
   Send,
   MoreHorizontal,
   Loader2,
+  Calculator,
+  TrendingUp,
+  Receipt,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1460,34 +1463,189 @@ export default function AdminLoadDetailsPage() {
         </TabsContent>
 
         <TabsContent value="costs" className="space-y-4">
+          {/* Shipper's Pricing Preference */}
           <Card>
             <CardHeader>
-              <CardTitle>Cost Breakdown</CardTitle>
-              <CardDescription>Financial details for this shipment</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                Shipper's Pricing Preference
+              </CardTitle>
+              <CardDescription>Original pricing submitted by shipper</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Base Freight Cost</span>
-                  <span className="font-medium">{formatCurrency(detailedLoad.costBreakdown.baseFreightCost)}</span>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-muted-foreground text-sm">Rate Type</span>
+                    <p className="font-medium">
+                      {apiLoad?.rateType === "fixed_price" ? "Fixed Price" : "Per Tonne Rate"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-sm">Shipper's Preferred Advance</span>
+                    <p className="font-medium text-orange-600">{apiLoad?.advancePaymentPercent || 0}%</p>
+                  </div>
                 </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Fuel Surcharge</span>
-                  <span className="font-medium">{formatCurrency(detailedLoad.costBreakdown.fuelSurcharge)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Handling Fee</span>
-                  <span className="font-medium">{formatCurrency(detailedLoad.costBreakdown.handlingFee)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Platform Fee</span>
-                  <span className="font-medium">{formatCurrency(detailedLoad.costBreakdown.platformFee)}</span>
-                </div>
-                <div className="flex justify-between py-3 bg-muted/50 rounded-lg px-3">
-                  <span className="font-semibold">Total Cost</span>
-                  <span className="font-bold text-lg">{formatCurrency(detailedLoad.costBreakdown.totalCost)}</span>
+                <div className="space-y-3">
+                  {apiLoad?.rateType === "per_ton" && apiLoad?.shipperPricePerTon && (
+                    <div>
+                      <span className="text-muted-foreground text-sm">Shipper's Rate (Per Tonne)</span>
+                      <p className="font-medium text-blue-600">{formatCurrency(parseFloat(apiLoad.shipperPricePerTon))} / tonne</p>
+                    </div>
+                  )}
+                  {apiLoad?.rateType === "fixed_price" && apiLoad?.shipperFixedPrice && (
+                    <div>
+                      <span className="text-muted-foreground text-sm">Shipper's Fixed Price</span>
+                      <p className="font-medium text-blue-600">{formatCurrency(parseFloat(apiLoad.shipperFixedPrice))}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground text-sm">Cargo Weight</span>
+                    <p className="font-medium">{apiLoad?.weight || "N/A"} {apiLoad?.weightUnit || "MT"}</p>
+                  </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Admin Pricing */}
+          {apiLoad?.adminFinalPrice && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  Admin Pricing (Posted to Marketplace)
+                </CardTitle>
+                <CardDescription>Price set by admin for carrier marketplace</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-muted-foreground text-sm">Gross Price (Invoice to Shipper)</span>
+                      <p className="font-medium text-lg text-green-600">{formatCurrency(parseFloat(apiLoad.adminFinalPrice))}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-sm">Carrier Advance</span>
+                      <p className="font-medium">{apiLoad.carrierAdvancePercent || 0}%</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-muted-foreground text-sm">Post Mode</span>
+                      <p className="font-medium capitalize">{apiLoad.adminPostMode || "Open"}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-sm">Allow Counter Bids</span>
+                      <p className="font-medium">{apiLoad.allowCounterBids ? "Yes" : "No"}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Carrier Bid/Negotiation */}
+          {(() => {
+            const acceptedBid = apiLoad?.bids?.find((b: any) => b.status === "accepted");
+            if (!acceptedBid) return null;
+            
+            const bidAmount = parseFloat(acceptedBid.amount || "0");
+            const counterAmount = acceptedBid.counterAmount ? parseFloat(acceptedBid.counterAmount) : null;
+            const adminPrice = parseFloat(apiLoad?.adminFinalPrice || "0");
+            const platformMargin = adminPrice - (counterAmount || bidAmount);
+            const marginPercent = adminPrice > 0 ? ((platformMargin / adminPrice) * 100).toFixed(1) : "0";
+            
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Carrier Bid & Negotiation
+                  </CardTitle>
+                  <CardDescription>Winning bid details from {acceptedBid.carrierType === "solo" ? "Solo Carrier" : "Enterprise Fleet"}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-muted-foreground text-sm">Initial Bid Amount</span>
+                        <p className="font-medium">{formatCurrency(bidAmount)}</p>
+                      </div>
+                      {counterAmount && counterAmount !== bidAmount && (
+                        <div>
+                          <span className="text-muted-foreground text-sm">Counter/Negotiated Amount</span>
+                          <p className="font-medium text-blue-600">{formatCurrency(counterAmount)}</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-muted-foreground text-sm">Bid Type</span>
+                        <p className="font-medium capitalize">{acceptedBid.bidType || "Direct"}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-muted-foreground text-sm">Final Carrier Payment</span>
+                        <p className="font-medium text-lg text-green-600">{formatCurrency(counterAmount || bidAmount)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-sm">Carrier Advance ({apiLoad?.carrierAdvancePercent || 0}%)</span>
+                        <p className="font-medium text-orange-600">
+                          {formatCurrency((counterAmount || bidAmount) * (apiLoad?.carrierAdvancePercent || 0) / 100)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {/* Financial Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-primary" />
+                Financial Summary
+              </CardTitle>
+              <CardDescription>Overall cost breakdown for this shipment</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const acceptedBid = apiLoad?.bids?.find((b: any) => b.status === "accepted");
+                const carrierPayment = acceptedBid ? parseFloat(acceptedBid.counterAmount || acceptedBid.amount || "0") : 0;
+                const adminPrice = parseFloat(apiLoad?.adminFinalPrice || "0");
+                const shipperPrice = apiLoad?.rateType === "fixed_price" 
+                  ? parseFloat(apiLoad?.shipperFixedPrice || "0")
+                  : parseFloat(apiLoad?.shipperPricePerTon || "0") * parseFloat(apiLoad?.weight || "0");
+                const platformMargin = adminPrice - carrierPayment;
+                const marginPercent = adminPrice > 0 ? ((platformMargin / adminPrice) * 100).toFixed(1) : "0";
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-muted-foreground">Shipper's Original Offer</span>
+                      <span className="font-medium">{shipperPrice > 0 ? formatCurrency(shipperPrice) : "Not specified"}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-muted-foreground">Admin Posted Price (Gross)</span>
+                      <span className="font-medium">{adminPrice > 0 ? formatCurrency(adminPrice) : "Not priced yet"}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-muted-foreground">Carrier Payment</span>
+                      <span className="font-medium">{carrierPayment > 0 ? formatCurrency(carrierPayment) : "No accepted bid"}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-muted-foreground">Platform Margin ({marginPercent}%)</span>
+                      <span className="font-medium text-primary">{platformMargin > 0 ? formatCurrency(platformMargin) : "Rs. 0"}</span>
+                    </div>
+                    <div className="flex justify-between py-3 bg-muted/50 rounded-lg px-3">
+                      <span className="font-semibold">Invoice Total</span>
+                      <span className="font-bold text-lg text-green-600">{adminPrice > 0 ? formatCurrency(adminPrice) : "Pending"}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>

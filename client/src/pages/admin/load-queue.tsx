@@ -1743,8 +1743,37 @@ export default function LoadQueuePage() {
                       <span className="font-medium">{loadToSendInvoice.pickupCity} → {loadToSendInvoice.dropoffCity}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Invoice Amount:</span>
-                      <span className="font-medium text-green-600">
+                      <span className="text-muted-foreground">Rate Type:</span>
+                      <span className="font-medium">{loadToSendInvoice.rateType === "fixed_price" ? "Fixed Price" : "Per Tonne"}</span>
+                    </div>
+                    {loadToSendInvoice.rateType === "per_ton" && loadToSendInvoice.shipperPricePerTon && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Shipper's Rate:</span>
+                        <span className="font-medium text-blue-600">
+                          Rs. {Number(loadToSendInvoice.shipperPricePerTon).toLocaleString('en-IN')} / tonne
+                        </span>
+                      </div>
+                    )}
+                    {loadToSendInvoice.rateType === "fixed_price" && loadToSendInvoice.shipperFixedPrice && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Shipper's Price:</span>
+                        <span className="font-medium text-blue-600">
+                          Rs. {Number(loadToSendInvoice.shipperFixedPrice).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
+                    {loadToSendInvoice.finalPrice && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Carrier Payment:</span>
+                        <span className="font-medium">
+                          Rs. {Number(loadToSendInvoice.finalPrice).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
+                    <Separator className="my-2" />
+                    <div className="flex justify-between">
+                      <span className="font-semibold">Invoice Amount:</span>
+                      <span className="font-bold text-green-600">
                         Rs. {Number(loadToSendInvoice.adminFinalPrice || loadToSendInvoice.shipperFixedPrice || loadToSendInvoice.adminPrice || 0).toLocaleString('en-IN')}
                       </span>
                     </div>

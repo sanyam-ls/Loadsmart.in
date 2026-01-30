@@ -54,6 +54,14 @@ interface LoadData {
   pickupDate?: string | Date;
   shipperId: string;
   cargoDescription?: string;
+  rateType?: string;
+  shipperPricePerTon?: string | number | null;
+  shipperFixedPrice?: string | number | null;
+  advancePaymentPercent?: number | null;
+  adminFinalPrice?: string | number | null;
+  carrierAdvancePercent?: number | null;
+  finalPrice?: string | number | null;
+  acceptedBidAmount?: string | number | null;
 }
 
 interface ShipperData {
@@ -408,6 +416,67 @@ export function InvoiceDrawer({
                       <span className="text-muted-foreground">Truck:</span>
                       <Badge variant="outline">{load.requiredTruckType}</Badge>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Cost Summary - Pricing Lifecycle */}
+              <Card>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <IndianRupee className="h-4 w-4" />
+                    Cost Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  {/* Shipper's Pricing */}
+                  <div className="flex justify-between py-1 border-b">
+                    <span className="text-muted-foreground">Rate Type</span>
+                    <span className="font-medium">
+                      {load.rateType === "fixed_price" ? "Fixed Price" : "Per Tonne Rate"}
+                    </span>
+                  </div>
+                  {load.rateType === "per_ton" && load.shipperPricePerTon && (
+                    <div className="flex justify-between py-1 border-b">
+                      <span className="text-muted-foreground">Shipper's Rate</span>
+                      <span className="font-medium text-blue-600">
+                        {formatCurrency(parseFloat(String(load.shipperPricePerTon)))} / tonne
+                      </span>
+                    </div>
+                  )}
+                  {load.rateType === "fixed_price" && load.shipperFixedPrice && (
+                    <div className="flex justify-between py-1 border-b">
+                      <span className="text-muted-foreground">Shipper's Fixed Price</span>
+                      <span className="font-medium text-blue-600">
+                        {formatCurrency(parseFloat(String(load.shipperFixedPrice)))}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-1 border-b">
+                    <span className="text-muted-foreground">Preferred Advance</span>
+                    <span className="font-medium text-orange-600">{load.advancePaymentPercent || 0}%</span>
+                  </div>
+                  {load.adminFinalPrice && (
+                    <div className="flex justify-between py-1 border-b">
+                      <span className="text-muted-foreground">Admin Posted Price</span>
+                      <span className="font-medium text-green-600">
+                        {formatCurrency(parseFloat(String(load.adminFinalPrice)))}
+                      </span>
+                    </div>
+                  )}
+                  {load.acceptedBidAmount && (
+                    <div className="flex justify-between py-1 border-b">
+                      <span className="text-muted-foreground">Final Negotiated Price</span>
+                      <span className="font-medium text-green-600">
+                        {formatCurrency(parseFloat(String(load.acceptedBidAmount)))}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-2 bg-muted/50 rounded px-2 mt-2">
+                    <span className="font-semibold">Invoice Total</span>
+                    <span className="font-bold text-green-600">
+                      {formatCurrency(parseFloat(String(load.adminFinalPrice || load.shipperFixedPrice || pricingAmount || 0)))}
+                    </span>
                   </div>
                 </CardContent>
               </Card>

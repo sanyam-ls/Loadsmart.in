@@ -188,7 +188,6 @@ export default function LoadDetailPage() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [cancelDialog, setCancelDialog] = useState(false);
   const [unavailableDialog, setUnavailableDialog] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
 
@@ -330,21 +329,6 @@ export default function LoadDetailPage() {
     }
   }, [user?.id, user?.role, params.id, toast]);
 
-  const cancelMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/loads/${params.id}`, { status: "cancelled" });
-    },
-    onSuccess: () => {
-      toast({ title: "Load cancelled", description: "The load has been cancelled successfully." });
-      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
-      setCancelDialog(false);
-      navigate("/shipper/loads");
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
   const unavailableMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("PATCH", `/api/loads/${params.id}`, { status: "unavailable" });
@@ -358,10 +342,6 @@ export default function LoadDetailPage() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
-
-  const handleCancel = () => {
-    cancelMutation.mutate();
-  };
 
   const handleMakeUnavailable = () => {
     unavailableMutation.mutate();
@@ -394,7 +374,6 @@ export default function LoadDetailPage() {
     );
   }
 
-  const canCancel = !["cancelled", "delivered", "closed", "in_transit", "unavailable"].includes(load.status || "");
   const canMakeUnavailable = !["cancelled", "delivered", "closed", "in_transit", "awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "unavailable"].includes(load.status || "");
   const isFinalized = ["awarded", "invoice_created", "invoice_sent", "invoice_acknowledged", "invoice_paid", "in_transit", "delivered", "closed"].includes(load.status || "");
   const canEdit = !["cancelled", "delivered", "closed", "in_transit", "unavailable"].includes(load.status || "");
@@ -496,13 +475,7 @@ export default function LoadDetailPage() {
               Make Unavailable
             </Button>
           )}
-          {canCancel && (
-            <Button variant="destructive" size="sm" onClick={() => setCancelDialog(true)} data-testid="button-cancel-load">
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-          )}
-        </div>
+                  </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -911,30 +884,6 @@ export default function LoadDetailPage() {
           </Card>
         </div>
       )}
-
-      <Dialog open={cancelDialog} onOpenChange={setCancelDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel Load</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this load? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelDialog(false)}>
-              Keep Load
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleCancel} 
-              disabled={cancelMutation.isPending}
-              data-testid="button-confirm-cancel"
-            >
-              {cancelMutation.isPending ? "Cancelling..." : "Cancel Load"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={unavailableDialog} onOpenChange={setUnavailableDialog}>
         <DialogContent>

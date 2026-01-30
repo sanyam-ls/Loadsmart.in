@@ -11453,25 +11453,28 @@ RESPOND IN THIS EXACT JSON FORMAT:
         }
       }
       
-      // Get driver - if not on shipment, for solo carriers use the carrier themselves as driver
-      let driver = shipment.driverId ? await storage.getDriver(shipment.driverId) : null;
+      // Get driver info - for solo carriers, the carrier IS the driver
       let driverInfo = null;
       
-      if (driver) {
-        driverInfo = {
-          id: driver.id,
-          username: driver.name,
-          phone: driver.phone,
-          licenseNumber: driver.licenseNumber
-        };
-      } else if (isSoloCarrier && carrier) {
-        // For solo carriers, the carrier is the driver
+      if (isSoloCarrier && carrier) {
+        // For solo carriers, always use the carrier as the driver (they drive their own truck)
         driverInfo = {
           id: carrier.id,
-          username: carrier.username,
+          username: carrier.companyName || carrier.username,
           phone: carrier.phone,
           licenseNumber: null
         };
+      } else if (shipment.driverId) {
+        // For enterprise carriers, get the assigned driver
+        const driver = await storage.getDriver(shipment.driverId);
+        if (driver) {
+          driverInfo = {
+            id: driver.id,
+            username: driver.name,
+            phone: driver.phone,
+            licenseNumber: driver.licenseNumber
+          };
+        }
       }
 
       res.json({

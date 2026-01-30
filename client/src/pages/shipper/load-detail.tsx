@@ -269,6 +269,38 @@ export default function LoadDetailPage() {
 
   useEffect(() => {
     if (load && editSheetOpen) {
+      // Extract city name from "City, State" format if needed
+      const extractCityName = (cityValue: string | null) => {
+        if (!cityValue) return "";
+        // If city is in "City, State" format, extract just the city
+        const parts = cityValue.split(",");
+        return parts[0].trim();
+      };
+      
+      // Try to find state from city if state is not set
+      const findStateFromCity = (cityValue: string | null, existingState: string | null) => {
+        if (existingState) return existingState;
+        if (!cityValue) return "";
+        
+        // First check if city is in "City, State" format
+        const parts = cityValue.split(",");
+        if (parts.length > 1) {
+          const statePart = parts[1].trim();
+          // Check if statePart matches any state name
+          const matchedState = indianStates.find(s => s.name === statePart);
+          if (matchedState) return matchedState.name;
+        }
+        
+        // Otherwise try to find state from city name
+        const cityName = parts[0].trim();
+        return getStateForCity(cityName);
+      };
+      
+      const pickupCityName = extractCityName(load.pickupCity);
+      const dropoffCityName = extractCityName(load.dropoffCity);
+      const pickupStateName = findStateFromCity(load.pickupCity, load.pickupState);
+      const dropoffStateName = findStateFromCity(load.dropoffCity, load.dropoffState);
+      
       editForm.reset({
         shipperContactName: load.shipperContactName || "",
         shipperCompanyAddress: load.shipperCompanyAddress || "",
@@ -276,14 +308,14 @@ export default function LoadDetailPage() {
         pickupAddress: load.pickupAddress || "",
         pickupLocality: load.pickupLocality || "",
         pickupLandmark: load.pickupLandmark || "",
-        pickupCity: load.pickupCity || "",
-        pickupState: load.pickupState || "",
+        pickupCity: pickupCityName,
+        pickupState: pickupStateName,
         pickupPincode: load.pickupPincode || "",
         dropoffAddress: load.dropoffAddress || "",
         dropoffLocality: load.dropoffLocality || "",
         dropoffLandmark: load.dropoffLandmark || "",
-        dropoffCity: load.dropoffCity || "",
-        dropoffState: load.dropoffState || "",
+        dropoffCity: dropoffCityName,
+        dropoffState: dropoffStateName,
         dropoffPincode: load.dropoffPincode || "",
         dropoffBusinessName: load.dropoffBusinessName || "",
         receiverName: load.receiverName || "",

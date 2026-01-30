@@ -1010,7 +1010,7 @@ export default function AdminLoadDetailsPage() {
                         {apiLoad.shipmentDetails.truck.capacity && (
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Capacity</span>
-                            <span className="font-medium">{apiLoad.shipmentDetails.truck.capacity}</span>
+                            <span className="font-medium">{apiLoad.shipmentDetails.truck.capacity} tons</span>
                           </div>
                         )}
                         {apiLoad.shipmentDetails.truck.registrationNumber && (
@@ -1077,7 +1077,7 @@ export default function AdminLoadDetailsPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Capacity</span>
-                          <span className="font-medium">{detailedLoad.vehicleDetails.capacity}</span>
+                          <span className="font-medium">{detailedLoad.vehicleDetails.capacity} tons</span>
                         </div>
                       </div>
                       <div className="space-y-3">

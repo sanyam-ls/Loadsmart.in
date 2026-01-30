@@ -1025,7 +1025,8 @@ export default function AdminLoadDetailsPage() {
                 </Card>
               )}
 
-              {apiLoad?.shipmentDetails?.driver && (
+              {/* Only show Driver Details for enterprise/fleet carriers (not solo - they are already shown as the carrier) */}
+              {apiLoad?.shipmentDetails?.driver && apiLoad?.carrierOnboarding?.carrierType !== "solo" && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">

@@ -458,9 +458,31 @@ export default function LoadQueuePage() {
         });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
       });
+      
+      const unsubLoadUpdated = onMarketplaceEvent("load_updated", (data) => {
+        const eventType = data.event;
+        let title = "Load Updated";
+        let description = `Load ${data.load?.pickupCity || ""} to ${data.load?.dropoffCity || ""} was updated`;
+        
+        if (eventType === "load_edited") {
+          title = "Load Edited";
+          description = `Shipper edited load: ${data.load?.pickupCity || ""} to ${data.load?.dropoffCity || ""}`;
+        } else if (eventType === "load_available") {
+          title = "Load Made Available";
+          description = `Load ${data.load?.pickupCity || ""} to ${data.load?.dropoffCity || ""} is now available`;
+        } else if (eventType === "load_unavailable") {
+          title = "Load Made Unavailable";
+          description = `Load ${data.load?.pickupCity || ""} to ${data.load?.dropoffCity || ""} marked unavailable`;
+        }
+        
+        toast({ title, description });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/queue"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+      });
 
       return () => {
         unsubLoadSubmitted();
+        unsubLoadUpdated();
         disconnectMarketplace();
       };
     }

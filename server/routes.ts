@@ -898,6 +898,21 @@ export async function registerRoutes(
       }
       
       const load = await storage.updateLoad(req.params.id, body);
+      
+      // Broadcast load update to admin portal for real-time sync
+      if (load) {
+        broadcastLoadUpdated(load.id, load.shipperId, load.status, "load_edited", {
+          id: load.id,
+          status: load.status,
+          pickupCity: load.pickupCity,
+          dropoffCity: load.dropoffCity,
+          weight: load.weight,
+          materialType: load.materialType,
+          pickupDate: load.pickupDate,
+          deliveryDate: load.deliveryDate,
+        });
+      }
+      
       res.json(load);
     } catch (error) {
       console.error("Update load error:", error);
@@ -10846,6 +10861,22 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
 
       const updatedLoad = await storage.getLoad(load.id);
+      
+      // Broadcast status change to admin portal for real-time sync
+      if (updatedLoad) {
+        const eventType = toStatus === 'unavailable' ? 'load_unavailable' : 
+                          toStatus === 'pending' ? 'load_available' : 
+                          `load_status_${toStatus}`;
+        broadcastLoadUpdated(updatedLoad.id, updatedLoad.shipperId, updatedLoad.status, eventType, {
+          id: updatedLoad.id,
+          status: updatedLoad.status,
+          pickupCity: updatedLoad.pickupCity,
+          dropoffCity: updatedLoad.dropoffCity,
+          previousStatus: load.status,
+          changedBy: user.role,
+        });
+      }
+      
       res.json({ success: true, load: updatedLoad });
     } catch (error) {
       console.error("Load transition error:", error);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -732,16 +733,84 @@ export default function LoadDetailPage() {
               <CardTitle className="text-lg">Carrier Assignment</CardTitle>
             </CardHeader>
             <CardContent>
-              {isFinalized ? (
+              {isFinalized && shipment ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 pb-3 border-b">
+                    <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">Carrier Assigned</p>
+                      <p className="text-sm text-muted-foreground">A carrier has been finalized for this load</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {/* Carrier Organization */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Carrier
+                      </span>
+                      <span className="font-medium text-right">
+                        {shipment.carrier?.company || shipment.carrier?.username || "Not specified"}
+                      </span>
+                    </div>
+                    
+                    {/* Driver Name */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <UserIcon className="h-4 w-4" />
+                        Driver
+                      </span>
+                      <span className="font-medium text-right">
+                        {shipment.driver?.username || shipment.carrier?.username || "Not assigned"}
+                      </span>
+                    </div>
+                    
+                    {/* Truck Details */}
+                    {shipment.truck && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground flex items-center gap-2">
+                            <Truck className="h-4 w-4" />
+                            Vehicle
+                          </span>
+                          <span className="font-medium text-right">
+                            {shipment.truck.manufacturer} {shipment.truck.model}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Vehicle Number</span>
+                          <Badge variant="outline" className="font-mono no-default-hover-elevate no-default-active-elevate">
+                            {shipment.truck.licensePlate || "N/A"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Truck Type</span>
+                          <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                            {shipment.truck.truckType || "Standard"}
+                          </Badge>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Pickup Date */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Pickup Date
+                      </span>
+                      <span className="font-medium">
+                        {load.pickupDate ? format(new Date(load.pickupDate), "dd MMM yyyy") : "Not scheduled"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : isFinalized ? (
                 <div className="text-center py-4">
                   <CheckCircle className="h-12 w-12 mx-auto text-green-600 dark:text-green-400 mb-3" />
                   <p className="font-medium">Carrier Assigned</p>
                   <p className="text-sm text-muted-foreground mt-1">A carrier has been finalized for this load</p>
-                  {load.assignedCarrierId && (
-                    <Badge variant="outline" className="mt-3">
-                      Carrier ID: {load.assignedCarrierId.slice(0, 8)}
-                    </Badge>
-                  )}
+                  <p className="text-xs text-muted-foreground mt-2">Loading carrier details...</p>
                 </div>
               ) : (
                 <div className="text-center py-8">

@@ -1338,8 +1338,8 @@ export default function PostLoadPage() {
         <p className="text-muted-foreground">Fill in the details below. We will evaluate and price your load - you'll be notified when it's posted.</p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-4 lg:grid-cols-3">
-        <div className="xl:col-span-3 lg:col-span-2 space-y-6">
+      <div className="flex gap-6">
+        <div className="flex-1 space-y-6 min-w-0">
           {savedTemplates.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
@@ -2117,7 +2117,7 @@ export default function PostLoadPage() {
           </Form>
         </div>
 
-        <div className="space-y-6">
+        <div className="hidden lg:block w-80 shrink-0">
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">

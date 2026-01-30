@@ -1307,7 +1307,7 @@ export default function PostLoadPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 w-full pb-8">
+    <div className="p-4 lg:p-6 w-full h-fit">
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader className="text-center">

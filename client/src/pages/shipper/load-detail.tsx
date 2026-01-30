@@ -381,10 +381,19 @@ export default function LoadDetailPage() {
       
       const unsubLoadUpdate = onMarketplaceEvent("load_updated", (data) => {
         if (data.loadId === params.id || data.load?.id === params.id) {
-          toast({
-            title: "Load Updated",
-            description: `Your load status has been updated to: ${data.status}`,
-          });
+          const eventType = data.event;
+          let title = "Load Updated";
+          let description = `Your load status has been updated to: ${data.status}`;
+          
+          if (eventType === "admin_edited") {
+            title = "Admin Updated Load";
+            description = "An administrator has updated your load details";
+          } else if (eventType === "bid_accepted") {
+            title = "Carrier Assigned";
+            description = "A carrier has been assigned to your load";
+          }
+          
+          toast({ title, description });
           queryClient.invalidateQueries({ queryKey: ["/api/loads", params.id] });
           queryClient.invalidateQueries({ queryKey: ["/api/shipments/load", params.id] });
         }

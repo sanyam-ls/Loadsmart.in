@@ -2478,6 +2478,23 @@ export async function registerRoutes(
       }
 
       const updated = await storage.updateLoad(req.params.id, req.body);
+      
+      // Broadcast admin edit to shipper portal for real-time sync
+      if (updated) {
+        broadcastLoadUpdated(updated.id, updated.shipperId, updated.status, "admin_edited", {
+          id: updated.id,
+          status: updated.status,
+          pickupCity: updated.pickupCity,
+          dropoffCity: updated.dropoffCity,
+          weight: updated.weight,
+          materialType: updated.materialType,
+          pickupDate: updated.pickupDate,
+          deliveryDate: updated.deliveryDate,
+          adminFinalPrice: updated.adminFinalPrice,
+          rateType: updated.rateType,
+        });
+      }
+      
       res.json(updated);
     } catch (error) {
       console.error("Admin update load error:", error);

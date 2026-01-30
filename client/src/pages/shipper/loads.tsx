@@ -146,11 +146,19 @@ export default function ShipperLoadsPage() {
       connectMarketplace("shipper", user.id);
       
       const unsubLoadUpdate = onMarketplaceEvent("load_updated", (data) => {
-        const eventName = data.event === "bid_accepted" ? "Carrier Assigned" : data.event;
-        toast({
-          title: `Load ${eventName}`,
-          description: `Load ${data.load?.pickupCity || ""} → ${data.load?.dropoffCity || ""} has been updated to ${data.status}`,
-        });
+        const eventType = data.event;
+        let title = "Load Updated";
+        let description = `Load ${data.load?.pickupCity || ""} → ${data.load?.dropoffCity || ""} has been updated to ${data.status}`;
+        
+        if (eventType === "bid_accepted") {
+          title = "Carrier Assigned";
+          description = `A carrier has been assigned to your load: ${data.load?.pickupCity || ""} → ${data.load?.dropoffCity || ""}`;
+        } else if (eventType === "admin_edited") {
+          title = "Admin Updated Load";
+          description = `An administrator updated your load: ${data.load?.pickupCity || ""} → ${data.load?.dropoffCity || ""}`;
+        }
+        
+        toast({ title, description });
         if (typeof window !== "undefined") {
           import("@/lib/queryClient").then(({ queryClient }) => {
             queryClient.invalidateQueries({ queryKey: ['/api/loads'] });

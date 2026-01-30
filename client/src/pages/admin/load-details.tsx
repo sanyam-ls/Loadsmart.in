@@ -101,6 +101,8 @@ import { format } from "date-fns";
 import type { Load } from "@shared/schema";
 import { indianStates } from "@shared/indian-locations";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { connectMarketplace, onMarketplaceEvent, disconnectMarketplace } from "@/lib/marketplace-socket";
+import { useAuth } from "@/lib/auth-context";
 
 const formatCurrency = (amount: number) => {
   if (amount >= 100000) {
@@ -158,6 +160,7 @@ export default function AdminLoadDetailsPage() {
   const [, setLocation] = useLocation();
   const params = useParams<{ loadId: string }>();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { getDetailedLoad, updateLoadStatus, cancelLoad, assignCarrier, addAdminNote, approveDocument, rejectDocument, carriers, refreshFromShipperPortal } = useAdminData();
   
   const [activeTab, setActiveTab] = useState("overview");
@@ -168,6 +171,42 @@ export default function AdminLoadDetailsPage() {
   const [selectedStatus, setSelectedStatus] = useState<AdminLoad["status"]>("Active");
   const [selectedCarrierId, setSelectedCarrierId] = useState("");
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  
+  // WebSocket connection for real-time updates from shipper edits
+  useEffect(() => {
+    if (user?.id && user?.role === "admin" && params.loadId) {
+      connectMarketplace("admin", user.id);
+      
+      const unsubLoadUpdated = onMarketplaceEvent("load_updated", (data) => {
+        // Check if this update is for the current load
+        if (data.loadId === params.loadId || data.load?.id === params.loadId) {
+          const eventType = data.event;
+          let title = "Load Updated";
+          let description = "This load has been updated";
+          
+          if (eventType === "load_edited") {
+            title = "Shipper Edited Load";
+            description = `The shipper has edited this load`;
+          } else if (eventType === "load_available") {
+            title = "Load Made Available";
+            description = `This load is now available`;
+          } else if (eventType === "load_unavailable") {
+            title = "Load Made Unavailable";
+            description = `This load is now unavailable`;
+          }
+          
+          toast({ title, description });
+          queryClient.invalidateQueries({ queryKey: ["/api/loads", params.loadId] });
+          queryClient.invalidateQueries({ queryKey: ["/api/shipments/load", params.loadId] });
+        }
+      });
+      
+      return () => {
+        unsubLoadUpdated();
+        disconnectMarketplace();
+      };
+    }
+  }, [user?.id, user?.role, params.loadId, toast]);
   
   // Helper functions for city-state auto-fill
   const getAllCities = () => {

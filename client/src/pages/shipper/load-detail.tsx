@@ -199,6 +199,33 @@ export default function LoadDetailPage() {
   const { user } = useAuth();
   const [unavailableDialog, setUnavailableDialog] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  
+  // Helper functions for city-state auto-fill
+  const getAllCities = () => {
+    const cities: { name: string; stateName: string }[] = [];
+    indianStates.forEach(state => {
+      state.cities.forEach(city => {
+        cities.push({ name: city.name, stateName: state.name });
+      });
+    });
+    return cities;
+  };
+  
+  const getCitiesForState = (stateName: string) => {
+    const state = indianStates.find(s => s.name === stateName);
+    return state?.cities || [];
+  };
+  
+  const getStateForCity = (cityName: string) => {
+    for (const state of indianStates) {
+      if (state.cities.some(city => city.name === cityName)) {
+        return state.name;
+      }
+    }
+    return "";
+  };
+  
+  const allCities = getAllCities();
 
   const { data: load, isLoading, error } = useQuery<LoadWithCarrier>({
     queryKey: ["/api/loads", params.id],
@@ -1093,15 +1120,44 @@ export default function LoadDetailPage() {
                     <FormField
                       control={editForm.control}
                       name="pickupCity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>City *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="City" {...field} data-testid="input-edit-pickup-city" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const selectedState = editForm.watch("pickupState");
+                        const availableCities = selectedState 
+                          ? getCitiesForState(selectedState)
+                          : allCities;
+                        return (
+                          <FormItem>
+                            <FormLabel>City *</FormLabel>
+                            <Select 
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                const state = getStateForCity(value);
+                                if (state) {
+                                  editForm.setValue("pickupState", state);
+                                }
+                              }} 
+                              value={field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-edit-pickup-city">
+                                  <SelectValue placeholder="Select city" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {availableCities.map((city, index) => {
+                                  const cityName = 'stateName' in city ? city.name : city.name;
+                                  return (
+                                    <SelectItem key={`${cityName}-${index}`} value={cityName}>
+                                      {cityName}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                     <FormField
                       control={editForm.control}
@@ -1109,7 +1165,18 @@ export default function LoadDetailPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>State</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Clear city if it doesn't belong to new state
+                              const currentCity = editForm.getValues("pickupCity");
+                              const citiesInState = getCitiesForState(value);
+                              if (currentCity && !citiesInState.some(c => c.name === currentCity)) {
+                                editForm.setValue("pickupCity", "");
+                              }
+                            }} 
+                            value={field.value || ""}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-edit-pickup-state">
                                 <SelectValue placeholder="Select state" />
@@ -1192,15 +1259,44 @@ export default function LoadDetailPage() {
                     <FormField
                       control={editForm.control}
                       name="dropoffCity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>City *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="City" {...field} data-testid="input-edit-dropoff-city" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const selectedState = editForm.watch("dropoffState");
+                        const availableCities = selectedState 
+                          ? getCitiesForState(selectedState)
+                          : allCities;
+                        return (
+                          <FormItem>
+                            <FormLabel>City *</FormLabel>
+                            <Select 
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                const state = getStateForCity(value);
+                                if (state) {
+                                  editForm.setValue("dropoffState", state);
+                                }
+                              }} 
+                              value={field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-edit-dropoff-city">
+                                  <SelectValue placeholder="Select city" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {availableCities.map((city, index) => {
+                                  const cityName = 'stateName' in city ? city.name : city.name;
+                                  return (
+                                    <SelectItem key={`${cityName}-${index}`} value={cityName}>
+                                      {cityName}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                     <FormField
                       control={editForm.control}
@@ -1208,7 +1304,18 @@ export default function LoadDetailPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>State</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Clear city if it doesn't belong to new state
+                              const currentCity = editForm.getValues("dropoffCity");
+                              const citiesInState = getCitiesForState(value);
+                              if (currentCity && !citiesInState.some(c => c.name === currentCity)) {
+                                editForm.setValue("dropoffCity", "");
+                              }
+                            }} 
+                            value={field.value || ""}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-edit-dropoff-state">
                                 <SelectValue placeholder="Select state" />

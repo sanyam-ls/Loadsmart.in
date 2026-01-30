@@ -29,11 +29,13 @@ export interface AdminLoad {
   pickupLocality?: string;
   pickupLandmark?: string;
   pickupCity?: string;
+  pickupPincode?: string;
   dropoffAddress?: string;
   dropoffLocality?: string;
   dropoffLandmark?: string;
   dropoffBusinessName?: string;
   dropoffCity?: string;
+  dropoffPincode?: string;
   weight: number;
   weightUnit: string;
   type: string;

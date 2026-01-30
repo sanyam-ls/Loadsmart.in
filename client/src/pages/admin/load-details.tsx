@@ -1,6 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { 
   ChevronLeft,
   Package,
@@ -41,6 +44,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Dialog,
   DialogContent,
@@ -76,6 +96,8 @@ import { useAdminData, type DetailedLoad, type AdminLoad, type AdminCarrier, typ
 import { useBidsByLoad, type GroupedBidsResponse } from "@/lib/api-hooks";
 import { format } from "date-fns";
 import type { Load } from "@shared/schema";
+import { indianStates } from "@shared/indian-locations";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const formatCurrency = (amount: number) => {
   if (amount >= 100000) {
@@ -142,6 +164,34 @@ export default function AdminLoadDetailsPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<AdminLoad["status"]>("Active");
   const [selectedCarrierId, setSelectedCarrierId] = useState("");
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  
+  // Helper functions for city-state auto-fill
+  const getAllCities = () => {
+    const cities: { name: string; stateName: string }[] = [];
+    indianStates.forEach(state => {
+      state.cities.forEach(city => {
+        cities.push({ name: city.name, stateName: state.name });
+      });
+    });
+    return cities;
+  };
+  
+  const getCitiesForState = (stateName: string) => {
+    const state = indianStates.find(s => s.name === stateName);
+    return state?.cities || [];
+  };
+  
+  const getStateForCity = (cityName: string) => {
+    for (const state of indianStates) {
+      if (state.cities.some(city => city.name === cityName)) {
+        return state.name;
+      }
+    }
+    return "";
+  };
+  
+  const allCities = getAllCities();
   
   const loadId = params.loadId || "";
   
@@ -191,6 +241,161 @@ export default function AdminLoadDetailsPage() {
   // Pre-computed filtered bid arrays for dual marketplace view
   const soloBidsFiltered = useMemo(() => allBids.filter(b => b.carrierType === "solo"), [allBids]);
   const enterpriseBidsFiltered = useMemo(() => allBids.filter(b => b.carrierType === "enterprise" || !b.carrierType), [allBids]);
+
+  // Edit Load Form Schema
+  const editLoadSchema = z.object({
+    shipperContactName: z.string().optional(),
+    shipperCompanyAddress: z.string().optional(),
+    shipperPhone: z.string().optional(),
+    pickupAddress: z.string().optional(),
+    pickupLocality: z.string().optional(),
+    pickupLandmark: z.string().optional(),
+    pickupCity: z.string().min(1, "Pickup city is required"),
+    pickupState: z.string().optional(),
+    pickupPincode: z.string().optional(),
+    dropoffAddress: z.string().optional(),
+    dropoffLocality: z.string().optional(),
+    dropoffLandmark: z.string().optional(),
+    dropoffCity: z.string().min(1, "Dropoff city is required"),
+    dropoffState: z.string().optional(),
+    dropoffPincode: z.string().optional(),
+    dropoffBusinessName: z.string().optional(),
+    receiverName: z.string().min(1, "Receiver name is required"),
+    receiverPhone: z.string().min(1, "Receiver phone is required"),
+    receiverEmail: z.string().optional(),
+    weight: z.string().optional(),
+    goodsToBeCarried: z.string().optional(),
+    specialNotes: z.string().optional(),
+    pickupDate: z.string().optional(),
+    deliveryDate: z.string().optional(),
+  });
+  
+  type EditLoadFormData = z.infer<typeof editLoadSchema>;
+
+  const editForm = useForm<EditLoadFormData>({
+    resolver: zodResolver(editLoadSchema),
+    defaultValues: {
+      shipperContactName: "",
+      shipperCompanyAddress: "",
+      shipperPhone: "",
+      pickupAddress: "",
+      pickupLocality: "",
+      pickupLandmark: "",
+      pickupCity: "",
+      pickupState: "",
+      pickupPincode: "",
+      dropoffAddress: "",
+      dropoffLocality: "",
+      dropoffLandmark: "",
+      dropoffCity: "",
+      dropoffState: "",
+      dropoffPincode: "",
+      dropoffBusinessName: "",
+      receiverName: "",
+      receiverPhone: "",
+      receiverEmail: "",
+      weight: "",
+      goodsToBeCarried: "",
+      specialNotes: "",
+      pickupDate: "",
+      deliveryDate: "",
+    },
+  });
+
+  useEffect(() => {
+    if (apiLoad && editSheetOpen) {
+      // Extract city name from "City, State" format if needed
+      const extractCityName = (cityValue: string | null) => {
+        if (!cityValue) return "";
+        const parts = cityValue.split(",");
+        return parts[0].trim();
+      };
+      
+      // Try to find state from city if state is not set
+      const findStateFromCity = (cityValue: string | null, existingState: string | null) => {
+        if (existingState) return existingState;
+        if (!cityValue) return "";
+        
+        const parts = cityValue.split(",");
+        if (parts.length > 1) {
+          const statePart = parts[1].trim();
+          const matchedState = indianStates.find(s => s.name === statePart);
+          if (matchedState) return matchedState.name;
+        }
+        
+        const cityName = parts[0].trim();
+        return getStateForCity(cityName);
+      };
+      
+      const pickupCityName = extractCityName(apiLoad.pickupCity);
+      const dropoffCityName = extractCityName(apiLoad.dropoffCity);
+      const pickupStateName = findStateFromCity(apiLoad.pickupCity, apiLoad.pickupState);
+      const dropoffStateName = findStateFromCity(apiLoad.dropoffCity, apiLoad.dropoffState);
+      
+      editForm.reset({
+        shipperContactName: apiLoad.shipperContactName || "",
+        shipperCompanyAddress: apiLoad.shipperCompanyAddress || "",
+        shipperPhone: apiLoad.shipperPhone || "",
+        pickupAddress: apiLoad.pickupAddress || "",
+        pickupLocality: apiLoad.pickupLocality || "",
+        pickupLandmark: apiLoad.pickupLandmark || "",
+        pickupCity: pickupCityName,
+        pickupState: pickupStateName,
+        pickupPincode: apiLoad.pickupPincode || "",
+        dropoffAddress: apiLoad.dropoffAddress || "",
+        dropoffLocality: apiLoad.dropoffLocality || "",
+        dropoffLandmark: apiLoad.dropoffLandmark || "",
+        dropoffCity: dropoffCityName,
+        dropoffState: dropoffStateName,
+        dropoffPincode: apiLoad.dropoffPincode || "",
+        dropoffBusinessName: apiLoad.dropoffBusinessName || "",
+        receiverName: apiLoad.receiverName || "",
+        receiverPhone: apiLoad.receiverPhone || "",
+        receiverEmail: apiLoad.receiverEmail || "",
+        weight: apiLoad.weight?.toString() || "",
+        goodsToBeCarried: apiLoad.goodsToBeCarried || "",
+        specialNotes: apiLoad.specialNotes || "",
+        pickupDate: apiLoad.pickupDate ? new Date(apiLoad.pickupDate).toISOString().slice(0, 16) : "",
+        deliveryDate: apiLoad.deliveryDate ? new Date(apiLoad.deliveryDate).toISOString().slice(0, 16) : "",
+      });
+    }
+  }, [apiLoad, editSheetOpen, editForm]);
+
+  const editMutation = useMutation({
+    mutationFn: async (data: EditLoadFormData) => {
+      const payload: Record<string, any> = {};
+      
+      // Only include fields that have values
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") {
+          payload[key] = value;
+        }
+      });
+      
+      // Format city with state for display
+      if (data.pickupCity) {
+        payload.pickupCity = data.pickupState ? `${data.pickupCity}, ${data.pickupState}` : data.pickupCity;
+      }
+      if (data.dropoffCity) {
+        payload.dropoffCity = data.dropoffState ? `${data.dropoffCity}, ${data.dropoffState}` : data.dropoffCity;
+      }
+      
+      return apiRequest("PATCH", `/api/loads/${loadId}`, payload);
+    },
+    onSuccess: () => {
+      toast({ title: "Load updated", description: "The load details have been updated successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads", loadId] });
+      setEditSheetOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleEditSubmit = (data: EditLoadFormData) => {
+    editMutation.mutate(data);
+  };
   
   function createDetailedLoadFromApi(load: LoadWithRelations, displayId: string): DetailedLoad {
     const mapLoadStatus = (status: string | null): AdminLoad["status"] => {
@@ -220,12 +425,14 @@ export default function AdminLoadDetailsPage() {
       pickupLocality: load.pickupLocality || undefined,
       pickupLandmark: load.pickupLandmark || undefined,
       pickupCity: load.pickupCity || undefined,
+      pickupPincode: load.pickupPincode || undefined,
       // Full dropoff address details
       dropoffAddress: load.dropoffAddress || undefined,
       dropoffLocality: load.dropoffLocality || undefined,
       dropoffLandmark: load.dropoffLandmark || undefined,
       dropoffBusinessName: load.dropoffBusinessName || undefined,
       dropoffCity: load.dropoffCity || undefined,
+      dropoffPincode: load.dropoffPincode || undefined,
       weight: parseFloat(String(load.weight)) || 0,
       weightUnit: load.weightUnit || "kg",
       type: load.requiredTruckType || "Any",
@@ -421,8 +628,12 @@ export default function AdminLoadDetailsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsStatusModalOpen(true)} data-testid="menu-update-status">
+              <DropdownMenuItem onClick={() => setEditSheetOpen(true)} data-testid="menu-edit-load">
                 <Edit className="h-4 w-4 mr-2" />
+                Edit Load
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsStatusModalOpen(true)} data-testid="menu-update-status">
+                <RefreshCw className="h-4 w-4 mr-2" />
                 Update Status
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsReassignModalOpen(true)} data-testid="menu-reassign-carrier">
@@ -491,7 +702,7 @@ export default function AdminLoadDetailsPage() {
                     <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
                     <div>
                       <span className="text-muted-foreground text-sm">Pickup:</span>
-                      <div className="font-medium">{detailedLoad.pickupCity}</div>
+                      <div className="font-medium">{detailedLoad.pickupCity}{detailedLoad.pickupPincode ? ` - ${detailedLoad.pickupPincode}` : ''}</div>
                       {detailedLoad.pickupLocality && (
                         <div className="text-sm text-muted-foreground">{detailedLoad.pickupLocality}</div>
                       )}
@@ -509,7 +720,7 @@ export default function AdminLoadDetailsPage() {
                     <MapPin className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
                     <div>
                       <span className="text-muted-foreground text-sm">Dropoff:</span>
-                      <div className="font-medium">{detailedLoad.dropoffCity}</div>
+                      <div className="font-medium">{detailedLoad.dropoffCity}{detailedLoad.dropoffPincode ? ` - ${detailedLoad.dropoffPincode}` : ''}</div>
                       {detailedLoad.dropoffBusinessName && (
                         <div className="text-sm font-medium">{detailedLoad.dropoffBusinessName}</div>
                       )}
@@ -1486,6 +1697,490 @@ export default function AdminLoadDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Load Sheet */}
+      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto" data-testid="sheet-edit-load">
+          <SheetHeader>
+            <SheetTitle>Edit Load Details</SheetTitle>
+            <SheetDescription>
+              Update load information. Changes will sync across all portals.
+            </SheetDescription>
+          </SheetHeader>
+          
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-6 mt-6">
+              {/* Shipper Contact Information */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Shipper Contact</h4>
+                <FormField
+                  control={editForm.control}
+                  name="shipperContactName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-shipper-contact-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="shipperPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-shipper-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="shipperCompanyAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-shipper-company-address" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Pickup Location */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Pickup Location</h4>
+                <FormField
+                  control={editForm.control}
+                  name="pickupAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-pickup-address" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={editForm.control}
+                    name="pickupLocality"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Locality</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-pickup-locality" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="pickupLandmark"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Landmark</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-pickup-landmark" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={editForm.control}
+                    name="pickupCity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City *</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            const state = getStateForCity(value);
+                            if (state) {
+                              editForm.setValue("pickupState", state);
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-pickup-city">
+                              <SelectValue placeholder="Select city" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(editForm.watch("pickupState") 
+                              ? getCitiesForState(editForm.watch("pickupState") || "")
+                              : allCities
+                            ).map((city) => (
+                              <SelectItem 
+                                key={typeof city === 'string' ? city : city.name} 
+                                value={typeof city === 'string' ? city : city.name}
+                              >
+                                {typeof city === 'string' ? city : city.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="pickupState"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Clear city if it doesn't belong to new state
+                            const currentCity = editForm.getValues("pickupCity");
+                            if (currentCity && getStateForCity(currentCity) !== value) {
+                              editForm.setValue("pickupCity", "");
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-pickup-state">
+                              <SelectValue placeholder="Select state" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {indianStates.map((state) => (
+                              <SelectItem key={state.name} value={state.name}>
+                                {state.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={editForm.control}
+                  name="pickupPincode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pincode</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-pickup-pincode" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Dropoff Location */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Dropoff Location</h4>
+                <FormField
+                  control={editForm.control}
+                  name="dropoffAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-dropoff-address" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={editForm.control}
+                    name="dropoffLocality"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Locality</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-dropoff-locality" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="dropoffLandmark"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Landmark</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-dropoff-landmark" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={editForm.control}
+                    name="dropoffCity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City *</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            const state = getStateForCity(value);
+                            if (state) {
+                              editForm.setValue("dropoffState", state);
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-dropoff-city">
+                              <SelectValue placeholder="Select city" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(editForm.watch("dropoffState") 
+                              ? getCitiesForState(editForm.watch("dropoffState") || "")
+                              : allCities
+                            ).map((city) => (
+                              <SelectItem 
+                                key={typeof city === 'string' ? city : city.name} 
+                                value={typeof city === 'string' ? city : city.name}
+                              >
+                                {typeof city === 'string' ? city : city.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="dropoffState"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Clear city if it doesn't belong to new state
+                            const currentCity = editForm.getValues("dropoffCity");
+                            if (currentCity && getStateForCity(currentCity) !== value) {
+                              editForm.setValue("dropoffCity", "");
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-dropoff-state">
+                              <SelectValue placeholder="Select state" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {indianStates.map((state) => (
+                              <SelectItem key={state.name} value={state.name}>
+                                {state.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={editForm.control}
+                  name="dropoffPincode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pincode</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-dropoff-pincode" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="dropoffBusinessName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Business Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-dropoff-business-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Receiver Details */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Receiver Details</h4>
+                <FormField
+                  control={editForm.control}
+                  name="receiverName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-receiver-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={editForm.control}
+                    name="receiverPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone *</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-receiver-phone" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="receiverEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" data-testid="input-receiver-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Cargo Information */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Cargo Information</h4>
+                <FormField
+                  control={editForm.control}
+                  name="weight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Weight (tons)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" data-testid="input-weight" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="goodsToBeCarried"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Goods Description</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-goods-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="specialNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Special Notes</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} data-testid="input-special-notes" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Schedule */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Schedule</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={editForm.control}
+                    name="pickupDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pickup Date</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="datetime-local" data-testid="input-pickup-date" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="deliveryDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Delivery Date</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="datetime-local" data-testid="input-delivery-date" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setEditSheetOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={editMutation.isPending} data-testid="button-save-edit">
+                  {editMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

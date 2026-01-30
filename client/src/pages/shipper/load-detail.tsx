@@ -567,7 +567,7 @@ export default function LoadDetailPage() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">PICKUP</p>
                     <p className="font-semibold" data-testid="text-pickup">
-                      {load.pickupAddress}{load.pickupLocality ? `, ${load.pickupLocality}` : ''}, {load.pickupCity}
+                      {load.pickupAddress}{load.pickupLocality ? `, ${load.pickupLocality}` : ''}, {load.pickupCity}{load.pickupPincode ? ` - ${load.pickupPincode}` : ''}
                     </p>
                     {load.pickupLandmark && (
                       <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
@@ -585,7 +585,7 @@ export default function LoadDetailPage() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">DELIVERY</p>
                     <p className="font-semibold" data-testid="text-drop">
-                      {load.dropoffBusinessName ? `${load.dropoffBusinessName}, ` : ''}{load.dropoffAddress}{load.dropoffLocality ? `, ${load.dropoffLocality}` : ''}, {load.dropoffCity}
+                      {load.dropoffBusinessName ? `${load.dropoffBusinessName}, ` : ''}{load.dropoffAddress}{load.dropoffLocality ? `, ${load.dropoffLocality}` : ''}, {load.dropoffCity}{load.dropoffPincode ? ` - ${load.dropoffPincode}` : ''}
                     </p>
                     {load.dropoffLandmark && (
                       <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">

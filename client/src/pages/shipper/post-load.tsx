@@ -1307,7 +1307,7 @@ export default function PostLoadPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 w-full h-fit">
+    <div className="p-4 lg:p-6 w-full flex flex-col">
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader className="text-center">
@@ -1338,7 +1338,7 @@ export default function PostLoadPage() {
         <p className="text-muted-foreground">Fill in the details below. We will evaluate and price your load - you'll be notified when it's posted.</p>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex gap-6 items-start flex-1">
         <div className="flex-1 space-y-6 min-w-0">
           {savedTemplates.length > 0 && (
             <Card>

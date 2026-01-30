@@ -800,6 +800,14 @@ export async function registerRoutes(
       } | null = null;
       
       const shipment = await storage.getShipmentByLoad(load.id);
+      
+      // Check carrier type for solo carrier handling
+      let carrierProfile = null;
+      if (load.assignedCarrierId) {
+        carrierProfile = await storage.getCarrierProfile(load.assignedCarrierId);
+      }
+      const isSoloCarrier = carrierProfile?.carrierType === 'solo';
+      
       if (shipment) {
         shipmentDetails = {
           id: shipment.id,
@@ -808,25 +816,44 @@ export async function registerRoutes(
           driverId: shipment.driverId,
         };
         
-        // Fetch truck details if truckId exists
+        // Fetch truck details - first from shipment, then fallback to carrier's trucks
+        let truck = null;
         if (shipment.truckId) {
-          const truck = await storage.getTruck(shipment.truckId);
-          if (truck) {
-            shipmentDetails.truck = {
-              id: truck.id,
-              licensePlate: truck.licensePlate,
-              manufacturer: truck.make,
-              model: truck.model,
-              truckType: truck.truckType,
-              capacity: truck.capacity?.toString() || null,
-              chassisNumber: truck.chassisNumber,
-              registrationNumber: truck.registrationNumber,
-            };
+          truck = await storage.getTruck(shipment.truckId);
+        }
+        
+        // Fallback: For solo carriers, get their registered truck if not on shipment
+        if (!truck && load.assignedCarrierId) {
+          const carrierTrucks = await storage.getTrucksByCarrier(load.assignedCarrierId);
+          if (carrierTrucks && carrierTrucks.length > 0) {
+            truck = carrierTrucks[0]; // Use their primary truck
           }
         }
         
-        // Fetch driver details if driverId exists (from drivers table)
-        if (shipment.driverId) {
+        if (truck) {
+          shipmentDetails.truck = {
+            id: truck.id,
+            licensePlate: truck.licensePlate,
+            manufacturer: truck.make,
+            model: truck.model,
+            truckType: truck.truckType,
+            capacity: truck.capacity?.toString() || null,
+            chassisNumber: truck.chassisNumber,
+            registrationNumber: truck.registrationNumber,
+          };
+        }
+        
+        // Fetch driver details - for solo carriers, use carrier info as driver
+        if (isSoloCarrier && assignedCarrier) {
+          // Solo carriers drive their own truck
+          shipmentDetails.driver = {
+            id: assignedCarrier.id,
+            username: assignedCarrier.companyName || assignedCarrier.username,
+            phone: assignedCarrier.phone,
+            email: assignedCarrier.email,
+          };
+        } else if (shipment.driverId) {
+          // Enterprise carriers have assigned drivers
           const driver = await storage.getDriver(shipment.driverId);
           if (driver) {
             shipmentDetails.driver = {
@@ -835,6 +862,42 @@ export async function registerRoutes(
               phone: driver.phone,
               email: driver.email,
             };
+          }
+        }
+      } else if (load.assignedCarrierId) {
+        // No shipment yet, but carrier is assigned - fetch their registered truck/info for solo carriers
+        if (isSoloCarrier) {
+          const carrierTrucks = await storage.getTrucksByCarrier(load.assignedCarrierId);
+          if (carrierTrucks && carrierTrucks.length > 0 || assignedCarrier) {
+            shipmentDetails = {
+              id: '',
+              status: 'pending',
+              truckId: carrierTrucks[0]?.id || null,
+              driverId: null,
+            };
+            
+            if (carrierTrucks.length > 0) {
+              const truck = carrierTrucks[0];
+              shipmentDetails.truck = {
+                id: truck.id,
+                licensePlate: truck.licensePlate,
+                manufacturer: truck.make,
+                model: truck.model,
+                truckType: truck.truckType,
+                capacity: truck.capacity?.toString() || null,
+                chassisNumber: truck.chassisNumber,
+                registrationNumber: truck.registrationNumber,
+              };
+            }
+            
+            if (assignedCarrier) {
+              shipmentDetails.driver = {
+                id: assignedCarrier.id,
+                username: assignedCarrier.companyName || assignedCarrier.username,
+                phone: assignedCarrier.phone,
+                email: assignedCarrier.email,
+              };
+            }
           }
         }
       }

@@ -11437,11 +11437,42 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
 
       // Include carrier, truck, and driver details for Carrier Memo display
-      const [carrier, truck, driver] = await Promise.all([
-        storage.getUser(shipment.carrierId),
-        shipment.truckId ? storage.getTruck(shipment.truckId) : Promise.resolve(null),
-        shipment.driverId ? storage.getDriver(shipment.driverId) : Promise.resolve(null)
-      ]);
+      const carrier = await storage.getUser(shipment.carrierId);
+      
+      // Get carrier profile to determine carrier type
+      const carrierProfile = carrier ? await storage.getCarrierProfile(carrier.id) : null;
+      const isSoloCarrier = carrierProfile?.carrierType === 'solo';
+      
+      // Get truck - if not on shipment, for solo carriers get their registered truck
+      let truck = shipment.truckId ? await storage.getTruck(shipment.truckId) : null;
+      if (!truck && carrier) {
+        // Fallback: get the carrier's truck(s) - solo carriers typically have one
+        const carrierTrucks = await storage.getTrucksByCarrier(carrier.id);
+        if (carrierTrucks && carrierTrucks.length > 0) {
+          truck = carrierTrucks[0]; // Use their first/primary truck
+        }
+      }
+      
+      // Get driver - if not on shipment, for solo carriers use the carrier themselves as driver
+      let driver = shipment.driverId ? await storage.getDriver(shipment.driverId) : null;
+      let driverInfo = null;
+      
+      if (driver) {
+        driverInfo = {
+          id: driver.id,
+          username: driver.name,
+          phone: driver.phone,
+          licenseNumber: driver.licenseNumber
+        };
+      } else if (isSoloCarrier && carrier) {
+        // For solo carriers, the carrier is the driver
+        driverInfo = {
+          id: carrier.id,
+          username: carrier.username,
+          phone: carrier.phone,
+          licenseNumber: null
+        };
+      }
 
       res.json({
         ...shipment,
@@ -11461,12 +11492,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
           truckType: truck.truckType,
           capacity: truck.capacity
         } : null,
-        driver: driver ? {
-          id: driver.id,
-          username: driver.name,
-          phone: driver.phone,
-          licenseNumber: driver.licenseNumber
-        } : null
+        driver: driverInfo
       });
     } catch (error) {
       console.error("Get shipment by load error:", error);

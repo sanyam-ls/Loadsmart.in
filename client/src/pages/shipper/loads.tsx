@@ -211,8 +211,10 @@ export default function ShipperLoadsPage() {
 
   const statusMappings: Record<string, string[]> = {
     active: ['pending', 'priced', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid'],
-    bidding: ['open_for_bid', 'counter_received'],
-    assigned: ['awarded', 'invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid'],
+    pending: ['pending', 'priced'],
+    open_for_bids: ['posted_to_carriers', 'open_for_bid', 'counter_received'],
+    awarded: ['awarded'],
+    invoice: ['invoice_created', 'invoice_sent', 'invoice_acknowledged', 'invoice_paid'],
     in_transit: ['in_transit'],
     delivered: ['delivered', 'closed'],
     cancelled: ['cancelled'],
@@ -240,8 +242,10 @@ export default function ShipperLoadsPage() {
   const statusCounts = {
     all: loads.length,
     active: loads.filter((l: Load) => statusMappings.active.includes(l.status || '')).length,
-    bidding: loads.filter((l: Load) => statusMappings.bidding.includes(l.status || '')).length,
-    assigned: loads.filter((l: Load) => statusMappings.assigned.includes(l.status || '')).length,
+    pending: loads.filter((l: Load) => statusMappings.pending.includes(l.status || '')).length,
+    open_for_bids: loads.filter((l: Load) => statusMappings.open_for_bids.includes(l.status || '')).length,
+    awarded: loads.filter((l: Load) => statusMappings.awarded.includes(l.status || '')).length,
+    invoice: loads.filter((l: Load) => statusMappings.invoice.includes(l.status || '')).length,
     in_transit: loads.filter((l: Load) => statusMappings.in_transit.includes(l.status || '')).length,
     delivered: loads.filter((l: Load) => statusMappings.delivered.includes(l.status || '')).length,
     cancelled: loads.filter((l: Load) => statusMappings.cancelled.includes(l.status || '')).length,
@@ -288,8 +292,10 @@ export default function ShipperLoadsPage() {
           <SelectContent>
             <SelectItem value="all">{t('common.all')} ({statusCounts.all})</SelectItem>
             <SelectItem value="active">{t('common.active')} ({statusCounts.active})</SelectItem>
-            <SelectItem value="bidding">{t('bids.title')} ({statusCounts.bidding})</SelectItem>
-            <SelectItem value="assigned">{t('loads.awarded')} ({statusCounts.assigned})</SelectItem>
+            <SelectItem value="pending">Pending ({statusCounts.pending})</SelectItem>
+            <SelectItem value="open_for_bids">Open for Bids ({statusCounts.open_for_bids})</SelectItem>
+            <SelectItem value="awarded">{t('loads.awarded')} ({statusCounts.awarded})</SelectItem>
+            <SelectItem value="invoice">Invoice ({statusCounts.invoice})</SelectItem>
             <SelectItem value="in_transit">{t('loads.inTransit')} ({statusCounts.in_transit})</SelectItem>
             <SelectItem value="delivered">{t('loads.delivered')} ({statusCounts.delivered})</SelectItem>
             <SelectItem value="cancelled">{t('loads.cancelled')} ({statusCounts.cancelled})</SelectItem>
@@ -322,20 +328,23 @@ export default function ShipperLoadsPage() {
           <TabsTrigger value="all" className="gap-2">
             {t('common.all')} <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="active" className="gap-2">
-            {t('common.active')} <Badge variant="secondary" className="ml-1">{statusCounts.active}</Badge>
+          <TabsTrigger value="pending" className="gap-2">
+            Pending <Badge variant="secondary" className="ml-1">{statusCounts.pending}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="bidding" className="gap-2">
-            {t('bids.title')} <Badge variant="secondary" className="ml-1">{statusCounts.bidding}</Badge>
+          <TabsTrigger value="open_for_bids" className="gap-2">
+            Open for Bids <Badge variant="secondary" className="ml-1">{statusCounts.open_for_bids}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="awarded" className="gap-2">
+            {t('loads.awarded')} <Badge variant="secondary" className="ml-1">{statusCounts.awarded}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="invoice" className="gap-2">
+            Invoice <Badge variant="secondary" className="ml-1">{statusCounts.invoice}</Badge>
           </TabsTrigger>
           <TabsTrigger value="in_transit" className="gap-2">
             {t('loads.inTransit')} <Badge variant="secondary" className="ml-1">{statusCounts.in_transit}</Badge>
           </TabsTrigger>
           <TabsTrigger value="delivered" className="gap-2">
             {t('loads.delivered')} <Badge variant="secondary" className="ml-1">{statusCounts.delivered}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="unavailable" className="gap-2">
-            Unavailable <Badge variant="secondary" className="ml-1">{statusCounts.unavailable}</Badge>
           </TabsTrigger>
         </TabsList>
       </Tabs>

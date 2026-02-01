@@ -730,10 +730,10 @@ export default function PostLoadPage() {
     return state?.cities || [];
   }, [dropoffState]);
 
-  // Auto-populate shipper details from user profile
+  // Auto-populate shipper details from user profile and onboarding data
   useEffect(() => {
     if (user) {
-      // Shipper details - auto-populate from user profile (contact person name is left empty)
+      // Shipper details - auto-populate from user profile
       if (user.companyName) {
         form.setValue("shipperCompanyName", user.companyName);
       }
@@ -759,7 +759,28 @@ export default function PostLoadPage() {
         form.setValue("pickupLandmark", userAny.defaultPickupLandmark);
       }
     }
-  }, [user, form]);
+    
+    // Auto-populate from onboarding data (verification form details)
+    if (onboardingStatus && onboardingStatus.status === "approved") {
+      // Contact person name from onboarding
+      const contactName = onboardingStatus.contact_person_name || onboardingStatus.contactPersonName;
+      if (contactName && !form.getValues("shipperContactName")) {
+        form.setValue("shipperContactName", contactName);
+      }
+      
+      // Build company address from onboarding registered address
+      const address = onboardingStatus.registered_address || onboardingStatus.registeredAddress;
+      const locality = onboardingStatus.registered_locality || onboardingStatus.registeredLocality;
+      const city = onboardingStatus.registered_city || onboardingStatus.registeredCity;
+      const state = onboardingStatus.registered_state || onboardingStatus.registeredState;
+      const pincode = onboardingStatus.registered_pincode || onboardingStatus.registeredPincode;
+      
+      if (address && !form.getValues("shipperCompanyAddress")) {
+        const addressParts = [address, locality, city, state, pincode].filter(Boolean);
+        form.setValue("shipperCompanyAddress", addressParts.join(", "));
+      }
+    }
+  }, [user, onboardingStatus, form]);
 
   // State for distance loading
   const [isLoadingDistance, setIsLoadingDistance] = useState(false);

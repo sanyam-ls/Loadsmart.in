@@ -1418,31 +1418,13 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                   />
                   <FormField
                     control={form.control}
-                    name="businessAddressProofType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("onboarding.addressProofType")}</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-address-proof-type">
-                              <SelectValue placeholder={t("onboarding.selectAddressProofType")} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="rent_agreement">{t("onboarding.addressProofRentAgreement")}</SelectItem>
-                            <SelectItem value="electricity_bill">{t("onboarding.addressProofElectricityBill")}</SelectItem>
-                            <SelectItem value="office_photo_with_board">{t("onboarding.addressProofOfficePhoto")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
                     name="businessAddressProofUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.addressProof")}</FormLabel>
+                        <FormLabel>{t("onboarding.officePhoto")}</FormLabel>
+                        <p className="text-sm text-red-600 font-medium mb-2">
+                          {t("onboarding.officeSelfieNote")}
+                        </p>
                         <FormControl>
                           <DocumentUploadWithCamera
                             value={field.value || ""}
@@ -1450,6 +1432,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                             placeholder={t("onboarding.noFileSelected")}
                             testId="upload-address-proof"
                             documentType="address_proof"
+                            preferCamera={true}
                           />
                         </FormControl>
                         <FormDescription>{t("onboarding.addressProofDesc")}</FormDescription>

@@ -48,6 +48,7 @@ interface DocumentUploadWithCameraProps {
   disabled?: boolean;
   testId?: string;
   documentType?: string;
+  preferCamera?: boolean;
 }
 
 export function DocumentUploadWithCamera({
@@ -57,6 +58,7 @@ export function DocumentUploadWithCamera({
   disabled = false,
   testId,
   documentType = "document",
+  preferCamera = false,
 }: DocumentUploadWithCameraProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);

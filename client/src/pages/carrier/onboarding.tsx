@@ -1269,24 +1269,10 @@ export default function CarrierOnboarding() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-2 block">{t("onboarding.addressProofType")}</label>
-                        <Select
-                          value={fleetForm.watch("addressProofType") || ""}
-                          onValueChange={(val) => fleetForm.setValue("addressProofType", val as any)}
-                          disabled={!canEdit}
-                        >
-                          <SelectTrigger data-testid="select-carrier-address-proof-type">
-                            <SelectValue placeholder={t("onboarding.selectAddressProofType")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="rent_agreement">{t("onboarding.addressProofRentAgreement")}</SelectItem>
-                            <SelectItem value="electricity_bill">{t("onboarding.addressProofElectricityBill")}</SelectItem>
-                            <SelectItem value="office_photo_with_board">{t("onboarding.addressProofOfficePhoto")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">{t("onboarding.addressProof")}</label>
+                        <label className="text-sm font-medium mb-2 block">{t("onboarding.officePhoto")}</label>
+                        <p className="text-sm text-red-600 font-medium mb-2">
+                          {t("onboarding.officeSelfieNote")}
+                        </p>
                         <DocumentUploadWithCamera
                           value={fleetForm.watch("addressProofUrl") || ""}
                           onChange={(val) => {
@@ -1295,6 +1281,7 @@ export default function CarrierOnboarding() {
                           }}
                           disabled={!canEdit}
                           documentType="address_proof"
+                          preferCamera={true}
                         />
                         <p className="text-xs text-muted-foreground mt-1">{t("onboarding.addressProofDesc")}</p>
                       </div>

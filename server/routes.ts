@@ -9762,6 +9762,15 @@ RESPOND IN THIS EXACT JSON FORMAT:
         noGstCertificate: z.boolean().optional(),
         alternativeDocumentType: z.string().optional(),
         alternativeAuthorizationUrl: z.string().optional(),
+      }).refine((data) => {
+        // LR Copy is required for transporters
+        if (data.shipperRole === "transporter" && !data.lrCopyUrl) {
+          return false;
+        }
+        return true;
+      }, {
+        message: "LR Copy is required for Transporters",
+        path: ["lrCopyUrl"]
       });
 
       const validatedData = onboardingSchema.parse(req.body);

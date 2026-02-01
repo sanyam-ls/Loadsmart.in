@@ -453,6 +453,12 @@ export default function AdminOnboardingPage() {
               <TabsContent value="business" className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <Label className="text-muted-foreground">{t("onboarding.shipperRole")}</Label>
+                    <Badge variant={selectedRequest?.request.shipperRole === "transporter" ? "secondary" : "outline"} className="mt-1">
+                      {selectedRequest?.request.shipperRole === "transporter" ? t("onboarding.transporter") : t("onboarding.shipper")}
+                    </Badge>
+                  </div>
+                  <div>
                     <Label className="text-muted-foreground">{t("onboarding.legalCompanyName")}</Label>
                     <p className="font-medium">{selectedRequest?.request.legalCompanyName}</p>
                   </div>
@@ -636,6 +642,16 @@ export default function AdminOnboardingPage() {
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}
                   </div>
+                  {selectedRequest?.request.shipperRole === "transporter" && (
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">{t("onboarding.lrCopy")}</Label>
+                      {selectedRequest?.request.lrCopyUrl ? (
+                        <DocumentLink value={selectedRequest.request.lrCopyUrl} />
+                      ) : (
+                        <p className="text-muted-foreground">{t("common.notProvided")}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 

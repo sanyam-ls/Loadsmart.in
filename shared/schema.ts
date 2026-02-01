@@ -1782,11 +1782,18 @@ export const shipperOnboardingStatuses = [
 ] as const;
 export type ShipperOnboardingStatus = typeof shipperOnboardingStatuses[number];
 
+// Shipper Role Types - "I am a" dropdown
+export const shipperRoleTypes = ["shipper", "transporter"] as const;
+export type ShipperRoleType = typeof shipperRoleTypes[number];
+
 // Shipper Onboarding Requests table
 export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   shipperId: varchar("shipper_id").notNull().references(() => users.id),
   status: text("status").default("draft"), // draft, pending, under_review, approved, rejected, on_hold
+  
+  // Shipper Role - "I am a" dropdown (Shipper or Transporter)
+  shipperRole: text("shipper_role").default("shipper"), // shipper or transporter
   
   // Business Identity (optional for draft, required on submission)
   legalCompanyName: text("legal_company_name"),
@@ -1828,6 +1835,7 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   cancelledChequeUrl: text("cancelled_cheque_url"),
   businessAddressProofType: text("business_address_proof_type"), // rent_agreement, electricity_bill, office_photo_with_board
   businessAddressProofUrl: text("business_address_proof_url"),
+  lrCopyUrl: text("lr_copy_url"), // LR Copy - mandatory for Transporters
   
   // Trade References
   tradeReference1Company: text("trade_reference_1_company"),

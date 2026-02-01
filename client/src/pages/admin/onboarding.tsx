@@ -134,7 +134,7 @@ function OnboardingTable({
             </TableCell>
             <TableCell>
               {item.request.submittedAt
-                ? formatDistanceToNow(new Date(item.request.submittedAt), { addSuffix: true })
+                ? format(new Date(item.request.submittedAt), "dd MMM yyyy, hh:mm a")
                 : "-"}
             </TableCell>
             <TableCell>
@@ -247,7 +247,7 @@ export default function AdminOnboardingPage() {
   };
 
   const getFilteredByStatus = (status: string): OnboardingWithUser[] => {
-    return (requests || []).filter((item) => {
+    const filtered = (requests || []).filter((item) => {
       if (!item?.request) return false;
       const matchesSearch =
         !searchQuery ||
@@ -260,6 +260,13 @@ export default function AdminOnboardingPage() {
         return matchesSearch && (item.request.status === "pending" || item.request.status === "under_review");
       }
       return matchesSearch && item.request.status === status;
+    });
+    
+    // Sort by submittedAt descending (most recent first)
+    return filtered.sort((a, b) => {
+      const dateA = a.request.submittedAt ? new Date(a.request.submittedAt).getTime() : 0;
+      const dateB = b.request.submittedAt ? new Date(b.request.submittedAt).getTime() : 0;
+      return dateB - dateA;
     });
   };
 

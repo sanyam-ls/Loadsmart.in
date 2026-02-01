@@ -1240,9 +1240,9 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                         name="referralSalesPersonName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Sales Person Name</FormLabel>
+                            <FormLabel>Employee Code</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter sales person name" {...field} data-testid="input-sales-person-name" />
+                              <Input placeholder="Enter employee code" {...field} data-testid="input-employee-code" />
                             </FormControl>
                           </FormItem>
                         )}

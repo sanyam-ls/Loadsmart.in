@@ -489,11 +489,13 @@ export default function AdminOnboardingPage() {
                 <Separator />
 
                 <div>
+                  <Label className="text-muted-foreground">Locality / Area</Label>
+                  <p className="font-medium">{selectedRequest?.request.registeredLocality || "-"}</p>
+                </div>
+                <div>
                   <Label className="text-muted-foreground">{t("onboarding.registeredAddress")}</Label>
                   <p className="font-medium">
-                    {selectedRequest?.request.registeredAddress || "-"}
-                    {selectedRequest?.request.registeredLocality ? `, ${selectedRequest.request.registeredLocality}` : ""}
-                    , {selectedRequest?.request.registeredCity || "-"},{" "}
+                    {selectedRequest?.request.registeredAddress || "-"}, {selectedRequest?.request.registeredCity || "-"},{" "}
                     {selectedRequest?.request.registeredState || "-"} - {selectedRequest?.request.registeredPincode || "-"}
                   </p>
                 </div>

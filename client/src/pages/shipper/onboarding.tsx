@@ -97,7 +97,7 @@ const onboardingFormSchema = z.object({
   panNumber: z.string().min(10).max(10, "PAN must be 10 characters"),
   gstinNumber: z.string().optional(),
   registeredAddress: z.string().min(1, "Address is required"),
-  registeredLocality: z.string().optional(),
+  registeredLocality: z.string().min(1, "Locality is required"),
   registeredCity: z.string().min(1, "City is required"),
   registeredCityCustom: z.string().optional(),
   registeredState: z.string().min(1, "State is required"),
@@ -876,7 +876,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="registeredLocality"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Locality / Area <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
+                        <FormLabel>Locality / Area</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="e.g. Andheri West, Bandra, Connaught Place" 

@@ -9716,6 +9716,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
 
       const onboardingSchema = z.object({
+        shipperRole: z.enum(["shipper", "transporter"]).optional().default("shipper"),
         legalCompanyName: z.string().min(1, "Company name is required"),
         tradeName: z.string().optional(),
         businessType: z.enum(["proprietorship", "partnership", "pvt_ltd", "public_ltd", "llp"]).optional(),
@@ -9743,6 +9744,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         incorporationCertificateUrl: z.string().optional(),
         cancelledChequeUrl: z.string().optional(),
         businessAddressProofUrl: z.string().optional(),
+        lrCopyUrl: z.string().optional(),
         tradeReference1Company: z.string().optional(),
         tradeReference1Contact: z.string().optional(),
         tradeReference1Phone: z.string().optional(),
@@ -9976,6 +9978,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
 
       const draftSchema = z.object({
+        shipperRole: z.enum(["shipper", "transporter"]).optional(),
         legalCompanyName: z.string().optional(),
         tradeName: z.string().optional(),
         businessType: z.string().optional(),
@@ -10003,6 +10006,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         incorporationCertificateUrl: z.string().optional(),
         cancelledChequeUrl: z.string().optional(),
         businessAddressProofUrl: z.string().optional(),
+        lrCopyUrl: z.string().optional(),
         tradeReference1Company: z.string().optional(),
         tradeReference1Contact: z.string().optional(),
         tradeReference1Phone: z.string().optional(),

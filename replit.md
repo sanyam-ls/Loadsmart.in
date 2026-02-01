@@ -63,6 +63,13 @@ The Shipper Portal integrates a CAN-Bus GPS + Telematics system for real-time tr
 
 New shippers undergo a business verification process. This includes auto-draft creation, auto-saving of form data, a multi-tab form for business details, contact information, and document uploads to Replit Object Storage. An admin review queue manages statuses: `draft → pending → under_review → (approved | rejected | on_hold)`. Approval (`isVerified=true`) is required before posting loads.
 
+#### Shipper Role Selection
+Shippers must identify their role during onboarding via an "I am a" dropdown with two options:
+- **Shipper**: Standard shipper without additional document requirements
+- **Transporter**: Requires mandatory LR (Lorry Receipt) copy upload for verification
+
+The shipper role is displayed in the admin onboarding review page with a badge, and the LR copy document link is shown conditionally for Transporters. Server-side validation enforces LR copy requirement for transporter role submissions.
+
 ### Carrier Onboarding Workflow
 
 New carriers complete a verification process based on their type ("Solo Operator" or "Fleet/Company"). The workflow includes specific identity, vehicle, and document requirements, with auto-saving and document uploads. Similar to shippers, an admin review process determines approval, setting `isVerified=true` upon completion, which is necessary before accessing loads or bidding.

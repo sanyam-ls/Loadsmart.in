@@ -611,6 +611,14 @@ export default function AdminOnboardingPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">{t("onboarding.addressProof")}</Label>
+                    {selectedRequest?.request.businessAddressProofType && (
+                      <Badge variant="outline" className="mb-1">
+                        {selectedRequest.request.businessAddressProofType === "rent_agreement" ? t("onboarding.addressProofRentAgreement") :
+                         selectedRequest.request.businessAddressProofType === "electricity_bill" ? t("onboarding.addressProofElectricityBill") :
+                         selectedRequest.request.businessAddressProofType === "office_photo_with_board" ? t("onboarding.addressProofOfficePhoto") :
+                         selectedRequest.request.businessAddressProofType}
+                      </Badge>
+                    )}
                     {selectedRequest?.request.businessAddressProofUrl ? (
                       <DocumentLink value={selectedRequest.request.businessAddressProofUrl} />
                     ) : (

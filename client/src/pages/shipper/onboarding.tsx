@@ -117,6 +117,7 @@ const onboardingFormSchema = z.object({
   alternativeAuthorizationUrl: z.string().optional(),
   panCardUrl: z.string().optional(),
   incorporationCertificateUrl: z.string().optional(),
+  businessAddressProofType: z.enum(["rent_agreement", "electricity_bill", "office_photo_with_board"]).optional(),
   businessAddressProofUrl: z.string().optional(),
   tradeReference1Company: z.string().optional(),
   tradeReference1Contact: z.string().optional(),
@@ -176,6 +177,7 @@ export default function ShipperOnboarding() {
       alternativeAuthorizationUrl: "",
       panCardUrl: "",
       incorporationCertificateUrl: "",
+      businessAddressProofType: undefined,
       businessAddressProofUrl: "",
       tradeReference1Company: "",
       tradeReference1Contact: "",
@@ -241,6 +243,7 @@ export default function ShipperOnboarding() {
         alternativeAuthorizationUrl: onboardingStatus.alternativeAuthorizationUrl || "",
         panCardUrl: onboardingStatus.panCardUrl || "",
         incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || "",
+        businessAddressProofType: onboardingStatus.businessAddressProofType || undefined,
         businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || "",
         tradeReference1Company: onboardingStatus.tradeReference1Company || "",
         tradeReference1Contact: onboardingStatus.tradeReference1Contact || "",
@@ -1410,6 +1413,27 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                           />
                         </FormControl>
                         <FormDescription>{t("onboarding.incorporationCertificateDesc")}</FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="businessAddressProofType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("onboarding.addressProofType")}</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-address-proof-type">
+                              <SelectValue placeholder={t("onboarding.selectAddressProofType")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="rent_agreement">{t("onboarding.addressProofRentAgreement")}</SelectItem>
+                            <SelectItem value="electricity_bill">{t("onboarding.addressProofElectricityBill")}</SelectItem>
+                            <SelectItem value="office_photo_with_board">{t("onboarding.addressProofOfficePhoto")}</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </FormItem>
                     )}
                   />

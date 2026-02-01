@@ -71,6 +71,9 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   incorporation_certificate: "Incorporation Certificate",
   trade_license: "Trade License",
   address_proof: "Business Address Proof",
+  address_proof_rent_agreement: "Address Proof (Rent Agreement)",
+  address_proof_electricity_bill: "Address Proof (Electricity Bill)",
+  address_proof_office_photo: "Address Proof (Office Photo with Board)",
   pan_card: "PAN Card",
   gstin_certificate: "GSTIN Certificate",
   tan_certificate: "TAN Certificate",
@@ -102,6 +105,9 @@ const DOCUMENT_PRIORITY: Record<string, number> = {
   incorporation_certificate: 10,
   trade_license: 11,
   address_proof: 12,
+  address_proof_rent_agreement: 12,
+  address_proof_electricity_bill: 12,
+  address_proof_office_photo: 12,
   pan: 13,
   pan_card: 13,
   gstin: 14,
@@ -904,7 +910,11 @@ export default function CarrierVerificationPage() {
                             <div className="flex items-center gap-3">
                               <FileText className="h-5 w-5 text-muted-foreground" />
                               <div>
-                                <p className="font-medium">{getDocumentDisplayName(doc.documentType)}</p>
+                                <p className="font-medium">
+                                  {doc.documentType === "address_proof" && selectedVerification?.addressProofType ? 
+                                    getDocumentDisplayName(`address_proof_${selectedVerification.addressProofType === "office_photo_with_board" ? "office_photo" : selectedVerification.addressProofType}`) :
+                                    getDocumentDisplayName(doc.documentType)}
+                                </p>
                                 <p className="text-sm text-muted-foreground">{doc.fileName}</p>
                                 <p className="text-xs text-muted-foreground">
                                   {doc.uploadedAt ? `Uploaded ${format(new Date(doc.uploadedAt), "MMM d, yyyy")}` : "Recently uploaded"}

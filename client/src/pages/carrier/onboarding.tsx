@@ -75,6 +75,8 @@ const fleetFormSchema = z.object({
   licenseUrl: z.string().optional(),
   panUrl: z.string().optional(),
   gstinUrl: z.string().optional(),
+  addressProofType: z.enum(["rent_agreement", "electricity_bill", "office_photo_with_board"]).optional(),
+  addressProofUrl: z.string().optional(),
   rcUrl: z.string().optional(),
   insuranceUrl: z.string().optional(),
   fitnessUrl: z.string().optional(),
@@ -180,6 +182,8 @@ export default function CarrierOnboarding() {
       licenseUrl: "",
       panUrl: "",
       gstinUrl: "",
+      addressProofType: undefined,
+      addressProofUrl: "",
       rcUrl: "",
       insuranceUrl: "",
       fitnessUrl: "",
@@ -237,6 +241,8 @@ export default function CarrierOnboarding() {
           licenseUrl: onboardingStatus.documents.find(d => d.documentType === "license")?.fileUrl || "",
           panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
           gstinUrl: onboardingStatus.documents.find(d => d.documentType === "gstin")?.fileUrl || "",
+          addressProofType: (onboardingStatus as any).addressProofType || undefined,
+          addressProofUrl: onboardingStatus.documents.find(d => d.documentType === "address_proof")?.fileUrl || "",
           rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
           insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
           fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
@@ -1261,6 +1267,36 @@ export default function CarrierOnboarding() {
                           disabled={!canEdit}
                           documentType="gstin_certificate"
                         />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">{t("onboarding.addressProofType")}</label>
+                        <Select
+                          value={fleetForm.watch("addressProofType") || ""}
+                          onValueChange={(val) => fleetForm.setValue("addressProofType", val as any)}
+                          disabled={!canEdit}
+                        >
+                          <SelectTrigger data-testid="select-carrier-address-proof-type">
+                            <SelectValue placeholder={t("onboarding.selectAddressProofType")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="rent_agreement">{t("onboarding.addressProofRentAgreement")}</SelectItem>
+                            <SelectItem value="electricity_bill">{t("onboarding.addressProofElectricityBill")}</SelectItem>
+                            <SelectItem value="office_photo_with_board">{t("onboarding.addressProofOfficePhoto")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">{t("onboarding.addressProof")}</label>
+                        <DocumentUploadWithCamera
+                          value={fleetForm.watch("addressProofUrl") || ""}
+                          onChange={(val) => {
+                            fleetForm.setValue("addressProofUrl", val);
+                            handleDocumentUpload("address_proof", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="address_proof"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">{t("onboarding.addressProofDesc")}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.rcDoc")} *</label>

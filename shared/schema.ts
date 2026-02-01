@@ -1404,6 +1404,7 @@ export const carrierVerifications = pgTable("carrier_verifications", {
   panNumber: text("pan_number"),
   gstinNumber: text("gstin_number"),
   tanNumber: text("tan_number"),
+  addressProofType: text("address_proof_type"), // rent_agreement, electricity_bill, office_photo_with_board
   
   // Bank details (for both solo and fleet)
   bankName: text("bank_name"),
@@ -1824,6 +1825,7 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   panCardUrl: text("pan_card_url"),
   incorporationCertificateUrl: text("incorporation_certificate_url"),
   cancelledChequeUrl: text("cancelled_cheque_url"),
+  businessAddressProofType: text("business_address_proof_type"), // rent_agreement, electricity_bill, office_photo_with_board
   businessAddressProofUrl: text("business_address_proof_url"),
   
   // Trade References

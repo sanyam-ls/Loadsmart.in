@@ -89,6 +89,7 @@ function parseAddressForDropdowns(address: string): { state: string; city: strin
 }
 
 const onboardingFormSchema = z.object({
+  shipperRole: z.enum(["shipper", "transporter"]).default("shipper"),
   legalCompanyName: z.string().min(1, "Company name is required"),
   tradeName: z.string().optional(),
   businessType: z.enum(["proprietorship", "partnership", "pvt_ltd", "public_ltd", "llp"]),
@@ -119,6 +120,7 @@ const onboardingFormSchema = z.object({
   incorporationCertificateUrl: z.string().optional(),
   businessAddressProofType: z.enum(["rent_agreement", "electricity_bill", "office_photo_with_board"]).optional(),
   businessAddressProofUrl: z.string().optional(),
+  lrCopyUrl: z.string().optional(),
   tradeReference1Company: z.string().optional(),
   tradeReference1Contact: z.string().optional(),
   tradeReference1Phone: z.string().optional(),
@@ -149,6 +151,7 @@ export default function ShipperOnboarding() {
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingFormSchema),
     defaultValues: {
+      shipperRole: "shipper",
       legalCompanyName: "",
       tradeName: "",
       businessType: "pvt_ltd",
@@ -179,6 +182,7 @@ export default function ShipperOnboarding() {
       incorporationCertificateUrl: "",
       businessAddressProofType: undefined,
       businessAddressProofUrl: "",
+      lrCopyUrl: "",
       tradeReference1Company: "",
       tradeReference1Contact: "",
       tradeReference1Phone: "",
@@ -215,6 +219,7 @@ export default function ShipperOnboarding() {
       }
       
       const draftData: Partial<OnboardingFormData> = {
+        shipperRole: onboardingStatus.shipperRole || "shipper",
         legalCompanyName: onboardingStatus.legalCompanyName || user?.companyName || "",
         tradeName: onboardingStatus.tradeName || "",
         businessType: onboardingStatus.businessType || "pvt_ltd",
@@ -245,6 +250,7 @@ export default function ShipperOnboarding() {
         incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || "",
         businessAddressProofType: onboardingStatus.businessAddressProofType || undefined,
         businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || "",
+        lrCopyUrl: onboardingStatus.lrCopyUrl || "",
         tradeReference1Company: onboardingStatus.tradeReference1Company || "",
         tradeReference1Contact: onboardingStatus.tradeReference1Contact || "",
         tradeReference1Phone: onboardingStatus.tradeReference1Phone || "",
@@ -709,6 +715,34 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                 <CardDescription>{t("onboarding.businessDetailsDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* I am a - Shipper/Transporter dropdown */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="shipperRole"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>I am a</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-shipper-role">
+                              <SelectValue placeholder="Select your role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="shipper">Shipper</SelectItem>
+                            <SelectItem value="transporter">Transporter</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Select whether you are a Shipper or Transporter
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -1440,6 +1474,37 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     )}
                   />
                 </div>
+
+                {/* LR Copy - Mandatory for Transporters */}
+                {form.watch("shipperRole") === "transporter" && (
+                  <div className="p-4 rounded-lg border border-dashed border-primary/50 bg-primary/5">
+                    <h4 className="font-medium mb-4">Transporter Documents</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="lrCopyUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>LR Copy <span className="text-destructive">*</span></FormLabel>
+                            <FormControl>
+                              <DocumentUploadWithCamera
+                                value={field.value || ""}
+                                onChange={field.onChange}
+                                placeholder="No file selected"
+                                testId="upload-lr-copy"
+                                documentType="lr_copy"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Upload a copy of your Lorry Receipt (LR) - mandatory for Transporters
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-between gap-4">
                   <Button type="button" variant="outline" onClick={() => setActiveTab("contact")} data-testid="button-back-contact">

@@ -10298,10 +10298,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
         uniqueRegistrationNumber: z.string().optional(),
         chassisNumber: z.string().optional(),
         licensePlateNumber: z.string().optional(),
-        // Fleet/Company fields
+        // Fleet/Company fields (also used by solo operators for address)
         incorporationType: z.enum(["pvt_ltd", "llp", "proprietorship", "partnership"]).optional(),
         businessRegistrationNumber: z.string().optional(),
         businessAddress: z.string().optional(),
+        businessLocality: z.string().optional(),
         panNumber: z.string().optional(),
         gstinNumber: z.string().optional(),
         tanNumber: z.string().optional(),
@@ -10325,6 +10326,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         incorporationType: userInput.incorporationType,
         businessRegistrationNumber: userInput.businessRegistrationNumber,
         businessAddress: userInput.businessAddress,
+        businessLocality: userInput.businessLocality,
         panNumber: userInput.panNumber,
         gstinNumber: userInput.gstinNumber,
         tanNumber: userInput.tanNumber,
@@ -10400,10 +10402,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
         uniqueRegistrationNumber: z.string().optional(),
         chassisNumber: z.string().optional(),
         licensePlateNumber: z.string().optional(),
-        // Fleet/Company fields
+        // Fleet/Company fields (also used by solo operators for address)
         incorporationType: z.enum(["pvt_ltd", "llp", "proprietorship", "partnership"]).optional(),
         businessRegistrationNumber: z.string().optional(),
         businessAddress: z.string().optional(),
+        businessLocality: z.string().optional(),
         panNumber: z.string().optional(),
         gstinNumber: z.string().optional(),
         tanNumber: z.string().optional(),

@@ -42,6 +42,8 @@ const soloFormSchema = z.object({
   uniqueRegistrationNumber: z.string().optional(),
   chassisNumber: z.string().min(1, "Chassis number is required"),
   licensePlateNumber: z.string().min(1, "License plate is required"),
+  businessAddress: z.string().min(1, "Business address is required"),
+  businessLocality: z.string().min(1, "Locality is required"),
   aadhaarUrl: z.string().optional(),
   licenseUrl: z.string().optional(),
   permitUrl: z.string().optional(),
@@ -64,6 +66,7 @@ const fleetFormSchema = z.object({
   panNumber: z.string().min(10, "PAN must be 10 characters").max(10),
   gstinNumber: z.string().optional(), // GSTIN is optional
   businessAddress: z.string().min(1, "Business address is required"),
+  businessLocality: z.string().min(1, "Locality is required"),
   fleetSize: z.number().int().min(1),
   // Vehicle tab fields (for one truck)
   licensePlateNumber: z.string().min(1, "License plate is required"),
@@ -107,6 +110,7 @@ interface OnboardingResponse {
   incorporationType?: string;
   businessRegistrationNumber?: string;
   businessAddress?: string;
+  businessLocality?: string;
   panNumber?: string;
   gstinNumber?: string;
   tanNumber?: string;
@@ -150,6 +154,8 @@ export default function CarrierOnboarding() {
       uniqueRegistrationNumber: "",
       chassisNumber: "",
       licensePlateNumber: "",
+      businessAddress: "",
+      businessLocality: "",
       aadhaarUrl: "",
       licenseUrl: "",
       permitUrl: "",
@@ -173,6 +179,7 @@ export default function CarrierOnboarding() {
       panNumber: "",
       gstinNumber: "",
       businessAddress: "",
+      businessLocality: "",
       fleetSize: 1,
       licensePlateNumber: "",
       chassisNumber: "",
@@ -209,6 +216,8 @@ export default function CarrierOnboarding() {
           uniqueRegistrationNumber: onboardingStatus.uniqueRegistrationNumber || "",
           chassisNumber: onboardingStatus.chassisNumber || "",
           licensePlateNumber: onboardingStatus.licensePlateNumber || "",
+          businessAddress: onboardingStatus.businessAddress || "",
+          businessLocality: onboardingStatus.businessLocality || "",
           aadhaarUrl: onboardingStatus.documents.find(d => d.documentType === "aadhaar")?.fileUrl || "",
           licenseUrl: onboardingStatus.documents.find(d => d.documentType === "license")?.fileUrl || "",
           permitUrl: onboardingStatus.documents.find(d => d.documentType === "permit")?.fileUrl || "",
@@ -232,6 +241,7 @@ export default function CarrierOnboarding() {
           panNumber: onboardingStatus.panNumber || "",
           gstinNumber: onboardingStatus.gstinNumber || "",
           businessAddress: onboardingStatus.businessAddress || "",
+          businessLocality: onboardingStatus.businessLocality || "",
           fleetSize: onboardingStatus.fleetSize || 1,
           licensePlateNumber: onboardingStatus.licensePlateNumber || "",
           chassisNumber: onboardingStatus.chassisNumber || "",
@@ -706,6 +716,32 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={soloForm.control}
+                      name="businessAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Address *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Registered office address" disabled={!canEdit} data-testid="input-solo-business-address" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={soloForm.control}
+                      name="businessLocality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Locality / Area *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g. Andheri West, Bandra, Connaught Place" disabled={!canEdit} data-testid="input-solo-business-locality" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -1033,6 +1069,19 @@ export default function CarrierOnboarding() {
                           <FormLabel>Business Address *</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="Registered office address" disabled={!canEdit} data-testid="input-fleet-business-address" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={fleetForm.control}
+                      name="businessLocality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Locality / Area *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g. Andheri West, Bandra, Connaught Place" disabled={!canEdit} data-testid="input-fleet-business-locality" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

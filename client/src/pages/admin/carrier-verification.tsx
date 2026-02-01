@@ -158,9 +158,12 @@ interface CarrierVerification {
   incorporationType?: "pvt_ltd" | "llp" | "proprietorship" | "partnership";
   businessRegistrationNumber?: string;
   businessAddress?: string;
+  businessLocality?: string;
   panNumber?: string;
   gstinNumber?: string;
   tanNumber?: string;
+  // Address proof
+  addressProofType?: string;
   // Bank details
   bankName?: string;
   bankAccountNumber?: string;
@@ -814,6 +817,14 @@ export default function CarrierVerificationPage() {
                         <Label className="text-muted-foreground">Unique Registration Number</Label>
                         <p className="font-medium">{selectedVerification.uniqueRegistrationNumber || "Not provided"}</p>
                       </div>
+                      <div>
+                        <Label className="text-muted-foreground">Locality / Area</Label>
+                        <p className="font-medium">{selectedVerification.businessLocality || "Not provided"}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground">Business Address</Label>
+                        <p className="font-medium">{selectedVerification.businessAddress || "Not provided"}</p>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -840,6 +851,10 @@ export default function CarrierVerificationPage() {
                       <div>
                         <Label className="text-muted-foreground">Business Registration Number</Label>
                         <p className="font-medium">{selectedVerification.businessRegistrationNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Locality / Area</Label>
+                        <p className="font-medium">{selectedVerification.businessLocality || "Not provided"}</p>
                       </div>
                       <div className="col-span-2">
                         <Label className="text-muted-foreground">Business Address</Label>

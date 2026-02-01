@@ -9777,6 +9777,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       if (existing) {
         onboardingRequest = await storage.updateShipperOnboardingRequest(existing.id, {
           status: "pending",
+          submittedAt: new Date(), // Update timestamp on resubmission
           ...validatedData,
           requestedCreditLimit: sanitizedCreditLimit,
           avgLoadValueInr: sanitizedAvgLoadValue,
@@ -10102,6 +10103,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       const updated = await storage.updateShipperOnboardingRequest(existing.id, {
         ...validatedData,
         status: "pending", // Re-submit for review
+        submittedAt: new Date(), // Update timestamp on resubmission
       });
 
       res.json(updated);

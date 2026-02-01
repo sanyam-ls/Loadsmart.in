@@ -10386,8 +10386,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(404).json({ error: "No onboarding request found" });
       }
 
-      // Only allow updates for draft, on_hold, or rejected status
-      if (!["draft", "on_hold", "rejected"].includes(onboarding.status || "")) {
+      // Allow updates for draft, on_hold, rejected, pending, or under_review status (carriers can edit while pending review)
+      if (!["draft", "on_hold", "rejected", "pending", "under_review"].includes(onboarding.status || "")) {
         return res.status(400).json({ error: "Cannot update onboarding request in current status" });
       }
 
@@ -10461,8 +10461,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(404).json({ error: "No onboarding request found" });
       }
 
-      // Only allow submission from draft, on_hold, or rejected status
-      if (!["draft", "on_hold", "rejected"].includes(onboarding.status || "")) {
+      // Allow submission from draft, on_hold, rejected, pending, or under_review status (carriers can edit while pending review)
+      if (!["draft", "on_hold", "rejected", "pending", "under_review"].includes(onboarding.status || "")) {
         return res.status(400).json({ error: "Cannot submit onboarding request in current status" });
       }
 

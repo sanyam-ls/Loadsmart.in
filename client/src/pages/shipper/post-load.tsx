@@ -1492,7 +1492,7 @@ export default function PostLoadPage() {
                       name="pickupLandmark"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark</FormLabel>
+                          <FormLabel>Landmark (optional)</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-pickup-landmark" />
                           </FormControl>
@@ -1657,7 +1657,7 @@ export default function PostLoadPage() {
                       name="dropoffLandmark"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark</FormLabel>
+                          <FormLabel>Landmark (optional)</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-dropoff-landmark" />
                           </FormControl>

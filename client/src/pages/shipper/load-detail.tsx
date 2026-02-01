@@ -1148,7 +1148,7 @@ export default function LoadDetailPage() {
                       name="pickupLandmark"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark</FormLabel>
+                          <FormLabel>Landmark (optional)</FormLabel>
                           <FormControl>
                             <Input placeholder="Nearby landmark" {...field} data-testid="input-edit-pickup-landmark" />
                           </FormControl>
@@ -1287,7 +1287,7 @@ export default function LoadDetailPage() {
                       name="dropoffLandmark"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark</FormLabel>
+                          <FormLabel>Landmark (optional)</FormLabel>
                           <FormControl>
                             <Input placeholder="Nearby landmark" {...field} data-testid="input-edit-dropoff-landmark" />
                           </FormControl>

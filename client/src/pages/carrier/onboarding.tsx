@@ -511,7 +511,7 @@ export default function CarrierOnboarding() {
     );
   };
 
-  const canEdit = !onboardingStatus?.status || ["draft", "on_hold", "rejected"].includes(onboardingStatus.status);
+  const canEdit = !onboardingStatus?.status || ["draft", "on_hold", "rejected", "pending", "under_review"].includes(onboardingStatus.status);
 
   if (isLoadingStatus) {
     return (
@@ -542,24 +542,7 @@ export default function CarrierOnboarding() {
     );
   }
 
-  if (onboardingStatus?.status === "pending" || onboardingStatus?.status === "under_review") {
-    return (
-      <div className="container max-w-2xl py-12">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
-              <Clock className="h-8 w-8 text-blue-600" />
-            </div>
-            <CardTitle className="text-2xl">{t("carrierOnboarding.pendingReview")}</CardTitle>
-            <CardDescription>{t("carrierOnboarding.pendingReviewDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            {getStatusBadge()}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Removed the pending/under_review block - carriers can now edit while pending
 
   return (
     <div className="container max-w-4xl py-8">
@@ -585,6 +568,20 @@ export default function CarrierOnboarding() {
             )}
           </div>
         </div>
+
+        {(onboardingStatus?.status === "pending" || onboardingStatus?.status === "under_review") && (
+          <Card className="mt-4 border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-700 dark:text-blue-300">{t("carrierOnboarding.pendingReview")}</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">{t("carrierOnboarding.pendingReviewDesc")} You can still make edits and resubmit.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {onboardingStatus?.status === "rejected" && onboardingStatus.rejectionReason && (
           <Card className="mt-4 border-destructive">

@@ -72,7 +72,7 @@ const loadFormSchema = z.object({
   pickupAddress: z.string().min(5, "Pickup address is required"),
   pickupLocality: z.string().optional(),
   pickupLandmark: z.string().optional(),
-  pickupBusinessName: z.string().optional(),
+  pickupBusinessName: z.string().min(2, "Business name is required"),
   pickupState: z.string().min(1, "Pickup state is required"),
   pickupCity: z.string().min(2, "Pickup city is required"),
   pickupCityCustom: z.string().optional(),
@@ -1468,9 +1468,9 @@ export default function PostLoadPage() {
                     name="pickupBusinessName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Business Name (optional)</FormLabel>
+                        <FormLabel>Business Name <span className="text-muted-foreground font-normal">(e.g. ABC Warehouse)</span></FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="e.g. ABC Warehouse" data-testid="input-pickup-business-name" />
+                          <Input {...field} data-testid="input-pickup-business-name" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

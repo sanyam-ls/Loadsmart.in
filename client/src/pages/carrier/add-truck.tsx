@@ -216,19 +216,29 @@ export default function AddTruckPage() {
         
         // Upload documents if any
         if (documents.length > 0) {
+          const docTypeLabels: Record<string, string> = {
+            rc: "Registration Certificate",
+            insurance: "Insurance",
+            fitness: "Fitness Certificate",
+            permit: "Permit",
+            puc: "PUC Certificate",
+          };
           for (const doc of documents) {
             try {
               const reader = new FileReader();
               await new Promise<void>((resolve, reject) => {
                 reader.onload = async () => {
                   const fileUrl = reader.result as string;
+                  // Format filename with truck number as title
+                  const docLabel = docTypeLabels[doc.type] || doc.type.toUpperCase();
+                  const formattedFileName = `${data.licensePlate} - ${docLabel}`;
                   await fetch("/api/carrier/documents", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",
                     body: JSON.stringify({
                       documentType: doc.type,
-                      fileName: doc.name,
+                      fileName: formattedFileName,
                       fileUrl: fileUrl,
                       fileSize: doc.file.size,
                       expiryDate: null,
@@ -246,8 +256,9 @@ export default function AddTruckPage() {
           }
         }
         
-        // Invalidate trucks query for real-time update
+        // Invalidate trucks and documents queries for real-time update
         queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents"] });
         
         toast({ title: "Truck added!", description: "Your truck is now listed and ready for loads." });
         navigate(isSoloCarrier ? "/carrier/my-truck" : "/carrier/fleet");

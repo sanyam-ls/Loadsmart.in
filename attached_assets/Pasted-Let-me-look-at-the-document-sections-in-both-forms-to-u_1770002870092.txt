@@ -1,0 +1,48 @@
+Let me look at the document sections in both forms to understand the current layout:
+
+Let me look at the documents tab in shipper onboarding and the identity tab in carrier onboarding:
+
+Let me look at more sections to understand the current structure:
+
+Let me look at the solo carrier identity tab and fleet identity tab to understand the full structure:
+
+Let me also look at the fleet documents tab and shipper business tab where PAN/GSTIN inputs are:
+
+I'll reorganize the verification forms so that input fields come first, followed by their corresponding document uploads. This involves moving document uploads from the Documents tab to right after their input fields.
+
+Now let me update the fleet carrier form to add document uploads after their corresponding inputs:
+
+Now let me update the shipper onboarding form to add document uploads after PAN and GSTIN inputs in the Business tab:
+
+Now let me update the Documents tabs to remove the relocated document uploads. First, let me see the shipper documents tab:
+
+Let me see the full shipper documents tab:
+
+Now I need to remove the duplicated document uploads from the Documents tabs. Let me update the shipper Documents tab first - I'll remove the GST Certificate and PAN Card uploads since they're now in the Business tab, but keep the "No GST" checkbox and alternative document options:
+
+Now let me remove the duplicate PAN Card section from shipper Documents tab:
+
+Now let me update the carrier solo Documents tab to remove Aadhaar and License uploads:
+
+Now let me update the fleet carrier Documents tab to remove Aadhaar, License, PAN, and GSTIN uploads:
+
+Done! I've reorganized the verification forms so that users first enter the input and then upload the document for the same field:
+
+Carrier Onboarding (Solo Operator):
+
+Aadhaar Number input → Aadhaar Card upload
+Driver License Number input → Driver License upload
+Carrier Onboarding (Fleet/Enterprise):
+
+Aadhaar Number input → Aadhaar Card upload
+Driver License Number input → Driver License upload
+PAN Number input → PAN Card upload
+GSTIN Number input → GSTIN Certificate upload
+Shipper Onboarding:
+
+PAN Number input → PAN Card upload
+GSTIN Number input → GST Certificate upload
+The duplicate document uploads have been removed from the Documents tabs to avoid confusion. The remaining documents in the Documents tabs are those that don't have corresponding input fields (like Permit, RC, Insurance, Fitness, etc.).
+
+Saved progress at the end of the loop
+8:54 am, Feb 02, 2026

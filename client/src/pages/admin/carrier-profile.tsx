@@ -684,7 +684,7 @@ export default function CarrierProfilePage() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    {showVerify && !doc.isVerified && doc.source !== 'truck' && (
+                    {showVerify && !doc.isVerified && (
                       <>
                         <Button
                           size="icon"
@@ -736,7 +736,7 @@ export default function CarrierProfilePage() {
                       <CollapsibleContent className="ml-6 mt-1 border-l-2 border-muted pl-4">
                         {truck.length > 0 ? (
                           <div className="bg-muted/30 rounded-lg">
-                            {truck.map(doc => renderDocumentRow(doc, false))}
+                            {truck.map(doc => renderDocumentRow(doc, true))}
                           </div>
                         ) : (
                           <p className="text-sm text-muted-foreground py-2">No truck documents</p>

@@ -2578,16 +2578,18 @@ export async function registerRoutes(
       
       for (const truck of trucks) {
         const docTypes = [
-          { field: 'rcDocumentUrl', type: 'truck_rc', label: 'Registration Certificate', expiry: null },
-          { field: 'insuranceDocumentUrl', type: 'truck_insurance', label: 'Insurance Certificate', expiry: truck.insuranceExpiry },
-          { field: 'fitnessDocumentUrl', type: 'truck_fitness', label: 'Fitness Certificate', expiry: truck.fitnessExpiry },
-          { field: 'permitDocumentUrl', type: 'truck_permit', label: 'Permit', expiry: (truck as any).permitExpiry },
-          { field: 'pucDocumentUrl', type: 'truck_puc', label: 'PUC Certificate', expiry: (truck as any).pucExpiry },
+          { field: 'rcDocumentUrl', type: 'truck_rc', label: 'Registration Certificate', expiry: null, verifiedField: 'rcVerified' },
+          { field: 'insuranceDocumentUrl', type: 'truck_insurance', label: 'Insurance Certificate', expiry: truck.insuranceExpiry, verifiedField: 'insuranceVerified' },
+          { field: 'fitnessDocumentUrl', type: 'truck_fitness', label: 'Fitness Certificate', expiry: truck.fitnessExpiry, verifiedField: 'fitnessVerified' },
+          { field: 'permitDocumentUrl', type: 'truck_permit', label: 'Permit', expiry: (truck as any).permitExpiry, verifiedField: 'permitVerified' },
+          { field: 'pucDocumentUrl', type: 'truck_puc', label: 'PUC Certificate', expiry: (truck as any).pucExpiry, verifiedField: 'pucVerified' },
         ];
         
         for (const docType of docTypes) {
           const docData = parseDocUrl((truck as any)[docType.field]);
           if (docData) {
+            // Get verification status from truck record
+            const isVerified = (truck as any)[docType.verifiedField] === true;
             truckDocuments.push({
               id: `${truck.id}-${docType.type}`,
               userId: carrier.id,
@@ -2595,7 +2597,7 @@ export async function registerRoutes(
               fileName: docData.name || `${docType.label}`,
               fileUrl: docData.path,
               expiryDate: docType.expiry,
-              isVerified: true, // Truck docs are auto-verified
+              isVerified: isVerified,
               createdAt: truck.createdAt || new Date(),
               truckId: truck.id,
               truckPlate: truck.licensePlate,
@@ -2789,13 +2791,58 @@ export async function registerRoutes(
       }
 
       const { isVerified, rejectionReason } = req.body;
-      const document = await storage.getDocument(req.params.id);
+      const docId = req.params.id;
+      
+      // Check if this is a truck document (format: truckId-docType)
+      const truckDocPattern = /^([a-f0-9-]+)-(truck_rc|truck_insurance|truck_fitness|truck_permit|truck_puc)$/;
+      const match = docId.match(truckDocPattern);
+      
+      if (match) {
+        // This is a truck document - update the truck's document verification status
+        const [, truckId, docType] = match;
+        const truck = await storage.getTruck(truckId);
+        
+        if (!truck) {
+          return res.status(404).json({ error: "Truck not found" });
+        }
+        
+        // Verify truck belongs to a carrier
+        const truckOwner = await storage.getUser(truck.carrierId);
+        if (!truckOwner || truckOwner.role !== "carrier") {
+          return res.status(400).json({ error: "Invalid truck ownership" });
+        }
+        
+        // Map document type to verification field
+        const verificationFieldMap: Record<string, string> = {
+          truck_rc: 'rcVerified',
+          truck_insurance: 'insuranceVerified',
+          truck_fitness: 'fitnessVerified',
+          truck_permit: 'permitVerified',
+          truck_puc: 'pucVerified',
+        };
+        
+        const verificationField = verificationFieldMap[docType];
+        if (verificationField) {
+          // Update truck verification status
+          const updateData: any = { [verificationField]: isVerified };
+          await storage.updateTruck(truckId, updateData);
+        }
+        
+        return res.json({ 
+          id: docId, 
+          isVerified, 
+          message: `Truck ${docType.replace('truck_', '')} document ${isVerified ? 'verified' : 'rejected'}` 
+        });
+      }
+      
+      // Regular document verification
+      const document = await storage.getDocument(docId);
       
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
       }
 
-      const updated = await storage.updateDocument(req.params.id, { 
+      const updated = await storage.updateDocument(docId, { 
         isVerified,
         // Could add rejectionReason field to schema if needed
       });

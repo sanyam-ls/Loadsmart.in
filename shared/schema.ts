@@ -323,6 +323,12 @@ export const trucks = pgTable("trucks", {
   fitnessDocumentUrl: text("fitness_document_url"), // Fitness certificate document
   permitDocumentUrl: text("permit_document_url"), // Permit document
   pucDocumentUrl: text("puc_document_url"), // Pollution Under Control certificate
+  // Document verification status (admin verified)
+  rcVerified: boolean("rc_verified").default(false),
+  insuranceVerified: boolean("insurance_verified").default(false),
+  fitnessVerified: boolean("fitness_verified").default(false),
+  permitVerified: boolean("permit_verified").default(false),
+  pucVerified: boolean("puc_verified").default(false),
 });
 
 // Drivers table (for enterprise carriers)

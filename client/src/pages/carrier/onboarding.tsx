@@ -50,6 +50,7 @@ const soloFormSchema = z.object({
   rcUrl: z.string().optional(),
   insuranceUrl: z.string().optional(),
   fitnessUrl: z.string().optional(),
+  tdsDeclarationUrl: z.string().optional(),
   // Bank details
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
@@ -83,6 +84,7 @@ const fleetFormSchema = z.object({
   rcUrl: z.string().optional(),
   insuranceUrl: z.string().optional(),
   fitnessUrl: z.string().optional(),
+  tdsDeclarationUrl: z.string().optional(),
   // Bank details
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
@@ -972,6 +974,18 @@ export default function CarrierOnboarding() {
                           documentType="fitness_certificate"
                         />
                       </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">TDS Declaration (Optional)</label>
+                        <DocumentUploadWithCamera
+                          value={soloForm.watch("tdsDeclarationUrl") || ""}
+                          onChange={(val) => {
+                            soloForm.setValue("tdsDeclarationUrl", val);
+                            handleDocumentUpload("tds_declaration", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="tds_declaration"
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1312,6 +1326,18 @@ export default function CarrierOnboarding() {
                           }}
                           disabled={!canEdit}
                           documentType="gstin_certificate"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">TDS Declaration (Optional)</label>
+                        <DocumentUploadWithCamera
+                          value={fleetForm.watch("tdsDeclarationUrl") || ""}
+                          onChange={(val) => {
+                            fleetForm.setValue("tdsDeclarationUrl", val);
+                            handleDocumentUpload("tds_declaration", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="tds_declaration"
                         />
                       </div>
                       <div>

@@ -165,23 +165,74 @@ export default function CarrierProfilePage() {
   });
 
   const documentTypeLabels: Record<string, string> = {
+    // Official/Identity Documents
+    aadhaar: "Aadhaar Card",
+    aadhar: "Aadhaar Card",
+    pan: "PAN Card",
+    pan_card: "PAN Card",
     license: "Driving License",
+    driving_license: "Driving License",
+    address_proof: "Address Proof",
+    selfie: "Office Selfie",
+    gst_certificate: "GST Certificate",
+    bank_details: "Bank Details",
+    cancelled_cheque: "Cancelled Cheque",
+    // Vehicle Documents
     rc: "RC Book",
     insurance: "Insurance Policy",
     fitness: "Fitness Certificate",
     permit: "Road Permit",
     puc: "PUC Certificate",
-    pod: "Proof of Delivery",
-    lr: "Lorry Receipt",
-    eway: "E-Way Bill",
-    eway_bill: "E-Way Bill",
-    loading_photos: "Loading Photos",
-    other: "Other Document",
     truck_rc: "Truck RC",
     truck_insurance: "Truck Insurance",
     truck_fitness: "Truck Fitness",
     truck_permit: "Truck Permit",
     truck_puc: "Truck PUC",
+    // Shipment Documents
+    pod: "Proof of Delivery",
+    lr: "Lorry Receipt",
+    lr_consignment: "LR / Consignment Note",
+    eway: "E-Way Bill",
+    eway_bill: "E-Way Bill",
+    loading_photos: "Loading Photos",
+    invoice: "Invoice",
+    weighment_slip: "Weighment Slip",
+    other: "Other Document",
+  };
+
+  // Document category definitions
+  const officialDocTypes = ['aadhaar', 'aadhar', 'pan', 'pan_card', 'license', 'driving_license', 'address_proof', 'selfie', 'gst_certificate', 'bank_details', 'cancelled_cheque'];
+  const vehicleDocTypes = ['rc', 'insurance', 'fitness', 'permit', 'puc', 'truck_rc', 'truck_insurance', 'truck_fitness', 'truck_permit', 'truck_puc'];
+  const shipmentDocTypes = ['pod', 'lr', 'lr_consignment', 'eway', 'eway_bill', 'loading_photos', 'invoice', 'weighment_slip', 'other'];
+
+  // Categorize documents
+  const categorizeDocuments = (docs: any[]) => {
+    const official: any[] = [];
+    const vehicle: any[] = [];
+    const shipment: any[] = [];
+
+    docs.forEach(doc => {
+      const docType = doc.documentType || doc.type || '';
+      
+      // Vehicle documents from trucks (source: 'truck')
+      if (doc.source === 'truck' || vehicleDocTypes.includes(docType)) {
+        vehicle.push(doc);
+      }
+      // Shipment documents (have loadId)
+      else if (doc.loadId || shipmentDocTypes.includes(docType)) {
+        shipment.push(doc);
+      }
+      // Official/Identity documents (onboarding)
+      else if (officialDocTypes.includes(docType) || !doc.loadId) {
+        official.push(doc);
+      }
+      // Default to shipment for unknown types
+      else {
+        shipment.push(doc);
+      }
+    });
+
+    return { official, vehicle, shipment };
   };
 
   const handleSync = () => {
@@ -581,103 +632,143 @@ export default function CarrierProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Uploaded Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {carrier.documents && carrier.documents.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Document</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Uploaded</TableHead>
-                      <TableHead>Expiry</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {carrier.documents.map((doc: any) => (
-                      <TableRow key={doc.id} data-testid={`row-document-${doc.id}`}>
-                        <TableCell className="font-medium">{doc.fileName || doc.name}</TableCell>
-                        <TableCell>{documentTypeLabels[doc.documentType] || doc.documentType || doc.type}</TableCell>
-                        <TableCell>
-                          {doc.source === 'truck' ? (
-                            <Badge variant="outline" className="text-xs">
-                              Truck: {doc.truckPlate}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">Shipment</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {doc.createdAt ? format(new Date(doc.createdAt), "MMM dd, yyyy") : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          {doc.expiryDate ? format(new Date(doc.expiryDate), "MMM dd, yyyy") : "No expiry"}
-                        </TableCell>
-                        <TableCell>
-                          {doc.isVerified ? (
-                            <Badge variant="default">Verified</Badge>
-                          ) : (
-                            <Badge variant="secondary">Pending</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setSelectedDocument(doc);
-                                setDocumentPreviewOpen(true);
-                              }}
-                              data-testid={`button-view-document-${doc.id}`}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {!doc.isVerified && doc.source !== 'truck' && (
-                              <>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-green-600 hover:text-green-700"
-                                  onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: true })}
-                                  disabled={documentVerifyMutation.isPending}
-                                  data-testid={`button-approve-document-${doc.id}`}
-                                >
-                                  <CheckCircle2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-red-600 hover:text-red-700"
-                                  onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: false })}
-                                  disabled={documentVerifyMutation.isPending}
-                                  data-testid={`button-reject-document-${doc.id}`}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
+        <TabsContent value="documents" className="mt-6 space-y-6">
+          {carrier.documents && carrier.documents.length > 0 ? (
+            (() => {
+              const { official, vehicle, shipment } = categorizeDocuments(carrier.documents);
+              
+              const renderDocumentTable = (docs: any[], categoryLabel: string, testIdPrefix: string) => (
+                docs.length > 0 && (
+                  <Card key={categoryLabel}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          {categoryLabel === "Official Documents" && <ShieldCheck className="h-5 w-5 text-primary" />}
+                          {categoryLabel === "Vehicle Documents" && <Truck className="h-5 w-5 text-primary" />}
+                          {categoryLabel === "Shipment Documents" && <Package className="h-5 w-5 text-primary" />}
+                          {categoryLabel}
+                        </CardTitle>
+                        <Badge variant="secondary">{docs.length}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Document</TableHead>
+                            <TableHead>Type</TableHead>
+                            {categoryLabel === "Vehicle Documents" && <TableHead>Vehicle</TableHead>}
+                            <TableHead>Uploaded</TableHead>
+                            <TableHead>Expiry</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {docs.map((doc: any) => (
+                            <TableRow key={doc.id} data-testid={`row-${testIdPrefix}-${doc.id}`}>
+                              <TableCell className="font-medium">{doc.fileName || doc.name}</TableCell>
+                              <TableCell>{documentTypeLabels[doc.documentType] || doc.documentType || doc.type}</TableCell>
+                              {categoryLabel === "Vehicle Documents" && (
+                                <TableCell>
+                                  {doc.source === 'truck' && doc.truckPlate ? (
+                                    <Badge variant="outline" className="text-xs">
+                                      {doc.truckPlate}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                  )}
+                                </TableCell>
+                              )}
+                              <TableCell>
+                                {doc.createdAt ? format(new Date(doc.createdAt), "MMM dd, yyyy") : "N/A"}
+                              </TableCell>
+                              <TableCell>
+                                {doc.expiryDate ? format(new Date(doc.expiryDate), "MMM dd, yyyy") : "No expiry"}
+                              </TableCell>
+                              <TableCell>
+                                {doc.isVerified ? (
+                                  <Badge variant="default">Verified</Badge>
+                                ) : (
+                                  <Badge variant="secondary">Pending</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setSelectedDocument(doc);
+                                      setDocumentPreviewOpen(true);
+                                    }}
+                                    data-testid={`button-view-${testIdPrefix}-${doc.id}`}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  {!doc.isVerified && doc.source !== 'truck' && (
+                                    <>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="text-green-600 hover:text-green-700"
+                                        onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: true })}
+                                        disabled={documentVerifyMutation.isPending}
+                                        data-testid={`button-approve-${testIdPrefix}-${doc.id}`}
+                                      >
+                                        <CheckCircle2 className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="text-red-600 hover:text-red-700"
+                                        onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: false })}
+                                        disabled={documentVerifyMutation.isPending}
+                                        data-testid={`button-reject-${testIdPrefix}-${doc.id}`}
+                                      >
+                                        <XCircle className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )
+              );
+
+              return (
+                <>
+                  {renderDocumentTable(official, "Official Documents", "official-doc")}
+                  {renderDocumentTable(vehicle, "Vehicle Documents", "vehicle-doc")}
+                  {renderDocumentTable(shipment, "Shipment Documents", "shipment-doc")}
+                  {official.length === 0 && vehicle.length === 0 && shipment.length === 0 && (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center py-8 text-muted-foreground">
+                          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>No documents uploaded yet</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No documents uploaded yet</p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 

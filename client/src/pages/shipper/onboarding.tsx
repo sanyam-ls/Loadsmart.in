@@ -910,10 +910,10 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="registeredLocality"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Locality / Area</FormLabel>
+                        <FormLabel>Locality / Area <span className="text-muted-foreground font-normal">(e.g. Andheri West, Bandra)</span></FormLabel>
                         <FormControl>
                           <Input 
-                            placeholder="e.g. Andheri West, Bandra, Connaught Place" 
+                            placeholder="" 
                             {...field} 
                             data-testid="input-locality"
                           />
@@ -1005,7 +1005,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                           <FormLabel>Custom City Name</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="Enter your city name" 
+                              placeholder="" 
                               {...field} 
                               data-testid="input-city-custom"
                             />
@@ -1276,7 +1276,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                           <FormItem>
                             <FormLabel>Employee Code</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter employee code" {...field} data-testid="input-employee-code" />
+                              <Input placeholder="" {...field} data-testid="input-employee-code" />
                             </FormControl>
                           </FormItem>
                         )}

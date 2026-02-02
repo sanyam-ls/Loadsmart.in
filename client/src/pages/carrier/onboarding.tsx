@@ -738,9 +738,9 @@ export default function CarrierOnboarding() {
                       name="businessLocality"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Locality / Area *</FormLabel>
+                          <FormLabel>Locality / Area * <span className="text-muted-foreground font-normal">(e.g. Andheri West, Bandra)</span></FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g. Andheri West, Bandra, Connaught Place" disabled={!canEdit} data-testid="input-solo-business-locality" />
+                            <Input {...field} placeholder="" disabled={!canEdit} data-testid="input-solo-business-locality" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -846,9 +846,9 @@ export default function CarrierOnboarding() {
                       name="bankName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Bank Name</FormLabel>
+                          <FormLabel>Bank Name <span className="text-muted-foreground font-normal">(e.g. State Bank of India)</span></FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g., State Bank of India" disabled={!canEdit} data-testid="input-bank-name" />
+                            <Input {...field} placeholder="" disabled={!canEdit} data-testid="input-bank-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -861,7 +861,7 @@ export default function CarrierOnboarding() {
                         <FormItem>
                           <FormLabel>Account Number</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Enter account number" disabled={!canEdit} data-testid="input-bank-account" />
+                            <Input {...field} placeholder="" disabled={!canEdit} data-testid="input-bank-account" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -872,9 +872,9 @@ export default function CarrierOnboarding() {
                       name="bankIfscCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>IFSC Code</FormLabel>
+                          <FormLabel>IFSC Code <span className="text-muted-foreground font-normal">(e.g. SBIN0001234)</span></FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g., SBIN0001234" disabled={!canEdit} data-testid="input-bank-ifsc" />
+                            <Input {...field} placeholder="" disabled={!canEdit} data-testid="input-bank-ifsc" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1095,9 +1095,9 @@ export default function CarrierOnboarding() {
                       name="businessLocality"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Locality / Area *</FormLabel>
+                          <FormLabel>Locality / Area * <span className="text-muted-foreground font-normal">(e.g. Andheri West, Bandra)</span></FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g. Andheri West, Bandra, Connaught Place" disabled={!canEdit} data-testid="input-fleet-business-locality" />
+                            <Input {...field} placeholder="" disabled={!canEdit} data-testid="input-fleet-business-locality" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1224,9 +1224,9 @@ export default function CarrierOnboarding() {
                       name="bankName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Bank Name</FormLabel>
+                          <FormLabel>Bank Name <span className="text-muted-foreground font-normal">(e.g. State Bank of India)</span></FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g., State Bank of India" disabled={!canEdit} data-testid="input-fleet-bank-name" />
+                            <Input {...field} placeholder="" disabled={!canEdit} data-testid="input-fleet-bank-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1239,7 +1239,7 @@ export default function CarrierOnboarding() {
                         <FormItem>
                           <FormLabel>Account Number</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Enter account number" disabled={!canEdit} data-testid="input-fleet-bank-account" />
+                            <Input {...field} placeholder="" disabled={!canEdit} data-testid="input-fleet-bank-account" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1250,9 +1250,9 @@ export default function CarrierOnboarding() {
                       name="bankIfscCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>IFSC Code</FormLabel>
+                          <FormLabel>IFSC Code <span className="text-muted-foreground font-normal">(e.g. SBIN0001234)</span></FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g., SBIN0001234" disabled={!canEdit} data-testid="input-fleet-bank-ifsc" />
+                            <Input {...field} placeholder="" disabled={!canEdit} data-testid="input-fleet-bank-ifsc" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

@@ -658,6 +658,7 @@ export default function CarrierProfilePage() {
                             <TableHead>Document</TableHead>
                             <TableHead>Type</TableHead>
                             {categoryLabel === "Vehicle Documents" && <TableHead>Vehicle</TableHead>}
+                            {categoryLabel === "Shipment Documents" && <TableHead>Load ID</TableHead>}
                             <TableHead>Uploaded</TableHead>
                             <TableHead>Expiry</TableHead>
                             <TableHead>Status</TableHead>
@@ -674,6 +675,17 @@ export default function CarrierProfilePage() {
                                   {doc.source === 'truck' && doc.truckPlate ? (
                                     <Badge variant="outline" className="text-xs">
                                       {doc.truckPlate}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                  )}
+                                </TableCell>
+                              )}
+                              {categoryLabel === "Shipment Documents" && (
+                                <TableCell>
+                                  {doc.loadId ? (
+                                    <Badge variant="outline" className="text-xs font-mono">
+                                      {doc.loadId.slice(0, 8)}...
                                     </Badge>
                                   ) : (
                                     <span className="text-muted-foreground text-xs">-</span>

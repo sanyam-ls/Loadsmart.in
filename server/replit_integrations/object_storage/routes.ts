@@ -3,7 +3,19 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 // Authentication middleware - checks if user is logged in
 function requireAuth(req: Request, res: Response, next: NextFunction) {
+  console.log('[ObjectStorage] Auth check:', {
+    path: req.path,
+    hasSession: !!req.session,
+    userId: req.session?.userId,
+    cookies: Object.keys(req.cookies || {}),
+    headers: {
+      cookie: req.headers.cookie ? 'present' : 'missing',
+      origin: req.headers.origin,
+    }
+  });
+  
   if (!req.session?.userId) {
+    console.log('[ObjectStorage] Authentication failed - no userId in session');
     return res.status(401).json({ error: "Authentication required" });
   }
   next();

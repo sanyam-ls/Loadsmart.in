@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -147,16 +147,29 @@ function AuthenticatedImage({
 
   useEffect(() => {
     let isMounted = true;
+    let currentBlobUrl: string | null = null;
     
     async function fetchImage() {
       try {
         setLoading(true);
         setError(false);
+        setBlobUrl(null);
         
-        // If it's a data URL or asset URL, use directly
-        if (src.startsWith('data:') || src.includes('/assets/')) {
-          setBlobUrl(src);
-          setLoading(false);
+        // If it's a data URL, use directly
+        if (src.startsWith('data:')) {
+          if (isMounted) {
+            setBlobUrl(src);
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // If it's an asset URL, use directly
+        if (src.includes('/assets/')) {
+          if (isMounted) {
+            setBlobUrl(src);
+            setLoading(false);
+          }
           return;
         }
         
@@ -165,17 +178,30 @@ function AuthenticatedImage({
         });
         
         if (!response.ok) {
-          throw new Error(`Failed to load image: ${response.status}`);
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Verify content type is an image
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.startsWith('image/')) {
+          throw new Error(`Invalid content type: ${contentType}`);
         }
         
         const blob = await response.blob();
+        
+        // Double-check blob type
+        if (!blob.type.startsWith('image/') && blob.type !== '') {
+          throw new Error(`Invalid blob type: ${blob.type}`);
+        }
+        
         if (isMounted) {
-          const url = URL.createObjectURL(blob);
-          setBlobUrl(url);
+          currentBlobUrl = URL.createObjectURL(blob);
+          setBlobUrl(currentBlobUrl);
           setLoading(false);
         }
       } catch (err) {
-        console.error('Error loading image:', err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error('Error loading authenticated image:', src, 'Error:', errorMessage);
         if (isMounted) {
           setError(true);
           setLoading(false);
@@ -186,19 +212,23 @@ function AuthenticatedImage({
     
     if (src) {
       fetchImage();
+    } else {
+      setLoading(false);
+      setError(true);
+      onLoadError?.();
     }
     
     return () => {
       isMounted = false;
-      if (blobUrl && blobUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(blobUrl);
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
       }
     };
-  }, [src]);
+  }, [src, onLoadError]);
 
   if (loading) {
     return (
-      <div className={`${className} flex items-center justify-center bg-muted`}>
+      <div className={`${className || ''} flex items-center justify-center bg-muted`}>
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -214,13 +244,27 @@ function AuthenticatedImage({
       alt={alt} 
       className={className}
       data-testid={testId}
+      onError={() => {
+        setError(true);
+        onLoadError?.();
+      }}
     />
   );
 }
 
 // Document Preview component with authenticated image loading
 function DocumentPreview({ fileUrl, fileName }: { fileUrl?: string; fileName: string }) {
-  const [showFallback, setShowFallback] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  
+  // Reset error state when fileUrl changes
+  useEffect(() => {
+    setLoadError(false);
+  }, [fileUrl]);
+  
+  // Stable callback reference to prevent unnecessary re-renders
+  const handleLoadError = useCallback(() => {
+    setLoadError(true);
+  }, []);
   
   const isImageUrl = fileUrl && (
     fileUrl.includes("/assets/generated_images/") ||
@@ -231,9 +275,10 @@ function DocumentPreview({ fileUrl, fileName }: { fileUrl?: string; fileName: st
     fileUrl.includes("/objects/")
   );
 
-  if (!fileUrl || showFallback || !isImageUrl) {
+  // Show fallback when no URL, load error, or not an image URL
+  if (!fileUrl || loadError || !isImageUrl) {
     return (
-      <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden">
+      <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden" data-testid="document-preview-fallback">
         <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
           <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
           <p className="text-sm">Document Preview</p>
@@ -244,21 +289,14 @@ function DocumentPreview({ fileUrl, fileName }: { fileUrl?: string; fileName: st
   }
 
   return (
-    <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden">
+    <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden" data-testid="document-preview-image">
       <AuthenticatedImage
         src={fileUrl}
         alt={fileName}
         className="w-full h-full object-contain"
         testId="img-document-preview"
-        onLoadError={() => setShowFallback(true)}
+        onLoadError={handleLoadError}
       />
-      {showFallback && (
-        <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
-          <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Document Preview</p>
-          <p className="text-xs">{fileName}</p>
-        </div>
-      )}
     </div>
   );
 }

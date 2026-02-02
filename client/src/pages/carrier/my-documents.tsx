@@ -63,6 +63,8 @@ interface Document {
   createdAt: string;
   verificationStatus?: "pending" | "approved" | "rejected";
   rejectionReason?: string;
+  driverId?: string | null;
+  truckId?: string | null;
 }
 
 interface ShipmentDocument {
@@ -263,6 +265,19 @@ export default function MyDocumentsPage() {
   // Helper to check if document type is for trucks
   const isTruckDocType = (docType: string) => 
     ["rc", "insurance", "fitness", "puc", "permit"].includes(docType);
+
+  // Helper to get owner info for a document (driver name or truck registration)
+  const getDocumentOwnerInfo = (doc: Document): string => {
+    if (doc.driverId && driversData) {
+      const driver = driversData.find((d: any) => d.id === doc.driverId);
+      if (driver) return `(${driver.name})`;
+    }
+    if (doc.truckId && trucksData) {
+      const truck = trucksData.find((t: any) => t.id === doc.truckId);
+      if (truck) return `(${truck.registrationNumber})`;
+    }
+    return "";
+  };
 
   const handleUpload = async () => {
     if (!selectedDocType || !selectedFile) {
@@ -1274,6 +1289,7 @@ export default function MyDocumentsPage() {
                         data-testid={`link-expired-doc-${doc.id}`}
                       >
                         {documentTypeLabels[doc.documentType] || doc.documentType}
+                        {getDocumentOwnerInfo(doc) && ` ${getDocumentOwnerInfo(doc)}`}
                       </button>
                       {doc.expiryDate && ` - expired ${new Date(doc.expiryDate).toLocaleDateString()}`}
                     </li>
@@ -1297,6 +1313,7 @@ export default function MyDocumentsPage() {
                         data-testid={`link-expiring-doc-${doc.id}`}
                       >
                         {documentTypeLabels[doc.documentType] || doc.documentType}
+                        {getDocumentOwnerInfo(doc) && ` ${getDocumentOwnerInfo(doc)}`}
                       </button>
                       {doc.expiryDate && ` - expires ${new Date(doc.expiryDate).toLocaleDateString()}`}
                     </li>

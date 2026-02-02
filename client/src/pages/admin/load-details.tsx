@@ -25,6 +25,7 @@ import {
   UserPlus,
   Download,
   Eye,
+  EyeOff,
   Star,
   Navigation,
   Calendar,
@@ -438,6 +439,49 @@ export default function AdminLoadDetailsPage() {
   const handleEditSubmit = (data: EditLoadFormData) => {
     editMutation.mutate(data);
   };
+
+  // Mutation to toggle load availability
+  const toggleAvailabilityMutation = useMutation({
+    mutationFn: async ({ toStatus }: { toStatus: string }) => {
+      return apiRequest("POST", `/api/loads/${loadId}/transition`, { 
+        toStatus,
+        reason: toStatus === 'unavailable' ? 'Marked unavailable by admin' : 'Restored to pending by admin'
+      });
+    },
+    onSuccess: (_, variables) => {
+      const isUnavailable = variables.toStatus === 'unavailable';
+      toast({ 
+        title: isUnavailable ? "Load marked unavailable" : "Load restored", 
+        description: isUnavailable 
+          ? "This load has been removed from the carrier marketplace." 
+          : "This load has been restored to pending status. You can re-price and post it to carriers."
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loads", loadId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/loads"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Handle availability toggle
+  const handleToggleAvailability = () => {
+    const currentStatus = apiLoad?.status;
+    const toStatus = currentStatus === 'unavailable' ? 'pending' : 'unavailable';
+    toggleAvailabilityMutation.mutate({ toStatus });
+  };
+
+  // Check if load can be marked unavailable (unassigned loads only, no carrier assigned)
+  const canToggleAvailability = useMemo(() => {
+    if (!apiLoad) return false;
+    // Don't allow if a carrier has been assigned
+    if (apiLoad.assignedCarrierId) return false;
+    const unassignedStatuses = ['draft', 'pending', 'priced', 'posted_to_carriers', 'open_for_bid', 'counter_received', 'unavailable'];
+    return unassignedStatuses.includes(apiLoad.status || '');
+  }, [apiLoad]);
+
+  const isCurrentlyUnavailable = apiLoad?.status === 'unavailable';
   
   function createDetailedLoadFromApi(load: LoadWithRelations, displayId: string): DetailedLoad {
     const mapLoadStatus = (status: string | null): AdminLoad["status"] => {
@@ -683,6 +727,25 @@ export default function AdminLoadDetailsPage() {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Reassign Carrier
               </DropdownMenuItem>
+              {canToggleAvailability && (
+                <DropdownMenuItem 
+                  onClick={handleToggleAvailability}
+                  disabled={toggleAvailabilityMutation.isPending}
+                  data-testid="menu-toggle-availability"
+                >
+                  {isCurrentlyUnavailable ? (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Make Available
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      Mark Unavailable
+                    </>
+                  )}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => setIsCancelModalOpen(true)} 

@@ -34,6 +34,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -419,6 +420,20 @@ export default function AdminLoadsPage() {
 
   const verifiedCarriers = carriers.filter(c => c.verificationStatus === "verified");
 
+  // Calculate status counts for tabs
+  const statusCounts = useMemo(() => {
+    return {
+      all: loads.length,
+      Pending: loads.filter(l => l.status === "Pending").length,
+      Active: loads.filter(l => l.status === "Active").length,
+      Bidding: loads.filter(l => l.status === "Bidding").length,
+      Assigned: loads.filter(l => l.status === "Assigned").length,
+      "En Route": loads.filter(l => l.status === "En Route").length,
+      Delivered: loads.filter(l => l.status === "Delivered").length,
+      Cancelled: loads.filter(l => l.status === "Cancelled").length,
+    };
+  }, [loads]);
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -519,34 +534,79 @@ export default function AdminLoadsPage() {
         </Card>
       </div>
 
+      {/* Status Tabs */}
+      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+        <TabsList className="w-full justify-start h-auto flex-wrap gap-1 bg-transparent p-0">
+          <TabsTrigger 
+            value="all" 
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            data-testid="tab-all"
+          >
+            All ({statusCounts.all})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="Pending" 
+            className="data-[state=active]:bg-gray-600 data-[state=active]:text-white"
+            data-testid="tab-pending"
+          >
+            Pending ({statusCounts.Pending})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="Active" 
+            className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white"
+            data-testid="tab-active"
+          >
+            Active ({statusCounts.Active})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="Bidding" 
+            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+            data-testid="tab-bidding"
+          >
+            Bidding ({statusCounts.Bidding})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="Assigned" 
+            className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+            data-testid="tab-assigned"
+          >
+            Assigned ({statusCounts.Assigned})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="En Route" 
+            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            data-testid="tab-in-transit"
+          >
+            In Transit ({statusCounts["En Route"]})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="Delivered" 
+            className="data-[state=active]:bg-green-600 data-[state=active]:text-white"
+            data-testid="tab-delivered"
+          >
+            Delivered ({statusCounts.Delivered})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="Cancelled" 
+            className="data-[state=active]:bg-red-600 data-[state=active]:text-white"
+            data-testid="tab-cancelled"
+          >
+            Cancelled ({statusCounts.Cancelled})
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by Load ID, Pickup ID, route, shipper, or carrier..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                data-testid="input-search-loads"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px]" data-testid="select-status-filter">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Bidding">Bidding</SelectItem>
-                <SelectItem value="Assigned">Assigned</SelectItem>
-                <SelectItem value="En Route">In Transit</SelectItem>
-                <SelectItem value="Delivered">Delivered</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by Load ID, Pickup ID, route, shipper, or carrier..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              data-testid="input-search-loads"
+            />
           </div>
         </CardHeader>
         <CardContent className="p-0">

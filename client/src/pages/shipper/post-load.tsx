@@ -1752,13 +1752,15 @@ export default function PostLoadPage() {
                     </label>
                   </div>
                   {savePickupAddress && (
-                    <Input 
-                      placeholder="Address label (e.g., Mumbai Warehouse)" 
-                      value={pickupAddressLabel}
-                      onChange={(e) => setPickupAddressLabel(e.target.value)}
-                      className="mt-2"
-                      data-testid="input-pickup-address-label"
-                    />
+                    <div className="mt-2">
+                      <label className="text-sm text-muted-foreground mb-1 block">Address Label <span className="font-normal">(e.g. Mumbai Warehouse)</span></label>
+                      <Input 
+                        placeholder="" 
+                        value={pickupAddressLabel}
+                        onChange={(e) => setPickupAddressLabel(e.target.value)}
+                        data-testid="input-pickup-address-label"
+                      />
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -1965,13 +1967,15 @@ export default function PostLoadPage() {
                     </label>
                   </div>
                   {saveDropoffAddress && (
-                    <Input 
-                      placeholder="Address label (e.g., Delhi Distribution Center)" 
-                      value={dropoffAddressLabel}
-                      onChange={(e) => setDropoffAddressLabel(e.target.value)}
-                      className="mt-2"
-                      data-testid="input-dropoff-address-label"
-                    />
+                    <div className="mt-2">
+                      <label className="text-sm text-muted-foreground mb-1 block">Address Label <span className="font-normal">(e.g. Delhi Distribution Center)</span></label>
+                      <Input 
+                        placeholder="" 
+                        value={dropoffAddressLabel}
+                        onChange={(e) => setDropoffAddressLabel(e.target.value)}
+                        data-testid="input-dropoff-address-label"
+                      />
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -2198,7 +2202,7 @@ export default function PostLoadPage() {
                       name="shipperPricePerTon"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Price per Tonne</FormLabel>
+                          <FormLabel>Price per Tonne <span className="text-muted-foreground font-normal">(e.g. 1,50,000)</span></FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
@@ -2206,7 +2210,7 @@ export default function PostLoadPage() {
                                 type="text"
                                 inputMode="numeric"
                                 className="pl-10"
-                                placeholder="e.g. 1,50,000"
+                                placeholder=""
                                 {...field}
                                 onChange={(e) => {
                                   const value = e.target.value.replace(/[^0-9,]/g, '');
@@ -2230,7 +2234,7 @@ export default function PostLoadPage() {
                       name="shipperFixedPrice"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Fixed Price</FormLabel>
+                          <FormLabel>Fixed Price <span className="text-muted-foreground font-normal">(e.g. 1,50,000)</span></FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">Rs.</span>
@@ -2238,7 +2242,7 @@ export default function PostLoadPage() {
                                 type="text"
                                 inputMode="numeric"
                                 className="pl-10"
-                                placeholder="e.g. 1,50,000"
+                                placeholder=""
                                 {...field}
                                 onChange={(e) => {
                                   const value = e.target.value.replace(/[^0-9,]/g, '');

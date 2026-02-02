@@ -959,6 +959,7 @@ export const documents = pgTable("documents", {
   loadId: varchar("load_id").references(() => loads.id),
   shipmentId: varchar("shipment_id").references(() => shipments.id),
   truckId: varchar("truck_id").references(() => trucks.id), // Link to specific truck for compliance docs
+  driverId: varchar("driver_id").references(() => drivers.id), // Link to specific driver for compliance docs
   documentType: text("document_type").notNull(),
   fileName: text("file_name").notNull(),
   fileUrl: text("file_url").notNull(),

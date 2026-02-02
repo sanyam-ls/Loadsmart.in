@@ -134,6 +134,8 @@ export default function MyDocumentsPage() {
   const [selectedDocType, setSelectedDocType] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [expiryDate, setExpiryDate] = useState("");
+  const [selectedDriverId, setSelectedDriverId] = useState("");
+  const [selectedTruckId, setSelectedTruckId] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     truck: true,
     driver: false,
@@ -203,7 +205,7 @@ export default function MyDocumentsPage() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: async (docData: { documentType: string; fileName: string; fileUrl: string; fileSize: number; expiryDate: string | null }) => {
+    mutationFn: async (docData: { documentType: string; fileName: string; fileUrl: string; fileSize: number; expiryDate: string | null; driverId?: string | null; truckId?: string | null }) => {
       return apiRequest("POST", "/api/carrier/documents", docData);
     },
     onSuccess: () => {
@@ -250,7 +252,17 @@ export default function MyDocumentsPage() {
     setSelectedDocType("");
     setSelectedFile(null);
     setExpiryDate("");
+    setSelectedDriverId("");
+    setSelectedTruckId("");
   };
+
+  // Helper to check if document type is for drivers
+  const isDriverDocType = (docType: string) => 
+    ["license", "pan_card", "aadhar", "aadhaar"].includes(docType);
+
+  // Helper to check if document type is for trucks
+  const isTruckDocType = (docType: string) => 
+    ["rc", "insurance", "fitness", "puc", "permit"].includes(docType);
 
   const handleUpload = async () => {
     if (!selectedDocType || !selectedFile) {
@@ -262,6 +274,26 @@ export default function MyDocumentsPage() {
       return;
     }
 
+    // For fleet/enterprise carriers, require driver/truck selection for relevant doc types
+    if (carrierType === "enterprise") {
+      if (isDriverDocType(selectedDocType) && !selectedDriverId && driversData && driversData.length > 0) {
+        toast({
+          title: "Missing Information",
+          description: "Please select which driver this document belongs to.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (isTruckDocType(selectedDocType) && !selectedTruckId && trucksData && trucksData.length > 0) {
+        toast({
+          title: "Missing Information",
+          description: "Please select which truck this document belongs to.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const base64Url = reader.result as string;
@@ -271,6 +303,8 @@ export default function MyDocumentsPage() {
         fileUrl: base64Url,
         fileSize: selectedFile.size,
         expiryDate: expiryDate || null,
+        driverId: isDriverDocType(selectedDocType) ? (selectedDriverId || null) : null,
+        truckId: isTruckDocType(selectedDocType) ? (selectedTruckId || null) : null,
       });
     };
     reader.onerror = () => {
@@ -1363,7 +1397,11 @@ export default function MyDocumentsPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Document Type</Label>
-              <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+              <Select value={selectedDocType} onValueChange={(val) => {
+                setSelectedDocType(val);
+                setSelectedDriverId("");
+                setSelectedTruckId("");
+              }}>
                 <SelectTrigger data-testid="select-document-type">
                   <SelectValue placeholder="Select document type..." />
                 </SelectTrigger>
@@ -1380,6 +1418,66 @@ export default function MyDocumentsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Driver selection for fleet/enterprise carriers when uploading driver docs */}
+            {carrierType === "enterprise" && 
+              isDriverDocType(selectedDocType) && 
+              driversData && driversData.length > 0 && (
+              <div className="space-y-2">
+                <Label>Select Driver</Label>
+                <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                  <SelectTrigger data-testid="select-driver">
+                    <SelectValue placeholder="Select which driver..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {driversData.map((driver: any) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        <div className="flex items-center gap-2">
+                          <User className="h-3 w-3 text-muted-foreground" />
+                          <span>{driver.name}</span>
+                          {driver.phone && (
+                            <span className="text-muted-foreground text-xs">({driver.phone})</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select the driver this document belongs to
+                </p>
+              </div>
+            )}
+
+            {/* Truck selection for fleet/enterprise carriers when uploading truck docs */}
+            {carrierType === "enterprise" && 
+              isTruckDocType(selectedDocType) && 
+              trucksData && trucksData.length > 0 && (
+              <div className="space-y-2">
+                <Label>Select Truck</Label>
+                <Select value={selectedTruckId} onValueChange={setSelectedTruckId}>
+                  <SelectTrigger data-testid="select-truck">
+                    <SelectValue placeholder="Select which truck..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {trucksData.map((truck: any) => (
+                      <SelectItem key={truck.id} value={truck.id}>
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-3 w-3 text-muted-foreground" />
+                          <span>{truck.licensePlate || truck.registrationNumber || `Truck ${truck.id}`}</span>
+                          {truck.truckType && (
+                            <span className="text-muted-foreground text-xs">({truck.truckType})</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select the truck this document belongs to
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>File</Label>

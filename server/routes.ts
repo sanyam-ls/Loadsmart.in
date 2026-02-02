@@ -7940,7 +7940,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(403).json({ error: "Carrier access required" });
       }
 
-      const { documentType, fileName, fileUrl, fileSize, expiryDate, truckId } = req.body;
+      const { documentType, fileName, fileUrl, fileSize, expiryDate, truckId, driverId } = req.body;
 
       // Validate required fields
       if (!documentType || !fileName || !fileUrl) {
@@ -7980,6 +7980,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         fileSize: fileSize || 0,
         expiryDate: expiryDate ? new Date(expiryDate) : null,
         truckId: truckId || null,
+        driverId: driverId || null,
         isVerified: false,
       });
 

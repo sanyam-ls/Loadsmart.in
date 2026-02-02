@@ -218,17 +218,13 @@ export default function CarrierProfilePage() {
       if (doc.source === 'truck' || vehicleDocTypes.includes(docType)) {
         vehicle.push(doc);
       }
-      // Shipment documents (have loadId)
-      else if (doc.loadId || shipmentDocTypes.includes(docType)) {
+      // Shipment documents MUST have loadId
+      else if (doc.loadId) {
         shipment.push(doc);
       }
-      // Official/Identity documents (onboarding)
-      else if (officialDocTypes.includes(docType) || !doc.loadId) {
-        official.push(doc);
-      }
-      // Default to shipment for unknown types
+      // Official/Identity documents (everything else without loadId)
       else {
-        shipment.push(doc);
+        official.push(doc);
       }
     });
 

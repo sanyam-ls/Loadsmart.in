@@ -7929,9 +7929,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
         });
       } else if (verification.status === "rejected") {
         // Reset to pending if carrier uploads new documents after rejection
+        // Update submittedAt with current timestamp for resubmission
         await storage.updateCarrierVerification(verification.id, {
           status: "pending",
           rejectionReason: null,
+          submittedAt: new Date(),
         });
         verification = await storage.getCarrierVerification(verification.id);
       }

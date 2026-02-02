@@ -7964,6 +7964,22 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(400).json({ error: "File size exceeds maximum allowed (10MB)" });
       }
 
+      // Validate driverId belongs to the carrier
+      if (driverId) {
+        const driver = await storage.getDriver(driverId);
+        if (!driver || driver.carrierId !== user.id) {
+          return res.status(400).json({ error: "Invalid driver selected" });
+        }
+      }
+
+      // Validate truckId belongs to the carrier
+      if (truckId) {
+        const truck = await storage.getTruck(truckId);
+        if (!truck || truck.carrierId !== user.id) {
+          return res.status(400).json({ error: "Invalid truck selected" });
+        }
+      }
+
       // Delete existing documents of the same type (replacement behavior)
       // This ensures uploading a new insurance doc replaces the old one
       const existingDocs = await storage.getDocumentsByUser(user.id);

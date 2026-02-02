@@ -1410,7 +1410,7 @@
     "driverLicense": "Driver License Number",
     "permitType": "Permit Type",
     "nationalPermit": "National Permit",
-    "domesticPermit": "Domestic Permit",
+    "domesticPermit": "State Permit",
     "licensePlate": "License Plate Number",
     "chassisNumber": "Chassis Number",
     "registrationNumber": "Unique Registration Number",

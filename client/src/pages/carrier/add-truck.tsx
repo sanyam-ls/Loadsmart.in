@@ -507,7 +507,7 @@ export default function AddTruckPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="national">National Permit (All India)</SelectItem>
-                        <SelectItem value="domestic">State/Domestic Permit</SelectItem>
+                        <SelectItem value="domestic">State Permit</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

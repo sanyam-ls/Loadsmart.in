@@ -861,7 +861,7 @@ export default function CarrierVerificationPage() {
                         <Label className="text-muted-foreground">Permit Type</Label>
                         <p className="font-medium">
                           {selectedVerification.permitType === "national" ? "National Permit" : 
-                           selectedVerification.permitType === "domestic" ? "Domestic Permit" : "Not provided"}
+                           selectedVerification.permitType === "domestic" ? "State Permit" : "Not provided"}
                         </p>
                       </div>
                       <div>

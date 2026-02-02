@@ -764,12 +764,11 @@ export default function MyDocumentsPage() {
         createdAt: driver.createdAt || new Date().toISOString(),
       });
     }
-    if (driverDocs.length > 0) {
-      driverDocumentsByName[driver.name] = {
-        driverId: driver.id,
-        documents: driverDocs
-      };
-    }
+    // Always add driver to folder structure, even if no documents yet
+    driverDocumentsByName[driver.name] = {
+      driverId: driver.id,
+      documents: driverDocs
+    };
   });
 
   const DriverFolderSection = () => {
@@ -837,46 +836,50 @@ export default function MyDocumentsPage() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <div className="ml-6 mt-2 space-y-2 border-l border-muted pl-3">
-                        {driverData.documents.map(doc => (
-                          <div
-                            key={doc.id}
-                            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate"
-                            data-testid={`doc-item-${doc.id}`}
-                          >
-                            <div className="flex-shrink-0">
-                              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                                <FileText className="h-5 w-5 text-muted-foreground" />
+                        {driverData.documents.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-2 italic">No documents uploaded yet</p>
+                        ) : (
+                          driverData.documents.map(doc => (
+                            <div
+                              key={doc.id}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate"
+                              data-testid={`doc-item-${doc.id}`}
+                            >
+                              <div className="flex-shrink-0">
+                                <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                                  <FileText className="h-5 w-5 text-muted-foreground" />
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <p className="font-medium truncate">{doc.fileName}</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {driverName} - {doc.fileName}
+                                </p>
+                              </div>
                               <div className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                <p className="font-medium truncate">{doc.fileName}</p>
+                                <Badge variant="default" className="text-xs">
+                                  Verified
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (doc.fileUrl) {
+                                      window.open(doc.fileUrl, '_blank');
+                                    }
+                                  }}
+                                  data-testid={`button-download-${doc.id}`}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
                               </div>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {driverName} - {doc.fileName}
-                              </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="default" className="text-xs">
-                                Verified
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (doc.fileUrl) {
-                                    window.open(doc.fileUrl, '_blank');
-                                  }
-                                }}
-                                data-testid={`button-download-${doc.id}`}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </CollapsibleContent>
                   </Collapsible>

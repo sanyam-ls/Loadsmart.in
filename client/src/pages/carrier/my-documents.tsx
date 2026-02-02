@@ -409,36 +409,6 @@ export default function MyDocumentsPage() {
 
   const allDocuments = [...expired, ...expiringSoon, ...healthy];
   
-  // Convert driver documents (license, aadhaar images stored on driver records) to Document format
-  // Default to isVerified: false - verification status will be merged from verification table
-  const driverDocumentsFromDrivers: Document[] = [];
-  (driversData || []).forEach((driver: any) => {
-    if (driver.licenseImageUrl) {
-      driverDocumentsFromDrivers.push({
-        id: `driver-license-${driver.id}`,
-        documentType: "license",
-        fileName: `${driver.name} - Driving License`,
-        fileUrl: driver.licenseImageUrl,
-        fileSize: undefined,
-        expiryDate: driver.licenseExpiry || null,
-        isVerified: false,
-        createdAt: driver.createdAt || new Date().toISOString(),
-      });
-    }
-    if (driver.aadhaarImageUrl) {
-      driverDocumentsFromDrivers.push({
-        id: `driver-aadhaar-${driver.id}`,
-        documentType: "aadhaar",
-        fileName: `${driver.name} - Aadhaar Card${driver.aadhaarNumber ? ` (${driver.aadhaarNumber})` : ''}`,
-        fileUrl: driver.aadhaarImageUrl,
-        fileSize: undefined,
-        expiryDate: null,
-        isVerified: false,
-        createdAt: driver.createdAt || new Date().toISOString(),
-      });
-    }
-  });
-
   // Helper to extract URL from JSON object or string
   const extractFileUrl = (urlData: any): string | null => {
     if (!urlData) return null;
@@ -455,6 +425,38 @@ export default function MyDocumentsPage() {
     }
     return null;
   };
+
+  // Convert driver documents (license, aadhaar images stored on driver records) to Document format
+  // Default to isVerified: false - verification status will be merged from verification table
+  const driverDocumentsFromDrivers: Document[] = [];
+  (driversData || []).forEach((driver: any) => {
+    const driverLicenseUrl = extractFileUrl(driver.licenseImageUrl);
+    if (driverLicenseUrl) {
+      driverDocumentsFromDrivers.push({
+        id: `driver-license-${driver.id}`,
+        documentType: "license",
+        fileName: `${driver.name} - Driving License`,
+        fileUrl: driverLicenseUrl,
+        fileSize: undefined,
+        expiryDate: driver.licenseExpiry || null,
+        isVerified: false,
+        createdAt: driver.createdAt || new Date().toISOString(),
+      });
+    }
+    const driverAadhaarUrl = extractFileUrl(driver.aadhaarImageUrl);
+    if (driverAadhaarUrl) {
+      driverDocumentsFromDrivers.push({
+        id: `driver-aadhaar-${driver.id}`,
+        documentType: "aadhaar",
+        fileName: `${driver.name} - Aadhaar Card${driver.aadhaarNumber ? ` (${driver.aadhaarNumber})` : ''}`,
+        fileUrl: driverAadhaarUrl,
+        fileSize: undefined,
+        expiryDate: null,
+        isVerified: false,
+        createdAt: driver.createdAt || new Date().toISOString(),
+      });
+    }
+  });
 
   // Convert truck documents (RC, insurance, etc. stored on truck records) to Document format
   // Group truck documents by license plate for hierarchical display
@@ -1729,14 +1731,22 @@ export default function MyDocumentsPage() {
                       alt={selectedDocument.fileName}
                       className="w-full h-full object-contain"
                       data-testid="img-document-preview"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
                     />
-                  ) : (
-                    <div className="text-center text-muted-foreground">
-                      <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Document Preview</p>
-                      <p className="text-xs">{selectedDocument.fileName}</p>
-                    </div>
-                  )}
+                  ) : null}
+                  <div 
+                    className="text-center text-muted-foreground flex-col items-center justify-center"
+                    style={{ display: selectedDocument.fileUrl?.includes("/objects/") ? 'none' : 'flex' }}
+                  >
+                    <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Document Preview</p>
+                    <p className="text-xs">{selectedDocument.fileName}</p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">

@@ -1034,14 +1034,7 @@ export default function CarrierLoadsPage() {
                   </Badge>
                 </div>
                 
-                {load.shipperName && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Building2 className="h-4 w-4" />
-                    <span>{load.shipperName}</span>
-                    <ShipperRatingBadge shipperId={load.shipperId} />
-                  </div>
-                )}
-                
+                                
                 <div className="flex items-center justify-between pt-2 border-t gap-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Total Price</p>
@@ -1131,14 +1124,7 @@ export default function CarrierLoadsPage() {
                         </div>
                         
                         <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                          {load.shipperName && (
-                            <span className="flex items-center gap-1">
-                              <Building2 className="h-4 w-4" />
-                              {load.shipperName}
-                              <ShipperRatingBadge shipperId={load.shipperId} />
-                            </span>
-                          )}
-                          {load.weight && (
+                                                    {load.weight && (
                             <span className="flex items-center gap-1">
                               <Package className="h-4 w-4" />
                               {load.weight} Tons
@@ -1267,14 +1253,7 @@ export default function CarrierLoadsPage() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    {detailLoad.shipperName && (
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">{t("loads.shipper")}:</span>
-                        <span className="font-medium">{detailLoad.shipperName}</span>
-                      </div>
-                    )}
-                    {detailLoad.loadType && (
+                                        {detailLoad.loadType && (
                       <div className="flex items-center gap-2">
                         <Truck className="h-4 w-4 text-muted-foreground" />
                         <span className="text-muted-foreground">{t("common.type")}:</span>

@@ -292,18 +292,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
       <div className="grid grid-cols-2 gap-4 py-4">
         <Card>
           <CardContent className="pt-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Shipper</span>
-              <span className="font-medium">{bid.shipperCompany}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Rating</span>
-              <div className="flex items-center gap-1">
-                <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                <span className="font-medium">{bid.shipperRating.toFixed(1)}</span>
-              </div>
-            </div>
-            <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Load Type</span>
               <span className="font-medium">{bid.loadType}</span>
             </div>
@@ -906,14 +895,6 @@ export default function CarrierBidsPage() {
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                        <div className="flex items-center gap-1">
-                          <Building2 className="h-4 w-4" />
-                          <span>{bid.shipperCompany}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                          <span>{bid.shipperRating.toFixed(1)}</span>
-                        </div>
                         <div className="flex items-center gap-1">
                           <Package className="h-4 w-4" />
                           <span>{bid.weight} Tons</span>

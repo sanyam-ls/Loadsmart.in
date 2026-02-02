@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -86,7 +87,10 @@ export default function AddTruckPage() {
   const { carrierType } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const rcInputRef = useRef<HTMLInputElement>(null);
+  const insuranceInputRef = useRef<HTMLInputElement>(null);
+  const fitnessInputRef = useRef<HTMLInputElement>(null);
+  const permitInputRef = useRef<HTMLInputElement>(null);
   const isSoloCarrier = carrierType === "solo";
   const [truckTypeOpen, setTruckTypeOpen] = useState(false);
   
@@ -98,33 +102,23 @@ export default function AddTruckPage() {
     }));
   }, []);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
     const files = e.target.files;
-    if (files) {
-      const newDocs: DocumentFile[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        // Determine document type from file name
-        const name = file.name.toLowerCase();
-        let type = "other";
-        if (name.includes("rc") || name.includes("registration")) type = "rc";
-        else if (name.includes("insurance")) type = "insurance";
-        else if (name.includes("fitness")) type = "fitness";
-        else if (name.includes("puc") || name.includes("pollution")) type = "puc";
-        else if (name.includes("permit")) type = "permit";
-        
-        newDocs.push({ file, name: file.name, type });
-      }
-      setDocuments(prev => [...prev, ...newDocs]);
+    if (files && files.length > 0) {
+      const file = files[0];
+      // Remove any existing document of this type and add new one
+      setDocuments(prev => [...prev.filter(d => d.type !== docType), { file, name: file.name, type: docType }]);
     }
     // Reset input so same file can be selected again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    e.target.value = "";
   };
 
-  const removeDocument = (index: number) => {
-    setDocuments(prev => prev.filter((_, i) => i !== index));
+  const removeDocument = (docType: string) => {
+    setDocuments(prev => prev.filter(d => d.type !== docType));
+  };
+  
+  const getDocumentByType = (docType: string) => {
+    return documents.find(d => d.type === docType);
   };
 
   // Fetch carrier onboarding data to auto-populate for solo carriers
@@ -661,50 +655,167 @@ export default function AddTruckPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Hidden file inputs for each document type */}
               <input
-                ref={fileInputRef}
+                ref={rcInputRef}
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
-                multiple
                 className="hidden"
-                onChange={handleFileSelect}
-                data-testid="input-document-upload"
+                onChange={(e) => handleFileSelect(e, "rc")}
+                data-testid="input-rc-upload"
               />
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-border rounded-lg p-6 text-center hover-elevate cursor-pointer"
-                data-testid="dropzone-documents"
-              >
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm font-medium">Click to upload vehicle documents</p>
-                <p className="text-xs text-muted-foreground">RC, Insurance, Fitness Certificate (PDF, JPG, PNG)</p>
-              </div>
-              
-              {documents.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Selected documents:</p>
-                  {documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between gap-2 p-2 border rounded-md">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                        <span className="text-sm truncate">{doc.name}</span>
-                        <Badge variant="outline" className="flex-shrink-0 no-default-hover-elevate no-default-active-elevate">
-                          {doc.type.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeDocument(index)}
-                        data-testid={`button-remove-doc-${index}`}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+              <input
+                ref={insuranceInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e, "insurance")}
+                data-testid="input-insurance-upload"
+              />
+              <input
+                ref={fitnessInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e, "fitness")}
+                data-testid="input-fitness-upload"
+              />
+              <input
+                ref={permitInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e, "permit")}
+                data-testid="input-permit-upload"
+              />
+
+              {/* RC Document */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">RC (Registration Certificate)</Label>
+                {getDocumentByType("rc") ? (
+                  <div className="flex items-center justify-between gap-2 p-3 border rounded-md bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileText className="h-4 w-4 flex-shrink-0 text-primary" />
+                      <span className="text-sm truncate">{getDocumentByType("rc")?.name}</span>
+                      <Badge variant="secondary" className="flex-shrink-0 text-xs">Uploaded</Badge>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDocument("rc")}
+                      data-testid="button-remove-rc"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => rcInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-4 text-center hover-elevate cursor-pointer"
+                    data-testid="dropzone-rc"
+                  >
+                    <Upload className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Click to upload RC (PDF, JPG, PNG)</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Insurance Document */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Insurance Certificate</Label>
+                {getDocumentByType("insurance") ? (
+                  <div className="flex items-center justify-between gap-2 p-3 border rounded-md bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileText className="h-4 w-4 flex-shrink-0 text-primary" />
+                      <span className="text-sm truncate">{getDocumentByType("insurance")?.name}</span>
+                      <Badge variant="secondary" className="flex-shrink-0 text-xs">Uploaded</Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDocument("insurance")}
+                      data-testid="button-remove-insurance"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => insuranceInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-4 text-center hover-elevate cursor-pointer"
+                    data-testid="dropzone-insurance"
+                  >
+                    <Upload className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Click to upload Insurance (PDF, JPG, PNG)</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Fitness Certificate */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Fitness Certificate</Label>
+                {getDocumentByType("fitness") ? (
+                  <div className="flex items-center justify-between gap-2 p-3 border rounded-md bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileText className="h-4 w-4 flex-shrink-0 text-primary" />
+                      <span className="text-sm truncate">{getDocumentByType("fitness")?.name}</span>
+                      <Badge variant="secondary" className="flex-shrink-0 text-xs">Uploaded</Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDocument("fitness")}
+                      data-testid="button-remove-fitness"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => fitnessInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-4 text-center hover-elevate cursor-pointer"
+                    data-testid="dropzone-fitness"
+                  >
+                    <Upload className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Click to upload Fitness Certificate (PDF, JPG, PNG)</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Permit Document */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Permit Document</Label>
+                {getDocumentByType("permit") ? (
+                  <div className="flex items-center justify-between gap-2 p-3 border rounded-md bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileText className="h-4 w-4 flex-shrink-0 text-primary" />
+                      <span className="text-sm truncate">{getDocumentByType("permit")?.name}</span>
+                      <Badge variant="secondary" className="flex-shrink-0 text-xs">Uploaded</Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDocument("permit")}
+                      data-testid="button-remove-permit"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => permitInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-4 text-center hover-elevate cursor-pointer"
+                    data-testid="dropzone-permit"
+                  >
+                    <Upload className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Click to upload Permit (PDF, JPG, PNG)</p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 

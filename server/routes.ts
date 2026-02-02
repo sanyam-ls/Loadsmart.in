@@ -16,6 +16,8 @@ import {
   insertShipperRatingSchema,
   carrierRatings,
   insertCarrierRatingSchema,
+  savedAddresses,
+  insertSavedAddressSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -13868,6 +13870,154 @@ RESPOND IN THIS EXACT JSON FORMAT:
     } catch (error: any) {
       console.error("Check carrier rating error:", error);
       res.status(500).json({ error: "Failed to check rating status" });
+    }
+  });
+
+  // =============================================
+  // SAVED ADDRESSES - Shipper address book
+  // =============================================
+
+  // Get all saved addresses for the current shipper
+  app.get("/api/shipper/saved-addresses", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Only shippers can access saved addresses" });
+      }
+
+      const addresses = await db.select().from(savedAddresses)
+        .where(eq(savedAddresses.shipperId, parseInt(userId)))
+        .orderBy(savedAddresses.usageCount);
+      
+      // Sort by usage count descending (most used first)
+      addresses.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
+
+      res.json(addresses);
+    } catch (error: any) {
+      console.error("Get saved addresses error:", error);
+      res.status(500).json({ error: "Failed to get saved addresses" });
+    }
+  });
+
+  // Get saved addresses by type (pickup or dropoff)
+  app.get("/api/shipper/saved-addresses/:type", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      const { type } = req.params;
+      
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Only shippers can access saved addresses" });
+      }
+
+      if (type !== "pickup" && type !== "dropoff") {
+        return res.status(400).json({ error: "Invalid address type. Must be 'pickup' or 'dropoff'" });
+      }
+
+      const addresses = await db.select().from(savedAddresses)
+        .where(eq(savedAddresses.shipperId, parseInt(userId)));
+      
+      // Filter by type and sort by usage count descending
+      const filteredAddresses = addresses
+        .filter(a => a.addressType === type && a.isActive)
+        .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
+
+      res.json(filteredAddresses);
+    } catch (error: any) {
+      console.error("Get saved addresses by type error:", error);
+      res.status(500).json({ error: "Failed to get saved addresses" });
+    }
+  });
+
+  // Save a new address
+  app.post("/api/shipper/saved-addresses", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Only shippers can save addresses" });
+      }
+
+      const parsed = insertSavedAddressSchema.safeParse({
+        ...req.body,
+        shipperId: parseInt(userId),
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid address data", details: parsed.error.errors });
+      }
+
+      const [newAddress] = await db.insert(savedAddresses).values(parsed.data).returning();
+
+      res.json(newAddress);
+    } catch (error: any) {
+      console.error("Save address error:", error);
+      res.status(500).json({ error: "Failed to save address" });
+    }
+  });
+
+  // Update usage count when address is used
+  app.post("/api/shipper/saved-addresses/:id/use", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      const addressId = parseInt(req.params.id);
+      
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Only shippers can use saved addresses" });
+      }
+
+      // Verify ownership
+      const [address] = await db.select().from(savedAddresses).where(eq(savedAddresses.id, addressId));
+      if (!address || address.shipperId !== parseInt(userId)) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+
+      // Increment usage count
+      const [updated] = await db.update(savedAddresses)
+        .set({ 
+          usageCount: (address.usageCount || 0) + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(savedAddresses.id, addressId))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Update address usage error:", error);
+      res.status(500).json({ error: "Failed to update address usage" });
+    }
+  });
+
+  // Delete a saved address
+  app.delete("/api/shipper/saved-addresses/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      const addressId = parseInt(req.params.id);
+      
+      if (!user || user.role !== "shipper") {
+        return res.status(403).json({ error: "Only shippers can delete saved addresses" });
+      }
+
+      // Verify ownership
+      const [address] = await db.select().from(savedAddresses).where(eq(savedAddresses.id, addressId));
+      if (!address || address.shipperId !== parseInt(userId)) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+
+      // Soft delete by setting isActive to false
+      await db.update(savedAddresses)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(savedAddresses.id, addressId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete address error:", error);
+      res.status(500).json({ error: "Failed to delete address" });
     }
   });
 

@@ -1939,6 +1939,38 @@ export const insertShipperRatingSchema = createInsertSchema(shipperRatings).omit
 export type InsertShipperRating = z.infer<typeof insertShipperRatingSchema>;
 export type ShipperRating = typeof shipperRatings.$inferSelect;
 
+// Saved addresses table for shippers to reuse pickup/dropoff addresses
+export const savedAddresses = pgTable("saved_addresses", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  shipperId: integer("shipper_id").notNull(),
+  addressType: varchar("address_type", { length: 20 }).notNull(), // 'pickup' or 'dropoff'
+  label: varchar("label", { length: 100 }), // Optional friendly name like "Mumbai Warehouse"
+  businessName: varchar("business_name", { length: 200 }),
+  address: varchar("address", { length: 500 }),
+  locality: varchar("locality", { length: 200 }),
+  landmark: varchar("landmark", { length: 200 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  pincode: varchar("pincode", { length: 10 }),
+  contactName: varchar("contact_name", { length: 200 }),
+  contactPhone: varchar("contact_phone", { length: 20 }),
+  contactEmail: varchar("contact_email", { length: 200 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  usageCount: integer("usage_count").default(0),
+  isActive: boolean("is_active").default(true),
+});
+
+export const insertSavedAddressSchema = createInsertSchema(savedAddresses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+});
+
+export type InsertSavedAddress = z.infer<typeof insertSavedAddressSchema>;
+export type SavedAddress = typeof savedAddresses.$inferSelect;
+
 // Live telemetry data type (for WebSocket streaming)
 export interface LiveTelemetryData {
   vehicleId: string;

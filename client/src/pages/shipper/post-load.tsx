@@ -673,6 +673,56 @@ export default function PostLoadPage() {
     }
   }, [onboardingStatus?.status, user?.id]);
 
+  // Fetch saved addresses for quick selection
+  const { data: savedPickupAddresses = [] } = useQuery<any[]>({
+    queryKey: ["/api/shipper/saved-addresses", "pickup"],
+    enabled: user?.role === "shipper",
+  });
+
+  const { data: savedDropoffAddresses = [] } = useQuery<any[]>({
+    queryKey: ["/api/shipper/saved-addresses", "dropoff"],
+    enabled: user?.role === "shipper",
+  });
+
+  // State for tracking if user wants to save new addresses
+  const [savePickupAddress, setSavePickupAddress] = useState(false);
+  const [saveDropoffAddress, setSaveDropoffAddress] = useState(false);
+  const [pickupAddressLabel, setPickupAddressLabel] = useState("");
+  const [dropoffAddressLabel, setDropoffAddressLabel] = useState("");
+
+  // Handle selecting a saved pickup address
+  const handleSelectPickupAddress = (address: any) => {
+    if (address) {
+      form.setValue("pickupBusinessName", address.businessName || "");
+      form.setValue("pickupAddress", address.address || "");
+      form.setValue("pickupLocality", address.locality || "");
+      form.setValue("pickupLandmark", address.landmark || "");
+      form.setValue("pickupCity", address.city || "");
+      form.setValue("pickupState", address.state || "");
+      form.setValue("pickupPincode", address.pincode || "");
+      // Increment usage count
+      apiRequest("POST", `/api/shipper/saved-addresses/${address.id}/use`);
+    }
+  };
+
+  // Handle selecting a saved dropoff address
+  const handleSelectDropoffAddress = (address: any) => {
+    if (address) {
+      form.setValue("dropoffBusinessName", address.businessName || "");
+      form.setValue("dropoffAddress", address.address || "");
+      form.setValue("dropoffLocality", address.locality || "");
+      form.setValue("dropoffLandmark", address.landmark || "");
+      form.setValue("dropoffCity", address.city || "");
+      form.setValue("dropoffState", address.state || "");
+      form.setValue("dropoffPincode", address.pincode || "");
+      form.setValue("receiverName", address.contactName || "");
+      form.setValue("receiverPhone", address.contactPhone || "");
+      form.setValue("receiverEmail", address.contactEmail || "");
+      // Increment usage count
+      apiRequest("POST", `/api/shipper/saved-addresses/${address.id}/use`);
+    }
+  };
+
   const form = useForm<LoadFormData>({
     resolver: zodResolver(loadFormSchema),
     defaultValues: {
@@ -1009,6 +1059,51 @@ export default function PostLoadPage() {
       setSubmitted(true);
       
       queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
+
+      // Save pickup address if checkbox was checked
+      if (savePickupAddress) {
+        try {
+          await apiRequest("POST", "/api/shipper/saved-addresses", {
+            addressType: "pickup",
+            label: pickupAddressLabel || data.pickupBusinessName || `${finalPickupCity} Address`,
+            businessName: data.pickupBusinessName || null,
+            address: data.pickupAddress || null,
+            locality: data.pickupLocality || null,
+            landmark: data.pickupLandmark || null,
+            city: finalPickupCity,
+            state: data.pickupState,
+            pincode: data.pickupPincode || null,
+            isActive: true,
+          });
+          queryClient.invalidateQueries({ queryKey: ['/api/shipper/saved-addresses'] });
+        } catch (err) {
+          console.error("Failed to save pickup address:", err);
+        }
+      }
+
+      // Save dropoff address if checkbox was checked
+      if (saveDropoffAddress) {
+        try {
+          await apiRequest("POST", "/api/shipper/saved-addresses", {
+            addressType: "dropoff",
+            label: dropoffAddressLabel || data.dropoffBusinessName || `${finalDropoffCity} Address`,
+            businessName: data.dropoffBusinessName || null,
+            address: data.dropoffAddress || null,
+            locality: data.dropoffLocality || null,
+            landmark: data.dropoffLandmark || null,
+            city: finalDropoffCity,
+            state: data.dropoffState,
+            pincode: data.dropoffPincode || null,
+            contactName: data.receiverName || null,
+            contactPhone: data.receiverPhone || null,
+            contactEmail: data.receiverEmail || null,
+            isActive: true,
+          });
+          queryClient.invalidateQueries({ queryKey: ['/api/shipper/saved-addresses'] });
+        } catch (err) {
+          console.error("Failed to save dropoff address:", err);
+        }
+      }
 
       toast({ 
         title: "Load Submitted for Review", 
@@ -1463,6 +1558,31 @@ export default function PostLoadPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Saved Pickup Addresses Selector */}
+                  {savedPickupAddresses.length > 0 && (
+                    <div className="space-y-2">
+                      <FormLabel className="text-sm">Select from Saved Addresses</FormLabel>
+                      <Select onValueChange={(value) => {
+                        const address = savedPickupAddresses.find((a: any) => a.id.toString() === value);
+                        if (address) handleSelectPickupAddress(address);
+                      }}>
+                        <SelectTrigger data-testid="select-saved-pickup-address">
+                          <SelectValue placeholder="Choose a saved pickup address" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {savedPickupAddresses.map((addr: any) => (
+                            <SelectItem key={addr.id} value={addr.id.toString()}>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">{addr.label || addr.businessName || "Unnamed Address"}</span>
+                                <span className="text-xs text-muted-foreground">{addr.city}, {addr.state}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Or enter a new address below</p>
+                    </div>
+                  )}
                   <FormField
                     control={form.control}
                     name="pickupBusinessName"
@@ -1617,6 +1737,29 @@ export default function PostLoadPage() {
                       </FormItem>
                     )}
                   />
+                  {/* Save Pickup Address Checkbox */}
+                  <div className="flex items-center gap-3 pt-2 border-t">
+                    <input 
+                      type="checkbox" 
+                      id="save-pickup-address" 
+                      checked={savePickupAddress}
+                      onChange={(e) => setSavePickupAddress(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                      data-testid="checkbox-save-pickup-address"
+                    />
+                    <label htmlFor="save-pickup-address" className="text-sm text-muted-foreground cursor-pointer">
+                      Save this pickup address for future use
+                    </label>
+                  </div>
+                  {savePickupAddress && (
+                    <Input 
+                      placeholder="Address label (e.g., Mumbai Warehouse)" 
+                      value={pickupAddressLabel}
+                      onChange={(e) => setPickupAddressLabel(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-pickup-address-label"
+                    />
+                  )}
                 </CardContent>
               </Card>
 
@@ -1628,6 +1771,31 @@ export default function PostLoadPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Saved Dropoff Addresses Selector */}
+                  {savedDropoffAddresses.length > 0 && (
+                    <div className="space-y-2">
+                      <FormLabel className="text-sm">Select from Saved Addresses</FormLabel>
+                      <Select onValueChange={(value) => {
+                        const address = savedDropoffAddresses.find((a: any) => a.id.toString() === value);
+                        if (address) handleSelectDropoffAddress(address);
+                      }}>
+                        <SelectTrigger data-testid="select-saved-dropoff-address">
+                          <SelectValue placeholder="Choose a saved dropoff address" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {savedDropoffAddresses.map((addr: any) => (
+                            <SelectItem key={addr.id} value={addr.id.toString()}>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">{addr.label || addr.businessName || "Unnamed Address"}</span>
+                                <span className="text-xs text-muted-foreground">{addr.city}, {addr.state}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Or enter a new address below</p>
+                    </div>
+                  )}
                   <FormField
                     control={form.control}
                     name="dropoffBusinessName"
@@ -1782,6 +1950,29 @@ export default function PostLoadPage() {
                       </FormItem>
                     )}
                   />
+                  {/* Save Dropoff Address Checkbox */}
+                  <div className="flex items-center gap-3 pt-2 border-t">
+                    <input 
+                      type="checkbox" 
+                      id="save-dropoff-address" 
+                      checked={saveDropoffAddress}
+                      onChange={(e) => setSaveDropoffAddress(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                      data-testid="checkbox-save-dropoff-address"
+                    />
+                    <label htmlFor="save-dropoff-address" className="text-sm text-muted-foreground cursor-pointer">
+                      Save this dropoff address for future use
+                    </label>
+                  </div>
+                  {saveDropoffAddress && (
+                    <Input 
+                      placeholder="Address label (e.g., Delhi Distribution Center)" 
+                      value={dropoffAddressLabel}
+                      onChange={(e) => setDropoffAddressLabel(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-dropoff-address-label"
+                    />
+                  )}
                 </CardContent>
               </Card>
 

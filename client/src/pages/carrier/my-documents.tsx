@@ -1257,13 +1257,35 @@ export default function MyDocumentsPage() {
           <AlertTitle>
             {summary.expiredCount > 0 ? "Action Required: Documents Expired" : "Reminder: Documents Expiring Soon"}
           </AlertTitle>
-          <AlertDescription className="space-y-2">
-            <p>
-              {summary.expiredCount > 0 && `${summary.expiredCount} document(s) have expired and need immediate renewal. `}
-              {summary.expiringSoonCount > 0 && `${summary.expiringSoonCount} document(s) will expire within 30 days.`}
-            </p>
-            <p className="text-sm">
-              Please upload updated versions of your truck and driver documents to maintain compliance and continue bidding on loads.
+          <AlertDescription className="space-y-3">
+            {expired.length > 0 && (
+              <div>
+                <p className="font-medium text-red-600 dark:text-red-400">Expired:</p>
+                <ul className="list-disc list-inside text-sm mt-1">
+                  {expired.map(doc => (
+                    <li key={doc.id}>
+                      {documentTypeLabels[doc.documentType] || doc.documentType}
+                      {doc.expiryDate && ` - expired ${new Date(doc.expiryDate).toLocaleDateString()}`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {expiringSoon.length > 0 && (
+              <div>
+                <p className="font-medium text-amber-600 dark:text-amber-400">Expiring Soon:</p>
+                <ul className="list-disc list-inside text-sm mt-1">
+                  {expiringSoon.map(doc => (
+                    <li key={doc.id}>
+                      {documentTypeLabels[doc.documentType] || doc.documentType}
+                      {doc.expiryDate && ` - expires ${new Date(doc.expiryDate).toLocaleDateString()}`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Please upload updated versions to maintain compliance and continue bidding on loads.
             </p>
             <Button 
               variant={summary.expiredCount > 0 ? "secondary" : "outline"}

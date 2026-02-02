@@ -77,6 +77,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   pan_card: "PAN Card",
   gstin_certificate: "GSTIN Certificate",
   tan_certificate: "TAN Certificate",
+  tds_declaration: "TDS Declaration",
   void_cheque: "Void Cheque / Cancelled Cheque",
 };
 
@@ -115,7 +116,8 @@ const DOCUMENT_PRIORITY: Record<string, number> = {
   gst: 14,
   tan: 15,
   tan_certificate: 15,
-  fleet_proof: 16,
+  tds_declaration: 16,
+  fleet_proof: 17,
   other: 99,
 };
 

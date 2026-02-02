@@ -1479,6 +1479,12 @@ export default function LoadQueuePage() {
                   <div className="space-y-2">
                     <Label className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Pickup Location</Label>
                     <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-green-500">
+                      {detailsLoad.pickupBusinessName && (
+                        <div className="col-span-2">
+                          <Label className="text-muted-foreground text-xs">Business Name</Label>
+                          <p className="font-medium text-primary">{detailsLoad.pickupBusinessName}</p>
+                        </div>
+                      )}
                       <div>
                         <Label className="text-muted-foreground text-xs">Street Address</Label>
                         <p className="font-medium">{detailsLoad.pickupAddress || "N/A"}</p>

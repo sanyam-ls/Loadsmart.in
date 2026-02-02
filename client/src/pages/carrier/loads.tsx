@@ -1234,6 +1234,9 @@ export default function CarrierLoadsPage() {
                     <div className="flex items-start gap-2">
                       <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
                       <div>
+                        {detailLoad.pickupBusinessName && (
+                          <div className="text-sm font-medium text-primary">{detailLoad.pickupBusinessName}</div>
+                        )}
                         <div className="font-medium">{detailLoad.origin}</div>
                         {detailLoad.pickupLocality && (
                           <div className="text-sm text-muted-foreground">{detailLoad.pickupLocality}</div>

@@ -576,7 +576,7 @@ export default function LoadDetailPage() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">PICKUP</p>
                     <p className="font-semibold" data-testid="text-pickup">
-                      {load.pickupAddress}{load.pickupLocality ? `, ${load.pickupLocality}` : ''}, {load.pickupCity}{load.pickupPincode ? ` - ${load.pickupPincode}` : ''}
+                      {load.pickupBusinessName ? `${load.pickupBusinessName}, ` : ''}{load.pickupAddress}{load.pickupLocality ? `, ${load.pickupLocality}` : ''}, {load.pickupCity}{load.pickupPincode ? ` - ${load.pickupPincode}` : ''}
                     </p>
                     {load.pickupLandmark && (
                       <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">

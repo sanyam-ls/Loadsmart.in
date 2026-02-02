@@ -39,7 +39,7 @@ export interface AdminLoad {
   weight: number;
   weightUnit: string;
   type: string;
-  status: "Active" | "Bidding" | "Assigned" | "En Route" | "Delivered" | "Cancelled" | "Pending";
+  status: "Active" | "Bidding" | "Assigned" | "En Route" | "Delivered" | "Cancelled" | "Pending" | "Unavailable";
   assignedCarrier: string | null;
   carrierId: string | null;
   createdDate: Date;

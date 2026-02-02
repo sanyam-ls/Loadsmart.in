@@ -76,15 +76,23 @@ type LoadWithBidCount = Load & { bidCount?: number; assignedCarrierName?: string
 function mapLoadStatus(status: string | null): AdminLoad["status"] {
   switch (status) {
     case "pending": return "Pending";
+    case "submitted_to_admin": return "Pending";
     case "priced": return "Active";
     case "posted_to_carriers": return "Active";
     case "open_for_bid": return "Bidding";
     case "counter_received": return "Bidding";
     case "awarded": return "Assigned";
+    case "invoice_created": return "Assigned";
+    case "invoice_sent": return "Assigned";
+    case "invoice_acknowledged": return "Assigned";
+    case "invoice_approved": return "Assigned";
+    case "invoice_negotiation": return "Assigned";
+    case "invoice_paid": return "Assigned";
     case "in_transit": return "En Route";
     case "delivered": return "Delivered";
     case "closed": return "Delivered";
     case "cancelled": return "Cancelled";
+    case "unavailable": return "Unavailable";
     default: return "Pending";
   }
 }
@@ -410,6 +418,7 @@ export default function AdminLoadsPage() {
       case "Active": return "bg-cyan-600";
       case "Cancelled": return "bg-red-600";
       case "Pending": return "bg-gray-600";
+      case "Unavailable": return "bg-slate-600";
       default: return "";
     }
   };
@@ -431,6 +440,7 @@ export default function AdminLoadsPage() {
       "En Route": loads.filter(l => l.status === "En Route").length,
       Delivered: loads.filter(l => l.status === "Delivered").length,
       Cancelled: loads.filter(l => l.status === "Cancelled").length,
+      Unavailable: loads.filter(l => l.status === "Unavailable").length,
     };
   }, [loads]);
 
@@ -592,6 +602,13 @@ export default function AdminLoadsPage() {
             data-testid="tab-cancelled"
           >
             Cancelled ({statusCounts.Cancelled})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="Unavailable" 
+            className="data-[state=active]:bg-slate-600 data-[state=active]:text-white"
+            data-testid="tab-unavailable"
+          >
+            Unavailable ({statusCounts.Unavailable})
           </TabsTrigger>
         </TabsList>
       </Tabs>

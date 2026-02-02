@@ -72,6 +72,7 @@ const loadFormSchema = z.object({
   pickupAddress: z.string().min(5, "Pickup address is required"),
   pickupLocality: z.string().optional(),
   pickupLandmark: z.string().optional(),
+  pickupBusinessName: z.string().optional(),
   pickupState: z.string().min(1, "Pickup state is required"),
   pickupCity: z.string().min(2, "Pickup city is required"),
   pickupCityCustom: z.string().optional(),
@@ -682,6 +683,7 @@ export default function PostLoadPage() {
       pickupAddress: "",
       pickupLocality: "",
       pickupLandmark: "",
+      pickupBusinessName: "",
       pickupState: "",
       pickupCity: "",
       pickupCityCustom: "",
@@ -962,6 +964,7 @@ export default function PostLoadPage() {
         pickupAddress: data.pickupAddress,
         pickupLocality: data.pickupLocality || null,
         pickupLandmark: data.pickupLandmark || null,
+        pickupBusinessName: data.pickupBusinessName || null,
         pickupCity: finalPickupCity,
         dropoffAddress: data.dropoffAddress,
         dropoffLocality: data.dropoffLocality || null,
@@ -1460,6 +1463,19 @@ export default function PostLoadPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="pickupBusinessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name (optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g. ABC Warehouse" data-testid="input-pickup-business-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="pickupAddress"

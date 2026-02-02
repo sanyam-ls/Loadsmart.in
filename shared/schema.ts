@@ -365,6 +365,7 @@ export const loads = pgTable("loads", {
   pickupAddress: text("pickup_address").notNull(),
   pickupLocality: text("pickup_locality"),
   pickupLandmark: text("pickup_landmark"),
+  pickupBusinessName: text("pickup_business_name"),
   pickupCity: text("pickup_city").notNull(),
   pickupState: text("pickup_state"),
   pickupPincode: text("pickup_pincode"),

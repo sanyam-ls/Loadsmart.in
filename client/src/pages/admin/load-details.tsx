@@ -466,6 +466,7 @@ export default function AdminLoadDetailsPage() {
       pickupAddress: load.pickupAddress || undefined,
       pickupLocality: load.pickupLocality || undefined,
       pickupLandmark: load.pickupLandmark || undefined,
+      pickupBusinessName: load.pickupBusinessName || undefined,
       pickupCity: load.pickupCity || undefined,
       pickupPincode: load.pickupPincode || undefined,
       // Full dropoff address details
@@ -744,6 +745,9 @@ export default function AdminLoadDetailsPage() {
                     <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
                     <div>
                       <span className="text-muted-foreground text-sm">Pickup:</span>
+                      {detailedLoad.pickupBusinessName && (
+                        <div className="font-semibold text-primary">{detailedLoad.pickupBusinessName}</div>
+                      )}
                       <div className="font-medium">{detailedLoad.pickupCity}{detailedLoad.pickupPincode ? ` - ${detailedLoad.pickupPincode}` : ''}</div>
                       {detailedLoad.pickupLocality && (
                         <div className="text-sm text-muted-foreground">{detailedLoad.pickupLocality}</div>

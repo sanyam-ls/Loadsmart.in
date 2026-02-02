@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, addHours, differenceInHours } from "date-fns";
@@ -561,8 +562,21 @@ export default function TrackingPage() {
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
   const [mapFullscreen, setMapFullscreen] = useState(false);
+  const [shipmentFilter, setShipmentFilter] = useState<"all" | "active" | "in_transit">("all");
 
-  const activeShipments = shipments.filter(s => s.currentStage !== "delivered");
+  const allActiveShipments = shipments.filter(s => s.currentStage !== "delivered");
+  const activeOnlyShipments = shipments.filter(s => 
+    ["load_created", "carrier_assigned", "reached_pickup", "loaded"].includes(s.currentStage)
+  );
+  const inTransitShipments = shipments.filter(s => 
+    ["in_transit", "arrived_at_drop"].includes(s.currentStage)
+  );
+  
+  const activeShipments = shipmentFilter === "active" 
+    ? activeOnlyShipments 
+    : shipmentFilter === "in_transit" 
+      ? inTransitShipments 
+      : allActiveShipments;
   const selectedShipment = shipments.find(s => s.id === selectedShipmentId) || activeShipments[0] || null;
   const estimatedArrival = selectedShipment ? calculateETA(selectedShipment) : null;
 
@@ -603,7 +617,7 @@ export default function TrackingPage() {
     );
   }
 
-  if (activeShipments.length === 0) {
+  if (allActiveShipments.length === 0) {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-6">Track Shipments</h1>
@@ -637,8 +651,21 @@ export default function TrackingPage() {
 
       <div className="grid gap-4 h-[calc(100vh-160px)] grid-cols-1 lg:grid-cols-[320px_1fr]">
         <Card className="overflow-hidden flex flex-col min-h-0">
-          <CardHeader className="pb-2 flex-shrink-0">
-            <CardTitle className="text-sm">Active Shipments ({activeShipments.length})</CardTitle>
+          <CardHeader className="pb-2 flex-shrink-0 space-y-3">
+            <CardTitle className="text-sm">Shipments</CardTitle>
+            <Tabs value={shipmentFilter} onValueChange={(v) => setShipmentFilter(v as "all" | "active" | "in_transit")} className="w-full">
+              <TabsList className="w-full grid grid-cols-3 h-8">
+                <TabsTrigger value="all" className="text-xs" data-testid="tab-all-shipments">
+                  All ({allActiveShipments.length})
+                </TabsTrigger>
+                <TabsTrigger value="active" className="text-xs" data-testid="tab-active-shipments">
+                  Active ({activeOnlyShipments.length})
+                </TabsTrigger>
+                <TabsTrigger value="in_transit" className="text-xs" data-testid="tab-in-transit-shipments">
+                  In Transit ({inTransitShipments.length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent className="p-0 flex-1 min-h-0">
             <ScrollArea className="h-full">

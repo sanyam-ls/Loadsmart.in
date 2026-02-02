@@ -310,7 +310,7 @@ export default function AdminOverview() {
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {analytics?.negotiations.activeLoads || 0}
                 </p>
-                <p className="text-xs text-muted-foreground">Active Loads</p>
+                <p className="text-xs text-muted-foreground">All Loads</p>
               </div>
               <div className="space-y-1">
                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">

@@ -114,7 +114,7 @@ const metricConfig: Record<MetricType, { label: string; formatter: (v: number) =
     icon: DollarSign,
   },
   activeLoads: { 
-    label: "Active Loads", 
+    label: "All Loads", 
     formatter: (v) => v.toLocaleString(),
     icon: Package,
   },
@@ -274,7 +274,7 @@ export function TransactionVolumeChart() {
   };
 
   const handleExportCSV = () => {
-    const headers = ["Month", "Volume", "Active Loads", "Carrier Signups", "Revenue", "Completed Loads", "Avg Load Price"];
+    const headers = ["Month", "Volume", "All Loads", "Carrier Signups", "Revenue", "Completed Loads", "Avg Load Price"];
     const csvContent = [
       headers.join(","),
       ...filteredData.map(d => [
@@ -498,7 +498,7 @@ export function TransactionVolumeChart() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="volume">Transaction Volume</SelectItem>
-                    <SelectItem value="activeLoads">Active Loads</SelectItem>
+                    <SelectItem value="activeLoads">All Loads</SelectItem>
                     <SelectItem value="carrierSignups">Carrier Signups</SelectItem>
                     <SelectItem value="revenue">Revenue</SelectItem>
                   </SelectContent>

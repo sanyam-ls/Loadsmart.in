@@ -1032,7 +1032,11 @@ export default function MyDocumentsPage() {
                           driverData.documents.map(doc => (
                             <div
                               key={doc.id}
-                              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate"
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate cursor-pointer"
+                              onClick={() => {
+                                setSelectedDocument(doc as Document);
+                                setPreviewDialogOpen(true);
+                              }}
                               data-testid={`doc-item-${doc.id}`}
                             >
                               <div className="flex-shrink-0">
@@ -1043,10 +1047,10 @@ export default function MyDocumentsPage() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                   <CheckCircle className="h-4 w-4 text-green-500" />
-                                  <p className="font-medium truncate">{doc.fileName}</p>
+                                  <p className="font-medium truncate">{documentTypeLabels[doc.documentType] || doc.documentType}</p>
                                 </div>
                                 <p className="text-sm text-muted-foreground truncate">
-                                  {driverName} - {doc.fileName}
+                                  {driverName} - {documentTypeLabels[doc.documentType] || doc.documentType}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">
@@ -1168,7 +1172,11 @@ export default function MyDocumentsPage() {
                           truckData.documents.map(doc => (
                             <div
                               key={doc.id}
-                              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate"
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate cursor-pointer"
+                              onClick={() => {
+                                setSelectedDocument(doc as Document);
+                                setPreviewDialogOpen(true);
+                              }}
                               data-testid={`doc-item-${doc.id}`}
                             >
                               <div className="flex-shrink-0">
@@ -1179,10 +1187,10 @@ export default function MyDocumentsPage() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                   <CheckCircle className="h-4 w-4 text-green-500" />
-                                  <p className="font-medium truncate">{doc.fileName}</p>
+                                  <p className="font-medium truncate">{documentTypeLabels[doc.documentType] || doc.documentType}</p>
                                 </div>
                                 <p className="text-sm text-muted-foreground truncate">
-                                  {plate} - {doc.fileName}
+                                  {plate} - {documentTypeLabels[doc.documentType] || doc.documentType}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">

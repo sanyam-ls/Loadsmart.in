@@ -146,9 +146,18 @@ export default function MyDocumentsPage() {
   const [expandedLoads, setExpandedLoads] = useState<Record<string, boolean>>({});
   const [expandedDrivers, setExpandedDrivers] = useState<Record<string, boolean>>({});
   const [expandedTrucks, setExpandedTrucks] = useState<Record<string, boolean>>({});
+  const [viewAllDialogOpen, setViewAllDialogOpen] = useState(false);
+  const [viewAllFolderName, setViewAllFolderName] = useState("");
+  const [viewAllDocuments, setViewAllDocuments] = useState<Document[]>([]);
 
   const toggleDriver = (driverId: string) => {
     setExpandedDrivers(prev => ({ ...prev, [driverId]: !prev[driverId] }));
+  };
+
+  const openViewAllDialog = (folderName: string, documents: Document[]) => {
+    setViewAllFolderName(folderName);
+    setViewAllDocuments(documents);
+    setViewAllDialogOpen(true);
   };
 
   const toggleTruck = (truckId: string) => {
@@ -948,8 +957,8 @@ export default function MyDocumentsPage() {
         open={expandedFolders.driver} 
         onOpenChange={() => toggleFolder("driver")}
       >
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
+        <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
+          <CollapsibleTrigger className="flex items-center gap-2 flex-1">
             {expandedFolders.driver ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             ) : (
@@ -962,11 +971,26 @@ export default function MyDocumentsPage() {
             )}
             <User className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium">Driver Documents</span>
-            <Badge variant="secondary" className="ml-auto text-xs">
-              {totalDriverDocs}
-            </Badge>
-          </div>
-        </CollapsibleTrigger>
+          </CollapsibleTrigger>
+          {totalDriverDocs > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                const allDriverDocs = Object.values(driverDocumentsByName).flatMap(d => d.documents);
+                openViewAllDialog("Driver Documents", allDriverDocs);
+              }}
+              data-testid="button-view-all-driver-docs"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View All
+            </Button>
+          )}
+          <Badge variant="secondary" className="text-xs">
+            {totalDriverDocs}
+          </Badge>
+        </div>
         <CollapsibleContent>
           <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
             {driverNames.length === 0 ? (
@@ -1069,8 +1093,8 @@ export default function MyDocumentsPage() {
         open={expandedFolders.truck} 
         onOpenChange={() => toggleFolder("truck")}
       >
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
+        <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
+          <CollapsibleTrigger className="flex items-center gap-2 flex-1">
             {expandedFolders.truck ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             ) : (
@@ -1083,11 +1107,26 @@ export default function MyDocumentsPage() {
             )}
             <Truck className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium">Truck Documents</span>
-            <Badge variant="secondary" className="ml-auto text-xs">
-              {totalTruckDocs}
-            </Badge>
-          </div>
-        </CollapsibleTrigger>
+          </CollapsibleTrigger>
+          {totalTruckDocs > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                const allTruckDocs = Object.values(truckDocumentsByPlate).flatMap(t => t.documents);
+                openViewAllDialog("Truck Documents", allTruckDocs);
+              }}
+              data-testid="button-view-all-truck-docs"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View All
+            </Button>
+          )}
+          <Badge variant="secondary" className="text-xs">
+            {totalTruckDocs}
+          </Badge>
+        </div>
         <CollapsibleContent>
           <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
             {truckPlates.length === 0 ? (
@@ -1742,6 +1781,103 @@ export default function MyDocumentsPage() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewAllDialogOpen} onOpenChange={setViewAllDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-amber-500" />
+              {viewAllFolderName}
+            </DialogTitle>
+            <DialogDescription>
+              {viewAllDocuments.length} document{viewAllDocuments.length !== 1 ? 's' : ''} in this folder
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[50vh] pr-4">
+            <div className="space-y-3">
+              {viewAllDocuments.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No documents in this folder</p>
+              ) : (
+                viewAllDocuments.map(doc => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate cursor-pointer"
+                    onClick={() => {
+                      setSelectedDocument(doc);
+                      setViewAllDialogOpen(false);
+                      setPreviewDialogOpen(true);
+                    }}
+                    data-testid={`view-all-doc-${doc.id}`}
+                  >
+                    <div className="flex-shrink-0">
+                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {doc.verificationStatus === "approved" || doc.isVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : doc.verificationStatus === "rejected" ? (
+                          <XCircle className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-amber-500" />
+                        )}
+                        <p className="font-medium truncate">
+                          {documentTypeLabels[doc.documentType] || doc.documentType}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {getDocumentOwnerInfo(doc) || doc.fileName}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {doc.expiryDate && (
+                        <span className={`text-xs ${
+                          new Date(doc.expiryDate) < new Date() 
+                            ? 'text-red-500' 
+                            : differenceInDays(new Date(doc.expiryDate), new Date()) <= 30 
+                              ? 'text-amber-500'
+                              : 'text-muted-foreground'
+                        }`}>
+                          {new Date(doc.expiryDate) < new Date() 
+                            ? 'Expired' 
+                            : `Expires ${format(new Date(doc.expiryDate), 'MMM d, yyyy')}`
+                          }
+                        </span>
+                      )}
+                      <Badge 
+                        variant={doc.verificationStatus === "approved" || doc.isVerified ? "default" : doc.verificationStatus === "rejected" ? "destructive" : "secondary"}
+                        className="text-xs"
+                      >
+                        {doc.verificationStatus === "approved" || doc.isVerified ? 'Verified' : doc.verificationStatus === "rejected" ? 'Rejected' : 'Pending'}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (doc.fileUrl) {
+                            window.open(doc.fileUrl, '_blank');
+                          }
+                        }}
+                        data-testid={`button-download-viewall-${doc.id}`}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewAllDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

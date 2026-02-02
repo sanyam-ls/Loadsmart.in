@@ -1264,7 +1264,14 @@ export default function MyDocumentsPage() {
                 <ul className="list-disc list-inside text-sm mt-1">
                   {expired.map(doc => (
                     <li key={doc.id}>
-                      {documentTypeLabels[doc.documentType] || doc.documentType}
+                      <button
+                        type="button"
+                        className="text-left underline hover:text-red-800 dark:hover:text-red-300 cursor-pointer"
+                        onClick={() => setSelectedDocument(doc)}
+                        data-testid={`link-expired-doc-${doc.id}`}
+                      >
+                        {documentTypeLabels[doc.documentType] || doc.documentType}
+                      </button>
                       {doc.expiryDate && ` - expired ${new Date(doc.expiryDate).toLocaleDateString()}`}
                     </li>
                   ))}
@@ -1277,7 +1284,14 @@ export default function MyDocumentsPage() {
                 <ul className="list-disc list-inside text-sm mt-1">
                   {expiringSoon.map(doc => (
                     <li key={doc.id}>
-                      {documentTypeLabels[doc.documentType] || doc.documentType}
+                      <button
+                        type="button"
+                        className="text-left underline hover:text-amber-800 dark:hover:text-amber-300 cursor-pointer"
+                        onClick={() => setSelectedDocument(doc)}
+                        data-testid={`link-expiring-doc-${doc.id}`}
+                      >
+                        {documentTypeLabels[doc.documentType] || doc.documentType}
+                      </button>
                       {doc.expiryDate && ` - expires ${new Date(doc.expiryDate).toLocaleDateString()}`}
                     </li>
                   ))}

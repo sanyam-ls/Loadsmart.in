@@ -409,7 +409,7 @@ export default function CarrierVerificationPage() {
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="h-4 w-4" />
-                  <span>Applied {format(new Date(verification.createdAt), "MMM d, yyyy")}</span>
+                  <span>Applied {format(new Date(verification.submittedAt || verification.createdAt), "MMM d, yyyy")}</span>
                 </div>
               </div>
 

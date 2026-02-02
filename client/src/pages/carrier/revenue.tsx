@@ -332,7 +332,7 @@ export default function CarrierRevenuePage() {
     trips: m.tripsCompleted
   }));
 
-  // Create daily revenue trend data (stock-market style) from actual shipments
+  // Create daily revenue trend data (stock-market style) from actual shipments and mock data
   const dailyRevenueData = useMemo(() => {
     // Get delivered shipments for this carrier
     const myDeliveredShipments = allShipments.filter((s: Shipment) => 
@@ -350,7 +350,7 @@ export default function CarrierRevenuePage() {
       dailyRevenue[format(date, 'yyyy-MM-dd')] = 0;
     });
 
-    // Accumulate revenue by completion date
+    // Accumulate revenue from real shipments by completion date
     myDeliveredShipments.forEach((shipment: Shipment) => {
       if (!shipment.completedAt) return;
       const completedDate = format(new Date(shipment.completedAt), 'yyyy-MM-dd');
@@ -361,6 +361,20 @@ export default function CarrierRevenuePage() {
         dailyRevenue[completedDate] += revenue;
       }
     });
+
+    // For enterprise carriers, also include mock completed trips data in the chart
+    if (!isSoloDriver && mockCompletedTrips.length > 0) {
+      mockCompletedTrips.forEach((trip) => {
+        if (!trip.completedAt) return;
+        const completedDate = format(new Date(trip.completedAt), 'yyyy-MM-dd');
+        // Use profitEarned as the revenue from mock data
+        const revenue = trip.profitEarned > 0 ? trip.profitEarned : 0;
+        
+        if (dailyRevenue[completedDate] !== undefined) {
+          dailyRevenue[completedDate] += revenue;
+        }
+      });
+    }
 
     // Calculate cumulative revenue and format for chart
     let cumulativeRevenue = 0;
@@ -407,7 +421,7 @@ export default function CarrierRevenuePage() {
       last7Revenue,
       prev7Revenue
     };
-  }, [allShipments, allLoads, user?.id]);
+  }, [allShipments, allLoads, user?.id, isSoloDriver, mockCompletedTrips]);
 
   const truckTypeChartData = analytics.revenueByTruckType.map((t, i) => ({
     name: t.truckType,

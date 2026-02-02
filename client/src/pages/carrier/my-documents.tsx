@@ -138,9 +138,14 @@ export default function MyDocumentsPage() {
   });
   const [expandedLoads, setExpandedLoads] = useState<Record<string, boolean>>({});
   const [expandedDrivers, setExpandedDrivers] = useState<Record<string, boolean>>({});
+  const [expandedTrucks, setExpandedTrucks] = useState<Record<string, boolean>>({});
 
   const toggleDriver = (driverId: string) => {
     setExpandedDrivers(prev => ({ ...prev, [driverId]: !prev[driverId] }));
+  };
+
+  const toggleTruck = (truckId: string) => {
+    setExpandedTrucks(prev => ({ ...prev, [truckId]: !prev[truckId] }));
   };
 
   const { data, isLoading, error } = useQuery<ExpiryData>({
@@ -353,68 +358,91 @@ export default function MyDocumentsPage() {
   });
 
   // Convert truck documents (RC, insurance, etc. stored on truck records) to Document format
+  // Group truck documents by license plate for hierarchical display
   const truckDocumentsFromTrucks: Document[] = [];
+  const truckDocumentsByPlate: Record<string, { truckId: string; licensePlate: string; documents: Document[] }> = {};
+  
   (trucksData || []).forEach((truck: any) => {
+    const truckDocs: Document[] = [];
+    const plateLabel = truck.licensePlate || truck.registrationNumber || `Truck ${truck.id}`;
+    
     if (truck.rcDocumentUrl) {
-      truckDocumentsFromTrucks.push({
+      const doc = {
         id: `truck-rc-${truck.id}`,
         documentType: "rc",
-        fileName: `${truck.registrationNumber} - Registration Certificate`,
+        fileName: "Registration Certificate",
         fileUrl: truck.rcDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.rcExpiry || null,
         isVerified: true,
         createdAt: truck.createdAt || new Date().toISOString(),
-      });
+      };
+      truckDocumentsFromTrucks.push(doc);
+      truckDocs.push(doc);
     }
     if (truck.insuranceDocumentUrl) {
-      truckDocumentsFromTrucks.push({
+      const doc = {
         id: `truck-insurance-${truck.id}`,
         documentType: "insurance",
-        fileName: `${truck.registrationNumber} - Insurance`,
+        fileName: "Insurance",
         fileUrl: truck.insuranceDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.insuranceExpiry || null,
         isVerified: true,
         createdAt: truck.createdAt || new Date().toISOString(),
-      });
+      };
+      truckDocumentsFromTrucks.push(doc);
+      truckDocs.push(doc);
     }
     if (truck.fitnessDocumentUrl) {
-      truckDocumentsFromTrucks.push({
+      const doc = {
         id: `truck-fitness-${truck.id}`,
         documentType: "fitness",
-        fileName: `${truck.registrationNumber} - Fitness Certificate`,
+        fileName: "Fitness Certificate",
         fileUrl: truck.fitnessDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.fitnessExpiry || null,
         isVerified: true,
         createdAt: truck.createdAt || new Date().toISOString(),
-      });
+      };
+      truckDocumentsFromTrucks.push(doc);
+      truckDocs.push(doc);
     }
     if (truck.permitDocumentUrl) {
-      truckDocumentsFromTrucks.push({
+      const doc = {
         id: `truck-permit-${truck.id}`,
         documentType: "permit",
-        fileName: `${truck.registrationNumber} - Permit`,
+        fileName: "State Permit",
         fileUrl: truck.permitDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.permitExpiry || null,
         isVerified: true,
         createdAt: truck.createdAt || new Date().toISOString(),
-      });
+      };
+      truckDocumentsFromTrucks.push(doc);
+      truckDocs.push(doc);
     }
     if (truck.pucDocumentUrl) {
-      truckDocumentsFromTrucks.push({
+      const doc = {
         id: `truck-puc-${truck.id}`,
         documentType: "puc",
-        fileName: `${truck.registrationNumber} - PUC Certificate`,
+        fileName: "PUC Certificate",
         fileUrl: truck.pucDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.pucExpiry || null,
         isVerified: true,
         createdAt: truck.createdAt || new Date().toISOString(),
-      });
+      };
+      truckDocumentsFromTrucks.push(doc);
+      truckDocs.push(doc);
     }
+    
+    // Always add truck to folder structure, even if no documents yet
+    truckDocumentsByPlate[plateLabel] = {
+      truckId: truck.id,
+      licensePlate: plateLabel,
+      documents: truckDocs
+    };
   });
 
   // Merge documents from documents table with driver/truck documents
@@ -892,6 +920,127 @@ export default function MyDocumentsPage() {
     );
   };
 
+  const TruckFolderSection = () => {
+    const truckPlates = Object.keys(truckDocumentsByPlate).sort();
+    const totalTruckDocs = Object.values(truckDocumentsByPlate).reduce(
+      (sum, t) => sum + t.documents.length, 0
+    );
+
+    return (
+      <Collapsible 
+        open={expandedFolders.truck} 
+        onOpenChange={() => toggleFolder("truck")}
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
+            {expandedFolders.truck ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+            {expandedFolders.truck ? (
+              <FolderOpen className="h-5 w-5 text-amber-500" />
+            ) : (
+              <Folder className="h-5 w-5 text-amber-500" />
+            )}
+            <Truck className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">Truck Documents</span>
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {totalTruckDocs}
+            </Badge>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
+            {truckPlates.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">No trucks added yet</p>
+            ) : (
+              truckPlates.map(plate => {
+                const truckData = truckDocumentsByPlate[plate];
+                const isExpanded = expandedTrucks[`truck-${truckData.truckId}`];
+                return (
+                  <Collapsible 
+                    key={truckData.truckId}
+                    open={isExpanded}
+                    onOpenChange={() => toggleTruck(`truck-${truckData.truckId}`)}
+                  >
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center gap-2 p-2 rounded-lg hover-elevate border bg-muted/50">
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                        )}
+                        {isExpanded ? (
+                          <FolderOpen className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Folder className="h-4 w-4 text-primary" />
+                        )}
+                        <Truck className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-medium text-sm">{plate}</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          {truckData.documents.length} {truckData.documents.length === 1 ? 'doc' : 'docs'}
+                        </Badge>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-6 mt-2 space-y-2 border-l border-muted pl-3">
+                        {truckData.documents.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-2 italic">No documents uploaded yet</p>
+                        ) : (
+                          truckData.documents.map(doc => (
+                            <div
+                              key={doc.id}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate"
+                              data-testid={`doc-item-${doc.id}`}
+                            >
+                              <div className="flex-shrink-0">
+                                <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                                  <FileText className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <p className="font-medium truncate">{doc.fileName}</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {plate} - {doc.fileName}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="default" className="text-xs">
+                                  Verified
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (doc.fileUrl) {
+                                      window.open(doc.fileUrl, '_blank');
+                                    }
+                                  }}
+                                  data-testid={`button-download-${doc.id}`}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  };
+
   const renderDocumentList = (docs: Document[], emptyMessage: string) => (
     docs.length === 0 ? (
       <div className="text-center py-8 text-muted-foreground">
@@ -1027,13 +1176,7 @@ export default function MyDocumentsPage() {
             <CardContent>
               <ScrollArea className="h-[calc(100vh-450px)]">
                 <div className="space-y-3 pr-4">
-                  <FolderSection 
-                    title="Truck Documents"
-                    icon={Truck}
-                    folderId="truck"
-                    documents={truckDocs}
-                    emptyMessage="No truck documents uploaded"
-                  />
+                  <TruckFolderSection />
                   <DriverFolderSection />
                   <LoadsFolderSection />
                 </div>

@@ -946,7 +946,7 @@ export default function MyDocumentsPage() {
         fileUrl: licenseUrl,
         fileSize: undefined,
         expiryDate: driver.licenseExpiry || null,
-        isVerified: true,
+        isVerified: false,
         createdAt: driver.createdAt || new Date().toISOString(),
       });
     }
@@ -959,7 +959,7 @@ export default function MyDocumentsPage() {
         fileUrl: aadhaarUrl,
         fileSize: undefined,
         expiryDate: null,
-        isVerified: true,
+        isVerified: false,
         createdAt: driver.createdAt || new Date().toISOString(),
       });
     }

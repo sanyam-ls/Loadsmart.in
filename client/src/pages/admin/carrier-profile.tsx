@@ -24,7 +24,13 @@ import {
   XCircle,
   Download,
   Loader2,
+  Folder,
+  FolderOpen,
+  ChevronRight,
+  ChevronDown,
+  User,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -201,34 +207,51 @@ export default function CarrierProfilePage() {
   };
 
   // Document category definitions
-  const officialDocTypes = ['aadhaar', 'aadhar', 'pan', 'pan_card', 'license', 'driving_license', 'address_proof', 'selfie', 'gst_certificate', 'bank_details', 'cancelled_cheque'];
+  const driverDocTypes = ['aadhaar', 'aadhar', 'license', 'driving_license', 'selfie'];
   const vehicleDocTypes = ['rc', 'insurance', 'fitness', 'permit', 'puc', 'truck_rc', 'truck_insurance', 'truck_fitness', 'truck_permit', 'truck_puc'];
-  const shipmentDocTypes = ['pod', 'lr', 'lr_consignment', 'eway', 'eway_bill', 'loading_photos', 'invoice', 'weighment_slip', 'other'];
 
-  // Categorize documents
+  // Categorize documents into folders matching carrier portal structure
   const categorizeDocuments = (docs: any[]) => {
-    const official: any[] = [];
-    const vehicle: any[] = [];
-    const shipment: any[] = [];
+    const truck: any[] = [];
+    const driver: any[] = [];
+    const loadDocs: Record<string, any[]> = {};
 
     docs.forEach(doc => {
       const docType = doc.documentType || doc.type || '';
       
-      // Vehicle documents from trucks (source: 'truck')
+      // Truck/Vehicle documents (source: 'truck' or vehicle doc types)
       if (doc.source === 'truck' || vehicleDocTypes.includes(docType)) {
-        vehicle.push(doc);
+        truck.push(doc);
       }
-      // Shipment documents MUST have loadId
+      // Documents with loadId go to load folders
       else if (doc.loadId) {
-        shipment.push(doc);
+        if (!loadDocs[doc.loadId]) {
+          loadDocs[doc.loadId] = [];
+        }
+        loadDocs[doc.loadId].push(doc);
       }
-      // Official/Identity documents (everything else without loadId)
+      // Driver identity documents
+      else if (driverDocTypes.includes(docType)) {
+        driver.push(doc);
+      }
+      // Default remaining to driver folder
       else {
-        official.push(doc);
+        driver.push(doc);
       }
     });
 
-    return { official, vehicle, shipment };
+    return { truck, driver, loadDocs };
+  };
+
+  // State for collapsible folders
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
+    truck: true,
+    driver: true,
+    loads: true,
+  });
+
+  const toggleFolder = (folder: string) => {
+    setOpenFolders(prev => ({ ...prev, [folder]: !prev[folder] }));
   };
 
   const handleSync = () => {
@@ -628,143 +651,162 @@ export default function CarrierProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-6 space-y-6">
+        <TabsContent value="documents" className="mt-6">
           {carrier.documents && carrier.documents.length > 0 ? (
             (() => {
-              const { official, vehicle, shipment } = categorizeDocuments(carrier.documents);
+              const { truck, driver, loadDocs } = categorizeDocuments(carrier.documents);
+              const loadIds = Object.keys(loadDocs);
+              const totalLoadDocs = loadIds.reduce((sum, id) => sum + loadDocs[id].length, 0);
               
-              const renderDocumentTable = (docs: any[], categoryLabel: string, testIdPrefix: string) => (
-                docs.length > 0 && (
-                  <Card key={categoryLabel}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          {categoryLabel === "Official Documents" && <ShieldCheck className="h-5 w-5 text-primary" />}
-                          {categoryLabel === "Vehicle Documents" && <Truck className="h-5 w-5 text-primary" />}
-                          {categoryLabel === "Shipment Documents" && <Package className="h-5 w-5 text-primary" />}
-                          {categoryLabel}
-                        </CardTitle>
-                        <Badge variant="secondary">{docs.length}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Document</TableHead>
-                            <TableHead>Type</TableHead>
-                            {categoryLabel === "Vehicle Documents" && <TableHead>Vehicle</TableHead>}
-                            {categoryLabel === "Shipment Documents" && <TableHead>Load ID</TableHead>}
-                            <TableHead>Uploaded</TableHead>
-                            <TableHead>Expiry</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {docs.map((doc: any) => (
-                            <TableRow key={doc.id} data-testid={`row-${testIdPrefix}-${doc.id}`}>
-                              <TableCell className="font-medium">{doc.fileName || doc.name}</TableCell>
-                              <TableCell>{documentTypeLabels[doc.documentType] || doc.documentType || doc.type}</TableCell>
-                              {categoryLabel === "Vehicle Documents" && (
-                                <TableCell>
-                                  {doc.source === 'truck' && doc.truckPlate ? (
-                                    <Badge variant="outline" className="text-xs">
-                                      {doc.truckPlate}
-                                    </Badge>
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs">-</span>
-                                  )}
-                                </TableCell>
-                              )}
-                              {categoryLabel === "Shipment Documents" && (
-                                <TableCell>
-                                  {doc.loadId ? (
-                                    <Badge variant="outline" className="text-xs font-mono">
-                                      {doc.loadId.slice(0, 8)}...
-                                    </Badge>
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs">-</span>
-                                  )}
-                                </TableCell>
-                              )}
-                              <TableCell>
-                                {doc.createdAt ? format(new Date(doc.createdAt), "MMM dd, yyyy") : "N/A"}
-                              </TableCell>
-                              <TableCell>
-                                {doc.expiryDate ? format(new Date(doc.expiryDate), "MMM dd, yyyy") : "No expiry"}
-                              </TableCell>
-                              <TableCell>
-                                {doc.isVerified ? (
-                                  <Badge variant="default">Verified</Badge>
-                                ) : (
-                                  <Badge variant="secondary">Pending</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setSelectedDocument(doc);
-                                      setDocumentPreviewOpen(true);
-                                    }}
-                                    data-testid={`button-view-${testIdPrefix}-${doc.id}`}
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                  {!doc.isVerified && doc.source !== 'truck' && categoryLabel === "Official Documents" && (
-                                    <>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="text-green-600 hover:text-green-700"
-                                        onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: true })}
-                                        disabled={documentVerifyMutation.isPending}
-                                        data-testid={`button-approve-${testIdPrefix}-${doc.id}`}
-                                      >
-                                        <CheckCircle2 className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="text-red-600 hover:text-red-700"
-                                        onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: false })}
-                                        disabled={documentVerifyMutation.isPending}
-                                        data-testid={`button-reject-${testIdPrefix}-${doc.id}`}
-                                      >
-                                        <XCircle className="h-4 w-4" />
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                )
+              const renderDocumentRow = (doc: any, showVerify: boolean = false) => (
+                <div key={doc.id} className="flex items-center justify-between py-2 px-3 border-b last:border-b-0" data-testid={`row-doc-${doc.id}`}>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className={`h-4 w-4 ${doc.isVerified ? 'text-green-500' : 'text-muted-foreground'}`} />
+                    <div>
+                      <p className="font-medium text-sm">{documentTypeLabels[doc.documentType] || doc.documentType || 'Document'}</p>
+                      <p className="text-xs text-muted-foreground">{doc.fileName || 'Uploaded Document'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {doc.isVerified ? (
+                      <Badge variant="default" className="text-xs">Verified</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">Pending</Badge>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedDocument(doc);
+                        setDocumentPreviewOpen(true);
+                      }}
+                      data-testid={`button-view-doc-${doc.id}`}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {showVerify && !doc.isVerified && doc.source !== 'truck' && (
+                      <>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-green-600 hover:text-green-700"
+                          onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: true })}
+                          disabled={documentVerifyMutation.isPending}
+                          data-testid={`button-approve-doc-${doc.id}`}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => documentVerifyMutation.mutate({ documentId: doc.id, isVerified: false })}
+                          disabled={documentVerifyMutation.isPending}
+                          data-testid={`button-reject-doc-${doc.id}`}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
               );
 
               return (
-                <>
-                  {renderDocumentTable(official, "Official Documents", "official-doc")}
-                  {renderDocumentTable(vehicle, "Vehicle Documents", "vehicle-doc")}
-                  {renderDocumentTable(shipment, "Shipment Documents", "shipment-doc")}
-                  {official.length === 0 && vehicle.length === 0 && shipment.length === 0 && (
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-center py-8 text-muted-foreground">
-                          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>No documents uploaded yet</p>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Folder className="h-5 w-5 text-primary" />
+                      Document Folders
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">Organize your documents by category</p>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {/* Truck Documents Folder */}
+                    <Collapsible open={openFolders.truck} onOpenChange={() => toggleFolder('truck')}>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg border hover-elevate" data-testid="folder-truck-documents">
+                        <div className="flex items-center gap-2">
+                          {openFolders.truck ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          {openFolders.truck ? <FolderOpen className="h-5 w-5 text-amber-500" /> : <Folder className="h-5 w-5 text-amber-500" />}
+                          <Truck className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Truck Documents</span>
                         </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </>
+                        <Badge variant="secondary">{truck.length}</Badge>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="ml-6 mt-1 border-l-2 border-muted pl-4">
+                        {truck.length > 0 ? (
+                          <div className="bg-muted/30 rounded-lg">
+                            {truck.map(doc => renderDocumentRow(doc, false))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground py-2">No truck documents</p>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Driver Documents Folder */}
+                    <Collapsible open={openFolders.driver} onOpenChange={() => toggleFolder('driver')}>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg border hover-elevate" data-testid="folder-driver-documents">
+                        <div className="flex items-center gap-2">
+                          {openFolders.driver ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          {openFolders.driver ? <FolderOpen className="h-5 w-5 text-amber-500" /> : <Folder className="h-5 w-5 text-amber-500" />}
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Driver Documents</span>
+                        </div>
+                        <Badge variant="secondary">{driver.length}</Badge>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="ml-6 mt-1 border-l-2 border-muted pl-4">
+                        {driver.length > 0 ? (
+                          <div className="bg-muted/30 rounded-lg">
+                            {driver.map(doc => renderDocumentRow(doc, true))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground py-2">No driver documents</p>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Loads Folder */}
+                    <Collapsible open={openFolders.loads} onOpenChange={() => toggleFolder('loads')}>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg border hover-elevate" data-testid="folder-loads">
+                        <div className="flex items-center gap-2">
+                          {openFolders.loads ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          {openFolders.loads ? <FolderOpen className="h-5 w-5 text-amber-500" /> : <Folder className="h-5 w-5 text-amber-500" />}
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Loads</span>
+                        </div>
+                        <Badge variant="secondary">{totalLoadDocs} docs in {loadIds.length} loads</Badge>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="ml-6 mt-1 border-l-2 border-muted pl-4 space-y-2">
+                        {loadIds.length > 0 ? (
+                          loadIds.map(loadId => {
+                            const docs = loadDocs[loadId];
+                            const isOpen = openFolders[`load-${loadId}`] || false;
+                            return (
+                              <Collapsible key={loadId} open={isOpen} onOpenChange={() => toggleFolder(`load-${loadId}`)}>
+                                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg bg-muted/30 hover-elevate" data-testid={`folder-load-${loadId}`}>
+                                  <div className="flex items-center gap-2">
+                                    {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                    <Folder className="h-4 w-4 text-blue-500" />
+                                    <span className="text-sm font-mono">LD-{loadId.slice(0, 8).toUpperCase()}</span>
+                                  </div>
+                                  <Badge variant="outline" className="text-xs">{docs.length} doc{docs.length !== 1 ? 's' : ''}</Badge>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="ml-4 mt-1 border-l border-muted pl-3">
+                                  <div className="bg-background rounded-lg border">
+                                    {docs.map(doc => renderDocumentRow(doc, false))}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            );
+                          })
+                        ) : (
+                          <p className="text-sm text-muted-foreground py-2">No load documents</p>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </CardContent>
+                </Card>
               );
             })()
           ) : (

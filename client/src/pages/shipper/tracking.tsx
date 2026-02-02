@@ -66,6 +66,7 @@ interface TrackedShipment {
     pickupState?: string;
     pickupLat?: string | null;
     pickupLng?: string | null;
+    pickupDate?: string | null;
     dropoffCity: string;
     dropoffAddress: string;
     dropoffState?: string;
@@ -687,9 +688,15 @@ export default function TrackingPage() {
                       </span>
                       {getStatusBadge(shipment.currentStage)}
                     </div>
-                    <p className="font-medium text-sm mb-2">
+                    <p className="font-medium text-sm mb-1">
                       {shipment.load?.pickupCity || "Origin"} to {shipment.load?.dropoffCity || "Destination"}
                     </p>
+                    {shipment.load?.pickupDate && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                        <Calendar className="h-3 w-3" />
+                        <span>Pickup: {format(new Date(shipment.load.pickupDate), "MMM d, yyyy")}</span>
+                      </div>
+                    )}
                     <Progress value={shipment.progress} className="h-2 mb-2" />
                     <div className="flex items-center justify-between text-xs text-muted-foreground gap-2 flex-wrap">
                       <span>{shipment.carrier?.companyName || "Carrier"}</span>

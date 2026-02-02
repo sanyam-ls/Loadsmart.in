@@ -11442,6 +11442,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
               pickupState: load.pickupState,
               pickupLat: load.pickupLat,
               pickupLng: load.pickupLng,
+              pickupDate: load.pickupDate,
               dropoffCity: load.dropoffCity,
               dropoffAddress: load.dropoffAddress,
               dropoffState: load.dropoffState,

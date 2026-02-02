@@ -78,7 +78,7 @@ export default function AdminUsersPage() {
     name: "",
     email: "",
     phone: "",
-    role: "shipper" as "shipper" | "carrier" | "dispatcher" | "admin",
+    role: "shipper" as "shipper" | "carrier" | "admin",
     company: "",
     status: "active" as "active" | "suspended" | "pending",
     region: "North India" as string,
@@ -233,7 +233,7 @@ export default function AdminUsersPage() {
       name: user.name || "",
       email: user.email || "",
       phone: user.phone || "",
-      role: user.role,
+      role: (user.role === "dispatcher" ? "shipper" : user.role) as "shipper" | "carrier" | "admin",
       company: user.company || "",
       status: user.status,
       region: user.region || "North India",
@@ -366,7 +366,6 @@ export default function AdminUsersPage() {
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="shipper">Shipper</SelectItem>
                   <SelectItem value="carrier">Carrier</SelectItem>
-                  <SelectItem value="dispatcher">Dispatcher</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -620,14 +619,13 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="add-role">Role</Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "dispatcher" | "admin" }))}>
+                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "admin" }))}>
                   <SelectTrigger data-testid="select-add-role">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="shipper">Shipper</SelectItem>
                     <SelectItem value="carrier">Carrier</SelectItem>
-                    <SelectItem value="dispatcher">Dispatcher</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
@@ -709,14 +707,13 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Role</Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "dispatcher" | "admin" }))}>
+                <Select value={formData.role} onValueChange={(v) => setFormData(prev => ({ ...prev, role: v as "shipper" | "carrier" | "admin" }))}>
                   <SelectTrigger data-testid="select-edit-role">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="shipper">Shipper</SelectItem>
                     <SelectItem value="carrier">Carrier</SelectItem>
-                    <SelectItem value="dispatcher">Dispatcher</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

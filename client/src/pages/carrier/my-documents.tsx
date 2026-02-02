@@ -137,6 +137,11 @@ export default function MyDocumentsPage() {
     loads: true,
   });
   const [expandedLoads, setExpandedLoads] = useState<Record<string, boolean>>({});
+  const [expandedDrivers, setExpandedDrivers] = useState<Record<string, boolean>>({});
+
+  const toggleDriver = (driverId: string) => {
+    setExpandedDrivers(prev => ({ ...prev, [driverId]: !prev[driverId] }));
+  };
 
   const { data, isLoading, error } = useQuery<ExpiryData>({
     queryKey: ["/api/carrier/documents/expiring"],
@@ -731,6 +736,159 @@ export default function MyDocumentsPage() {
     );
   };
 
+  // Group driver documents by driver name for hierarchical display
+  const driverDocumentsByName: Record<string, { driverId: string; documents: Document[] }> = {};
+  (driversData || []).forEach((driver: any) => {
+    const driverDocs: Document[] = [];
+    if (driver.licenseImageUrl) {
+      driverDocs.push({
+        id: `driver-license-${driver.id}`,
+        documentType: "license",
+        fileName: "Driving License",
+        fileUrl: driver.licenseImageUrl,
+        fileSize: undefined,
+        expiryDate: driver.licenseExpiry || null,
+        isVerified: true,
+        createdAt: driver.createdAt || new Date().toISOString(),
+      });
+    }
+    if (driver.aadhaarImageUrl) {
+      driverDocs.push({
+        id: `driver-aadhaar-${driver.id}`,
+        documentType: "aadhaar",
+        fileName: `Aadhaar Card${driver.aadhaarNumber ? ` (${driver.aadhaarNumber})` : ''}`,
+        fileUrl: driver.aadhaarImageUrl,
+        fileSize: undefined,
+        expiryDate: null,
+        isVerified: true,
+        createdAt: driver.createdAt || new Date().toISOString(),
+      });
+    }
+    if (driverDocs.length > 0) {
+      driverDocumentsByName[driver.name] = {
+        driverId: driver.id,
+        documents: driverDocs
+      };
+    }
+  });
+
+  const DriverFolderSection = () => {
+    const driverNames = Object.keys(driverDocumentsByName).sort();
+    const totalDriverDocs = Object.values(driverDocumentsByName).reduce(
+      (sum, d) => sum + d.documents.length, 0
+    );
+
+    return (
+      <Collapsible 
+        open={expandedFolders.driver} 
+        onOpenChange={() => toggleFolder("driver")}
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center gap-2 p-3 rounded-lg hover-elevate border bg-card">
+            {expandedFolders.driver ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+            {expandedFolders.driver ? (
+              <FolderOpen className="h-5 w-5 text-amber-500" />
+            ) : (
+              <Folder className="h-5 w-5 text-amber-500" />
+            )}
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">Driver Documents</span>
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {totalDriverDocs}
+            </Badge>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
+            {driverNames.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">No driver documents uploaded</p>
+            ) : (
+              driverNames.map(driverName => {
+                const driverData = driverDocumentsByName[driverName];
+                const isExpanded = expandedDrivers[`driver-${driverData.driverId}`];
+                return (
+                  <Collapsible 
+                    key={driverData.driverId}
+                    open={isExpanded}
+                    onOpenChange={() => toggleDriver(`driver-${driverData.driverId}`)}
+                  >
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center gap-2 p-2 rounded-lg hover-elevate border bg-muted/50">
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                        )}
+                        {isExpanded ? (
+                          <FolderOpen className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Folder className="h-4 w-4 text-primary" />
+                        )}
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-medium text-sm">{driverName}</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          {driverData.documents.length} {driverData.documents.length === 1 ? 'doc' : 'docs'}
+                        </Badge>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-6 mt-2 space-y-2 border-l border-muted pl-3">
+                        {driverData.documents.map(doc => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate"
+                            data-testid={`doc-item-${doc.id}`}
+                          >
+                            <div className="flex-shrink-0">
+                              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                                <FileText className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <p className="font-medium truncate">{doc.fileName}</p>
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {driverName} - {doc.fileName}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="text-xs">
+                                Verified
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (doc.fileUrl) {
+                                    window.open(doc.fileUrl, '_blank');
+                                  }
+                                }}
+                                data-testid={`button-download-${doc.id}`}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  };
+
   const renderDocumentList = (docs: Document[], emptyMessage: string) => (
     docs.length === 0 ? (
       <div className="text-center py-8 text-muted-foreground">
@@ -873,13 +1031,7 @@ export default function MyDocumentsPage() {
                     documents={truckDocs}
                     emptyMessage="No truck documents uploaded"
                   />
-                  <FolderSection 
-                    title="Driver Documents"
-                    icon={User}
-                    folderId="driver"
-                    documents={driverDocs}
-                    emptyMessage="No driver documents uploaded"
-                  />
+                  <DriverFolderSection />
                   <LoadsFolderSection />
                 </div>
               </ScrollArea>

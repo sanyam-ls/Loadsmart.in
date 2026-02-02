@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -125,6 +125,142 @@ function formatFileSize(bytes?: number): string {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+// Component to load images from authenticated /objects/ routes
+function AuthenticatedImage({ 
+  src, 
+  alt, 
+  className, 
+  testId,
+  onLoadError 
+}: { 
+  src: string; 
+  alt: string; 
+  className?: string; 
+  testId?: string;
+  onLoadError?: () => void;
+}) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    async function fetchImage() {
+      try {
+        setLoading(true);
+        setError(false);
+        
+        // If it's a data URL or asset URL, use directly
+        if (src.startsWith('data:') || src.includes('/assets/')) {
+          setBlobUrl(src);
+          setLoading(false);
+          return;
+        }
+        
+        const response = await fetch(src, {
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load image: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        if (isMounted) {
+          const url = URL.createObjectURL(blob);
+          setBlobUrl(url);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error loading image:', err);
+        if (isMounted) {
+          setError(true);
+          setLoading(false);
+          onLoadError?.();
+        }
+      }
+    }
+    
+    if (src) {
+      fetchImage();
+    }
+    
+    return () => {
+      isMounted = false;
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [src]);
+
+  if (loading) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-muted`}>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !blobUrl) {
+    return null;
+  }
+
+  return (
+    <img 
+      src={blobUrl} 
+      alt={alt} 
+      className={className}
+      data-testid={testId}
+    />
+  );
+}
+
+// Document Preview component with authenticated image loading
+function DocumentPreview({ fileUrl, fileName }: { fileUrl?: string; fileName: string }) {
+  const [showFallback, setShowFallback] = useState(false);
+  
+  const isImageUrl = fileUrl && (
+    fileUrl.includes("/assets/generated_images/") ||
+    fileUrl.endsWith(".png") ||
+    fileUrl.endsWith(".jpg") ||
+    fileUrl.endsWith(".jpeg") ||
+    fileUrl.startsWith("data:image/") ||
+    fileUrl.includes("/objects/")
+  );
+
+  if (!fileUrl || showFallback || !isImageUrl) {
+    return (
+      <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden">
+        <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
+          <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Document Preview</p>
+          <p className="text-xs">{fileName}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden">
+      <AuthenticatedImage
+        src={fileUrl}
+        alt={fileName}
+        className="w-full h-full object-contain"
+        testId="img-document-preview"
+        onLoadError={() => setShowFallback(true)}
+      />
+      {showFallback && (
+        <div className="text-center text-muted-foreground flex flex-col items-center justify-center">
+          <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Document Preview</p>
+          <p className="text-xs">{fileName}</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MyDocumentsPage() {
@@ -1719,35 +1855,10 @@ export default function MyDocumentsPage() {
               </DialogHeader>
 
               <div className="py-4">
-                <div className="aspect-[4/3] rounded-lg bg-muted flex items-center justify-center mb-4 overflow-hidden">
-                  {selectedDocument.fileUrl?.includes("/assets/generated_images/") || 
-                   selectedDocument.fileUrl?.endsWith(".png") || 
-                   selectedDocument.fileUrl?.endsWith(".jpg") || 
-                   selectedDocument.fileUrl?.endsWith(".jpeg") ||
-                   selectedDocument.fileUrl?.startsWith("data:image/") ||
-                   selectedDocument.fileUrl?.includes("/objects/") ? (
-                    <img 
-                      src={selectedDocument.fileUrl} 
-                      alt={selectedDocument.fileName}
-                      className="w-full h-full object-contain"
-                      data-testid="img-document-preview"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const fallback = target.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div 
-                    className="text-center text-muted-foreground flex-col items-center justify-center"
-                    style={{ display: selectedDocument.fileUrl?.includes("/objects/") ? 'none' : 'flex' }}
-                  >
-                    <FileText className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Document Preview</p>
-                    <p className="text-xs">{selectedDocument.fileName}</p>
-                  </div>
-                </div>
+                <DocumentPreview 
+                  fileUrl={selectedDocument.fileUrl}
+                  fileName={selectedDocument.fileName}
+                />
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>

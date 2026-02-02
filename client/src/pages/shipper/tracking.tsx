@@ -692,9 +692,11 @@ export default function TrackingPage() {
                       {shipment.load?.pickupCity || "Origin"} to {shipment.load?.dropoffCity || "Destination"}
                     </p>
                     {shipment.load?.pickupDate && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                        <Calendar className="h-3 w-3" />
-                        <span>Pickup: {format(new Date(shipment.load.pickupDate), "MMM d, yyyy")}</span>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Badge variant="outline" className="text-xs px-2 py-0.5 bg-primary/10 border-primary/30 text-primary">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {format(new Date(shipment.load.pickupDate), "MMM d, yyyy")}
+                        </Badge>
                       </div>
                     )}
                     <Progress value={shipment.progress} className="h-2 mb-2" />

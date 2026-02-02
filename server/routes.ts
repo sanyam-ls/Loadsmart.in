@@ -10587,6 +10587,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
           "incorporation", "trade_license", "address_proof", "pan", "gstin", "tan",
           // Bank documents
           "void_cheque",
+          // Tax documents
+          "tds_declaration",
           // Legacy types
           "gst", "aadhar", "fleet_proof", "other"
         ]),

@@ -439,6 +439,23 @@ export default function MyDocumentsPage() {
     }
   });
 
+  // Helper to extract URL from JSON object or string
+  const extractFileUrl = (urlData: any): string | null => {
+    if (!urlData) return null;
+    if (typeof urlData === 'string') {
+      try {
+        const parsed = JSON.parse(urlData);
+        return parsed.path || parsed.url || urlData;
+      } catch {
+        return urlData;
+      }
+    }
+    if (typeof urlData === 'object' && urlData.path) {
+      return urlData.path;
+    }
+    return null;
+  };
+
   // Convert truck documents (RC, insurance, etc. stored on truck records) to Document format
   // Group truck documents by license plate for hierarchical display
   const truckDocumentsFromTrucks: Document[] = [];
@@ -449,12 +466,13 @@ export default function MyDocumentsPage() {
     const plateLabel = truck.licensePlate || truck.registrationNumber || `Truck ${truck.id}`;
     
     // Default to isVerified: false - verification status will be merged from verification table
-    if (truck.rcDocumentUrl) {
+    const rcUrl = extractFileUrl(truck.rcDocumentUrl);
+    if (rcUrl) {
       const doc = {
         id: `truck-rc-${truck.id}`,
         documentType: "rc",
         fileName: "Registration Certificate",
-        fileUrl: truck.rcDocumentUrl,
+        fileUrl: rcUrl,
         fileSize: undefined,
         expiryDate: truck.rcExpiry || null,
         isVerified: false,
@@ -463,12 +481,13 @@ export default function MyDocumentsPage() {
       truckDocumentsFromTrucks.push(doc);
       truckDocs.push(doc);
     }
-    if (truck.insuranceDocumentUrl) {
+    const insuranceUrl = extractFileUrl(truck.insuranceDocumentUrl);
+    if (insuranceUrl) {
       const doc = {
         id: `truck-insurance-${truck.id}`,
         documentType: "insurance",
         fileName: "Insurance",
-        fileUrl: truck.insuranceDocumentUrl,
+        fileUrl: insuranceUrl,
         fileSize: undefined,
         expiryDate: truck.insuranceExpiry || null,
         isVerified: false,
@@ -477,12 +496,13 @@ export default function MyDocumentsPage() {
       truckDocumentsFromTrucks.push(doc);
       truckDocs.push(doc);
     }
-    if (truck.fitnessDocumentUrl) {
+    const fitnessUrl = extractFileUrl(truck.fitnessDocumentUrl);
+    if (fitnessUrl) {
       const doc = {
         id: `truck-fitness-${truck.id}`,
         documentType: "fitness",
         fileName: "Fitness Certificate",
-        fileUrl: truck.fitnessDocumentUrl,
+        fileUrl: fitnessUrl,
         fileSize: undefined,
         expiryDate: truck.fitnessExpiry || null,
         isVerified: false,
@@ -491,12 +511,13 @@ export default function MyDocumentsPage() {
       truckDocumentsFromTrucks.push(doc);
       truckDocs.push(doc);
     }
-    if (truck.permitDocumentUrl) {
+    const permitUrl = extractFileUrl(truck.permitDocumentUrl);
+    if (permitUrl) {
       const doc = {
         id: `truck-permit-${truck.id}`,
         documentType: "permit",
         fileName: "State Permit",
-        fileUrl: truck.permitDocumentUrl,
+        fileUrl: permitUrl,
         fileSize: undefined,
         expiryDate: truck.permitExpiry || null,
         isVerified: false,
@@ -505,12 +526,13 @@ export default function MyDocumentsPage() {
       truckDocumentsFromTrucks.push(doc);
       truckDocs.push(doc);
     }
-    if (truck.pucDocumentUrl) {
+    const pucUrl = extractFileUrl(truck.pucDocumentUrl);
+    if (pucUrl) {
       const doc = {
         id: `truck-puc-${truck.id}`,
         documentType: "puc",
         fileName: "PUC Certificate",
-        fileUrl: truck.pucDocumentUrl,
+        fileUrl: pucUrl,
         fileSize: undefined,
         expiryDate: truck.pucExpiry || null,
         isVerified: false,
@@ -915,24 +937,26 @@ export default function MyDocumentsPage() {
   const driverDocumentsByName: Record<string, { driverId: string; documents: Document[] }> = {};
   (driversData || []).forEach((driver: any) => {
     const driverDocs: Document[] = [];
-    if (driver.licenseImageUrl) {
+    const licenseUrl = extractFileUrl(driver.licenseImageUrl);
+    if (licenseUrl) {
       driverDocs.push({
         id: `driver-license-${driver.id}`,
         documentType: "license",
         fileName: "Driving License",
-        fileUrl: driver.licenseImageUrl,
+        fileUrl: licenseUrl,
         fileSize: undefined,
         expiryDate: driver.licenseExpiry || null,
         isVerified: true,
         createdAt: driver.createdAt || new Date().toISOString(),
       });
     }
-    if (driver.aadhaarImageUrl) {
+    const aadhaarUrl = extractFileUrl(driver.aadhaarImageUrl);
+    if (aadhaarUrl) {
       driverDocs.push({
         id: `driver-aadhaar-${driver.id}`,
         documentType: "aadhaar",
         fileName: `Aadhaar Card${driver.aadhaarNumber ? ` (${driver.aadhaarNumber})` : ''}`,
-        fileUrl: driver.aadhaarImageUrl,
+        fileUrl: aadhaarUrl,
         fileSize: undefined,
         expiryDate: null,
         isVerified: true,

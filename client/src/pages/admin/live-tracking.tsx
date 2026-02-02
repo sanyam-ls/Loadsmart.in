@@ -766,7 +766,10 @@ export default function AdminLiveTrackingPage() {
                           className={`flex items-center justify-between p-2 bg-muted/50 rounded-lg ${hasDocument ? 'cursor-pointer hover-elevate' : ''}`}
                           onClick={() => {
                             if (hasDocument && doc.fileUrl) {
-                              window.open(doc.fileUrl, '_blank');
+                              const url = doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('data:') || doc.fileUrl.startsWith('/objects/') 
+                                ? doc.fileUrl 
+                                : `/objects/${doc.fileUrl}`;
+                              window.open(url, '_blank');
                             }
                           }}
                           data-testid={`admin-document-${docItem.key}`}

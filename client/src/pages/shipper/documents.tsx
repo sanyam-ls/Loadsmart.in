@@ -1127,7 +1127,13 @@ export default function DocumentsPage() {
                         Document stored locally
                       </p>
                       {selectedDocument.fileUrl && (
-                        <Button size="sm" variant="outline" onClick={() => window.open(selectedDocument.fileUrl, '_blank')}>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          const fileUrl = selectedDocument.fileUrl || '';
+                          const url = fileUrl.startsWith('http') || fileUrl.startsWith('data:') || fileUrl.startsWith('/objects/') 
+                            ? fileUrl 
+                            : `/objects/${fileUrl}`;
+                          window.open(url, '_blank');
+                        }}>
                           <Download className="h-4 w-4 mr-2" />
                           Open Document
                         </Button>

@@ -886,23 +886,40 @@ export default function TripsPage() {
                                         </Button>
                                       </>
                                     ) : (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setSelectedDocType(labelToDocumentType[docLabel]);
-                                          setUploadDialogOpen(true);
-                                        }}
-                                        disabled={isUploading || !shipmentId}
-                                        data-testid={`button-upload-doc-${index}`}
-                                      >
-                                        {isUploading ? (
-                                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                        ) : (
-                                          <Upload className="h-4 w-4 mr-1" />
-                                        )}
-                                        Upload
-                                      </Button>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setSelectedDocType(labelToDocumentType[docLabel]);
+                                            setCameraMode(true);
+                                            setUploadDialogOpen(true);
+                                            startCamera();
+                                          }}
+                                          disabled={isUploading || !shipmentId}
+                                          data-testid={`button-camera-doc-${index}`}
+                                        >
+                                          <Camera className="h-4 w-4 mr-1" />
+                                          Capture
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setSelectedDocType(labelToDocumentType[docLabel]);
+                                            setUploadDialogOpen(true);
+                                          }}
+                                          disabled={isUploading || !shipmentId}
+                                          data-testid={`button-upload-doc-${index}`}
+                                        >
+                                          {isUploading ? (
+                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                          ) : (
+                                            <Upload className="h-4 w-4 mr-1" />
+                                          )}
+                                          Upload
+                                        </Button>
+                                      </div>
                                     )}
                                   </div>
                                 </div>

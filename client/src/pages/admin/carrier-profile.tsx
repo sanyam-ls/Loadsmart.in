@@ -795,7 +795,13 @@ export default function CarrierProfilePage() {
                 <div className="flex-1" />
                 <Button 
                   variant="outline"
-                  onClick={() => window.open(selectedDocument.fileUrl, "_blank")}
+                  onClick={() => {
+                    const fileUrl = selectedDocument.fileUrl || '';
+                    const url = fileUrl.startsWith('http') || fileUrl.startsWith('data:') || fileUrl.startsWith('/objects/') 
+                      ? fileUrl 
+                      : `/objects/${fileUrl}`;
+                    window.open(url, "_blank");
+                  }}
                   data-testid="button-download-document"
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -803,7 +809,13 @@ export default function CarrierProfilePage() {
                 </Button>
                 <Button 
                   variant="outline"
-                  onClick={() => window.open(selectedDocument.fileUrl, "_blank")}
+                  onClick={() => {
+                    const fileUrl = selectedDocument.fileUrl || '';
+                    const url = fileUrl.startsWith('http') || fileUrl.startsWith('data:') || fileUrl.startsWith('/objects/') 
+                      ? fileUrl 
+                      : `/objects/${fileUrl}`;
+                    window.open(url, "_blank");
+                  }}
                   data-testid="button-view-full-document"
                 >
                   <Eye className="h-4 w-4 mr-2" />

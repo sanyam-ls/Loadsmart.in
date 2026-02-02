@@ -218,9 +218,9 @@ export default function ShipperDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title={t("dashboard.activeLoads")}
-          value={activeLoads.length}
+          value={userLoads.length}
           icon={Package}
-          subtitle={`${userLoads.length} total`}
+          subtitle={`${activeLoads.length} active`}
           onClick={() => navigate("/shipper/loads")}
           testId="stat-active-loads"
         />

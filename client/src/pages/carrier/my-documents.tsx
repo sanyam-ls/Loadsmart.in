@@ -1267,7 +1267,10 @@ export default function MyDocumentsPage() {
                       <button
                         type="button"
                         className="text-left underline hover:text-red-800 dark:hover:text-red-300 cursor-pointer"
-                        onClick={() => setSelectedDocument(doc)}
+                        onClick={() => {
+                          setSelectedDocument(doc);
+                          setPreviewDialogOpen(true);
+                        }}
                         data-testid={`link-expired-doc-${doc.id}`}
                       >
                         {documentTypeLabels[doc.documentType] || doc.documentType}
@@ -1287,7 +1290,10 @@ export default function MyDocumentsPage() {
                       <button
                         type="button"
                         className="text-left underline hover:text-amber-800 dark:hover:text-amber-300 cursor-pointer"
-                        onClick={() => setSelectedDocument(doc)}
+                        onClick={() => {
+                          setSelectedDocument(doc);
+                          setPreviewDialogOpen(true);
+                        }}
                         data-testid={`link-expiring-doc-${doc.id}`}
                       >
                         {documentTypeLabels[doc.documentType] || doc.documentType}

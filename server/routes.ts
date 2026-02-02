@@ -69,6 +69,38 @@ const hashPassword = async (password: string): Promise<string> => {
     .join("");
 };
 
+// Document type labels for notification messages
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  rc: "RC (Registration Certificate)",
+  insurance: "Vehicle Insurance",
+  fitness: "Fitness Certificate",
+  permit: "National / State Permit",
+  puc: "PUC Certificate",
+  road_tax: "Road Tax / Challan Clearance",
+  license: "Driving License",
+  pan: "PAN Card",
+  gst: "GST Certificate",
+  aadhar: "Aadhaar Card",
+  aadhaar: "Aadhaar Card",
+  fleet_proof: "Fleet Ownership Proof",
+  aadhaar_card: "Aadhaar Card",
+  driver_license: "Driver License",
+  permit_document: "Permit Document",
+  insurance_certificate: "Insurance Certificate",
+  fitness_certificate: "Fitness Certificate",
+  incorporation_certificate: "Incorporation Certificate",
+  incorporation: "Incorporation Certificate",
+  trade_license: "Trade License",
+  address_proof: "Business Address Proof",
+  pan_card: "PAN Card",
+  gstin_certificate: "GSTIN Certificate",
+  gstin: "GSTIN Certificate",
+  tan_certificate: "TAN Certificate",
+  tan: "TAN Certificate",
+  tds_declaration: "TDS Declaration",
+  void_cheque: "Void Cheque / Cancelled Cheque",
+};
+
 declare module "express-session" {
   interface SessionData {
     userId: string;
@@ -9427,6 +9459,77 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(400).json({ error: error.errors });
       }
       console.error("Put verification on hold error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/admin/verification-documents/:id - Approve or reject individual document
+  app.patch("/api/admin/verification-documents/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const documentId = req.params.id;
+      
+      // Validate request body
+      const updateSchema = z.object({
+        status: z.enum(["approved", "rejected"]),
+        rejectionReason: z.string().optional(),
+      });
+
+      const validatedBody = updateSchema.parse(req.body);
+
+      // Get the document to find the carrier
+      const doc = await storage.getVerificationDocument(documentId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Update document status
+      const updated = await storage.updateVerificationDocument(documentId, {
+        status: validatedBody.status,
+        rejectionReason: validatedBody.status === "rejected" ? validatedBody.rejectionReason : null,
+        reviewedBy: user.id,
+        reviewedAt: new Date(),
+      });
+
+      // If rejected, create notification for carrier
+      if (validatedBody.status === "rejected") {
+        const documentTypeLabel = DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        
+        await storage.createNotification({
+          userId: doc.carrierId,
+          title: "Document Rejected",
+          message: `Your ${documentTypeLabel} has been rejected.${validatedBody.rejectionReason ? ` Reason: ${validatedBody.rejectionReason}` : ''} Please upload a valid document.`,
+          type: "warning",
+        });
+
+        // Broadcast real-time notification
+        broadcastMarketplaceEvent("document_rejected", {
+          carrierId: doc.carrierId,
+          documentType: doc.documentType,
+          reason: validatedBody.rejectionReason,
+        });
+      }
+
+      // Create audit log
+      await storage.createAuditLog({
+        adminId: user.id,
+        userId: doc.carrierId,
+        actionType: validatedBody.status === "approved" ? "approve_document" : "reject_document",
+        actionDescription: `${validatedBody.status === "approved" ? "Approved" : "Rejected"} document ${doc.documentType} for carrier ${doc.carrierId}${validatedBody.rejectionReason ? `: ${validatedBody.rejectionReason}` : ""}`,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Update verification document error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

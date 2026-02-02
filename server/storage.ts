@@ -243,6 +243,7 @@ export interface IStorage {
   
   // Carrier Verification Document methods
   createVerificationDocument(doc: InsertCarrierVerificationDocument): Promise<CarrierVerificationDocument>;
+  getVerificationDocument(id: string): Promise<CarrierVerificationDocument | undefined>;
   getVerificationDocuments(verificationId: string): Promise<CarrierVerificationDocument[]>;
   getVerificationDocumentsByCarrier(carrierId: string): Promise<CarrierVerificationDocument[]>;
   updateVerificationDocument(id: string, updates: Partial<CarrierVerificationDocument>): Promise<CarrierVerificationDocument | undefined>;
@@ -1278,6 +1279,13 @@ export class DatabaseStorage implements IStorage {
   async createVerificationDocument(doc: InsertCarrierVerificationDocument): Promise<CarrierVerificationDocument> {
     const [newDoc] = await db.insert(carrierVerificationDocuments).values(doc).returning();
     return newDoc;
+  }
+
+  async getVerificationDocument(id: string): Promise<CarrierVerificationDocument | undefined> {
+    const [doc] = await db.select()
+      .from(carrierVerificationDocuments)
+      .where(eq(carrierVerificationDocuments.id, id));
+    return doc;
   }
 
   async getVerificationDocuments(verificationId: string): Promise<CarrierVerificationDocument[]> {

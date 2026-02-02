@@ -278,6 +278,51 @@ export default function CarrierVerificationPage() {
     },
   });
 
+  // Individual document verification mutation
+  const documentVerifyMutation = useMutation({
+    mutationFn: async ({ docId, status, rejectionReason }: { docId: string; status: "approved" | "rejected"; rejectionReason?: string }) => {
+      return apiRequest("PATCH", `/api/admin/verification-documents/${docId}`, { status, rejectionReason });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
+      toast({
+        title: variables.status === "approved" ? "Document Approved" : "Document Rejected",
+        description: variables.status === "approved" 
+          ? "The document has been verified successfully." 
+          : "The carrier has been notified of the rejection.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update document status",
+      });
+    },
+  });
+
+  // State for document rejection dialog
+  const [docRejectDialogOpen, setDocRejectDialogOpen] = useState(false);
+  const [docRejectReason, setDocRejectReason] = useState("");
+  const [selectedDocForReject, setSelectedDocForReject] = useState<VerificationDocument | null>(null);
+
+  const handleDocApprove = (doc: VerificationDocument) => {
+    documentVerifyMutation.mutate({ docId: doc.id, status: "approved" });
+  };
+
+  const handleDocReject = () => {
+    if (selectedDocForReject && docRejectReason.trim()) {
+      documentVerifyMutation.mutate({ 
+        docId: selectedDocForReject.id, 
+        status: "rejected", 
+        rejectionReason: docRejectReason 
+      });
+      setDocRejectDialogOpen(false);
+      setDocRejectReason("");
+      setSelectedDocForReject(null);
+    }
+  };
+
   // Sort function: latest (most recent) first
   const sortByLatestFirst = (list: CarrierVerification[]) => {
     return [...list].sort((a, b) => {
@@ -980,41 +1025,72 @@ export default function CarrierVerificationPage() {
                         <p className="text-muted-foreground text-center py-4">No documents uploaded yet</p>
                       ) : (
                         sortDocumentsByPriority(selectedVerification.documents || []).map((doc) => (
-                          <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <FileText className="h-5 w-5 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium">
-                                  {doc.documentType === "address_proof" && selectedVerification?.addressProofType ? 
-                                    getDocumentDisplayName(`address_proof_${selectedVerification.addressProofType === "office_photo_with_board" ? "office_photo" : selectedVerification.addressProofType}`) :
-                                    getDocumentDisplayName(doc.documentType)}
-                                </p>
-                                <p className="text-sm text-muted-foreground">{doc.fileName}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {doc.uploadedAt ? `Uploaded ${format(new Date(doc.uploadedAt), "MMM d, yyyy")}` : "Recently uploaded"}
-                                </p>
+                          <div key={doc.id} className="p-3 border rounded-lg space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <FileText className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                  <p className="font-medium">
+                                    {doc.documentType === "address_proof" && selectedVerification?.addressProofType ? 
+                                      getDocumentDisplayName(`address_proof_${selectedVerification.addressProofType === "office_photo_with_board" ? "office_photo" : selectedVerification.addressProofType}`) :
+                                      getDocumentDisplayName(doc.documentType)}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">{doc.fileName}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {doc.uploadedAt ? `Uploaded ${format(new Date(doc.uploadedAt), "MMM d, yyyy")}` : "Recently uploaded"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {doc.status === "approved" ? (
+                                  <Badge variant="default" className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Verified</Badge>
+                                ) : doc.status === "rejected" ? (
+                                  <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
+                                ) : (
+                                  <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+                                )}
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  data-testid={`button-view-${doc.documentType}`}
+                                  onClick={() => {
+                                    setPreviewDoc(doc);
+                                    setPreviewOpen(true);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {doc.status === "approved" ? (
-                                <Badge variant="default" className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Verified</Badge>
-                              ) : doc.status === "rejected" ? (
-                                <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
-                              ) : (
-                                <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
-                              )}
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                data-testid={`button-view-${doc.documentType}`}
-                                onClick={() => {
-                                  setPreviewDoc(doc);
-                                  setPreviewOpen(true);
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            {doc.status === "pending" && (
+                              <div className="flex items-center gap-2 pl-8">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                                  onClick={() => handleDocApprove(doc)}
+                                  disabled={documentVerifyMutation.isPending}
+                                  data-testid={`button-approve-doc-${doc.documentType}`}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                  onClick={() => {
+                                    setSelectedDocForReject(doc);
+                                    setDocRejectDialogOpen(true);
+                                  }}
+                                  disabled={documentVerifyMutation.isPending}
+                                  data-testid={`button-reject-doc-${doc.documentType}`}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         ))
                       )}
@@ -1215,6 +1291,49 @@ export default function CarrierVerificationPage() {
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Open in New Tab
               </a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Rejection Dialog */}
+      <Dialog open={docRejectDialogOpen} onOpenChange={(open) => {
+        setDocRejectDialogOpen(open);
+        if (!open) {
+          setDocRejectReason("");
+          setSelectedDocForReject(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Document</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this {selectedDocForReject ? getDocumentDisplayName(selectedDocForReject.documentType) : 'document'}. The carrier will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Rejection Reason</Label>
+              <Textarea
+                placeholder="Enter reason for rejection..."
+                value={docRejectReason}
+                onChange={(e) => setDocRejectReason(e.target.value)}
+                className="mt-2"
+                data-testid="input-doc-reject-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDocRejectDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDocReject}
+              disabled={!docRejectReason.trim() || documentVerifyMutation.isPending}
+              data-testid="button-confirm-doc-reject"
+            >
+              Reject Document
             </Button>
           </DialogFooter>
         </DialogContent>

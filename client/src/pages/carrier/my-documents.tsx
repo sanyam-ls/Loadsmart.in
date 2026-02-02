@@ -61,6 +61,8 @@ interface Document {
   expiryDate: string | null;
   isVerified: boolean;
   createdAt: string;
+  verificationStatus?: "pending" | "approved" | "rejected";
+  rejectionReason?: string;
 }
 
 interface ShipmentDocument {
@@ -113,6 +115,7 @@ const documentCategories = {
   truck: ["rc", "insurance", "fitness", "puc", "permit"],
   driver: ["license", "pan_card", "aadhar", "aadhaar"],
   trip: ["pod", "invoice", "lr_consignment", "eway_bill", "weighment_slip"],
+  official: ["incorporation", "trade_license", "address_proof", "pan", "gstin", "tan", "gst", "void_cheque", "tds_declaration", "fleet_proof"],
 };
 
 function formatFileSize(bytes?: number): string {
@@ -174,6 +177,26 @@ export default function MyDocumentsPage() {
   // Fetch trucks to get their documents (RC, insurance, etc.)
   const { data: trucksData } = useQuery<any[]>({
     queryKey: ["/api/trucks"],
+    enabled: !!user && user.role === "carrier",
+    staleTime: 5000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Fetch carrier verification to get verification documents with their status
+  const { data: verificationData } = useQuery<{
+    id: string;
+    status: string;
+    documents?: Array<{
+      id: string;
+      documentType: string;
+      fileName: string;
+      fileUrl: string;
+      status: string;
+      rejectionReason?: string;
+      createdAt: string;
+    }>;
+  } | null>({
+    queryKey: ["/api/carrier/verification"],
     enabled: !!user && user.role === "carrier",
     staleTime: 5000,
     refetchOnWindowFocus: true,
@@ -329,6 +352,7 @@ export default function MyDocumentsPage() {
   const allDocuments = [...expired, ...expiringSoon, ...healthy];
   
   // Convert driver documents (license, aadhaar images stored on driver records) to Document format
+  // Default to isVerified: false - verification status will be merged from verification table
   const driverDocumentsFromDrivers: Document[] = [];
   (driversData || []).forEach((driver: any) => {
     if (driver.licenseImageUrl) {
@@ -339,7 +363,7 @@ export default function MyDocumentsPage() {
         fileUrl: driver.licenseImageUrl,
         fileSize: undefined,
         expiryDate: driver.licenseExpiry || null,
-        isVerified: true,
+        isVerified: false,
         createdAt: driver.createdAt || new Date().toISOString(),
       });
     }
@@ -351,7 +375,7 @@ export default function MyDocumentsPage() {
         fileUrl: driver.aadhaarImageUrl,
         fileSize: undefined,
         expiryDate: null,
-        isVerified: true,
+        isVerified: false,
         createdAt: driver.createdAt || new Date().toISOString(),
       });
     }
@@ -366,6 +390,7 @@ export default function MyDocumentsPage() {
     const truckDocs: Document[] = [];
     const plateLabel = truck.licensePlate || truck.registrationNumber || `Truck ${truck.id}`;
     
+    // Default to isVerified: false - verification status will be merged from verification table
     if (truck.rcDocumentUrl) {
       const doc = {
         id: `truck-rc-${truck.id}`,
@@ -374,7 +399,7 @@ export default function MyDocumentsPage() {
         fileUrl: truck.rcDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.rcExpiry || null,
-        isVerified: true,
+        isVerified: false,
         createdAt: truck.createdAt || new Date().toISOString(),
       };
       truckDocumentsFromTrucks.push(doc);
@@ -388,7 +413,7 @@ export default function MyDocumentsPage() {
         fileUrl: truck.insuranceDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.insuranceExpiry || null,
-        isVerified: true,
+        isVerified: false,
         createdAt: truck.createdAt || new Date().toISOString(),
       };
       truckDocumentsFromTrucks.push(doc);
@@ -402,7 +427,7 @@ export default function MyDocumentsPage() {
         fileUrl: truck.fitnessDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.fitnessExpiry || null,
-        isVerified: true,
+        isVerified: false,
         createdAt: truck.createdAt || new Date().toISOString(),
       };
       truckDocumentsFromTrucks.push(doc);
@@ -416,7 +441,7 @@ export default function MyDocumentsPage() {
         fileUrl: truck.permitDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.permitExpiry || null,
-        isVerified: true,
+        isVerified: false,
         createdAt: truck.createdAt || new Date().toISOString(),
       };
       truckDocumentsFromTrucks.push(doc);
@@ -430,7 +455,7 @@ export default function MyDocumentsPage() {
         fileUrl: truck.pucDocumentUrl,
         fileSize: undefined,
         expiryDate: truck.pucExpiry || null,
-        isVerified: true,
+        isVerified: false,
         createdAt: truck.createdAt || new Date().toISOString(),
       };
       truckDocumentsFromTrucks.push(doc);
@@ -445,13 +470,69 @@ export default function MyDocumentsPage() {
     };
   });
 
+  // Create maps for verification document status - by fileUrl (most unique), fileName, and documentType as fallback
+  const verificationByUrl: Record<string, { status: string; rejectionReason?: string }> = {};
+  const verificationByFileName: Record<string, { status: string; rejectionReason?: string }> = {};
+  const verificationByType: Record<string, { status: string; rejectionReason?: string }> = {};
+  
+  if (verificationData?.documents) {
+    verificationData.documents.forEach(doc => {
+      // Primary key: fileUrl (most unique)
+      if (doc.fileUrl) {
+        verificationByUrl[doc.fileUrl] = {
+          status: doc.status,
+          rejectionReason: doc.rejectionReason
+        };
+      }
+      // Secondary key: fileName (good for matching)
+      if (doc.fileName) {
+        verificationByFileName[doc.fileName] = {
+          status: doc.status,
+          rejectionReason: doc.rejectionReason
+        };
+      }
+      // Fallback: documentType (only for single-document types like business docs)
+      verificationByType[doc.documentType] = {
+        status: doc.status,
+        rejectionReason: doc.rejectionReason
+      };
+    });
+  }
+
+  // Helper function to merge verification status with documents
+  // Uses hierarchical matching: fileUrl > fileName > documentType (for official docs only)
+  const mergeVerificationStatus = (docs: Document[]): Document[] => {
+    return docs.map(doc => {
+      // Try to find verification by most specific match first
+      const verificationInfo = 
+        verificationByUrl[doc.fileUrl] || 
+        verificationByFileName[doc.fileName] || 
+        (documentCategories.official.includes(doc.documentType) ? verificationByType[doc.documentType] : null);
+      
+      if (verificationInfo) {
+        return {
+          ...doc,
+          verificationStatus: verificationInfo.status as "pending" | "approved" | "rejected",
+          rejectionReason: verificationInfo.rejectionReason,
+          isVerified: verificationInfo.status === "approved"
+        };
+      }
+      // If no verification record found, explicitly set to pending for clear UI state
+      return {
+        ...doc,
+        verificationStatus: "pending" as const,
+        isVerified: false
+      };
+    });
+  };
+
   // Merge documents from documents table with driver/truck documents
   const truckDocsFromTable = allDocuments.filter(d => documentCategories.truck.includes(d.documentType));
   const driverDocsFromTable = allDocuments.filter(d => documentCategories.driver.includes(d.documentType));
   
-  const truckDocs = [...truckDocsFromTable, ...truckDocumentsFromTrucks];
-  const driverDocs = [...driverDocsFromTable, ...driverDocumentsFromDrivers];
-  const tripDocs = allDocuments.filter(d => documentCategories.trip.includes(d.documentType));
+  const truckDocs = mergeVerificationStatus([...truckDocsFromTable, ...truckDocumentsFromTrucks]);
+  const driverDocs = mergeVerificationStatus([...driverDocsFromTable, ...driverDocumentsFromDrivers]);
+  const tripDocs = mergeVerificationStatus(allDocuments.filter(d => documentCategories.trip.includes(d.documentType)));
 
   // Get all carrier shipments - backend already filters by current carrier
   const carrierShipments = shipmentsData || [];
@@ -502,7 +583,9 @@ export default function MyDocumentsPage() {
             <div className="flex-shrink-0">
               {isExpired ? (
                 <XCircle className="h-4 w-4 text-red-500" />
-              ) : doc.isVerified ? (
+              ) : doc.verificationStatus === "rejected" ? (
+                <XCircle className="h-4 w-4 text-red-500" />
+              ) : doc.isVerified || doc.verificationStatus === "approved" ? (
                 <CheckCircle className="h-4 w-4 text-green-500" />
               ) : (
                 <Clock className="h-4 w-4 text-amber-500" />
@@ -513,6 +596,9 @@ export default function MyDocumentsPage() {
                 {documentTypeLabels[doc.documentType] || doc.documentType}
               </p>
               <p className="text-xs text-muted-foreground truncate">{doc.fileName}</p>
+              {doc.verificationStatus === "rejected" && doc.rejectionReason && (
+                <p className="text-xs text-red-500 truncate mt-0.5">Rejected: {doc.rejectionReason}</p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -526,10 +612,13 @@ export default function MyDocumentsPage() {
                 {daysUntilExpiry === 0 ? "Expires today" : `${daysUntilExpiry} days left`}
               </Badge>
             )}
-            {!isExpired && !isExpiringSoon && doc.isVerified && (
+            {doc.verificationStatus === "rejected" && (
+              <Badge variant="destructive" className="text-xs">Rejected</Badge>
+            )}
+            {!isExpired && !isExpiringSoon && doc.verificationStatus !== "rejected" && (doc.isVerified || doc.verificationStatus === "approved") && (
               <Badge variant="default" className="text-xs">Verified</Badge>
             )}
-            {!doc.isVerified && !isExpired && !isExpiringSoon && (
+            {!doc.isVerified && doc.verificationStatus !== "approved" && doc.verificationStatus !== "rejected" && !isExpired && !isExpiringSoon && (
               <Badge variant="secondary" className="text-xs">Pending</Badge>
             )}
             <Button 
@@ -1430,7 +1519,9 @@ export default function MyDocumentsPage() {
                   <div>
                     <p className="text-muted-foreground">Status</p>
                     <div className="mt-1">
-                      {selectedDocument.isVerified ? (
+                      {selectedDocument.verificationStatus === "rejected" ? (
+                        <Badge variant="destructive">Rejected</Badge>
+                      ) : selectedDocument.isVerified || selectedDocument.verificationStatus === "approved" ? (
                         <Badge variant="default">Verified</Badge>
                       ) : (
                         <Badge variant="secondary">Pending Review</Badge>
@@ -1452,6 +1543,13 @@ export default function MyDocumentsPage() {
                     </p>
                   </div>
                 </div>
+
+                {selectedDocument.verificationStatus === "rejected" && selectedDocument.rejectionReason && (
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg">
+                    <p className="text-sm font-medium text-red-800 dark:text-red-400">Rejection Reason:</p>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">{selectedDocument.rejectionReason}</p>
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="flex-col sm:flex-row gap-2">

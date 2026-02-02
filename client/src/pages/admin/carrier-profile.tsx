@@ -706,7 +706,7 @@ export default function CarrierProfilePage() {
                                   >
                                     <Eye className="h-4 w-4" />
                                   </Button>
-                                  {!doc.isVerified && doc.source !== 'truck' && (
+                                  {!doc.isVerified && doc.source !== 'truck' && categoryLabel === "Official Documents" && (
                                     <>
                                       <Button
                                         size="icon"

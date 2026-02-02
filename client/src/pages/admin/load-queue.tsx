@@ -1955,14 +1955,14 @@ export default function LoadQueuePage() {
                                 setRepriceGrossPrice(Math.max(0, newTotal));
                               }
                             }}
-                            placeholder="Enter tonnage"
+                            placeholder=""
                             className="text-lg font-medium"
                             data-testid="input-reprice-tonnage"
                           />
                           <p className="text-xs text-muted-foreground">From load: {parseFloat(repriceLoad.weight?.toString() || "0")} {repriceLoad.weightUnit || "MT"}</p>
                         </div>
                         <div className="space-y-2">
-                          <Label>Rate Per Tonne (Rs.)</Label>
+                          <Label>Rate Per Tonne (Rs.) <span className="text-muted-foreground font-normal">(e.g. 2000)</span></Label>
                           <Input
                             type="number"
                             value={repriceRatePerTon || ""}
@@ -1973,7 +1973,7 @@ export default function LoadQueuePage() {
                               const newTotal = Math.round(rate * repriceTonnage);
                               setRepriceGrossPrice(Math.max(0, newTotal));
                             }}
-                            placeholder="e.g. 2000"
+                            placeholder=""
                             className="text-lg font-medium"
                             data-testid="input-reprice-rate-per-ton"
                           />
@@ -2012,7 +2012,7 @@ export default function LoadQueuePage() {
                             const newPrice = parseInt(e.target.value) || 0;
                             setRepriceGrossPrice(Math.max(0, newPrice)); // Ensure non-negative
                           }}
-                          placeholder="e.g. 50000"
+                          placeholder=""
                           className="text-lg font-medium"
                           data-testid="input-reprice-fixed-price"
                         />
@@ -2205,10 +2205,10 @@ export default function LoadQueuePage() {
 
               {/* Reason */}
               <div className="space-y-2">
-                <Label htmlFor="reprice-reason">Reason (optional)</Label>
+                <Label htmlFor="reprice-reason">Reason (optional) <span className="text-muted-foreground font-normal">(e.g. Market rate adjustment)</span></Label>
                 <Textarea
                   id="reprice-reason"
-                  placeholder="e.g., Market rate adjustment, no bids received..."
+                  placeholder=""
                   value={repriceReason}
                   onChange={(e) => setRepriceReason(e.target.value)}
                   rows={2}

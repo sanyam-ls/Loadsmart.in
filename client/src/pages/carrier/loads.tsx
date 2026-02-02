@@ -1530,7 +1530,7 @@ export default function CarrierLoadsPage() {
                       <label className="text-sm font-medium">Your Bid Amount</label>
                       <Input
                         type="number"
-                        placeholder="Enter your bid"
+                        placeholder=""
                         value={bidAmount}
                         onChange={(e) => setBidAmount(e.target.value)}
                         className="text-lg font-medium"

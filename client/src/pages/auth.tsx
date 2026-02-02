@@ -663,7 +663,7 @@ export default function AuthPage() {
                               <FormItem>
                                 <FormLabel>Username, Email or Phone</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="Enter username, email or phone" {...field} data-testid="input-login-username" />
+                                  <Input placeholder="" {...field} data-testid="input-login-username" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -679,7 +679,7 @@ export default function AuthPage() {
                                   <div className="relative">
                                     <Input
                                       type={showPassword ? "text" : "password"}
-                                      placeholder="Enter your password"
+                                      placeholder=""
                                       {...field}
                                       data-testid="input-login-password"
                                     />
@@ -921,10 +921,10 @@ export default function AuthPage() {
                             name="city"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Service Zones</FormLabel>
+                                <FormLabel>Service Zones <span className="text-muted-foreground font-normal">(e.g. Maharashtra, Gujarat)</span></FormLabel>
                                 <FormControl>
                                   <Input 
-                                    placeholder="e.g. Maharashtra, Gujarat, Delhi NCR" 
+                                    placeholder="" 
                                     {...field} 
                                     data-testid="input-register-city" 
                                   />
@@ -1053,7 +1053,7 @@ export default function AuthPage() {
                                 <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                   type="text"
-                                  placeholder="Enter 6-digit OTP"
+                                  placeholder=""
                                   className="pl-10 tracking-widest font-mono"
                                   maxLength={6}
                                   value={enteredOtp}
@@ -1176,9 +1176,9 @@ export default function AuthPage() {
             {resetStep === "otp" && (
               <>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Verification Code</label>
+                  <label className="text-sm font-medium">Verification Code <span className="text-muted-foreground font-normal">(6 digits)</span></label>
                   <Input
-                    placeholder="Enter 6-digit code"
+                    placeholder=""
                     value={resetOtpCode}
                     onChange={(e) => setResetOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     maxLength={6}
@@ -1216,7 +1216,7 @@ export default function AuthPage() {
                   <div className="relative">
                     <Input
                       type={showNewPassword ? "text" : "password"}
-                      placeholder="Enter new password"
+                      placeholder=""
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       data-testid="input-new-password"

@@ -665,13 +665,13 @@ export default function MyTruckPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="capacity">Capacity (tons)</Label>
+                <Label htmlFor="capacity">Capacity (tons) <span className="text-muted-foreground font-normal">(e.g. 22)</span></Label>
                 <Input 
                   id="capacity"
                   type="number"
                   value={editForm.capacity}
                   onChange={(e) => setEditForm({...editForm, capacity: e.target.value})}
-                  placeholder="e.g. 22"
+                  placeholder=""
                   data-testid="input-capacity"
                 />
               </div>
@@ -679,12 +679,12 @@ export default function MyTruckPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">Registration City</Label>
+                <Label htmlFor="city">Registration City <span className="text-muted-foreground font-normal">(e.g. Ludhiana)</span></Label>
                 <Input 
                   id="city"
                   value={editForm.city}
                   onChange={(e) => setEditForm({...editForm, city: e.target.value})}
-                  placeholder="e.g. Ludhiana"
+                  placeholder=""
                   data-testid="input-city"
                 />
               </div>

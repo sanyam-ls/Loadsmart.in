@@ -405,7 +405,7 @@ export default function MyInfoPage() {
                         <FormControl>
                           <Input
                             {...field}
-                            placeholder="Enter your phone number"
+                            placeholder=""
                             data-testid="input-phone"
                           />
                         </FormControl>
@@ -422,7 +422,7 @@ export default function MyInfoPage() {
                         <FormControl>
                           <Input
                             {...field}
-                            placeholder="Enter your full name"
+                            placeholder=""
                             data-testid="input-driver-name"
                           />
                         </FormControl>

@@ -454,9 +454,9 @@ export default function AddTruckPage() {
                   name="chassisNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Chassis Number</FormLabel>
+                      <FormLabel>Chassis Number <span className="text-muted-foreground font-normal">(e.g. MAT123456789012345)</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., MAT123456789012345" {...field} data-testid="input-chassis-number" />
+                        <Input placeholder="" {...field} data-testid="input-chassis-number" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

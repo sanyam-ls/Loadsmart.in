@@ -481,7 +481,7 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
                   <Input
                     type="text"
                     inputMode="numeric"
-                    placeholder="Enter counter amount"
+                    placeholder=""
                     value={counterAmount}
                     onChange={(e) => {
                       // Allow only digits and format as needed

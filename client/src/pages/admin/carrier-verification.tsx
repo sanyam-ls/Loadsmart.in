@@ -1077,7 +1077,7 @@ export default function CarrierVerificationPage() {
             <div>
               <Label>Rejection Reason</Label>
               <Textarea
-                placeholder="Enter the reason for rejection..."
+                placeholder=""
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 className="mt-2"
@@ -1117,7 +1117,7 @@ export default function CarrierVerificationPage() {
             <div>
               <Label>Notes</Label>
               <Textarea
-                placeholder="Enter notes about why this verification is on hold..."
+                placeholder=""
                 value={holdNotes}
                 onChange={(e) => setHoldNotes(e.target.value)}
                 className="mt-2"

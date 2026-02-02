@@ -495,7 +495,7 @@ export default function ShipperOtpQueue() {
               <Label htmlFor="reject-notes">Reason (optional)</Label>
               <Textarea
                 id="reject-notes"
-                placeholder="Enter reason for rejection..."
+                placeholder=""
                 value={rejectNotes}
                 onChange={(e) => setRejectNotes(e.target.value)}
                 data-testid="input-reject-notes"

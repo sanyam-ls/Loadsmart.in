@@ -285,7 +285,7 @@ export default function SoloLoadFeed() {
                 type="number"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
-                placeholder="Enter your price"
+                placeholder=""
                 data-testid="input-bid-amount"
               />
             </div>

@@ -278,29 +278,58 @@ export default function CarrierVerificationPage() {
     },
   });
 
+  // Sort function: latest (most recent) first
+  const sortByLatestFirst = (list: CarrierVerification[]) => {
+    return [...list].sort((a, b) => {
+      const dateA = new Date(a.submittedAt || a.createdAt).getTime();
+      const dateB = new Date(b.submittedAt || b.createdAt).getTime();
+      return dateB - dateA; // Descending order (latest first)
+    });
+  };
+
   const pendingVerifications = useMemo(() => {
-    return verifications.filter(v => v.status === "pending" || v.status === "under_review");
+    const pending = verifications.filter(v => v.status === "pending" || v.status === "under_review");
+    return sortByLatestFirst(pending);
   }, [verifications]);
 
+  // Categorized pending verifications
+  const pendingSoloVerifications = useMemo(() => {
+    return pendingVerifications.filter(v => v.carrierType === "solo" || (!v.carrierType && v.fleetSize === 1));
+  }, [pendingVerifications]);
+
+  const pendingFleetVerifications = useMemo(() => {
+    return pendingVerifications.filter(v => v.carrierType === "enterprise" || (!v.carrierType && v.fleetSize > 1));
+  }, [pendingVerifications]);
+
   const draftVerifications = useMemo(() => {
-    return verifications.filter(v => v.status === "draft");
+    const drafts = verifications.filter(v => v.status === "draft");
+    return sortByLatestFirst(drafts);
   }, [verifications]);
 
   const rejectedVerifications = useMemo(() => {
-    return verifications.filter(v => v.status === "rejected" || v.status === "on_hold");
+    const rejected = verifications.filter(v => v.status === "rejected" || v.status === "on_hold");
+    return sortByLatestFirst(rejected);
   }, [verifications]);
 
-  const filteredVerifications = useMemo(() => {
-    const list = activeTab === "pending" ? pendingVerifications : 
-                 activeTab === "draft" ? draftVerifications : rejectedVerifications;
+  // Search filter function
+  const filterBySearch = (list: CarrierVerification[]) => {
     if (!searchQuery) return list;
-    
     const query = searchQuery.toLowerCase();
     return list.filter(v => 
       v.carrier?.companyName?.toLowerCase().includes(query) ||
       v.carrier?.email?.toLowerCase().includes(query)
     );
+  };
+
+  const filteredVerifications = useMemo(() => {
+    const list = activeTab === "pending" ? pendingVerifications : 
+                 activeTab === "draft" ? draftVerifications : rejectedVerifications;
+    return filterBySearch(list);
   }, [activeTab, pendingVerifications, draftVerifications, rejectedVerifications, searchQuery]);
+
+  // Filtered categorized pending lists for display
+  const filteredPendingSolo = useMemo(() => filterBySearch(pendingSoloVerifications), [pendingSoloVerifications, searchQuery]);
+  const filteredPendingFleet = useMemo(() => filterBySearch(pendingFleetVerifications), [pendingFleetVerifications, searchQuery]);
 
   const handleApprove = (verification: CarrierVerification) => {
     approveMutation.mutate(verification.id);
@@ -666,7 +695,7 @@ export default function CarrierVerificationPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="mt-4 space-y-4">
+        <TabsContent value="pending" className="mt-4 space-y-6">
           {filteredVerifications.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -676,7 +705,35 @@ export default function CarrierVerificationPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredVerifications.map(verification => renderVerificationCard(verification))
+            <>
+              {/* Solo Owner-Operator Section */}
+              {filteredPendingSolo.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <User className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold">Solo Owner-Operator</h3>
+                    <Badge variant="secondary" className="ml-auto">{filteredPendingSolo.length}</Badge>
+                  </div>
+                  <div className="space-y-4">
+                    {filteredPendingSolo.map(verification => renderVerificationCard(verification))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fleet/Enterprise Section */}
+              {filteredPendingFleet.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <Building2 className="h-5 w-5 text-purple-600" />
+                    <h3 className="text-lg font-semibold">Fleet Carriers</h3>
+                    <Badge variant="secondary" className="ml-auto">{filteredPendingFleet.length}</Badge>
+                  </div>
+                  <div className="space-y-4">
+                    {filteredPendingFleet.map(verification => renderVerificationCard(verification))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 

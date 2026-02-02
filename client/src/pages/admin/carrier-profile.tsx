@@ -767,44 +767,84 @@ export default function CarrierProfilePage() {
                     </Collapsible>
 
                     {/* Loads Folder */}
-                    <Collapsible open={openFolders.loads} onOpenChange={() => toggleFolder('loads')}>
-                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg border hover-elevate" data-testid="folder-loads">
-                        <div className="flex items-center gap-2">
-                          {openFolders.loads ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          {openFolders.loads ? <FolderOpen className="h-5 w-5 text-amber-500" /> : <Folder className="h-5 w-5 text-amber-500" />}
-                          <Package className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">Loads</span>
-                        </div>
-                        <Badge variant="secondary">{totalLoadDocs} docs in {loadIds.length} loads</Badge>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="ml-6 mt-1 border-l-2 border-muted pl-4 space-y-2">
-                        {loadIds.length > 0 ? (
-                          loadIds.map(loadId => {
-                            const docs = loadDocs[loadId];
-                            const isOpen = openFolders[`load-${loadId}`] || false;
-                            return (
-                              <Collapsible key={loadId} open={isOpen} onOpenChange={() => toggleFolder(`load-${loadId}`)}>
-                                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg bg-muted/30 hover-elevate" data-testid={`folder-load-${loadId}`}>
-                                  <div className="flex items-center gap-2">
-                                    {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                    <Folder className="h-4 w-4 text-blue-500" />
-                                    <span className="text-sm font-mono">LD-{loadId.slice(0, 8).toUpperCase()}</span>
-                                  </div>
-                                  <Badge variant="outline" className="text-xs">{docs.length} doc{docs.length !== 1 ? 's' : ''}</Badge>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="ml-4 mt-1 border-l border-muted pl-3">
-                                  <div className="bg-background rounded-lg border">
-                                    {docs.map(doc => renderDocumentRow(doc, false))}
-                                  </div>
-                                </CollapsibleContent>
-                              </Collapsible>
-                            );
-                          })
-                        ) : (
-                          <p className="text-sm text-muted-foreground py-2">No load documents</p>
-                        )}
-                      </CollapsibleContent>
-                    </Collapsible>
+                    {(() => {
+                      // Build load info map from assignedLoads
+                      const loadInfoMap: Record<string, { loadNumber: number; status: string }> = {};
+                      if (carrier.assignedLoads) {
+                        carrier.assignedLoads.forEach((load: any) => {
+                          loadInfoMap[load.id] = {
+                            loadNumber: load.shipperLoadNumber || load.adminReferenceNumber || 0,
+                            status: load.status || 'unknown',
+                          };
+                        });
+                      }
+                      
+                      // Sort load IDs by load number descending
+                      const sortedLoadIds = [...loadIds].sort((a, b) => {
+                        const numA = loadInfoMap[a]?.loadNumber || 0;
+                        const numB = loadInfoMap[b]?.loadNumber || 0;
+                        return numB - numA;
+                      });
+
+                      const getStatusBadge = (status: string) => {
+                        const statusLabels: Record<string, string> = {
+                          delivered: "Delivered",
+                          in_transit: "In Transit",
+                          pickup_scheduled: "Pickup Scheduled",
+                          awarded: "Awarded",
+                          invoice_sent: "Invoice Sent",
+                          invoice_paid: "Invoice Paid",
+                          closed: "Closed",
+                        };
+                        const label = statusLabels[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        return <Badge variant="outline" className="text-xs ml-2">{label}</Badge>;
+                      };
+
+                      return (
+                        <Collapsible open={openFolders.loads} onOpenChange={() => toggleFolder('loads')}>
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg border hover-elevate" data-testid="folder-loads">
+                            <div className="flex items-center gap-2">
+                              {openFolders.loads ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              {openFolders.loads ? <FolderOpen className="h-5 w-5 text-amber-500" /> : <Folder className="h-5 w-5 text-amber-500" />}
+                              <Package className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">Loads</span>
+                            </div>
+                            <Badge variant="secondary">{totalLoadDocs} docs in {loadIds.length} loads</Badge>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="ml-6 mt-1 border-l-2 border-muted pl-4 space-y-2">
+                            {sortedLoadIds.length > 0 ? (
+                              sortedLoadIds.map(loadId => {
+                                const docs = loadDocs[loadId];
+                                const loadInfo = loadInfoMap[loadId];
+                                const loadNum = loadInfo?.loadNumber || 0;
+                                const loadStatus = loadInfo?.status || '';
+                                const isOpen = openFolders[`load-${loadId}`] || false;
+                                return (
+                                  <Collapsible key={loadId} open={isOpen} onOpenChange={() => toggleFolder(`load-${loadId}`)}>
+                                    <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg bg-muted/30 hover-elevate" data-testid={`folder-load-${loadId}`}>
+                                      <div className="flex items-center gap-2">
+                                        {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                        <Folder className="h-4 w-4 text-blue-500" />
+                                        <span className="text-sm font-medium">LD-{String(loadNum).padStart(3, '0')}</span>
+                                        {loadStatus && getStatusBadge(loadStatus)}
+                                      </div>
+                                      <Badge variant="outline" className="text-xs">{docs.length} doc{docs.length !== 1 ? 's' : ''}</Badge>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="ml-4 mt-1 border-l border-muted pl-3">
+                                      <div className="bg-background rounded-lg border">
+                                        {docs.map(doc => renderDocumentRow(doc, false))}
+                                      </div>
+                                    </CollapsibleContent>
+                                  </Collapsible>
+                                );
+                              })
+                            ) : (
+                              <p className="text-sm text-muted-foreground py-2">No load documents</p>
+                            )}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               );

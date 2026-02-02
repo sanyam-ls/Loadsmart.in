@@ -824,88 +824,47 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="panNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("onboarding.pan")}</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="ABCDE1234F" 
-                              className="uppercase"
-                              maxLength={10}
-                              {...field} 
-                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                              data-testid="input-pan-number"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="panCardUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("onboarding.panCard")}</FormLabel>
-                          <FormControl>
-                            <DocumentUploadWithCamera
-                              value={field.value || ""}
-                              onChange={field.onChange}
-                              placeholder={t("onboarding.noFileSelected")}
-                              testId="upload-pan-card"
-                              documentType="pan_card"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="gstinNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("onboarding.gstin")}</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="22ABCDE1234F1Z5" 
-                              className="uppercase"
-                              maxLength={15}
-                              {...field} 
-                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                              data-testid="input-gstin"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="gstCertificateUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("onboarding.gstCertificate")}</FormLabel>
-                          <FormControl>
-                            <DocumentUploadWithCamera
-                              value={field.value || ""}
-                              onChange={field.onChange}
-                              placeholder={t("onboarding.noFileSelected")}
-                              testId="upload-gst-certificate"
-                              documentType="gst_certificate"
-                              disabled={form.watch("noGstCertificate")}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <FormField
+                    control={form.control}
+                    name="panNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("onboarding.pan")}</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="ABCDE1234F" 
+                            className="uppercase"
+                            maxLength={10}
+                            {...field} 
+                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                            data-testid="input-pan-number"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="gstinNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("onboarding.gstin")}</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="22ABCDE1234F1Z5" 
+                            className="uppercase"
+                            maxLength={15}
+                            {...field} 
+                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                            data-testid="input-gstin"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="cinNumber"
@@ -1349,6 +1308,27 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
+                    name="gstCertificateUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("onboarding.gstCertificate")}</FormLabel>
+                        <FormControl>
+                          <DocumentUploadWithCamera
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-gst-certificate"
+                            documentType="gst_certificate"
+                            disabled={form.watch("noGstCertificate")}
+                          />
+                        </FormControl>
+                        <FormDescription>{t("onboarding.gstCertificateDesc")}</FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
                     name="noGstCertificate"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
@@ -1428,6 +1408,27 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     />
                   </div>
                 )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="panCardUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("onboarding.panCard")}</FormLabel>
+                        <FormControl>
+                          <DocumentUploadWithCamera
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-pan-card"
+                            documentType="pan_card"
+                          />
+                        </FormControl>
+                        <FormDescription>{t("onboarding.panCardDesc")}</FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField

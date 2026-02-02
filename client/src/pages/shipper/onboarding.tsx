@@ -850,7 +850,7 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     name="gstinNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("onboarding.gstin")}</FormLabel>
+                        <FormLabel>{t("onboarding.gstin")} <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="22ABCDE1234F1Z5" 

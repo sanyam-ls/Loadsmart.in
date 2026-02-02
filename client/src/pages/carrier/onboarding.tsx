@@ -703,6 +703,18 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
+                    <div className="pl-4 border-l-2 border-muted">
+                      <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.aadhaarCard")} *</label>
+                      <DocumentUploadWithCamera
+                        value={soloForm.watch("aadhaarUrl") || ""}
+                        onChange={(val) => {
+                          soloForm.setValue("aadhaarUrl", val);
+                          handleDocumentUpload("aadhaar", val);
+                        }}
+                        disabled={!canEdit}
+                        documentType="aadhaar_card"
+                      />
+                    </div>
                     <FormField
                       control={soloForm.control}
                       name="driverLicenseNumber"
@@ -716,6 +728,18 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
+                    <div className="pl-4 border-l-2 border-muted">
+                      <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.driverLicenseDoc")} *</label>
+                      <DocumentUploadWithCamera
+                        value={soloForm.watch("licenseUrl") || ""}
+                        onChange={(val) => {
+                          soloForm.setValue("licenseUrl", val);
+                          handleDocumentUpload("license", val);
+                        }}
+                        disabled={!canEdit}
+                        documentType="driver_license"
+                      />
+                    </div>
                     <FormField
                       control={soloForm.control}
                       name="businessAddress"
@@ -901,30 +925,6 @@ export default function CarrierOnboarding() {
                   <CardContent className="space-y-6">
                     <div className="grid gap-4">
                       <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.aadhaarCard")} *</label>
-                        <DocumentUploadWithCamera
-                          value={soloForm.watch("aadhaarUrl") || ""}
-                          onChange={(val) => {
-                            soloForm.setValue("aadhaarUrl", val);
-                            handleDocumentUpload("aadhaar", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="aadhaar_card"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.driverLicenseDoc")} *</label>
-                        <DocumentUploadWithCamera
-                          value={soloForm.watch("licenseUrl") || ""}
-                          onChange={(val) => {
-                            soloForm.setValue("licenseUrl", val);
-                            handleDocumentUpload("license", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="driver_license"
-                        />
-                      </div>
-                      <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.permitDoc")} *</label>
                         <DocumentUploadWithCamera
                           value={soloForm.watch("permitUrl") || ""}
@@ -1022,6 +1022,18 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
+                    <div className="pl-4 border-l-2 border-muted">
+                      <label className="text-sm font-medium mb-2 block">Aadhaar Card *</label>
+                      <DocumentUploadWithCamera
+                        value={fleetForm.watch("aadhaarUrl") || ""}
+                        onChange={(val) => {
+                          fleetForm.setValue("aadhaarUrl", val);
+                          handleDocumentUpload("aadhaar", val);
+                        }}
+                        disabled={!canEdit}
+                        documentType="aadhaar"
+                      />
+                    </div>
                     <FormField
                       control={fleetForm.control}
                       name="driverLicenseNumber"
@@ -1035,6 +1047,18 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
+                    <div className="pl-4 border-l-2 border-muted">
+                      <label className="text-sm font-medium mb-2 block">Driver's License *</label>
+                      <DocumentUploadWithCamera
+                        value={fleetForm.watch("licenseUrl") || ""}
+                        onChange={(val) => {
+                          fleetForm.setValue("licenseUrl", val);
+                          handleDocumentUpload("license", val);
+                        }}
+                        disabled={!canEdit}
+                        documentType="license"
+                      />
+                    </div>
                     <FormField
                       control={fleetForm.control}
                       name="panNumber"
@@ -1048,6 +1072,18 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
+                    <div className="pl-4 border-l-2 border-muted">
+                      <label className="text-sm font-medium mb-2 block">PAN Card *</label>
+                      <DocumentUploadWithCamera
+                        value={fleetForm.watch("panUrl") || ""}
+                        onChange={(val) => {
+                          fleetForm.setValue("panUrl", val);
+                          handleDocumentUpload("pan", val);
+                        }}
+                        disabled={!canEdit}
+                        documentType="pan_card"
+                      />
+                    </div>
                     <FormField
                       control={fleetForm.control}
                       name="gstinNumber"
@@ -1061,6 +1097,18 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
+                    <div className="pl-4 border-l-2 border-muted">
+                      <label className="text-sm font-medium mb-2 block">GSTIN Certificate (Optional)</label>
+                      <DocumentUploadWithCamera
+                        value={fleetForm.watch("gstinUrl") || ""}
+                        onChange={(val) => {
+                          fleetForm.setValue("gstinUrl", val);
+                          handleDocumentUpload("gstin", val);
+                        }}
+                        disabled={!canEdit}
+                        documentType="gstin_certificate"
+                      />
+                    </div>
                     <FormField
                       control={fleetForm.control}
                       name="businessAddress"
@@ -1266,54 +1314,6 @@ export default function CarrierOnboarding() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid gap-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Aadhaar Card *</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("aadhaarUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("aadhaarUrl", val);
-                            handleDocumentUpload("aadhaar", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="aadhaar"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Driver's License *</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("licenseUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("licenseUrl", val);
-                            handleDocumentUpload("license", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="license"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">PAN Card *</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("panUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("panUrl", val);
-                            handleDocumentUpload("pan", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="pan_card"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">GSTIN Certificate (Optional)</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("gstinUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("gstinUrl", val);
-                            handleDocumentUpload("gstin", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="gstin_certificate"
-                        />
-                      </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("onboarding.officePhoto")}</label>
                         <p className="text-sm text-red-600 font-medium mb-2">

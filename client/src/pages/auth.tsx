@@ -557,7 +557,7 @@ export default function AuthPage() {
           loop 
           muted 
           playsInline
-          className="absolute inset-0 w-full h-full object-contain"
+          className="absolute inset-0 w-full h-full object-cover object-center"
           onLoadedData={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
         >
           <source src="/assets/Loadlink_1768957478492.mp4" type="video/mp4" />

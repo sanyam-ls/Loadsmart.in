@@ -321,6 +321,12 @@ export default function AuthPage() {
     defaultValues: { username: "", password: "" },
   });
 
+  // Get role and carrierType from URL params for pre-selection
+  const roleParam = urlParams.get("role");
+  const carrierTypeParam = urlParams.get("carrierType");
+  const initialRole = (roleParam === "shipper" || roleParam === "carrier") ? roleParam : "shipper";
+  const initialCarrierType = (carrierTypeParam === "solo" || carrierTypeParam === "enterprise") ? carrierTypeParam : undefined;
+
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -328,32 +334,19 @@ export default function AuthPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      role: "shipper",
+      role: initialRole,
       companyName: "",
       companyPhone: "",
       city: "",
       address: "",
       phone: "",
-      carrierType: undefined,
+      carrierType: initialCarrierType,
     },
   });
 
   const selectedRole = registerForm.watch("role");
   const selectedCarrierType = registerForm.watch("carrierType");
   const watchedPhone = registerForm.watch("phone");
-
-  // Set role and carrierType from URL parameters
-  useEffect(() => {
-    const roleParam = urlParams.get("role");
-    const carrierTypeParam = urlParams.get("carrierType");
-    
-    if (roleParam === "shipper" || roleParam === "carrier") {
-      registerForm.setValue("role", roleParam);
-    }
-    if (carrierTypeParam === "solo" || carrierTypeParam === "enterprise") {
-      registerForm.setValue("carrierType", carrierTypeParam);
-    }
-  }, []);
 
   // Reset OTP verification state when phone number changes
   useEffect(() => {

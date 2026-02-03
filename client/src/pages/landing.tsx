@@ -324,12 +324,12 @@ export default function LandingPage() {
       `}</style>
       
       <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md bg-white/95 dark:bg-[rgba(6,8,23,0.95)] border-gray-200 dark:border-white/10">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="container mx-auto flex h-20 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <img 
               src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
               alt="Load Smart" 
-              className="h-14 w-auto"
+              className="h-16 w-[200px] object-contain"
             />
           </div>
           <div className="flex items-center gap-4">

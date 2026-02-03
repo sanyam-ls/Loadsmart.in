@@ -472,8 +472,8 @@ export default function LandingPage() {
       {/* About Section - Black & White Hero */}
       <section className="relative py-24">
         <div 
-          className="absolute inset-0 bg-cover bg-center grayscale"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=1600&h=600&fit=crop')" }}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/assets/94D758F2-0FF2-4869-9B38-FFF2C0762427_1770127007344.png')" }}
         >
           <div className="absolute inset-0 bg-[#1a1a2e]/60" />
         </div>

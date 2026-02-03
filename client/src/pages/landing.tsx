@@ -353,7 +353,7 @@ export default function LandingPage() {
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/assets/7181445E-ECEF-4FE4-9951-343B8B9C7286_1770125833116.png')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117]/80 via-[#0d1117]/70 to-[#0d1117]/80" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117]/40 via-[#0d1117]/30 to-[#0d1117]/40" />
         </div>
         <div className="relative z-10 container mx-auto px-4 text-center">
           <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 drop-shadow-lg" data-testid="text-ai-platform-title">

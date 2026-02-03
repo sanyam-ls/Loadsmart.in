@@ -76,12 +76,6 @@ export default function LandingPage() {
 
   const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
 
-  const stats = [
-    { value: "₹1T+", label: "IN FREIGHT TRANSACTIONS" },
-    { value: "235M+", label: "LOADS POSTED ANNUALLY" },
-    { value: "150K", label: "TRANSACTIONS PER MINUTE" }
-  ];
-
   const handleGetStarted = () => {
     setLocation("/auth");
   };
@@ -353,23 +347,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* AI Platform Section */}
       <section className="relative py-24">
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?w=1600&h=600&fit=crop')" }}
+          style={{ backgroundImage: "url('/assets/7181445E-ECEF-4FE4-9951-343B8B9C7286_1770125833116.png')" }}
         >
-          <div className="absolute inset-0 bg-[#1a1a2e]/70" />
+          <div className="absolute inset-0 bg-[#1a1a2e]/60" />
         </div>
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-12 text-center">
-            {stats.map((stat, index) => (
-              <div key={index} data-testid={`stat-${index}`}>
-                <p className="text-5xl md:text-6xl font-bold text-white mb-2">{stat.value}</p>
-                <p className="text-white/80 text-sm font-semibold tracking-wider uppercase">{stat.label}</p>
-              </div>
-            ))}
-          </div>
+        <div className="relative z-10 container mx-auto px-4 text-center">
+          <h2 className="text-4xl md:text-6xl font-bold text-white mb-6" data-testid="text-ai-platform-title">
+            India's First AI-Powered Logistics Platform
+          </h2>
+          <p className="text-white/90 text-lg md:text-xl max-w-4xl mx-auto leading-relaxed" data-testid="text-ai-platform-description">
+            Our intelligent automation transforms freight operations across every portal. Shippers get AI-powered truck recommendations and smart pricing. Carriers benefit from algorithmic load matching and route optimization. Admins leverage real-time analytics and automated compliance tracking. From document verification to predictive ETA calculations, our AI Concierge works 24/7 to reduce manual work, eliminate errors, and accelerate every transaction.
+          </p>
         </div>
       </section>
 

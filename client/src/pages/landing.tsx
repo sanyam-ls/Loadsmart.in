@@ -62,7 +62,7 @@ export default function LandingPage() {
     {
       role: "Carrier",
       description: "Find the best loads first on India's largest load board network, with support from dock to dock and beyond.",
-      image: "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400&h=300&fit=crop"
+      image: "/assets/708CC45D-8B89-4450-992D-90158D6A2F5D_1770123616290.png"
     },
     {
       role: "Shipper",

@@ -481,7 +481,7 @@ export default function LandingPage() {
           <h2 className="text-3xl md:text-5xl font-bold text-white uppercase tracking-wide leading-tight" data-testid="text-about-title">
             We've been taking the<br />
             uncertainty out of<br />
-            freight since 2020
+            freight since 1998 with Roadex
           </h2>
         </div>
       </section>

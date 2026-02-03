@@ -67,7 +67,7 @@ export default function LandingPage() {
     {
       role: "Shipper",
       description: "Take charge of your transportation and logistics network, with a 360-degree view of truckload markets.",
-      image: "/assets/Screenshot_2026-02-03_at_6.22.06_PM_1770123127649.png"
+      image: "/assets/PHOTO-2026-01-21-00-10-30_1770123244936.jpg"
     }
   ];
 

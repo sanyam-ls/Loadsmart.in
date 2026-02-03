@@ -77,11 +77,15 @@ export default function LandingPage() {
   const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
 
   const handleGetStarted = () => {
-    setLocation("/auth");
+    setLocation("/auth?tab=register");
   };
 
   const handleLogin = () => {
     setLocation("/auth");
+  };
+
+  const handleSignup = () => {
+    setLocation("/auth?tab=register");
   };
 
   return (

@@ -549,20 +549,22 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
-        <video 
-          ref={videoRef}
-          autoPlay 
-          loop 
-          muted 
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          onLoadedData={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
-        >
-          <source src="/assets/Loadlink_1768957478492.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-br from-[#060817]/80 via-[#16254F]/70 to-[#060817]/75" />
+    <div className="min-h-screen flex relative">
+      {/* Full-screen video background */}
+      <video 
+        ref={videoRef}
+        autoPlay 
+        loop 
+        muted 
+        playsInline
+        className="fixed inset-0 w-full h-full object-cover object-center z-0"
+        onLoadedData={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
+      >
+        <source src="/assets/Loadlink_1768957478492.mp4" type="video/mp4" />
+      </video>
+      <div className="fixed inset-0 bg-gradient-to-br from-[#060817]/80 via-[#16254F]/70 to-[#060817]/75 z-0" />
+
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-40 h-40 border-4 border-white rounded-full" />
           <div className="absolute bottom-32 right-20 w-60 h-60 border-4 border-white rounded-full" />
@@ -605,7 +607,7 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-[#f5f5f7] dark:bg-[#060817]">
+      <div className="flex-1 flex flex-col relative z-10">
         <div className="flex justify-end gap-2 p-4">
           <LanguageSwitcher />
           <ThemeToggle />

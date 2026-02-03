@@ -565,11 +565,6 @@ export default function AuthPage() {
       <div className="fixed inset-0 bg-gradient-to-br from-[#060817]/80 via-[#16254F]/70 to-[#060817]/75 z-0" />
 
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-40 h-40 border-4 border-white rounded-full" />
-          <div className="absolute bottom-32 right-20 w-60 h-60 border-4 border-white rounded-full" />
-          <div className="absolute top-1/2 left-1/3 w-20 h-20 border-4 border-white rounded-full" />
-        </div>
         <div className="relative z-10 flex flex-col justify-center p-12 text-white">
           <div className="flex items-center gap-3 mb-8">
             <img 

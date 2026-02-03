@@ -88,13 +88,13 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white dark:bg-[#0d1117]">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full bg-[#1a1a2e] border-b border-[#1a1a2e]">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="flex h-16 items-center justify-between w-full px-4">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center pl-2">
             <img 
               src={logoPath}
               alt="LoadSmart" 
-              className="h-10 w-auto object-contain"
+              className="h-14 w-auto object-contain"
               data-testid="img-logo"
             />
           </div>

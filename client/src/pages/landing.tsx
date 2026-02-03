@@ -56,20 +56,25 @@ export default function LandingPage() {
   const roleCards = [
     {
       role: "Driver",
-      description: "Own your truck, own your future. Access loads directly, manage your trips, track earnings, and stay compliant - all from your Solo Carrier Portal.",
+      shortDescription: "Own your truck, own your future.",
+      detailedDescription: "As a Solo Driver, you get exclusive access to our Solo Carrier Portal. Find and accept loads directly, manage your trips in real-time, track your earnings, upload documents, and stay compliant with automated expiry alerts. Your truck, your rules, your profits.",
       image: "/assets/E5B529F0-62F3-4B17-80D6-64685531E0FA_1770123487619.png"
     },
     {
       role: "Carrier",
-      description: "Find the best loads first on India's largest load board network, with support from dock to dock and beyond.",
+      shortDescription: "Grow your fleet business with confidence.",
+      detailedDescription: "As a Fleet Carrier, manage your entire fleet from one powerful dashboard. Assign trucks and drivers to loads, track all shipments in real-time, bid on marketplace loads, manage invoices, and maximize fleet utilization. Scale your business with India's largest freight network.",
       image: "/assets/708CC45D-8B89-4450-992D-90158D6A2F5D_1770123616290.png"
     },
     {
       role: "Shipper",
-      description: "Take charge of your transportation and logistics network, with a 360-degree view of truckload markets.",
+      shortDescription: "Take charge of your logistics network.",
+      detailedDescription: "As a Shipper, post your loads and connect with verified carriers instantly. Get competitive pricing, track shipments in real-time with GPS telematics, manage documents digitally, and gain 360-degree visibility into your transportation network. Streamline your supply chain today.",
       image: "/assets/PHOTO-2026-01-21-00-10-30_1770123244936.jpg"
     }
   ];
+
+  const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
 
   const stats = [
     { value: "₹1T+", label: "IN FREIGHT TRANSACTIONS" },
@@ -256,31 +261,87 @@ export default function LandingPage() {
             {roleCards.map((card) => (
               <div 
                 key={card.role}
-                className="bg-white dark:bg-[#161b22] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
+                className="relative h-[500px] cursor-pointer perspective-1000"
+                style={{ perspective: '1000px' }}
+                onClick={() => setFlippedCards(prev => ({ ...prev, [card.role]: !prev[card.role] }))}
                 data-testid={`card-role-${card.role.toLowerCase()}`}
               >
-                <div className="p-8 text-center">
-                  <p className="text-gray-600 dark:text-gray-300 text-xl mb-2">I am a</p>
-                  <h3 className="text-4xl font-black text-[#2855CC] mb-6">{card.role}</h3>
-                  <Button 
-                    className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
-                    data-testid={`button-learn-more-${card.role.toLowerCase()}`}
+                <div 
+                  className="relative w-full h-full transition-transform duration-700"
+                  style={{ 
+                    transformStyle: 'preserve-3d',
+                    transform: flippedCards[card.role] ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                  }}
+                >
+                  {/* Front of card */}
+                  <div 
+                    className="absolute inset-0 bg-white dark:bg-[#161b22] rounded-lg shadow-lg backface-hidden"
+                    style={{ backfaceVisibility: 'hidden' }}
                   >
-                    Learn More
-                  </Button>
-                </div>
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={card.image} 
-                    alt={card.role}
-                    className="w-full h-full object-cover"
-                    data-testid={`img-role-${card.role.toLowerCase()}`}
-                  />
-                </div>
-                <div className="p-6">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm text-center leading-relaxed">
-                    {card.description}
-                  </p>
+                    <div className="p-8 text-center">
+                      <p className="text-gray-600 dark:text-gray-300 text-xl mb-2">I am a</p>
+                      <h3 className="text-4xl font-black text-[#2855CC] mb-6">{card.role}</h3>
+                      <Button 
+                        className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
+                        data-testid={`button-get-started-${card.role.toLowerCase()}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFlippedCards(prev => ({ ...prev, [card.role]: true }));
+                        }}
+                      >
+                        Get Started
+                      </Button>
+                    </div>
+                    <div className="relative h-48 overflow-hidden">
+                      <img 
+                        src={card.image} 
+                        alt={card.role}
+                        className="w-full h-full object-cover"
+                        data-testid={`img-role-${card.role.toLowerCase()}`}
+                      />
+                    </div>
+                    <div className="p-6">
+                      <p className="text-gray-600 dark:text-gray-400 text-sm text-center leading-relaxed">
+                        {card.shortDescription}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Back of card */}
+                  <div 
+                    className="absolute inset-0 bg-[#2855CC] dark:bg-[#1e4499] rounded-lg shadow-lg p-8 flex flex-col justify-between"
+                    style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                  >
+                    <div>
+                      <h3 className="text-3xl font-black text-white mb-4">{card.role}</h3>
+                      <p className="text-white/90 text-base leading-relaxed mb-6">
+                        {card.detailedDescription}
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      <Button 
+                        className="w-full bg-white text-[#2855CC] rounded-full text-sm font-semibold uppercase tracking-wider"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGetStarted();
+                        }}
+                        data-testid={`button-signup-${card.role.toLowerCase()}`}
+                      >
+                        Sign Up Now
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        className="w-full border-white text-white rounded-full text-sm font-semibold uppercase tracking-wider"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFlippedCards(prev => ({ ...prev, [card.role]: false }));
+                        }}
+                        data-testid={`button-back-${card.role.toLowerCase()}`}
+                      >
+                        Go Back
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

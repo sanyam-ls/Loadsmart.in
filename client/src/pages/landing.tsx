@@ -400,7 +400,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-bold text-white mb-3">Unified Digital Load Marketplace</h3>
               <p className="text-gray-300 leading-relaxed mb-4">
-                Single pane of glass for shippers, carriers, fleet owners, and brokers. Post loads, bid, assign, and track—without fragmentation or phone chaos.
+                Single pane of glass for shippers, carriers, fleet owners, and brokers. Post loads, bid, assign, and track without fragmentation or phone chaos.
               </p>
               <p className="text-[#3366FF] text-sm font-semibold">
                 Speed + liquidity + transparency.
@@ -493,7 +493,7 @@ export default function LandingPage() {
             LoadSmart by Roadex
           </h3>
           <p className="text-center text-gray-700 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed" data-testid="text-company-description">
-            LoadSmart is powered by Roadex, a US-based logistics leader headquartered in Southfield, Michigan. Founded in 1998 by truckers who understand the industry inside out, Roadex operates on the principle "For Truckers, By Truckers." With decades of experience serving owner-operators and fleet carriers across North America and India, we deliver a one-stop solution combining freight matching, invoice factoring, dispatch services, and real-time analytics. Our commitment to transparent pricing, honest service, and world-class customer support has earned the trust of thousands of shippers and carriers. At LoadSmart by Roadex, integrity drives every action - we help you keep more of your hard-earned money while maximizing efficiency across your entire logistics operation.
+            LoadSmart is powered by Roadex, a US-based logistics leader headquartered in Southfield, Michigan. Founded in 1998 by truckers who understand the industry inside out, Roadex operates on the principle "For Truckers, By Truckers." With decades of experience serving owner-operators and fleet carriers across North America and India, we deliver a one-stop solution combining freight matching, invoice factoring, dispatch services, and real-time analytics. Our commitment to transparent pricing, honest service, and world-class customer support has earned the trust of thousands of shippers and carriers. At LoadSmart by Roadex, integrity drives every action. We help you keep more of your hard-earned money while maximizing efficiency across your entire logistics operation.
           </p>
         </div>
       </section>

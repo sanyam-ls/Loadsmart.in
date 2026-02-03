@@ -489,8 +489,11 @@ export default function LandingPage() {
       {/* Company Description Section */}
       <section className="py-16 bg-gray-200 dark:bg-[#21262d]">
         <div className="container mx-auto px-4">
+          <h3 className="text-2xl md:text-3xl font-bold text-center text-gray-900 dark:text-white mb-6" data-testid="text-company-brand">
+            Load Smart by Roadex
+          </h3>
           <p className="text-center text-gray-700 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed" data-testid="text-company-description">
-            Load Smart operates India's fastest growing digital freight marketplace; an automated freight-matching technology platform; Load Smart iQ, the industry's leading freight data analytics service; and Load Smart Outgo, the freight financial services platform. Shippers, transportation brokers, carriers, news organizations, and industry analysts rely on Load Smart for market trends and data insights, informed by thousands of daily load posts and a database exceeding ₹1 trillion in freight market transactions. Founded in 2020, Load Smart continues to set the standard for innovation in the trucking and logistics industry.
+            Load Smart is powered by Roadex, a US-based logistics leader headquartered in Southfield, Michigan. Founded in 1998 by truckers who understand the industry inside out, Roadex operates on the principle "For Truckers, By Truckers." With decades of experience serving owner-operators and fleet carriers across North America and India, we deliver a one-stop solution combining freight matching, invoice factoring, dispatch services, and real-time analytics. Our commitment to transparent pricing, honest service, and world-class customer support has earned the trust of thousands of shippers and carriers. At Load Smart by Roadex, integrity drives every action - we help you keep more of your hard-earned money while maximizing efficiency across your entire logistics operation.
           </p>
         </div>
       </section>

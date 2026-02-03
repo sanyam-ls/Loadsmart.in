@@ -329,7 +329,7 @@ export default function LandingPage() {
             <img 
               src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
               alt="Load Smart" 
-              className="h-12 w-auto max-w-[200px]"
+              className="h-16 w-auto"
             />
           </div>
           <div className="flex items-center gap-4">

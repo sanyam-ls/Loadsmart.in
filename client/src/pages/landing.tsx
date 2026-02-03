@@ -106,7 +106,7 @@ export default function LandingPage() {
                 Products <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-[#1a1a2e] border-gray-700">
-                <DropdownMenuItem data-testid="menu-item-load-board">Load Board</DropdownMenuItem>
+                <DropdownMenuItem data-testid="menu-item-load-board" onClick={() => window.location.href = '/load-board'}>Load Board</DropdownMenuItem>
                 <DropdownMenuItem data-testid="menu-item-rateview">Rateview Analytics</DropdownMenuItem>
                 <DropdownMenuItem data-testid="menu-item-iq">iQ Analytics</DropdownMenuItem>
                 <DropdownMenuItem data-testid="menu-item-outgo">LoadSmart Outgo</DropdownMenuItem>

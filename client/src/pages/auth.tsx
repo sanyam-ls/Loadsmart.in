@@ -569,8 +569,8 @@ export default function AuthPage() {
           <div className="flex items-center gap-3 mb-8">
             <img 
               src="/assets/Purple_and_Black_Modern_Software_Developer_LinkedIn_Banner_1770118882647.png" 
-              alt="Load Smart" 
-              className="h-16 w-[300px] object-contain"
+              alt="LoadSmart" 
+              className="h-24 w-[400px] object-contain"
             />
           </div>
           <h1 className="text-4xl font-bold mb-4">

@@ -152,7 +152,7 @@ export function AppSidebar() {
           <img 
             src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
             alt="Load Smart" 
-            className="h-10 w-auto"
+            className="h-8 w-auto max-w-[160px]"
             data-testid="text-app-name"
           />
           <Badge variant={getRoleBadgeVariant()} className="w-fit text-xs">

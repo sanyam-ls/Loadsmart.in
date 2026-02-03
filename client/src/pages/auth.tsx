@@ -567,7 +567,7 @@ export default function AuthPage() {
             <img 
               src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
               alt="Load Smart" 
-              className="h-12 w-auto"
+              className="h-14 w-auto max-w-[220px]"
             />
           </div>
           <h1 className="text-4xl font-bold mb-4">

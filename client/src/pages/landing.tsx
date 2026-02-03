@@ -329,7 +329,7 @@ export default function LandingPage() {
             <img 
               src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
               alt="Load Smart" 
-              className="h-10 w-auto"
+              className="h-12 w-auto max-w-[200px]"
             />
           </div>
           <div className="flex items-center gap-4">
@@ -964,7 +964,7 @@ export default function LandingPage() {
               <img 
                 src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
                 alt="Load Smart" 
-                className="h-8 w-auto"
+                className="h-10 w-auto max-w-[180px]"
               />
             </div>
             <p className="text-sm text-gray-500 dark:text-[#667D9D]">

@@ -55,9 +55,9 @@ export default function LandingPage() {
 
   const roleCards = [
     {
-      role: "Broker",
-      description: "Move more freight and solve for any problem, with access to the most trucks and the deepest data.",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop"
+      role: "Driver",
+      description: "Own your truck, own your future. Access loads directly, manage your trips, track earnings, and stay compliant - all from your Solo Carrier Portal.",
+      image: "/assets/E5B529F0-62F3-4B17-80D6-64685531E0FA_1770123487619.png"
     },
     {
       role: "Carrier",

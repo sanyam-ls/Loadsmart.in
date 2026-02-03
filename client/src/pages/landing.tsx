@@ -353,15 +353,17 @@ export default function LandingPage() {
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/assets/7181445E-ECEF-4FE4-9951-343B8B9C7286_1770125833116.png')" }}
         >
-          <div className="absolute inset-0 bg-[#1a1a2e]/60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117]/80 via-[#0d1117]/70 to-[#0d1117]/80" />
         </div>
         <div className="relative z-10 container mx-auto px-4 text-center">
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-6" data-testid="text-ai-platform-title">
+          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 drop-shadow-lg" data-testid="text-ai-platform-title">
             India's First AI-Powered Logistics Platform
           </h2>
-          <p className="text-white/90 text-lg md:text-xl max-w-4xl mx-auto leading-relaxed" data-testid="text-ai-platform-description">
-            Our intelligent automation transforms freight operations across every portal. Shippers get AI-powered truck recommendations and smart pricing. Carriers benefit from algorithmic load matching and route optimization. Admins leverage real-time analytics and automated compliance tracking. From document verification to predictive ETA calculations, our AI Concierge works 24/7 to reduce manual work, eliminate errors, and accelerate every transaction.
-          </p>
+          <div className="bg-[#0d1117]/70 backdrop-blur-sm rounded-xl p-8 max-w-5xl mx-auto border border-white/10">
+            <p className="text-white text-lg md:text-xl leading-relaxed" data-testid="text-ai-platform-description">
+              Our intelligent automation transforms freight operations across every portal. <span className="text-[#3366FF] font-semibold">Shippers</span> get AI-powered truck recommendations and smart pricing. <span className="text-[#3366FF] font-semibold">Carriers</span> benefit from algorithmic load matching and route optimization. <span className="text-[#3366FF] font-semibold">Admins</span> leverage real-time analytics and automated compliance tracking. From document verification to predictive ETA calculations, our <span className="text-[#3366FF] font-semibold">AI Concierge</span> works 24/7 to reduce manual work, eliminate errors, and accelerate every transaction.
+            </p>
+          </div>
         </div>
       </section>
 

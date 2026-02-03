@@ -88,6 +88,16 @@ export default function LandingPage() {
     setLocation("/auth?tab=register");
   };
 
+  const handleCardSignup = (role: string) => {
+    if (role === "Driver") {
+      setLocation("/auth?tab=register&role=carrier&carrierType=solo");
+    } else if (role === "Carrier") {
+      setLocation("/auth?tab=register&role=carrier&carrierType=enterprise");
+    } else if (role === "Shipper") {
+      setLocation("/auth?tab=register&role=shipper");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#0d1117]">
       {/* Header */}
@@ -312,7 +322,7 @@ export default function LandingPage() {
                         className="w-full bg-white text-[#2855CC] rounded-full text-sm font-semibold uppercase tracking-wider"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleGetStarted();
+                          handleCardSignup(card.role);
                         }}
                         data-testid={`button-signup-${card.role.toLowerCase()}`}
                       >

@@ -342,6 +342,19 @@ export default function AuthPage() {
   const selectedCarrierType = registerForm.watch("carrierType");
   const watchedPhone = registerForm.watch("phone");
 
+  // Set role and carrierType from URL parameters
+  useEffect(() => {
+    const roleParam = urlParams.get("role");
+    const carrierTypeParam = urlParams.get("carrierType");
+    
+    if (roleParam === "shipper" || roleParam === "carrier") {
+      registerForm.setValue("role", roleParam);
+    }
+    if (carrierTypeParam === "solo" || carrierTypeParam === "enterprise") {
+      registerForm.setValue("carrierType", carrierTypeParam);
+    }
+  }, []);
+
   // Reset OTP verification state when phone number changes
   useEffect(() => {
     if (verifiedPhone && watchedPhone !== verifiedPhone) {

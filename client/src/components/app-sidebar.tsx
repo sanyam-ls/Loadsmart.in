@@ -150,16 +150,14 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <img 
-            src="/attached_assets/image_1770116427838.png" 
-            alt="Load Smart Logo" 
+            src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
+            alt="Load Smart" 
             className="h-10 w-auto"
+            data-testid="text-app-name"
           />
-          <div className="flex flex-col">
-            <span className="text-lg font-semibold" data-testid="text-app-name">Load Smart</span>
-            <Badge variant={getRoleBadgeVariant()} className="w-fit text-xs">
-              {getRoleLabel()}
-            </Badge>
-          </div>
+          <Badge variant={getRoleBadgeVariant()} className="w-fit text-xs">
+            {getRoleLabel()}
+          </Badge>
         </div>
       </SidebarHeader>
       <SidebarContent>

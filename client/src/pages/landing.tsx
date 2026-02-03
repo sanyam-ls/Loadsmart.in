@@ -327,8 +327,8 @@ export default function LandingPage() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <img 
-              src="/attached_assets/image_1770116427838.png" 
-              alt="Load Smart Logo" 
+              src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
+              alt="Load Smart" 
               className="h-10 w-auto"
             />
           </div>
@@ -962,8 +962,8 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img 
-                src="/attached_assets/image_1770116427838.png" 
-                alt="Load Smart Logo" 
+                src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
+                alt="Load Smart" 
                 className="h-8 w-auto"
               />
             </div>

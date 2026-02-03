@@ -174,15 +174,21 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative h-[600px] overflow-hidden">
-        {/* Hero Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center transition-all duration-700"
-          style={{ backgroundImage: `url(${heroSlides[currentHeroSlide].image})` }}
+      {/* Hero Section with Video Background */}
+      <section className="relative h-[600px] overflow-hidden" data-testid="section-hero">
+        {/* Video Background */}
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          data-testid="video-hero-background"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a2e]/90 via-[#1a1a2e]/70 to-transparent" />
-        </div>
+          <source src="/assets/Loadlink_1770122436363.mp4" type="video/mp4" />
+        </video>
+        {/* Dark overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a2e]/90 via-[#1a1a2e]/70 to-transparent" />
 
         {/* Hero Content */}
         <div className="relative z-10 container mx-auto h-full flex items-center px-4">

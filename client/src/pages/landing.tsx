@@ -260,8 +260,8 @@ export default function LandingPage() {
                 data-testid={`card-role-${card.role.toLowerCase()}`}
               >
                 <div className="p-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">I am a</p>
-                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">{card.role}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-base mb-1">I am a</p>
+                  <h3 className="text-3xl font-bold text-[#3366FF] mb-6">{card.role}</h3>
                   <Button 
                     className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
                     data-testid={`button-learn-more-${card.role.toLowerCase()}`}

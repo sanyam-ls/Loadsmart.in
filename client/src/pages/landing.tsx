@@ -82,15 +82,6 @@ export default function LandingPage() {
     { value: "150K", label: "TRANSACTIONS PER MINUTE" }
   ];
 
-  const awards = [
-    { title: "Top 50", subtitle: "Best Software" },
-    { title: "Grid Leader", subtitle: "Spring 2025" },
-    { title: "Leader", subtitle: "Load Board 2025" },
-    { title: "Leader", subtitle: "Analytics 2025" },
-    { title: "Fastest", subtitle: "Implementation" },
-    { title: "Best Est. ROI", subtitle: "Spring 2025" }
-  ];
-
   const handleGetStarted = () => {
     setLocation("/auth");
   };
@@ -359,32 +350,6 @@ export default function LandingPage() {
             We match the right load to the right truck at the right price, with trusted insights since 2020. 
             Succeed on India's fastest growing freight network.
           </p>
-        </div>
-      </section>
-
-      {/* Awards Section */}
-      <section className="py-12 bg-[#1a1a2e]">
-        <div className="container mx-auto px-4">
-          <h3 className="text-center text-white font-bold text-lg mb-8" data-testid="text-awards-title">
-            Award-winning freight technology
-          </h3>
-          <div className="flex flex-wrap justify-center gap-8">
-            {awards.map((award, index) => (
-              <div 
-                key={index}
-                className="flex items-center gap-3 bg-[#2a2a4e] rounded-lg px-6 py-4"
-                data-testid={`badge-award-${index}`}
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">LS</span>
-                </div>
-                <div>
-                  <p className="text-white font-bold text-sm">{award.title}</p>
-                  <p className="text-gray-400 text-xs">{award.subtitle}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

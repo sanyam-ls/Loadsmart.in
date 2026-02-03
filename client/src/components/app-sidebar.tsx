@@ -150,7 +150,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-6 border-b border-sidebar-border">
         <div className="flex flex-col gap-3">
           <img 
-            src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
+            src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770118306132.png" 
             alt="Load Smart" 
             className="w-full h-auto object-contain"
             data-testid="text-app-name"

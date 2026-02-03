@@ -327,9 +327,9 @@ export default function LandingPage() {
         <div className="container mx-auto flex h-20 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <img 
-              src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
+              src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770118306132.png" 
               alt="Load Smart" 
-              className="h-16 w-[200px] object-contain"
+              className="h-12 w-auto"
             />
           </div>
           <div className="flex items-center gap-4">
@@ -962,9 +962,9 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img 
-                src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
+                src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770118306132.png" 
                 alt="Load Smart" 
-                className="h-12 w-auto"
+                className="h-10 w-auto"
               />
             </div>
             <p className="text-sm text-gray-500 dark:text-[#667D9D]">

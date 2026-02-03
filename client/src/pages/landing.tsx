@@ -470,12 +470,12 @@ export default function LandingPage() {
       </section>
 
       {/* About Section - Black & White Hero */}
-      <section className="relative py-24">
+      <section className="relative py-32">
         <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/assets/94D758F2-0FF2-4869-9B38-FFF2C0762427_1770127007344.png')" }}
+          className="absolute inset-0 bg-cover"
+          style={{ backgroundImage: "url('/assets/94D758F2-0FF2-4869-9B38-FFF2C0762427_1770127007344.png')", backgroundPosition: "35% 25%" }}
         >
-          <div className="absolute inset-0 bg-[#1a1a2e]/60" />
+          <div className="absolute inset-0 bg-[#1a1a2e]/50" />
         </div>
         <div className="relative z-10 container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-white uppercase tracking-wide leading-tight" data-testid="text-about-title">

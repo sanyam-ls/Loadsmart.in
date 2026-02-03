@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth-context";
-import { ChevronLeft, ChevronRight, ChevronDown, Search, Facebook, Linkedin, Youtube, Instagram } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Search, Facebook, Linkedin, Youtube, Instagram, UserCheck, LayoutGrid, Zap, ShieldCheck, MapPin, BarChart3 } from "lucide-react";
 import { SiX } from "react-icons/si";
 import {
   DropdownMenu,
@@ -408,167 +408,103 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Products Grid Section */}
+      {/* Features Section */}
       <section className="py-20 bg-white dark:bg-[#0d1117]">
         <div className="container mx-auto px-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-center text-gray-900 dark:text-white mb-4" data-testid="text-features-title">
+            Platform Features
+          </h2>
+          <p className="text-center text-gray-600 dark:text-gray-400 mb-16 max-w-2xl mx-auto">
+            Everything you need to streamline your freight operations
+          </p>
+          
           {/* First Row */}
           <div className="grid md:grid-cols-3 gap-6 mb-6">
-            {/* Load Smart One Card */}
-            <div className="bg-[#1a1a2e] rounded-lg p-8 flex flex-col justify-between" data-testid="card-product-one">
-              <div>
-                <div className="mb-4">
-                  <img 
-                    src={logoPath}
-                    alt="Load Smart" 
-                    className="h-8 w-auto object-contain mb-4"
-                  />
-                </div>
-                <h3 className="text-3xl font-bold text-[#3366FF] mb-2">One</h3>
-                <p className="text-white text-xl font-semibold mb-1">Freight</p>
-                <p className="text-white font-bold mb-6">End-to-End Solutions</p>
+            {/* Effortless Onboarding Card */}
+            <div className="bg-gray-100 dark:bg-[#161b22] rounded-lg p-8" data-testid="card-feature-onboarding">
+              <div className="w-12 h-12 bg-[#3366FF]/10 rounded-lg flex items-center justify-center mb-4">
+                <UserCheck className="w-6 h-6 text-[#3366FF]" />
               </div>
-              <Button 
-                className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
-                data-testid="button-learn-more-one"
-              >
-                Learn More
-              </Button>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Effortless Onboarding & Ease of Use</h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                No steep learning curve. No technical dependency. Shippers and carriers get productive on Day One with an intuitive, role-based interface.
+              </p>
+              <p className="text-[#3366FF] text-sm font-semibold">
+                Software that works the way logistics already works.
+              </p>
             </div>
 
-            {/* Truck Highway Image */}
-            <div className="rounded-lg overflow-hidden h-64 md:h-auto">
-              <img 
-                src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&h=400&fit=crop"
-                alt="Freight truck on highway"
-                className="w-full h-full object-cover"
-                data-testid="img-truck-highway"
-              />
+            {/* Unified Digital Load Marketplace Card */}
+            <div className="bg-[#1a1a2e] rounded-lg p-8" data-testid="card-feature-marketplace">
+              <div className="w-12 h-12 bg-[#3366FF]/20 rounded-lg flex items-center justify-center mb-4">
+                <LayoutGrid className="w-6 h-6 text-[#3366FF]" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Unified Digital Load Marketplace</h3>
+              <p className="text-gray-300 leading-relaxed mb-4">
+                Single pane of glass for shippers, carriers, fleet owners, and brokers. Post loads, bid, assign, and track—without fragmentation or phone chaos.
+              </p>
+              <p className="text-[#3366FF] text-sm font-semibold">
+                Speed + liquidity + transparency.
+              </p>
             </div>
 
-            {/* Smart Factoring Card */}
-            <div className="bg-gray-100 dark:bg-[#161b22] rounded-lg p-8 flex flex-col justify-between" data-testid="card-product-factoring">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Smart Factoring</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                  Get paid fast with automated invoicing, no annual contracts, and rates as low as 1.0%.
-                </p>
+            {/* Smart Matching & Pricing Engine Card */}
+            <div className="bg-gray-100 dark:bg-[#161b22] rounded-lg p-8" data-testid="card-feature-matching">
+              <div className="w-12 h-12 bg-[#3366FF]/10 rounded-lg flex items-center justify-center mb-4">
+                <Zap className="w-6 h-6 text-[#3366FF]" />
               </div>
-              <Button 
-                className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
-                data-testid="button-learn-more-factoring"
-              >
-                Learn More
-              </Button>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Smart Matching & Pricing Engine</h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                Algorithmic load-to-carrier matching using lane history, truck type, availability, and performance data. Dynamic pricing reduces empty miles and rate disputes.
+              </p>
+              <p className="text-[#3366FF] text-sm font-semibold">
+                Higher margins, faster closes.
+              </p>
             </div>
           </div>
 
           {/* Second Row */}
-          <div className="grid md:grid-cols-3 gap-6 mb-6">
-            {/* Rateview Analytics Card */}
-            <div className="bg-gray-100 dark:bg-[#161b22] rounded-lg p-8" data-testid="card-product-rateview">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Rateview Analytics</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                The industry standard in truckload pricing data. See the most current spot and contract truckload rates across all lanes in India.
-              </p>
-              <Button 
-                className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
-                data-testid="button-learn-more-rateview"
-              >
-                Learn More
-              </Button>
-            </div>
-
-            {/* Warehouse Image */}
-            <div className="rounded-lg overflow-hidden h-64 md:h-auto">
-              <img 
-                src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&h=400&fit=crop"
-                alt="Warehouse"
-                className="w-full h-full object-cover"
-                data-testid="img-warehouse"
-              />
-            </div>
-
-            {/* iQ Analytics Card */}
-            <div className="bg-[#1a1a2e] rounded-lg p-8 flex flex-col justify-between" data-testid="card-product-iq">
-              <div>
-                <div className="mb-4">
-                  <img 
-                    src={logoPath}
-                    alt="Load Smart" 
-                    className="h-8 w-auto object-contain mb-4"
-                  />
-                </div>
-                <h3 className="text-4xl font-bold text-[#3366FF] mb-2">iQ</h3>
-                <p className="text-white text-xl font-semibold mb-4">Analytics</p>
-                <p className="text-white font-bold">The Most Accurate Insights</p>
-              </div>
-              <Button 
-                className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider mt-6"
-                data-testid="button-learn-more-iq"
-              >
-                Learn More
-              </Button>
-            </div>
-          </div>
-
-          {/* Third Row */}
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Outgo Factoring Card */}
-            <div className="bg-[#1a1a2e] rounded-lg p-8 flex flex-col justify-between" data-testid="card-product-outgo">
-              <div>
-                <div className="mb-4">
-                  <img 
-                    src={logoPath}
-                    alt="Load Smart" 
-                    className="h-8 w-auto object-contain mb-4"
-                  />
-                </div>
-                <h3 className="text-3xl font-bold text-[#3366FF] mb-2">Outgo</h3>
-                <p className="text-white text-xl font-semibold mb-4">Factoring</p>
-                <p className="text-white font-bold">Get paid faster</p>
+            {/* Carrier Trust & Verification Card */}
+            <div className="bg-[#1a1a2e] rounded-lg p-8" data-testid="card-feature-verification">
+              <div className="w-12 h-12 bg-[#3366FF]/20 rounded-lg flex items-center justify-center mb-4">
+                <ShieldCheck className="w-6 h-6 text-[#3366FF]" />
               </div>
-              <Button 
-                className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider mt-6"
-                data-testid="button-learn-more-outgo"
-              >
-                Learn More
-              </Button>
-            </div>
-
-            {/* Illustration/Diagram */}
-            <div className="bg-white dark:bg-[#161b22] rounded-lg p-8 flex items-center justify-center">
-              <div className="relative w-full h-48">
-                {/* Simple illustration representing freight flow */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full border-2 border-[#3366FF] flex items-center justify-center">
-                      <span className="text-[#3366FF] text-2xl font-bold">$</span>
-                    </div>
-                    <div className="w-8 h-0.5 bg-[#3366FF]" />
-                    <div className="w-16 h-16 rounded-full border-2 border-[#3366FF] flex items-center justify-center">
-                      <span className="text-[#3366FF] text-lg">Truck</span>
-                    </div>
-                    <div className="w-8 h-0.5 bg-[#3366FF]" />
-                    <div className="w-16 h-16 rounded-full border-2 border-[#3366FF] flex items-center justify-center">
-                      <span className="text-[#3366FF] text-2xl font-bold">$</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Factoring on Your Terms Card */}
-            <div className="bg-gray-100 dark:bg-[#161b22] rounded-lg p-8" data-testid="card-product-terms">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Factoring on Your Terms</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                Put non-recourse factoring work for you with automated invoicing, no long-term contracts, and the freedom to choose which loads to factor.
+              <h3 className="text-xl font-bold text-white mb-3">Carrier Trust & Verification Layer</h3>
+              <p className="text-gray-300 leading-relaxed mb-4">
+                Built-in KYC, document validation, performance scoring, and compliance tracking. Only verified carriers operate in the ecosystem.
               </p>
-              <Button 
-                className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
-                data-testid="button-learn-more-terms"
-              >
-                Learn More
-              </Button>
+              <p className="text-[#3366FF] text-sm font-semibold">
+                Risk reduction + enterprise trust.
+              </p>
+            </div>
+
+            {/* Real-Time Shipment Visibility Card */}
+            <div className="bg-gray-100 dark:bg-[#161b22] rounded-lg p-8" data-testid="card-feature-visibility">
+              <div className="w-12 h-12 bg-[#3366FF]/10 rounded-lg flex items-center justify-center mb-4">
+                <MapPin className="w-6 h-6 text-[#3366FF]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Real-Time Shipment Visibility</h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                Live tracking, milestone updates, and exception alerts across the journey. No black boxes. No "where is the truck?" calls.
+              </p>
+              <p className="text-[#3366FF] text-sm font-semibold">
+                Control, predictability, accountability.
+              </p>
+            </div>
+
+            {/* Operations & Analytics Command Center Card */}
+            <div className="bg-[#1a1a2e] rounded-lg p-8" data-testid="card-feature-analytics">
+              <div className="w-12 h-12 bg-[#3366FF]/20 rounded-lg flex items-center justify-center mb-4">
+                <BarChart3 className="w-6 h-6 text-[#3366FF]" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Operations & Analytics Command Center</h3>
+              <p className="text-gray-300 leading-relaxed mb-4">
+                Dashboards for on-time delivery, lane performance, carrier efficiency, and cost optimization. Decision-making powered by data, not gut feel.
+              </p>
+              <p className="text-[#3366FF] text-sm font-semibold">
+                Measurable ROI + operational intelligence.
+              </p>
             </div>
           </div>
         </div>

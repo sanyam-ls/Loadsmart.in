@@ -38,7 +38,7 @@ i18n
     },
     detection: {
       order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'freightflow.lang',
+      lookupLocalStorage: 'loadsmart.lang',
       caches: ['localStorage'],
     },
   });

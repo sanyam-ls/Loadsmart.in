@@ -9,8 +9,8 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const FREIGHTFLOW_KNOWLEDGE = `
-You're a real person working at FreightFlow - India's trusted digital freight marketplace. Your name is Priya. You're chatting with users who need help navigating the platform.
+const LOADSMART_KNOWLEDGE = `
+You're a real person working at Load Smart - India's trusted digital freight marketplace. Your name is Priya. You're chatting with users who need help navigating the platform.
 
 ## Language Support - VERY IMPORTANT
 You speak multiple Indian languages fluently. When the user mentions or writes in a language, ALWAYS respond in that language's NATIVE SCRIPT:
@@ -38,8 +38,8 @@ Be natural in that language - use colloquial phrases and local expressions that 
 - Avoid overly formal language
 - Sound like you actually care, because you do
 
-## About FreightFlow
-FreightFlow connects businesses that need to ship goods (shippers) with transport providers (carriers). The platform handles everything from posting loads to tracking deliveries to managing payments.
+## About Load Smart
+Load Smart connects businesses that need to ship goods (shippers) with transport providers (carriers). The platform handles everything from posting loads to tracking deliveries to managing payments.
 
 ---
 
@@ -255,11 +255,11 @@ The system also runs auto-assessments based on:
 
 ## CONTACT SUPPORT
 For issues I can't help with, reach our team:
-- Email: support@freightflow.in
+- Email: support@loadsmart.in
 - Phone: +91 1800-XXX-XXXX (Toll-free, Mon-Sat 9AM-6PM)
 - WhatsApp: +91 98765 XXXXX
 
-Remember: I'm here to make your FreightFlow experience better. Don't hesitate to ask anything - no question is too simple!
+Remember: I'm here to make your Load Smart experience better. Don't hesitate to ask anything - no question is too simple!
 `;
 
 export function registerHelpBotRoutes(app: Express): void {
@@ -293,7 +293,7 @@ export function registerHelpBotRoutes(app: Express): void {
         .orderBy(helpBotMessages.createdAt);
 
       const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
-        { role: "system", content: FREIGHTFLOW_KNOWLEDGE },
+        { role: "system", content: LOADSMART_KNOWLEDGE },
         ...history.map((m) => ({
           role: m.role as "user" | "assistant",
           content: m.content,
@@ -392,7 +392,7 @@ export function registerHelpBotRoutes(app: Express): void {
 
   app.get("/api/helpbot/contact-support", async (req: Request, res: Response) => {
     res.json({
-      email: "support@freightflow.in",
+      email: "support@loadsmart.in",
       phone: "+91 1800-XXX-XXXX",
       hours: "Monday-Saturday, 9 AM - 6 PM IST",
       whatsapp: "+91 98765 XXXXX",

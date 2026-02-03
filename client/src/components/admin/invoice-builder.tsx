@@ -319,7 +319,7 @@ Invoice Number: ${invoiceNumber}
 Date: ${new Date().toLocaleDateString('en-IN')}
 Due Date: ${paymentTerms}
 
-FROM: FreightFlow Platform
+FROM: Load Smart Platform
 TO: Shipper ID ${load?.shipperId || 'N/A'}
 
 LOAD DETAILS:

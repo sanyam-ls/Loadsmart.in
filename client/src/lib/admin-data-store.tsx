@@ -646,7 +646,7 @@ function generateEnterpriseUsers(): AdminUser[] {
     for (let i = 0; i < count; i++) {
       const firstName = randomFrom(indianFirstNames);
       const lastName = randomFrom(indianLastNames);
-      const company = role === "admin" ? "FreightFlow Platform" : randomFrom(companyNames);
+      const company = role === "admin" ? "Load Smart Platform" : randomFrom(companyNames);
       const daysAgo = randomBetween(1, 730);
       const isRecent = daysAgo < 30;
       const status = isRecent && Math.random() < 0.3 ? "pending" : (Math.random() < 0.05 ? "suspended" : "active");

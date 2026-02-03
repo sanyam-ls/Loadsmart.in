@@ -937,7 +937,7 @@ ${invoice.paymentReference ? `Payment Ref: ${invoice.paymentReference}` : ''}
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Account Name:</span>
-                        <span className="font-medium">FreightFlow Logistics Pvt Ltd</span>
+                        <span className="font-medium">Load Smart Logistics Pvt Ltd</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Account Number:</span>

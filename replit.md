@@ -1,8 +1,8 @@
-# FreightFlow - Digital Freight Marketplace
+# Load Smart - Digital Freight Marketplace
 
 ## Overview
 
-FreightFlow is a full-stack logistics marketplace connecting shippers with carriers, featuring Shipper, Carrier, and Admin roles. It aims to streamline freight transportation through an "Admin-as-Mediator" pricing model, session-based authentication, real-time UI, and a comprehensive design system, enhancing efficiency and transparency in freight management. The platform includes an AI Concierge, a Solo Carrier Portal, dual marketplace bidding, real-time tracking, and document sharing.
+Load Smart is a full-stack logistics marketplace connecting shippers with carriers, featuring Shipper, Carrier, and Admin roles. It aims to streamline freight transportation through an "Admin-as-Mediator" pricing model, session-based authentication, real-time UI, and a comprehensive design system, enhancing efficiency and transparency in freight management. The platform includes an AI Concierge, a Solo Carrier Portal, dual marketplace bidding, real-time tracking, and document sharing.
 
 ## User Preferences
 

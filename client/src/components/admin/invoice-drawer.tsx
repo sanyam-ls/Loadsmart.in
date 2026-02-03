@@ -747,7 +747,7 @@ export function InvoiceDrawer({
                   <div className="flex justify-between items-start">
                     <div>
                       <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
-                      <p className="text-muted-foreground text-sm">FreightFlow Logistics</p>
+                      <p className="text-muted-foreground text-sm">Load Smart Logistics</p>
                     </div>
                     <div className="text-right text-sm">
                       <p className="font-medium">Invoice Date</p>

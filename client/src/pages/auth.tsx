@@ -407,7 +407,7 @@ export default function AuthPage() {
           });
           navigate("/shipper/onboarding");
         } else {
-          toast({ title: t("auth.accountCreated"), description: t("auth.welcomeToFreightFlow") });
+          toast({ title: t("auth.accountCreated"), description: t("auth.welcomeToLoadSmart") });
           navigate("/");
         }
       } else {
@@ -564,10 +564,11 @@ export default function AuthPage() {
         </div>
         <div className="relative z-10 flex flex-col justify-center p-12 text-white">
           <div className="flex items-center gap-3 mb-8">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/20 backdrop-blur">
-              <Truck className="h-6 w-6" />
-            </div>
-            <span className="text-2xl font-bold">FreightFlow</span>
+            <img 
+              src="/attached_assets/image_1770116427838.png" 
+              alt="Load Smart Logo" 
+              className="h-12 w-auto"
+            />
           </div>
           <h1 className="text-4xl font-bold mb-4">
             {t("auth.digitalFreightMarketplace")}

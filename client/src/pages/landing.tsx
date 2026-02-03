@@ -39,7 +39,7 @@ const roleCards = [
     features: ["Post unlimited loads", "Real-time tracking", "Document management"],
     link: "/auth?role=shipper",
     backGreeting: "Hey, I am a Shipper!",
-    backDescription: "I post loads and connect with reliable carriers to move my freight. With FreightFlow, I can easily post unlimited shipments, get competitive bids from verified carriers, track my cargo in real-time, and manage all my shipping documents digitally. The platform helps me find the best rates while ensuring my goods reach their destination safely and on time."
+    backDescription: "I post loads and connect with reliable carriers to move my freight. With Load Smart, I can easily post unlimited shipments, get competitive bids from verified carriers, track my cargo in real-time, and manage all my shipping documents digitally. The platform helps me find the best rates while ensuring my goods reach their destination safely and on time."
   },
   {
     id: "solo",
@@ -50,7 +50,7 @@ const roleCards = [
     features: ["Load marketplace", "Earnings tracking", "Document storage"],
     link: "/auth?role=solo",
     backGreeting: "Hey, I am a Solo Carrier!",
-    backDescription: "I am an owner-operator who finds and hauls loads independently. FreightFlow gives me access to a marketplace full of available loads, helps me track my earnings and expenses, stores all my compliance documents, and lets me grow my business on my own terms. No middlemen, just me, my truck, and the open road."
+    backDescription: "I am an owner-operator who finds and hauls loads independently. Load Smart gives me access to a marketplace full of available loads, helps me track my earnings and expenses, stores all my compliance documents, and lets me grow my business on my own terms. No middlemen, just me, my truck, and the open road."
   },
   {
     id: "fleet",
@@ -61,19 +61,19 @@ const roleCards = [
     features: ["Fleet management", "Driver tracking", "Revenue analytics"],
     link: "/auth?role=fleet",
     backGreeting: "Hey, I am a Fleet Owner!",
-    backDescription: "I manage a fleet of trucks and drivers to handle multiple shipments. FreightFlow helps me assign drivers to loads, track all my vehicles in real-time, analyze revenue across my fleet, and scale my transportation business. With comprehensive analytics and fleet management tools, I can maximize efficiency and profitability."
+    backDescription: "I manage a fleet of trucks and drivers to handle multiple shipments. Load Smart helps me assign drivers to loads, track all my vehicles in real-time, analyze revenue across my fleet, and scale my transportation business. With comprehensive analytics and fleet management tools, I can maximize efficiency and profitability."
   }
 ];
 
 const staffCard = {
   id: "admin",
-  title: "FreightFlow Staff",
-  subtitle: "I work at FreightFlow",
+  title: "Load Smart Staff",
+  subtitle: "I work at Load Smart",
   description: "Manage operations, approve carriers, handle pricing, and oversee the marketplace.",
   icon: Shield,
   features: ["Full platform access", "Carrier verification", "Analytics dashboard"],
   link: "/auth?role=admin",
-  backGreeting: "Hey, I am FreightFlow Staff!",
+  backGreeting: "Hey, I am Load Smart Staff!",
   backDescription: "I ensure the marketplace runs smoothly by verifying carriers, managing load pricing, and overseeing all operations. My role involves approving new carriers, setting fair prices for shippers, resolving disputes, and using analytics to optimize the platform. I am the bridge that connects shippers with trusted carriers."
 };
 
@@ -278,7 +278,7 @@ export default function LandingPage() {
                 <CheckCircle2 className="w-16 h-16 text-yellow-400 mb-4" />
                 <h2 className="text-2xl font-bold text-white mb-4 text-center">Great Job!</h2>
                 <p className="text-white/90 text-center text-base leading-relaxed mb-6">
-                  Now explore our platform and discover how FreightFlow can transform your logistics experience.
+                  Now explore our platform and discover how Load Smart can transform your logistics experience.
                 </p>
                 <Button
                   onClick={closeWelcomePopup}
@@ -326,10 +326,11 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md bg-white/95 dark:bg-[rgba(6,8,23,0.95)] border-gray-200 dark:border-white/10">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#667D9D]">
-              <Truck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white tracking-wide">FreightFlow</span>
+            <img 
+              src="/attached_assets/image_1770116427838.png" 
+              alt="Load Smart Logo" 
+              className="h-10 w-auto"
+            />
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -558,7 +559,7 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <p className="text-xl font-bold mb-2 text-white">Join Our Team</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-              What It's Like Working at FreightFlow
+              What It's Like Working at Load Smart
             </h2>
             <p className="text-xl max-w-2xl mx-auto text-white">
               Be part of a team that's revolutionizing India's logistics industry. We're building the future of freight, one load at a time.
@@ -574,7 +575,7 @@ export default function LandingPage() {
                 description: 'Work with passionate people who care about making logistics better for everyone.',
                 image: collaborationImage,
                 backTitle: 'Our Team Spirit',
-                backDetails: 'At FreightFlow, collaboration is at our core. We hold daily standups, weekly brainstorming sessions, and quarterly team retreats. Our open-door policy means everyone from interns to executives can share ideas. We celebrate wins together, learn from setbacks as a team, and support each other through every challenge.'
+                backDetails: 'At Load Smart, collaboration is at our core. We hold daily standups, weekly brainstorming sessions, and quarterly team retreats. Our open-door policy means everyone from interns to executives can share ideas. We celebrate wins together, learn from setbacks as a team, and support each other through every challenge.'
               },
               {
                 id: 'growth',
@@ -922,7 +923,7 @@ export default function LandingPage() {
                   Ready to get started?
                 </h2>
                 <p className="text-lg mb-8 text-white/80">
-                  Join thousands of shippers and carriers already using FreightFlow to streamline their logistics operations.
+                  Join thousands of shippers and carriers already using Load Smart to streamline their logistics operations.
                 </p>
                 <div className="flex flex-wrap justify-center lg:justify-start gap-4">
                   <Button 
@@ -960,10 +961,11 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: 'rgba(0, 191, 255, 0.2)', border: '1px solid rgba(0, 191, 255, 0.4)' }}>
-                <Truck className="h-4 w-4" style={{ color: '#00BFFF' }} />
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white">FreightFlow</span>
+              <img 
+                src="/attached_assets/image_1770116427838.png" 
+                alt="Load Smart Logo" 
+                className="h-8 w-auto"
+              />
             </div>
             <p className="text-sm text-gray-500 dark:text-[#667D9D]">
               Digital Freight Marketplace. Connecting shippers with trusted carriers.

@@ -136,7 +136,7 @@ export async function registerRoutes(
         tableName: "session",
         createTableIfMissing: true,
       }),
-      secret: process.env.SESSION_SECRET || "freightflow-secret-key-change-in-production",
+      secret: process.env.SESSION_SECRET || "loadsmart-secret-key-change-in-production",
       resave: false,
       saveUninitialized: false,
       cookie: {
@@ -2344,7 +2344,7 @@ export async function registerRoutes(
       res.json({
         phone: admin.phone || admin.companyPhone || null,
         email: admin.email || null,
-        name: admin.companyName || admin.username || "FreightFlow Admin",
+        name: admin.companyName || admin.username || "Load Smart Admin",
       });
     } catch (error) {
       console.error("Get admin contact error:", error);
@@ -3390,7 +3390,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       
       const response = await fetch(url.toString(), {
         headers: {
-          "User-Agent": "FreightFlow/1.0 (logistics platform)"
+          "User-Agent": "LoadSmart/1.0 (logistics platform)"
         }
       });
       
@@ -3531,7 +3531,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       
       const osrmResponse = await fetch(osrmUrl, {
         headers: {
-          "User-Agent": "FreightFlow/1.0 (logistics platform)"
+          "User-Agent": "LoadSmart/1.0 (logistics platform)"
         }
       });
       
@@ -6111,10 +6111,10 @@ RESPOND IN THIS EXACT JSON FORMAT:
           const admins = await storage.getAdmins();
           const primaryAdmin = admins[0];
           const adminContact = primaryAdmin ? {
-            name: primaryAdmin.companyName || primaryAdmin.username || 'FreightFlow Support',
+            name: primaryAdmin.companyName || primaryAdmin.username || 'Load Smart Support',
             phone: primaryAdmin.phone || '+91 9876543210',
           } : {
-            name: 'FreightFlow Support',
+            name: 'Load Smart Support',
             phone: '+91 9876543210',
           };
 

@@ -25,7 +25,7 @@ const quickActions = [
 const aiResponses: Record<string, string[]> = {
   greeting: [
     "Hello! I'm your AI assistant. How can I help you today?",
-    "Welcome to FreightFlow! I'm here to assist you with navigating the platform.",
+    "Welcome to Load Smart! I'm here to assist you with navigating the platform.",
     "Hi there! Need help with posting loads, finding carriers, or tracking shipments?",
   ],
   post_load: [
@@ -111,7 +111,7 @@ export function AIConcierge() {
     if (isOpen && messages.length === 0) {
       const welcomeMessage: Message = {
         id: "welcome",
-        content: `Welcome${user?.username ? `, ${user.username}` : ""}! I'm your AI assistant for FreightFlow. How can I help you today?`,
+        content: `Welcome${user?.username ? `, ${user.username}` : ""}! I'm your AI assistant for Load Smart. How can I help you today?`,
         isUser: false,
         timestamp: new Date(),
       };

@@ -292,7 +292,7 @@ export function HelpBotWidget() {
                 <div>
                   <h3 className="font-semibold text-xl text-white mb-2">How can I help you?</h3>
                   <p className="text-sm text-[#667D9D] max-w-xs mx-auto">
-                    Ask me anything about FreightFlow, or connect with our support team.
+                    Ask me anything about Load Smart, or connect with our support team.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center pt-2">
@@ -400,7 +400,7 @@ export function HelpBotWidget() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" style={{ color: '#00BFFF' }} />
-                  <span>support@freightflow.in</span>
+                  <span>support@loadsmart.in</span>
                 </div>
               </div>
             </div>

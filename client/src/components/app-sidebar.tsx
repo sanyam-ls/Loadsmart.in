@@ -148,11 +148,11 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3">
           <img 
             src="/assets/Blue_Black_Simple_Modern_Minimalist_Letter_G_Business_Corporat_1770117363783.png" 
             alt="Load Smart" 
-            className="h-8 w-auto max-w-[160px]"
+            className="h-12 w-auto"
             data-testid="text-app-name"
           />
           <Badge variant={getRoleBadgeVariant()} className="w-fit text-xs">

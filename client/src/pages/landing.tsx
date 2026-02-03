@@ -189,7 +189,7 @@ export default function LandingPage() {
           className="absolute inset-0 w-full h-full object-cover"
           data-testid="video-hero-background"
         >
-          <source src="/assets/Loadlink_1770122436363.mp4" type="video/mp4" />
+          <source src="/assets/Load_Smart_Video_1770143671918.mov" type="video/mp4" />
         </video>
         {/* Dark overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a2e]/90 via-[#1a1a2e]/70 to-transparent" />

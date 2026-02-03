@@ -560,7 +560,7 @@ export default function AuthPage() {
         className="fixed inset-0 w-full h-full object-cover object-center z-0"
         onLoadedData={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
       >
-        <source src="/assets/Loadlink_1768957478492.mp4" type="video/mp4" />
+        <source src="/assets/Load_Smart_Video_1770143671918.mov" type="video/mp4" />
       </video>
       <div className="fixed inset-0 bg-gradient-to-br from-[#060817]/80 via-[#16254F]/70 to-[#060817]/75 z-0" />
 

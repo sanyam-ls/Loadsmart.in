@@ -93,7 +93,7 @@ export default function LandingPage() {
           <div className="flex items-center">
             <img 
               src={logoPath}
-              alt="Load Smart" 
+              alt="LoadSmart" 
               className="h-10 w-auto object-contain"
               data-testid="img-logo"
             />
@@ -109,7 +109,7 @@ export default function LandingPage() {
                 <DropdownMenuItem data-testid="menu-item-load-board">Load Board</DropdownMenuItem>
                 <DropdownMenuItem data-testid="menu-item-rateview">Rateview Analytics</DropdownMenuItem>
                 <DropdownMenuItem data-testid="menu-item-iq">iQ Analytics</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-outgo">Load Smart Outgo</DropdownMenuItem>
+                <DropdownMenuItem data-testid="menu-item-outgo">LoadSmart Outgo</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
@@ -490,10 +490,10 @@ export default function LandingPage() {
       <section className="py-16 bg-gray-200 dark:bg-[#21262d]">
         <div className="container mx-auto px-4">
           <h3 className="text-2xl md:text-3xl font-bold text-center text-gray-900 dark:text-white mb-6" data-testid="text-company-brand">
-            Load Smart by Roadex
+            LoadSmart by Roadex
           </h3>
           <p className="text-center text-gray-700 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed" data-testid="text-company-description">
-            Load Smart is powered by Roadex, a US-based logistics leader headquartered in Southfield, Michigan. Founded in 1998 by truckers who understand the industry inside out, Roadex operates on the principle "For Truckers, By Truckers." With decades of experience serving owner-operators and fleet carriers across North America and India, we deliver a one-stop solution combining freight matching, invoice factoring, dispatch services, and real-time analytics. Our commitment to transparent pricing, honest service, and world-class customer support has earned the trust of thousands of shippers and carriers. At Load Smart by Roadex, integrity drives every action - we help you keep more of your hard-earned money while maximizing efficiency across your entire logistics operation.
+            LoadSmart is powered by Roadex, a US-based logistics leader headquartered in Southfield, Michigan. Founded in 1998 by truckers who understand the industry inside out, Roadex operates on the principle "For Truckers, By Truckers." With decades of experience serving owner-operators and fleet carriers across North America and India, we deliver a one-stop solution combining freight matching, invoice factoring, dispatch services, and real-time analytics. Our commitment to transparent pricing, honest service, and world-class customer support has earned the trust of thousands of shippers and carriers. At LoadSmart by Roadex, integrity drives every action - we help you keep more of your hard-earned money while maximizing efficiency across your entire logistics operation.
           </p>
         </div>
       </section>
@@ -521,7 +521,7 @@ export default function LandingPage() {
                 <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-iq-benchmark">iQ Benchmark</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-operating-authority">Operating Authority</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-product-reviews">Product Reviews</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-outgo">Load Smart Outgo</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-outgo">LoadSmart Outgo</a></li>
               </ul>
             </div>
             <div>
@@ -571,7 +571,7 @@ export default function LandingPage() {
 
           {/* App Store Badges */}
           <div className="text-center mb-8">
-            <p className="text-gray-500 text-sm mb-4">Download the Load Smart mobile app</p>
+            <p className="text-gray-500 text-sm mb-4">Download the LoadSmart mobile app</p>
             <div className="flex justify-center gap-4">
               <div className="bg-black border border-gray-600 rounded-lg px-4 py-2 flex items-center gap-2" data-testid="badge-app-store">
                 <div className="text-white">
@@ -625,7 +625,7 @@ export default function LandingPage() {
           {/* Copyright */}
           <div className="text-center">
             <p className="text-gray-600 text-xs" data-testid="text-copyright">
-              Copyright 2026 Load Smart Solutions, LLC. All rights reserved. All trademarks are the property of their respective owners.
+              Copyright 2026 LoadSmart Solutions, LLC. All rights reserved. All trademarks are the property of their respective owners.
             </p>
           </div>
         </div>

@@ -29,6 +29,9 @@ import {
   Receipt,
   Users,
   Loader2,
+  Gavel,
+  Navigation,
+  Building2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -786,6 +789,44 @@ export default function AdminLoadsPage() {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Load
                             </DropdownMenuItem>
+                            {/* Cross-links for workflow connectivity */}
+                            {(load.status === "Bidding" || load.status === "Active") && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation(`/admin/negotiations?load=${load._originalId || load.loadId}`);
+                              }} data-testid={`menu-view-bids-${load.loadId}`}>
+                                <Gavel className="h-4 w-4 mr-2" />
+                                View Bids
+                              </DropdownMenuItem>
+                            )}
+                            {load.status === "In Transit" && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation("/admin/tracking");
+                              }} data-testid={`menu-track-${load.loadId}`}>
+                                <Navigation className="h-4 w-4 mr-2" />
+                                Live Tracking
+                              </DropdownMenuItem>
+                            )}
+                            {/* Profile links for workflow connectivity */}
+                            {load.shipperId && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation(`/admin/users?userId=${load.shipperId}&role=shipper`);
+                              }} data-testid={`menu-view-shipper-${load.loadId}`}>
+                                <Building2 className="h-4 w-4 mr-2" />
+                                View Shipper
+                              </DropdownMenuItem>
+                            )}
+                            {load.carrierId && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation(`/admin/carriers/${load.carrierId}`);
+                              }} data-testid={`menu-view-carrier-${load.loadId}`}>
+                                <Truck className="h-4 w-4 mr-2" />
+                                View Carrier
+                              </DropdownMenuItem>
+                            )}
                             {!load.assignedCarrier && (
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();

@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { 
   Users, 
   Plus, 
@@ -19,6 +19,8 @@ import {
   Shield,
   Building,
   RefreshCw,
+  FileCheck,
+  Truck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,12 +63,33 @@ import { formatDistanceToNow, format } from "date-fns";
 
 export default function AdminUsersPage() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
   const { users, addUser, updateUser, suspendUser, activateUser, deleteUser, refreshFromShipperPortal } = useAdminData();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [highlightUserId, setHighlightUserId] = useState<string | null>(null);
+  
+  // Handle deep-linking from other pages (e.g., from Onboarding "View User")
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const userId = params.get("userId");
+    const role = params.get("role");
+    
+    if (role) {
+      setRoleFilter(role);
+    }
+    if (userId) {
+      setHighlightUserId(userId);
+      // Auto-search for the user using userId field
+      const user = users.find(u => u.userId === userId);
+      if (user) {
+        setSearchQuery(user.email || user.name || "");
+      }
+    }
+  }, [searchString, users]);
   const [sortField, setSortField] = useState<keyof AdminUser>("dateJoined");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -440,7 +463,7 @@ export default function AdminUsersPage() {
                   paginatedUsers.map((user) => (
                     <TableRow 
                       key={user.userId} 
-                      className="cursor-pointer"
+                      className={`cursor-pointer ${user.userId === highlightUserId ? "bg-primary/10 ring-2 ring-primary/30" : ""}`}
                       data-testid={`row-user-${user.userId}`}
                     >
                       <TableCell>
@@ -500,6 +523,24 @@ export default function AdminUsersPage() {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit User
                             </DropdownMenuItem>
+                            {user.role === "shipper" && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation("/admin/onboarding");
+                              }} data-testid={`menu-view-onboarding-${user.userId}`}>
+                                <FileCheck className="h-4 w-4 mr-2" />
+                                View Onboarding
+                              </DropdownMenuItem>
+                            )}
+                            {user.role === "carrier" && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation("/admin/verification");
+                              }} data-testid={`menu-view-verification-${user.userId}`}>
+                                <Truck className="h-4 w-4 mr-2" />
+                                View Verification
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               handleResetPassword(user);

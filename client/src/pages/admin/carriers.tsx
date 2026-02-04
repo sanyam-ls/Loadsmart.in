@@ -121,8 +121,15 @@ export default function AdminCarriersPage() {
   });
   const itemsPerPage = 10;
 
-  const verifiedCarriers = useMemo(() => {
-    return apiCarriers.filter(c => c.isVerified === true);
+  // Show ALL carriers (verified and unverified) for better workflow visibility
+  const allCarriers = useMemo(() => apiCarriers, [apiCarriers]);
+  
+  const verifiedCount = useMemo(() => {
+    return apiCarriers.filter(c => c.isVerified === true).length;
+  }, [apiCarriers]);
+  
+  const unverifiedCount = useMemo(() => {
+    return apiCarriers.filter(c => c.isVerified !== true).length;
   }, [apiCarriers]);
 
   const pendingCount = useMemo(() => {
@@ -130,7 +137,7 @@ export default function AdminCarriersPage() {
   }, [verifications]);
 
   const filteredCarriers = useMemo(() => {
-    let result = [...verifiedCarriers];
+    let result = [...allCarriers];
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -166,7 +173,7 @@ export default function AdminCarriersPage() {
     });
     
     return result;
-  }, [verifiedCarriers, searchQuery, carrierTypeFilter, sortField, sortDirection]);
+  }, [allCarriers, searchQuery, carrierTypeFilter, sortField, sortDirection]);
 
   const paginatedCarriers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -309,7 +316,7 @@ export default function AdminCarriersPage() {
             </Button>
             <h1 className="text-2xl font-bold">{t('admin.carrierDirectory')}</h1>
           </div>
-          <p className="text-muted-foreground ml-10">{t('admin.verifiedCarriersOnly', { count: verifiedCarriers.length })}</p>
+          <p className="text-muted-foreground ml-10">{allCarriers.length} carriers ({verifiedCount} verified, {unverifiedCount} pending)</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {pendingCount > 0 && (
@@ -367,7 +374,7 @@ export default function AdminCarriersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t('admin.verifiedCarriers')}</p>
-                <p className="text-xl font-bold">{verifiedCarriers.length}</p>
+                <p className="text-xl font-bold">{verifiedCount}</p>
               </div>
             </div>
           </CardContent>
@@ -380,7 +387,7 @@ export default function AdminCarriersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t('admin.totalFleet')}</p>
-                <p className="text-xl font-bold">{verifiedCarriers.reduce((sum, c) => sum + (c.profile?.fleetSize || 0), 0)}</p>
+                <p className="text-xl font-bold">{allCarriers.reduce((sum, c) => sum + (c.profile?.fleetSize || 0), 0)}</p>
               </div>
             </div>
           </CardContent>
@@ -393,7 +400,7 @@ export default function AdminCarriersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t('admin.highActivity')}</p>
-                <p className="text-xl font-bold">{verifiedCarriers.filter(c => (c.bidCount || 0) > 5).length}</p>
+                <p className="text-xl font-bold">{allCarriers.filter(c => (c.bidCount || 0) > 5).length}</p>
               </div>
             </div>
           </CardContent>
@@ -406,7 +413,7 @@ export default function AdminCarriersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t('admin.avgRating')}</p>
-                <p className="text-xl font-bold">{(verifiedCarriers.reduce((sum, c) => sum + parseFloat(String(c.profile?.rating || 4.5)), 0) / Math.max(1, verifiedCarriers.length)).toFixed(1)}</p>
+                <p className="text-xl font-bold">{(allCarriers.reduce((sum, c) => sum + parseFloat(String(c.profile?.rating || 4.5)), 0) / Math.max(1, allCarriers.length)).toFixed(1)}</p>
               </div>
             </div>
           </CardContent>
@@ -617,6 +624,15 @@ export default function AdminCarriersPage() {
                               <Edit className="h-4 w-4 mr-2" />
                               {t('admin.editCarrier')}
                             </DropdownMenuItem>
+                            {!carrier.isVerified && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation("/admin/verification");
+                              }} data-testid={`menu-review-verification-${carrier.id}`}>
+                                <Shield className="h-4 w-4 mr-2" />
+                                Review Verification
+                              </DropdownMenuItem>
+                            )}
                             {carrier.isVerified && (
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();

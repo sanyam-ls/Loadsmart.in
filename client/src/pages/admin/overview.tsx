@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, FileCheck, Clock, Loader2, MessageSquare, ArrowUpDown, Percent, Wallet, Activity, Zap } from "lucide-react";
+import { Users, Package, Truck, DollarSign, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, FileCheck, Clock, Loader2, MessageSquare, ArrowUpDown, Percent, Wallet, Activity, Zap, ClipboardList, UserCheck, ShieldCheck, Receipt, MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +95,18 @@ export default function AdminOverview() {
   const { data: bids } = useBids();
   const { data: invoices } = useInvoices();
   
+  // Fetch pending tasks for Quick Actions
+  const { data: onboardingStats } = useQuery<{
+    total: number;
+    pending: number;
+    underReview: number;
+    approved: number;
+    rejected: number;
+    onHold: number;
+  }>({
+    queryKey: ['/api/admin/onboarding-requests/stats'],
+  });
+
   // Real-time analytics with auto-refresh every 10 seconds
   const { data: analytics } = useQuery<{
     negotiations: {
@@ -281,6 +293,116 @@ export default function AdminOverview() {
           testId="card-monthly-volume"
         />
       </div>
+
+      {/* Quick Actions - Pending Tasks Section */}
+      {((onboardingStats?.pending || 0) + (onboardingStats?.underReview || 0) + pendingVerifications + pendingLoads.length + (analytics?.negotiations.pendingBids || 0)) > 0 && (
+        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20" data-testid="card-quick-actions">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <CardTitle className="text-base">Pending Tasks</CardTitle>
+              <Badge variant="secondary" className="ml-auto">
+                {(onboardingStats?.pending || 0) + (onboardingStats?.underReview || 0) + pendingVerifications + pendingLoads.length + (analytics?.negotiations.pendingBids || 0)} items
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {/* Shipper Onboarding */}
+              {((onboardingStats?.pending || 0) + (onboardingStats?.underReview || 0)) > 0 && (
+                <div 
+                  className="flex items-center gap-3 p-3 rounded-lg bg-background hover-elevate cursor-pointer border"
+                  onClick={() => setLocation("/admin/onboarding")}
+                  data-testid="action-shipper-onboarding"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <UserCheck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Shipper Onboarding</p>
+                    <p className="text-xs text-muted-foreground">
+                      {onboardingStats?.pending || 0} pending, {onboardingStats?.underReview || 0} reviewing
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+
+              {/* Carrier Verification */}
+              {pendingVerifications > 0 && (
+                <div 
+                  className="flex items-center gap-3 p-3 rounded-lg bg-background hover-elevate cursor-pointer border"
+                  onClick={() => setLocation("/admin/verification")}
+                  data-testid="action-carrier-verification"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                    <ShieldCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Carrier Verification</p>
+                    <p className="text-xs text-muted-foreground">{pendingVerifications} awaiting review</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+
+              {/* Load Pricing Queue */}
+              {pendingLoads.length > 0 && (
+                <div 
+                  className="flex items-center gap-3 p-3 rounded-lg bg-background hover-elevate cursor-pointer border"
+                  onClick={() => setLocation("/admin/queue")}
+                  data-testid="action-load-pricing"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                    <Receipt className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Price Loads</p>
+                    <p className="text-xs text-muted-foreground">{pendingLoads.length} loads to price</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+
+              {/* Pending Bids */}
+              {(analytics?.negotiations.pendingBids || 0) > 0 && (
+                <div 
+                  className="flex items-center gap-3 p-3 rounded-lg bg-background hover-elevate cursor-pointer border"
+                  onClick={() => setLocation("/admin/negotiations")}
+                  data-testid="action-pending-bids"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <MessageSquare className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Review Bids</p>
+                    <p className="text-xs text-muted-foreground">{analytics?.negotiations.pendingBids || 0} pending bids</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+
+              {/* In-Transit Tracking */}
+              {inTransitLoads.length > 0 && (
+                <div 
+                  className="flex items-center gap-3 p-3 rounded-lg bg-background hover-elevate cursor-pointer border"
+                  onClick={() => setLocation("/admin/tracking")}
+                  data-testid="action-live-tracking"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900/30">
+                    <MapPin className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Live Tracking</p>
+                    <p className="text-xs text-muted-foreground">{inTransitLoads.length} shipments in transit</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Real-time Analytics Section */}
       <div className="grid gap-4 md:grid-cols-2">

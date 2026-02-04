@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { parseDocumentValue } from "@/components/DocumentUpload";
@@ -18,6 +19,7 @@ import {
   Calendar,
   MapPin,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +67,7 @@ interface OnboardingWithUser {
 interface OnboardingTableProps {
   items: OnboardingWithUser[];
   onReview: (item: OnboardingWithUser) => void;
+  onViewUser: (shipperId: string) => void;
   getStatusBadge: (status: string) => React.ReactNode;
   businessTypeLabels: Record<string, string>;
   t: (key: string) => string;
@@ -75,6 +78,7 @@ interface OnboardingTableProps {
 function OnboardingTable({
   items,
   onReview,
+  onViewUser,
   getStatusBadge,
   businessTypeLabels,
   t,
@@ -138,15 +142,28 @@ function OnboardingTable({
                 : "-"}
             </TableCell>
             <TableCell>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onReview(item)}
-                data-testid={`button-review-${testIdPrefix}-${item.request.id}`}
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                {t("adminOnboarding.review")}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onReview(item)}
+                  data-testid={`button-review-${testIdPrefix}-${item.request.id}`}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  {t("adminOnboarding.review")}
+                </Button>
+                {item.request.status === "approved" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewUser(item.request.shipperId)}
+                    data-testid={`button-view-user-${testIdPrefix}-${item.request.id}`}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    View User
+                  </Button>
+                )}
+              </div>
             </TableCell>
           </TableRow>
         ))}
@@ -183,7 +200,14 @@ function DocumentLink({ value }: { value: string }) {
 export default function AdminOnboardingPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Navigate to Users page (filtered by shipper role)
+  const handleViewUser = (shipperId: string) => {
+    // Deep-link to Users page with shipper filter and user ID
+    setLocation(`/admin/users?userId=${shipperId}&role=shipper`);
+  };
   const [selectedRequest, setSelectedRequest] = useState<OnboardingWithUser | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewData, setReviewData] = useState({
@@ -373,6 +397,7 @@ export default function AdminOnboardingPage() {
                   <OnboardingTable
                     items={getFilteredByStatus("approved")}
                     onReview={openReviewDialog}
+                    onViewUser={handleViewUser}
                     getStatusBadge={getStatusBadge}
                     businessTypeLabels={businessTypeLabels}
                     t={t}
@@ -385,6 +410,7 @@ export default function AdminOnboardingPage() {
                   <OnboardingTable
                     items={getFilteredByStatus("rejected")}
                     onReview={openReviewDialog}
+                    onViewUser={handleViewUser}
                     getStatusBadge={getStatusBadge}
                     businessTypeLabels={businessTypeLabels}
                     t={t}
@@ -397,6 +423,7 @@ export default function AdminOnboardingPage() {
                   <OnboardingTable
                     items={getFilteredByStatus("on_hold")}
                     onReview={openReviewDialog}
+                    onViewUser={handleViewUser}
                     getStatusBadge={getStatusBadge}
                     businessTypeLabels={businessTypeLabels}
                     t={t}
@@ -409,6 +436,7 @@ export default function AdminOnboardingPage() {
                   <OnboardingTable
                     items={getFilteredByStatus("pending")}
                     onReview={openReviewDialog}
+                    onViewUser={handleViewUser}
                     getStatusBadge={getStatusBadge}
                     businessTypeLabels={businessTypeLabels}
                     t={t}
@@ -421,6 +449,7 @@ export default function AdminOnboardingPage() {
                   <OnboardingTable
                     items={getFilteredByStatus("draft")}
                     onReview={openReviewDialog}
+                    onViewUser={handleViewUser}
                     getStatusBadge={getStatusBadge}
                     businessTypeLabels={businessTypeLabels}
                     t={t}

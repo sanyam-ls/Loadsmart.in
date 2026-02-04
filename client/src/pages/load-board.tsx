@@ -18,6 +18,7 @@ import {
 
 import logoPath from "@assets/Purple_and_Black_Modern_Software_Developer_LinkedIn_Banner_1770118882647.png";
 import loadBoardScreenshot from "@assets/Screenshot_2026-02-04_at_6.10.24_PM_1770208825423.png";
+import shipperPostLoadScreenshot from "@assets/Screenshot_2026-02-04_at_6.21.15_PM_1770209478249.png";
 
 export default function LoadBoard() {
   return (
@@ -214,7 +215,7 @@ export default function LoadBoard() {
             Get started in minutes and find your next load today
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto mb-12">
             {/* For Shippers */}
             <div className="bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] rounded-xl p-8 shadow-xl">
               <h3 className="text-2xl font-bold text-white mb-6">For Shippers</h3>
@@ -269,6 +270,19 @@ export default function LoadBoard() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Shipper Interface Preview */}
+          <div className="max-w-5xl mx-auto">
+            <h3 className="text-2xl font-bold text-[#1e3a8a] text-center mb-6">Shipper Portal - Post Load Interface</h3>
+            <div className="bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] rounded-2xl p-4 shadow-2xl">
+              <img 
+                src={shipperPostLoadScreenshot}
+                alt="Shipper Post Load Interface"
+                className="w-full rounded-lg shadow-lg"
+                data-testid="img-shipper-post-load"
+              />
             </div>
           </div>
         </div>

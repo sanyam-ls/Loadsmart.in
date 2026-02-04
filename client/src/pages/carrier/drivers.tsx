@@ -123,6 +123,8 @@ export default function CarrierDriversPage() {
     onSuccess: () => {
       toast({ title: "Driver added successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents/expiring"] });
       setIsAddDialogOpen(false);
       form.reset();
     },
@@ -144,6 +146,8 @@ export default function CarrierDriversPage() {
     onSuccess: () => {
       toast({ title: "Driver updated successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents/expiring"] });
       setEditingDriver(null);
       form.reset();
     },

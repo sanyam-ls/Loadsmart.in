@@ -1168,6 +1168,27 @@ export default function MyDocumentsPage() {
     };
   });
 
+  // Also add documents from the documents table (uploaded separately) to driverDocumentsByName
+  // These documents have driverId set but are not stored on the driver record itself
+  allDocuments.forEach((doc) => {
+    if (doc.driverId && documentCategories.driver.includes(doc.documentType)) {
+      // Find the driver this document belongs to
+      const driver = (driversData || []).find((d: any) => d.id === doc.driverId);
+      if (driver) {
+        // Check if this driver exists in our folder structure
+        if (driverDocumentsByName[driver.name]) {
+          // Check if this document is not already in the list (avoid duplicates)
+          const existingDoc = driverDocumentsByName[driver.name].documents.find(
+            (d) => d.id === doc.id || (d.documentType === doc.documentType && d.fileUrl === doc.fileUrl)
+          );
+          if (!existingDoc) {
+            driverDocumentsByName[driver.name].documents.push(doc);
+          }
+        }
+      }
+    }
+  });
+
   const DriverFolderSection = () => {
     const driverNames = Object.keys(driverDocumentsByName).sort();
     const totalDriverDocs = Object.values(driverDocumentsByName).reduce(

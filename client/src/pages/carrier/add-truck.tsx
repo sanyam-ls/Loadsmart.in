@@ -91,6 +91,7 @@ export default function AddTruckPage() {
   const insuranceInputRef = useRef<HTMLInputElement>(null);
   const fitnessInputRef = useRef<HTMLInputElement>(null);
   const permitInputRef = useRef<HTMLInputElement>(null);
+  const pucInputRef = useRef<HTMLInputElement>(null);
   const isSoloCarrier = carrierType === "solo";
   const [truckTypeOpen, setTruckTypeOpen] = useState(false);
   

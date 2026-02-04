@@ -700,6 +700,14 @@ export default function AddTruckPage() {
                 onChange={(e) => handleFileSelect(e, "permit")}
                 data-testid="input-permit-upload"
               />
+              <input
+                ref={pucInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e, "puc")}
+                data-testid="input-puc-upload"
+              />
 
               {/* RC Document */}
               <div className="space-y-2">
@@ -825,6 +833,38 @@ export default function AddTruckPage() {
                   >
                     <Upload className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
                     <p className="text-xs text-muted-foreground">Click to upload Permit (PDF, JPG, PNG)</p>
+                  </div>
+                )}
+              </div>
+
+              {/* PUC Certificate */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">PUC Certificate</Label>
+                {getDocumentByType("puc") ? (
+                  <div className="flex items-center justify-between gap-2 p-3 border rounded-md bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileText className="h-4 w-4 flex-shrink-0 text-primary" />
+                      <span className="text-sm truncate">{getDocumentByType("puc")?.name}</span>
+                      <Badge variant="secondary" className="flex-shrink-0 text-xs">Uploaded</Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDocument("puc")}
+                      data-testid="button-remove-puc"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => pucInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-4 text-center hover-elevate cursor-pointer"
+                    data-testid="dropzone-puc"
+                  >
+                    <Upload className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Click to upload PUC Certificate (PDF, JPG, PNG)</p>
                   </div>
                 )}
               </div>

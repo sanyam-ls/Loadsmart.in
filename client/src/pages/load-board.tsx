@@ -68,7 +68,7 @@ export default function LoadBoard() {
                 </Button>
               </Link>
               <Link href="/auth">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8" data-testid="button-find-loads">
+                <Button size="lg" className="bg-white text-[#1e3a8a] hover:bg-white/90 px-8 font-semibold" data-testid="button-find-loads">
                   Find Loads
                 </Button>
               </Link>

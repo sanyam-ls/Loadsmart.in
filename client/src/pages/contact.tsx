@@ -158,7 +158,10 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-semibold">Office Address</h3>
                       <p className="text-white/80">
-                        Mumbai, Maharashtra, India
+                        4th Floor, Cogneesol<br />
+                        D 253, Phase 8A, Industrial Area<br />
+                        Sector 75, Sahibzada Ajit Singh Nagar<br />
+                        Punjab - 140307
                       </p>
                     </div>
                   </div>

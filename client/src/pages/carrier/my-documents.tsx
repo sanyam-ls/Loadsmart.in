@@ -1189,6 +1189,49 @@ export default function MyDocumentsPage() {
     }
   });
 
+  // For solo carriers: Add driver documents from verification data
+  // Solo carriers upload their license/aadhaar during onboarding, not via drivers table
+  const carrierName = user?.companyName || user?.username || "Me";
+  if (verificationData?.documents && verificationData.documents.length > 0) {
+    const verificationDriverDocs: Document[] = [];
+    verificationData.documents.forEach((doc) => {
+      // Only include driver-related document types (license, aadhaar, etc.)
+      if (documentCategories.driver.includes(doc.documentType)) {
+        verificationDriverDocs.push({
+          id: `verification-${doc.id}`,
+          documentType: doc.documentType,
+          fileName: doc.fileName || documentTypeLabels[doc.documentType] || doc.documentType,
+          fileUrl: doc.fileUrl,
+          fileSize: undefined,
+          expiryDate: null,
+          isVerified: doc.status === "approved",
+          verificationStatus: doc.status as "pending" | "approved" | "rejected",
+          rejectionReason: doc.rejectionReason,
+          createdAt: doc.createdAt || new Date().toISOString(),
+        });
+      }
+    });
+    
+    // Add verification driver docs to folder structure if there are any
+    if (verificationDriverDocs.length > 0) {
+      if (!driverDocumentsByName[carrierName]) {
+        driverDocumentsByName[carrierName] = {
+          driverId: user?.id || "",
+          documents: []
+        };
+      }
+      // Add only non-duplicate documents
+      verificationDriverDocs.forEach((vDoc) => {
+        const existingDoc = driverDocumentsByName[carrierName].documents.find(
+          (d) => d.documentType === vDoc.documentType && d.fileUrl === vDoc.fileUrl
+        );
+        if (!existingDoc) {
+          driverDocumentsByName[carrierName].documents.push(vDoc);
+        }
+      });
+    }
+  }
+
   const DriverFolderSection = () => {
     const driverNames = Object.keys(driverDocumentsByName).sort();
     const totalDriverDocs = Object.values(driverDocumentsByName).reduce(

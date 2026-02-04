@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import logoPath from "@assets/Purple_and_Black_Modern_Software_Developer_LinkedIn_Banner_1770118882647.png";
+import loadBoardScreenshot from "@assets/Screenshot_2026-02-04_at_6.10.24_PM_1770208825423.png";
 
 export default function LoadBoard() {
   return (
@@ -72,6 +73,28 @@ export default function LoadBoard() {
                   Find Loads
                 </Button>
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Preview Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a8a] text-center mb-4" data-testid="text-preview-title">
+              See Our Platform in Action
+            </h2>
+            <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
+              Experience smart load matching with AI-powered recommendations tailored to your fleet
+            </p>
+            <div className="bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] rounded-2xl p-4 shadow-2xl">
+              <img 
+                src={loadBoardScreenshot}
+                alt="LoadSmart Load Board Interface"
+                className="w-full rounded-lg shadow-lg"
+                data-testid="img-load-board-preview"
+              />
             </div>
           </div>
         </div>

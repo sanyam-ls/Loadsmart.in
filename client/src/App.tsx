@@ -27,6 +27,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 const LandingPage = lazy(() => import("@/pages/landing"));
 const LoadBoardPage = lazy(() => import("@/pages/load-board"));
+const ContactPage = lazy(() => import("@/pages/contact"));
 
 const ShipperDashboard = lazy(() => import("@/pages/shipper").then(m => ({ default: m.ShipperDashboard })));
 const PostLoadPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.PostLoadPage })));
@@ -137,7 +138,15 @@ function AppContent() {
     );
   }
 
-  if (!user && location !== "/auth" && location !== "/" && location !== "/load-board") {
+  if (!user && location === "/contact") {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <ContactPage />
+      </Suspense>
+    );
+  }
+
+  if (!user && location !== "/auth" && location !== "/" && location !== "/load-board" && location !== "/contact") {
     return <Redirect to="/auth" />;
   }
 

@@ -360,7 +360,7 @@ export default function LoadBoard() {
       <footer className="bg-[#1e3a8a] py-8 border-t border-white/20">
         <div className="container mx-auto px-4 text-center">
           <p className="text-white/70 text-sm">
-            Copyright 2026 LoadSmart Solutions Private Limited. All rights reserved.
+            Copyright 2026 LoadSmart Solutions Pvt Ltd. All rights reserved.
           </p>
         </div>
       </footer>

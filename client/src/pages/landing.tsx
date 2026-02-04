@@ -644,7 +644,7 @@ export default function LandingPage() {
           {/* Copyright */}
           <div className="text-center">
             <p className="text-gray-600 text-xs" data-testid="text-copyright">
-              Copyright 2026 LoadSmart Solutions, LLC. All rights reserved. All trademarks are the property of their respective owners.
+              Copyright 2026 LoadSmart Solutions Pvt Ltd. All rights reserved. All trademarks are the property of their respective owners.
             </p>
           </div>
         </div>

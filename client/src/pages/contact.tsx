@@ -87,7 +87,7 @@ export default function ContactPage() {
             <img
               src="/assets/Purple_and_Black_Modern_Software_Developer_LinkedIn_Banner_1770118882647.png"
               alt="LoadSmart"
-              className="h-10 w-auto object-contain"
+              className="h-16 w-auto object-contain"
             />
           </div>
           <div className="flex items-center gap-2 text-white [&_button]:text-white [&_svg]:text-white">

@@ -43,6 +43,18 @@ Fleet/Enterprise carriers are restricted to assigning one truck and one driver p
 -   Terminal shipment statuses that release resources: `delivered`, `closed`, `cancelled`, `completed`
 -   Both shipments and accepted bids are checked to prevent race conditions during bid acceptance workflow
 
+### Admin Post a Load Feature
+
+Administrators can create loads on behalf of shippers through a dedicated "Post Load" page (/admin/post-load). This feature replicates the shipper's post-load form 100%, with additional admin pricing options. Key capabilities:
+-   Create loads for offline shipper contacts by entering shipper details manually (company name, contact, phone, address)
+-   Select an existing verified shipper via `existingShipperId` to attribute the load correctly
+-   Submit loads to the pricing queue (status: `pending`) for later pricing
+-   Post loads immediately with admin pricing (status: `posted_to_carriers`) when `postImmediately=true` and `adminGrossPrice` is provided
+-   Full form validation using `insertLoadSchema` with Zod
+-   Supports all shipper form fields: pickup/dropoff locations, cargo details, scheduling, pricing options
+
+API Endpoint: `POST /api/admin/loads/create` (admin-only access)
+
 ### Admin Reprice & Repost Feature
 
 Administrators can reprice and repost loads in `posted_to_carriers`, `open_for_bid`, `counter_received`, or `priced` statuses. Repricing marketplace loads automatically rejects all pending bids. The feature includes an enhanced pricing calculator for setting gross price, platform margin, and carrier advance payment, with server-side validation and an audit trail.

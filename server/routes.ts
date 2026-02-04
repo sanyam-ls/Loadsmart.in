@@ -2536,6 +2536,139 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Create and optionally price/post a load (mirrors shipper post-load)
+  app.post("/api/admin/loads/create", requireAuth, async (req, res) => {
+    try {
+      const adminUser = await storage.getUser(req.session.userId!);
+      if (!adminUser || adminUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const body = { ...req.body };
+      
+      // Validate required fields
+      if (!body.shipperCompanyName || !body.pickupCity || !body.dropoffCity || !body.weight || !body.pickupDate) {
+        return res.status(400).json({ error: "Missing required fields: shipperCompanyName, pickupCity, dropoffCity, weight, pickupDate" });
+      }
+      
+      // Validate postImmediately requires adminGrossPrice
+      if (body.postImmediately && !body.adminGrossPrice) {
+        return res.status(400).json({ error: "adminGrossPrice is required when postImmediately is true" });
+      }
+      
+      // Parse dates if they're strings
+      if (body.pickupDate && typeof body.pickupDate === 'string') {
+        body.pickupDate = new Date(body.pickupDate);
+      }
+      if (body.deliveryDate && typeof body.deliveryDate === 'string') {
+        body.deliveryDate = new Date(body.deliveryDate);
+      }
+
+      // Get next sequential global load number
+      const shipperLoadNumber = await storage.getNextGlobalLoadNumber();
+      
+      // Determine shipperId - use existingShipperId if provided, otherwise use admin as creator
+      // This supports both: 1) selecting an existing shipper, 2) creating for offline shipper contacts
+      let shipperId = adminUser.id;
+      if (body.existingShipperId) {
+        const existingShipper = await storage.getUser(body.existingShipperId);
+        if (existingShipper && existingShipper.role === 'shipper') {
+          shipperId = existingShipper.id;
+        }
+      }
+      
+      // Create the load with pending status (to go to queue) or priced if posting immediately
+      const status = body.postImmediately && body.adminGrossPrice ? 'posted_to_carriers' : 'pending';
+      
+      const loadData = insertLoadSchema.parse({
+        shipperId,
+        shipperLoadNumber,
+        status,
+        shipperCompanyName: body.shipperCompanyName,
+        shipperContactName: body.shipperContactName || 'N/A',
+        shipperCompanyAddress: body.shipperCompanyAddress || 'N/A',
+        shipperPhone: body.shipperPhone || 'N/A',
+        pickupAddress: body.pickupAddress || body.pickupCity,
+        pickupLocality: body.pickupLocality || null,
+        pickupLandmark: body.pickupLandmark || null,
+        pickupBusinessName: body.pickupBusinessName || null,
+        pickupCity: body.pickupCity,
+        pickupState: body.pickupState || null,
+        dropoffAddress: body.dropoffAddress || body.dropoffCity,
+        dropoffLocality: body.dropoffLocality || null,
+        dropoffLandmark: body.dropoffLandmark || null,
+        dropoffBusinessName: body.dropoffBusinessName || null,
+        dropoffCity: body.dropoffCity,
+        dropoffState: body.dropoffState || null,
+        receiverName: body.receiverName || null,
+        receiverPhone: body.receiverPhone || null,
+        receiverEmail: body.receiverEmail || null,
+        weight: body.weight,
+        materialType: body.goodsToBeCarried || 'General Cargo',
+        specialNotes: body.specialNotes || null,
+        rateType: body.rateType || 'fixed_price',
+        shipperPricePerTon: body.shipperPricePerTon ? String(body.shipperPricePerTon) : null,
+        shipperFixedPrice: body.shipperFixedPrice ? String(body.shipperFixedPrice) : null,
+        advancePaymentPercent: body.advancePaymentPercent || null,
+        requiredTruckType: body.requiredTruckType || 'open_body',
+        pickupDate: body.pickupDate,
+        deliveryDate: body.deliveryDate || null,
+        submittedAt: new Date(),
+        adminFinalPrice: body.postImmediately && body.adminGrossPrice ? String(body.adminGrossPrice) : null,
+        postedAt: body.postImmediately ? new Date() : null,
+      });
+
+      const load = await storage.createLoad(loadData);
+
+      // If posting immediately, create admin decision record
+      if (body.postImmediately && body.adminGrossPrice) {
+        await storage.createAdminDecision({
+          loadId: load.id,
+          adminId: adminUser.id,
+          suggestedPrice: parseInt(body.adminGrossPrice),
+          finalPrice: parseInt(body.adminGrossPrice),
+          postingMode: 'open_market',
+          invitedCarrierIds: null,
+          comment: 'Posted by admin via Post a Load',
+          pricingBreakdown: {
+            grossPrice: body.adminGrossPrice,
+            platformMargin: body.platformMargin || '10',
+            carrierAdvance: body.carrierAdvancePercent || '30',
+          },
+          actionType: 'price_and_post',
+        });
+
+        // Broadcast to marketplace
+        broadcastMarketplaceEvent({
+          type: 'load_posted',
+          loadId: load.id,
+          data: {
+            id: load.id,
+            pickupCity: load.pickupCity,
+            dropoffCity: load.dropoffCity,
+            weight: load.weight,
+            materialType: load.materialType,
+            price: parseInt(body.adminGrossPrice),
+            pickupDate: load.pickupDate,
+          }
+        });
+      }
+
+      res.json({ 
+        load_id: load.id, 
+        load_number: load.shipperLoadNumber, 
+        status: load.status,
+        posted: body.postImmediately && body.adminGrossPrice ? true : false,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Admin create load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Admin: Get carriers with profiles
   app.get("/api/admin/carriers", requireAuth, async (req, res) => {
     try {

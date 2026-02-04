@@ -15,3 +15,4 @@ export { default as AdminLiveTrackingPage } from "./live-tracking";
 export { default as NegotiationInbox } from "./negotiation-inbox";
 export { default as AdminOtpQueuePage } from "./otp-queue";
 export { default as AdminNearbyTrucksPage } from "./nearby-trucks";
+export { default as AdminPostLoadPage } from "./post-load";

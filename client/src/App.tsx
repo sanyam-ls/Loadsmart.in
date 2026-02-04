@@ -77,6 +77,7 @@ const AdminLiveTrackingPage = lazy(() => import("@/pages/admin").then(m => ({ de
 const NegotiationInbox = lazy(() => import("@/pages/admin").then(m => ({ default: m.NegotiationInbox })));
 const AdminOtpQueuePage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminOtpQueuePage })));
 const AdminNearbyTrucksPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminNearbyTrucksPage })));
+const AdminPostLoadPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPostLoadPage })));
 
 function PageLoader() {
   return (
@@ -228,6 +229,7 @@ function AppContent() {
                 <Route path="/solo/earnings" component={() => <CarrierOnboardingGate><SoloEarnings /></CarrierOnboardingGate>} />
                 
                 <Route path="/admin" component={AdminOverview} />
+                <Route path="/admin/post-load" component={AdminPostLoadPage} />
                 <Route path="/admin/queue" component={AdminLoadQueuePage} />
                 <Route path="/admin/negotiations" component={AdminNegotiationsPage} />
                 <Route path="/admin/inbox" component={NegotiationInbox} />

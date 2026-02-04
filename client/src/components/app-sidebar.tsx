@@ -85,6 +85,7 @@ const soloItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   { titleKey: "nav.overview", url: "/admin", icon: LayoutDashboard },
+  { titleKey: "nav.postLoad", url: "/admin/post-load", icon: Plus },
   { titleKey: "nav.loadQueue", url: "/admin/queue", icon: ClipboardList },
   { titleKey: "nav.bidsNegotiations", url: "/admin/negotiations", icon: Gavel },
   { titleKey: "nav.otpVerification", url: "/admin/otp-queue", icon: Key },

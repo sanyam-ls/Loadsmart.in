@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Package, Calendar, Truck, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, Container, Droplet, Check, Loader2, Phone, DollarSign, Users, ClipboardList, User, X, Search } from "lucide-react";
+import { MapPin, Package, Calendar, Truck, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, Container, Droplet, Check, ChevronsUpDown, Loader2, Phone, DollarSign, Users, ClipboardList, User, X, Search } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +38,19 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";

@@ -2545,8 +2545,8 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Query all shippers from database (both verified and pending)
-      const allShippers = await db.select({
+      // Query only verified shippers from database
+      const verifiedShippers = await db.select({
         id: users.id,
         username: users.username,
         email: users.email,
@@ -2554,9 +2554,12 @@ export async function registerRoutes(
         companyAddress: users.companyAddress,
         phone: users.phone,
         isVerified: users.isVerified,
-      }).from(users).where(eq(users.role, 'shipper'));
+      }).from(users).where(and(
+        eq(users.role, 'shipper'),
+        eq(users.isVerified, true)
+      ));
       
-      res.json(allShippers);
+      res.json(verifiedShippers);
     } catch (error) {
       console.error("Error fetching shippers:", error);
       res.status(500).json({ error: "Internal server error" });

@@ -948,11 +948,8 @@ export default function AdminPostLoadPage() {
                             </div>
                           ) : (
                             <>
-                              <div className="px-3 py-2 text-xs text-muted-foreground border-b flex items-center justify-between">
-                                <span>All Shippers ({filteredShippers.length})</span>
-                                <span className="text-xs">
-                                  {allShippers.filter(s => s.isVerified).length} verified
-                                </span>
+                              <div className="px-3 py-2 text-xs text-muted-foreground border-b">
+                                Verified Shippers ({filteredShippers.length})
                               </div>
                               {filteredShippers.length === 0 ? (
                                 <div className="px-3 py-4 text-sm text-muted-foreground text-center">
@@ -982,12 +979,7 @@ export default function AdminPostLoadPage() {
                                       }`}
                                     />
                                     <div className="flex flex-col flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium truncate">{shipper.companyName || shipper.username}</span>
-                                        <Badge variant={shipper.isVerified ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
-                                          {shipper.isVerified ? "Active" : "Pending"}
-                                        </Badge>
-                                      </div>
+                                      <span className="font-medium truncate">{shipper.companyName || shipper.username}</span>
                                       <span className="text-xs text-muted-foreground truncate">
                                         {shipper.email} {shipper.phone && `| ${shipper.phone}`}
                                       </span>

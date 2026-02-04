@@ -2545,22 +2545,20 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Query verified shippers directly from database
-      const verifiedShippers = await db.select({
+      // Query all shippers from database (both verified and pending)
+      const allShippers = await db.select({
         id: users.id,
         username: users.username,
         email: users.email,
         companyName: users.companyName,
         companyAddress: users.companyAddress,
         phone: users.phone,
-      }).from(users).where(and(
-        eq(users.role, 'shipper'),
-        eq(users.isVerified, true)
-      ));
+        isVerified: users.isVerified,
+      }).from(users).where(eq(users.role, 'shipper'));
       
-      res.json(verifiedShippers);
+      res.json(allShippers);
     } catch (error) {
-      console.error("Error fetching verified shippers:", error);
+      console.error("Error fetching shippers:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

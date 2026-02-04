@@ -570,23 +570,24 @@ export default function AdminPostLoadPage() {
   const [shipperSearchOpen, setShipperSearchOpen] = useState(false);
   const [shipperSearchQuery, setShipperSearchQuery] = useState("");
 
-  // Type for verified shipper from API
-  type VerifiedShipper = {
+  // Type for shipper from API
+  type ShipperOption = {
     id: string;
     username: string;
     email: string;
     companyName: string | null;
     companyAddress: string | null;
     phone: string | null;
+    isVerified: boolean | null;
   };
 
-  // Fetch verified shippers for the dropdown
-  const { data: verifiedShippers = [], isLoading: shippersLoading } = useQuery<VerifiedShipper[]>({
+  // Fetch all shippers for the dropdown
+  const { data: allShippers = [], isLoading: shippersLoading } = useQuery<ShipperOption[]>({
     queryKey: ['/api/admin/shippers/verified'],
   });
 
   // Filter shippers based on search query
-  const filteredShippers = verifiedShippers.filter((shipper) => {
+  const filteredShippers = allShippers.filter((shipper) => {
     if (!shipperSearchQuery.trim()) return true;
     const searchLower = shipperSearchQuery.toLowerCase();
     return (
@@ -947,8 +948,11 @@ export default function AdminPostLoadPage() {
                             </div>
                           ) : (
                             <>
-                              <div className="px-3 py-2 text-xs text-muted-foreground border-b">
-                                Verified Shippers ({filteredShippers.length})
+                              <div className="px-3 py-2 text-xs text-muted-foreground border-b flex items-center justify-between">
+                                <span>All Shippers ({filteredShippers.length})</span>
+                                <span className="text-xs">
+                                  {allShippers.filter(s => s.isVerified).length} verified
+                                </span>
                               </div>
                               {filteredShippers.length === 0 ? (
                                 <div className="px-3 py-4 text-sm text-muted-foreground text-center">
@@ -978,7 +982,12 @@ export default function AdminPostLoadPage() {
                                       }`}
                                     />
                                     <div className="flex flex-col flex-1 min-w-0">
-                                      <span className="font-medium truncate">{shipper.companyName || shipper.username}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium truncate">{shipper.companyName || shipper.username}</span>
+                                        <Badge variant={shipper.isVerified ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                                          {shipper.isVerified ? "Active" : "Pending"}
+                                        </Badge>
+                                      </div>
                                       <span className="text-xs text-muted-foreground truncate">
                                         {shipper.email} {shipper.phone && `| ${shipper.phone}`}
                                       </span>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { MapPin, Package, Calendar, Truck, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, Container, Droplet, Check, ChevronsUpDown, Loader2, Phone, DollarSign, Users, ClipboardList } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { MapPin, Package, Calendar, Truck, ArrowRight, Sparkles, Info, Clock, CheckCircle2, Send, Building2, ChevronRight, Container, Droplet, Check, ChevronsUpDown, Loader2, Phone, DollarSign, Users, ClipboardList, User } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { User as UserType } from "@shared/schema";
 import {
   Form,
   FormControl,
@@ -565,6 +567,13 @@ export default function AdminPostLoadPage() {
     suggestedTruck: string;
     nearbyTrucks: number;
   } | null>(null);
+  const [selectedShipperId, setSelectedShipperId] = useState<string | null>(null);
+  const [shipperSearchOpen, setShipperSearchOpen] = useState(false);
+
+  // Fetch verified shippers for the dropdown
+  const { data: verifiedShippers = [] } = useQuery<UserType[]>({
+    queryKey: ['/api/admin/shippers/verified'],
+  });
 
   const form = useForm<AdminLoadFormData>({
     resolver: zodResolver(adminLoadFormSchema),
@@ -663,6 +672,7 @@ export default function AdminPostLoadPage() {
       
       // Submit load via admin endpoint
       const response = await apiRequest("POST", "/api/admin/loads/create", {
+        existingShipperId: selectedShipperId,
         shipperCompanyName: data.shipperCompanyName,
         shipperContactName: data.shipperContactName,
         shipperCompanyAddress: data.shipperCompanyAddress,
@@ -851,6 +861,93 @@ export default function AdminPostLoadPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Shipper Selector */}
+                  <div className="space-y-2">
+                    <FormLabel>Select Existing Shipper (Optional)</FormLabel>
+                    <Popover open={shipperSearchOpen} onOpenChange={setShipperSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={shipperSearchOpen}
+                          className="w-full justify-between"
+                          data-testid="button-select-shipper"
+                        >
+                          {selectedShipperId
+                            ? verifiedShippers.find((s) => s.id === selectedShipperId)?.companyName || "Select shipper..."
+                            : "Select shipper or enter details below..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search shippers..." />
+                          <CommandList>
+                            <CommandEmpty>No shippers found.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="__none__"
+                                onSelect={() => {
+                                  setSelectedShipperId(null);
+                                  setShipperSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${
+                                    selectedShipperId === null ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                Enter manually (offline shipper)
+                              </CommandItem>
+                              {verifiedShippers.map((shipper) => (
+                                <CommandItem
+                                  key={shipper.id}
+                                  value={`${shipper.companyName} ${shipper.username}`}
+                                  onSelect={() => {
+                                    setSelectedShipperId(shipper.id);
+                                    // Auto-fill shipper details
+                                    form.setValue("shipperCompanyName", shipper.companyName || "");
+                                    form.setValue("shipperContactName", shipper.username || "");
+                                    form.setValue("shipperCompanyAddress", shipper.companyAddress || "");
+                                    form.setValue("shipperPhone", shipper.phone || "");
+                                    setShipperSearchOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${
+                                      selectedShipperId === shipper.id ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{shipper.companyName || shipper.username}</span>
+                                    <span className="text-xs text-muted-foreground">{shipper.email}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {selectedShipperId && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        Load will be attributed to this shipper and visible in their portal
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">
+                        {selectedShipperId ? "Shipper Info (auto-filled)" : "Or enter shipper details manually"}
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField
                       control={form.control}

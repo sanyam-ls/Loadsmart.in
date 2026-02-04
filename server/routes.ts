@@ -5,7 +5,7 @@ import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { storage } from "./storage";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { 
   insertUserSchema, insertLoadSchema, insertTruckSchema, insertDriverSchema, insertBidSchema,
   insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema,
@@ -18,6 +18,7 @@ import {
   insertCarrierRatingSchema,
   savedAddresses,
   insertSavedAddressSchema,
+  users,
 } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -2532,6 +2533,34 @@ export async function registerRoutes(
       res.json(updated);
     } catch (error) {
       console.error("Admin update load error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Get verified shippers for load creation
+  app.get("/api/admin/shippers/verified", requireAuth, async (req, res) => {
+    try {
+      const adminUser = await storage.getUser(req.session.userId!);
+      if (!adminUser || adminUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Query verified shippers directly from database
+      const verifiedShippers = await db.select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        companyName: users.companyName,
+        companyAddress: users.companyAddress,
+        phone: users.phone,
+      }).from(users).where(and(
+        eq(users.role, 'shipper'),
+        eq(users.isVerified, true)
+      ));
+      
+      res.json(verifiedShippers);
+    } catch (error) {
+      console.error("Error fetching verified shippers:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

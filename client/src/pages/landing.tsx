@@ -147,7 +147,12 @@ export default function LandingPage() {
                 <DropdownMenuItem data-testid="menu-item-videos">Videos</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" className="text-sm text-gray-300" data-testid="nav-contact">
+            <Button 
+              variant="ghost" 
+              className="text-sm text-gray-300" 
+              data-testid="nav-contact"
+              onClick={() => setLocation("/contact")}
+            >
               Contact
             </Button>
           </nav>
@@ -554,7 +559,7 @@ export default function LandingPage() {
                 <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-product-login">Product Login</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-fraud-protection">Fraud Protection</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-support-request">Support Request</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-contact-us">Contact Us</a></li>
+                <li><a href="/contact" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-contact-us">Contact Us</a></li>
               </ul>
             </div>
           </div>

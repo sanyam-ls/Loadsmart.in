@@ -1712,18 +1712,6 @@ export default function LoadQueuePage() {
             >
               Close
             </Button>
-            <Button 
-              onClick={() => {
-                setDetailsDialogOpen(false);
-                if (detailsLoad) {
-                  openRealLoadPricingDrawer(detailsLoad);
-                }
-              }}
-              data-testid="button-price-from-details"
-            >
-              <Calculator className="h-4 w-4 mr-2" />
-              Price This Load
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

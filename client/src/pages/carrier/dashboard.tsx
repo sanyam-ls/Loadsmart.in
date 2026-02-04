@@ -643,11 +643,6 @@ export default function CarrierDashboard() {
                       <span> ({performanceMetrics.totalRatings} rating{performanceMetrics.totalRatings !== 1 ? 's' : ''})</span>
                     )}
                   </p>
-                  {!performanceMetrics.isRealData && (
-                    <Badge variant="outline" className="mt-2 text-xs no-default-hover-elevate no-default-active-elevate">
-                      Demo Data
-                    </Badge>
-                  )}
                 </div>
 
                 {/* Individual Metrics */}

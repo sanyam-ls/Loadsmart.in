@@ -828,11 +828,6 @@ export default function CarrierLoadsPage() {
                           <Target className="h-3 w-3 mr-1" />
                           {load.matchScore}% {t("carrier.match")}
                         </Badge>
-                        {load.isSimulated && (
-                          <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 no-default-hover-elevate no-default-active-elevate">
-                            Demo
-                          </Badge>
-                        )}
                         {load.postedByAdmin && !load.isSimulated && (
                           <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">
                             <ShieldCheck className="h-3 w-3 mr-1" />
@@ -970,11 +965,6 @@ export default function CarrierLoadsPage() {
                       <Target className="h-3 w-3 mr-1" />
                       {load.matchScore}% {t("carrier.match")}
                     </Badge>
-                    {load.isSimulated && (
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 no-default-hover-elevate no-default-active-elevate">
-                        Demo
-                      </Badge>
-                    )}
                     {load.postedByAdmin && !load.isSimulated && (
                       <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">
                         <ShieldCheck className="h-3 w-3 mr-1" />
@@ -1099,11 +1089,6 @@ export default function CarrierLoadsPage() {
                             <Target className="h-3 w-3 mr-1" />
                             {load.matchScore}%
                           </Badge>
-                          {load.isSimulated && (
-                            <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 no-default-hover-elevate no-default-active-elevate">
-                              Demo
-                            </Badge>
-                          )}
                           <span className="text-sm text-muted-foreground">{formatLoadId(load)}</span>
                           {load.loadType && <Badge variant="outline">{load.loadType}</Badge>}
                           {load.myBid && (

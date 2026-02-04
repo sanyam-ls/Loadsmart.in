@@ -726,6 +726,28 @@ export default function MyDocumentsPage() {
     };
   });
 
+  // Also add documents from the documents table (uploaded via add-truck form) to truckDocumentsByPlate
+  // These documents have truckId set but are not stored on the truck record itself
+  allDocuments.forEach((doc) => {
+    if (doc.truckId && documentCategories.truck.includes(doc.documentType)) {
+      // Find the truck this document belongs to
+      const truck = (trucksData || []).find((t: any) => t.id === doc.truckId);
+      if (truck) {
+        const plateLabel = truck.licensePlate || truck.registrationNumber || `Truck ${truck.id}`;
+        // Check if this truck exists in our folder structure
+        if (truckDocumentsByPlate[plateLabel]) {
+          // Check if this document is not already in the list (avoid duplicates)
+          const existingDoc = truckDocumentsByPlate[plateLabel].documents.find(
+            (d) => d.id === doc.id || (d.documentType === doc.documentType && d.fileUrl === doc.fileUrl)
+          );
+          if (!existingDoc) {
+            truckDocumentsByPlate[plateLabel].documents.push(doc);
+          }
+        }
+      }
+    }
+  });
+
   // Create maps for verification document status - by fileUrl (most unique), fileName, and documentType as fallback
   const verificationByUrl: Record<string, { status: string; rejectionReason?: string }> = {};
   const verificationByFileName: Record<string, { status: string; rejectionReason?: string }> = {};

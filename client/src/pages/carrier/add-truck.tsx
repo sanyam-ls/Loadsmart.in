@@ -260,6 +260,7 @@ export default function AddTruckPage() {
         // Invalidate trucks and documents queries for real-time update
         queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
         queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/carrier/documents/expiring"] });
         
         toast({ title: "Truck added!", description: "Your truck is now listed and ready for loads." });
         navigate(isSoloCarrier ? "/carrier/my-truck" : "/carrier/fleet");

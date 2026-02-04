@@ -90,7 +90,7 @@ export default function ContactPage() {
               className="h-10 w-auto object-contain"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-white [&_button]:text-white [&_svg]:text-white">
             <LanguageSwitcher />
             <ThemeToggle />
           </div>

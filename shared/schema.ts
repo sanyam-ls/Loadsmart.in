@@ -2028,3 +2028,23 @@ export interface EtaPrediction {
 
 // Help Bot Chat exports
 export * from "./models/chat";
+
+// Contact form submissions table
+export const contactSubmissions = pgTable("contact_submissions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  fullName: varchar("full_name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }),
+  subject: varchar("subject", { length: 255 }),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  status: varchar("status", { length: 50 }).default("new").notNull(),
+});
+
+export const insertContactSubmissionSchema = createInsertSchema(contactSubmissions).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+});
+export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSchema>;
+export type ContactSubmission = typeof contactSubmissions.$inferSelect;

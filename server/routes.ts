@@ -14189,6 +14189,84 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   });
 
+  // ============ Contact Form Submission ============
+
+  // Handle contact form submissions (public endpoint - no auth required)
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { contactSubmissions, insertContactSubmissionSchema } = await import("@shared/schema");
+      const nodemailer = await import("nodemailer");
+
+      const parsed = insertContactSubmissionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid form data", details: parsed.error.errors });
+      }
+
+      const { fullName, email, phone, subject, message } = parsed.data;
+
+      // Store in database
+      const [submission] = await db.insert(contactSubmissions).values({
+        fullName,
+        email,
+        phone: phone || null,
+        subject: subject || null,
+        message,
+      }).returning();
+
+      // Send email notification
+      try {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || "smtp.gmail.com",
+          port: parseInt(process.env.SMTP_PORT || "587"),
+          secure: process.env.SMTP_SECURE === "true",
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        const mailOptions = {
+          from: process.env.SMTP_FROM || "noreply@loadsmart.in",
+          to: "info@loadsmart.in",
+          subject: `New Contact Form Submission: ${subject || "General Inquiry"}`,
+          html: `
+            <h2>New Contact Form Submission</h2>
+            <p><strong>From:</strong> ${fullName}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
+            <p><strong>Subject:</strong> ${subject || "Not specified"}</p>
+            <hr />
+            <h3>Message:</h3>
+            <p>${message.replace(/\n/g, "<br>")}</p>
+            <hr />
+            <p><em>Submitted at: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</em></p>
+          `,
+          replyTo: email,
+        };
+
+        // Only attempt to send if SMTP credentials are configured
+        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+          await transporter.sendMail(mailOptions);
+          console.log("Contact form email sent successfully");
+        } else {
+          console.log("SMTP not configured - email notification skipped but submission saved");
+        }
+      } catch (emailError) {
+        console.error("Failed to send email notification:", emailError);
+        // Don't fail the request - submission is already saved
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Thank you for your message. We'll get back to you soon!",
+        submissionId: submission.id 
+      });
+    } catch (error: any) {
+      console.error("Contact form error:", error);
+      res.status(500).json({ error: "Failed to submit contact form" });
+    }
+  });
+
   // Setup WebSocket for real-time telemetry
   setupTelemetryWebSocket(httpServer);
 

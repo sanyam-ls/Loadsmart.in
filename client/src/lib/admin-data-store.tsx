@@ -999,13 +999,12 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         }));
         setUsers(mappedUsers);
       } else {
-        // Fallback to mock data if API fails (e.g., not logged in as admin)
-        console.log("Using fallback user data - API returned:", response.status);
-        setUsers(enterpriseUsers);
+        // User not authorized - keep existing users or use empty array
+        setUsers([]);
       }
     } catch (error) {
       console.error("Failed to fetch users from API:", error);
-      setUsers(enterpriseUsers);
+      setUsers([]);
     } finally {
       setUsersLoading(false);
     }

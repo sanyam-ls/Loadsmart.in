@@ -45,3 +45,7 @@ integrations = ["javascript_database:1.0.0", "javascript_websocket:1.0.0", "java
 [userenv]
 
 [userenv.shared]
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = "587"
+SMTP_SECURE = "false"
+SMTP_FROM = "info@loadsmart.in"

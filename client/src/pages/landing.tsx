@@ -120,10 +120,10 @@ export default function LandingPage() {
                 Products <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-[#1a1a2e] border-gray-700">
-                <DropdownMenuItem data-testid="menu-item-load-board" onClick={() => window.location.href = '/load-board'}>Load Board</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-rateview">Rateview Analytics</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-iq">iQ Analytics</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-outgo">LoadSmart Outgo</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-load-board" onClick={() => window.location.href = '/load-board'}>Load Board</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-rateview">Rateview Analytics</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-iq">iQ Analytics</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-outgo">LoadSmart Outgo</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
@@ -131,9 +131,9 @@ export default function LandingPage() {
                 Solutions <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-[#1a1a2e] border-gray-700">
-                <DropdownMenuItem data-testid="menu-item-brokers">For Brokers</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-carriers">For Carriers</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-shippers">For Shippers</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-brokers">For Brokers</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-carriers">For Carriers</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-shippers">For Shippers</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
@@ -141,10 +141,10 @@ export default function LandingPage() {
                 Resources <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-[#1a1a2e] border-gray-700">
-                <DropdownMenuItem data-testid="menu-item-blog">Blog</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-faqs">FAQs</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-guides">Guides</DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-videos">Videos</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-blog">Blog</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-faqs">FAQs</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-guides">Guides</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-videos">Videos</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button 

@@ -75,6 +75,8 @@ The Shipper Portal integrates a CAN-Bus GPS + Telematics system for real-time tr
 
 New shippers undergo a business verification process. This includes auto-draft creation, auto-saving of form data, a multi-tab form for business details, contact information, and document uploads to Replit Object Storage. An admin review queue manages statuses: `draft → pending → under_review → (approved | rejected | on_hold)`. Approval (`isVerified=true`) is required before posting loads.
 
+**Critical Sync Principle**: When a shipper is approved via the onboarding review, the backend automatically sets `isVerified=true` on the user record. This ensures the shipper appears as "Active" in the Users page immediately after approval. The frontend also invalidates both `/api/admin/onboarding-requests` and `/api/admin/users` queries to keep both views in sync.
+
 #### Shipper Role Selection
 Shippers must identify their role during onboarding via an "I am a" dropdown with two options:
 - **Shipper**: Standard shipper without additional document requirements

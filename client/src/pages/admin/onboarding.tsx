@@ -201,6 +201,7 @@ export default function AdminOnboardingPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/onboarding-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] }); // Sync users list when shipper verified
       setIsReviewDialogOpen(false);
       setSelectedRequest(null);
       toast({

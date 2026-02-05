@@ -6832,9 +6832,17 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
 
       const isResend = invoice.status === 'sent';
-      console.log(`[Invoice] ${isResend ? 'Resending' : 'Sending'} invoice ${invoice.invoiceNumber} to shipper ${invoice.shipperId}`);
+      console.log(`[Invoice] ${isResend ? 'Resending' : 'Sending'} invoice ${invoice.invoiceNumber} (id: ${invoice.id}) to shipper ${invoice.shipperId}`);
+      console.log(`[Invoice] Current status: ${invoice.status}, shipperStatus: ${invoice.shipperStatus}`);
 
       const updated = await storage.sendInvoice(req.params.id);
+      
+      if (!updated) {
+        console.error(`[Invoice] CRITICAL: sendInvoice returned undefined for invoice ${invoice.id}`);
+        return res.status(500).json({ error: "Failed to update invoice status" });
+      }
+      
+      console.log(`[Invoice] Invoice ${updated.invoiceNumber} status updated: status=${updated.status}, shipperStatus=${updated.shipperStatus}`);
       
       // Transition load state to invoice_sent using centralized validation
       const load = await storage.getLoad(invoice.loadId);

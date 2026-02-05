@@ -810,14 +810,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async sendInvoice(id: string): Promise<Invoice | undefined> {
+    console.log(`[Storage] sendInvoice called for invoice ${id}`);
     const [updated] = await db.update(invoices)
       .set({ 
         status: 'sent',
+        shipperStatus: 'pending',
         sentAt: new Date(),
         updatedAt: new Date()
       })
       .where(eq(invoices.id, id))
       .returning();
+    if (updated) {
+      console.log(`[Storage] Invoice ${id} status updated to 'sent', shipperStatus to 'pending'`);
+    } else {
+      console.error(`[Storage] Failed to update invoice ${id} - no record returned`);
+    }
     return updated;
   }
 

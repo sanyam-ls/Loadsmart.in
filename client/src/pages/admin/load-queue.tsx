@@ -130,6 +130,7 @@ interface RealLoad {
   pickupAddress?: string;
   pickupLocality?: string;
   pickupLandmark?: string;
+  pickupBusinessName?: string;
   dropoffAddress?: string;
   dropoffLocality?: string;
   dropoffLandmark?: string;
@@ -585,9 +586,24 @@ export default function LoadQueuePage() {
       }
 
       // Send the invoice to shipper
-      const response = await apiRequest('POST', `/api/admin/invoices/${loadToSendInvoice.invoiceId}/send`);
-
-      if (response) {
+      console.log(`[LoadQueue] Sending invoice ${loadToSendInvoice.invoiceId} for load ${loadToSendInvoice.id}`);
+      const res = await apiRequest('POST', `/api/admin/invoices/${loadToSendInvoice.invoiceId}/send`);
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error(`[LoadQueue] Invoice send failed with status ${res.status}:`, errorData);
+        toast({
+          title: t('common.error'),
+          description: errorData.error || `Failed to send invoice (${res.status})`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const invoiceData = await res.json();
+      
+      if (invoiceData && invoiceData.status === 'sent') {
+        console.log(`[LoadQueue] Invoice sent successfully:`, invoiceData);
         toast({
           title: t('invoices.sent'),
           description: `Invoice sent to shipper for ${formatLoadId(loadToSendInvoice)}`,
@@ -596,9 +612,17 @@ export default function LoadQueuePage() {
         // Refresh the loads list
         queryClient.invalidateQueries({ queryKey: ['/api/admin/loads'] });
         queryClient.invalidateQueries({ queryKey: ['/api/admin/queue'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      } else {
+        console.error(`[LoadQueue] Invoice send returned unexpected response:`, invoiceData);
+        toast({
+          title: t('common.error'),
+          description: "Invoice may not have been sent properly. Please verify.",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
-      console.error("Failed to send invoice:", error);
+      console.error("[LoadQueue] Failed to send invoice:", error);
       toast({
         title: t('common.error'),
         description: error.message || "Failed to send invoice",

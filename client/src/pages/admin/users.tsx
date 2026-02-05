@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useLocation, useSearch, useParams } from "wouter";
 import { 
   Users, 
   Plus, 
@@ -64,6 +64,7 @@ import { formatDistanceToNow, format } from "date-fns";
 export default function AdminUsersPage() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
+  const params = useParams<{ id?: string }>();
   const { toast } = useToast();
   const { users, addUser, updateUser, suspendUser, activateUser, deleteUser, refreshFromShipperPortal } = useAdminData();
   
@@ -71,12 +72,14 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [highlightUserId, setHighlightUserId] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileUser, setProfileUser] = useState<AdminUser | null>(null);
   
   // Handle deep-linking from other pages (e.g., from Onboarding "View User")
   useEffect(() => {
-    const params = new URLSearchParams(searchString);
-    const userId = params.get("userId");
-    const role = params.get("role");
+    const urlParams = new URLSearchParams(searchString);
+    const userId = urlParams.get("userId");
+    const role = urlParams.get("role");
     
     if (role) {
       setRoleFilter(role);
@@ -90,6 +93,17 @@ export default function AdminUsersPage() {
       }
     }
   }, [searchString, users]);
+
+  // Handle URL path parameter for viewing user profile (e.g., /admin/users/:id)
+  useEffect(() => {
+    if (params.id && users.length > 0) {
+      const user = users.find(u => u.userId === params.id);
+      if (user) {
+        setProfileUser(user);
+        setIsProfileOpen(true);
+      }
+    }
+  }, [params.id, users]);
   const [sortField, setSortField] = useState<keyof AdminUser>("dateJoined");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -811,6 +825,148 @@ export default function AdminUsersPage() {
             <Button variant="destructive" onClick={handleDeleteUser} data-testid="button-confirm-delete">
               Delete
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Profile Dialog */}
+      <Dialog open={isProfileOpen} onOpenChange={(open) => {
+        setIsProfileOpen(open);
+        if (!open) {
+          setProfileUser(null);
+          // Navigate back to users list when closing
+          setLocation("/admin/users");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <span>{profileUser?.name || "User Profile"}</span>
+                {profileUser?.role && (
+                  <Badge variant="outline" className="ml-2 capitalize">
+                    {profileUser.role}
+                  </Badge>
+                )}
+              </div>
+            </DialogTitle>
+            <DialogDescription>
+              View detailed information about this user
+            </DialogDescription>
+          </DialogHeader>
+          
+          {profileUser && (
+            <div className="space-y-6 py-4">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Contact Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Full Name</span>
+                    <p className="font-medium">{profileUser.name || "-"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Email</span>
+                    <p className="font-medium flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      {profileUser.email || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Phone</span>
+                    <p className="font-medium flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      {profileUser.phone || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Company</span>
+                    <p className="font-medium flex items-center gap-2">
+                      <Building className="h-4 w-4 text-muted-foreground" />
+                      {profileUser.company || "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Status */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Account Details</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Role</span>
+                    <p>
+                      <Badge variant={profileUser.role === "admin" ? "default" : "outline"} className="capitalize">
+                        <Shield className="h-3 w-3 mr-1" />
+                        {profileUser.role}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Status</span>
+                    <p>
+                      <Badge variant={profileUser.status === "active" ? "default" : profileUser.status === "suspended" ? "destructive" : "secondary"}>
+                        {profileUser.status === "active" ? "Active" : profileUser.status === "suspended" ? "Suspended" : "Pending"}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Verification</span>
+                    <p>
+                      <Badge variant={profileUser.isVerified ? "default" : "outline"}>
+                        {profileUser.isVerified ? "Verified" : "Unverified"}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Date Joined</span>
+                    <p className="font-medium text-sm">
+                      {profileUser.dateJoined ? format(new Date(profileUser.dateJoined), "MMM d, yyyy") : "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Region Info */}
+              {profileUser.region && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Operating Region</h4>
+                  <p className="font-medium">{profileUser.region}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsProfileOpen(false);
+                setProfileUser(null);
+                setLocation("/admin/users");
+              }}
+              data-testid="button-close-profile"
+            >
+              Close
+            </Button>
+            {profileUser && (
+              <Button 
+                onClick={() => {
+                  setIsProfileOpen(false);
+                  const user = users.find(u => u.userId === profileUser.userId);
+                  if (user) {
+                    openEditModal(user);
+                  }
+                }}
+                data-testid="button-edit-from-profile"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit User
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

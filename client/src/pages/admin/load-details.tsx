@@ -1233,14 +1233,9 @@ export default function AdminLoadDetailsPage() {
     },
     onSuccess: () => {
       toast({ title: "Load updated", description: "The load details have been updated successfully." });
-      // Invalidate all load-related queries so changes sync across all portals
-      queryClient.invalidateQueries({ queryKey: ["/api/loads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/loads", loadId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/loads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/carrier/shipments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/carrier/marketplace"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/shipper/loads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/shipments"] });
+      // Invalidate ALL queries to ensure consistent view across all portals
+      // This is the most reliable way to sync data immediately
+      queryClient.invalidateQueries();
       setEditSheetOpen(false);
     },
     onError: (error: Error) => {

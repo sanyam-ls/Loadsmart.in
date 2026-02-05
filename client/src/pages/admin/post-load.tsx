@@ -1145,7 +1145,7 @@ export default function AdminPostLoadPage() {
                       name="pickupLandmark"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark</FormLabel>
+                          <FormLabel>Landmark (Optional)</FormLabel>
                           <FormControl>
                             <Input placeholder="Near..." {...field} data-testid="admin-input-pickup-landmark" />
                           </FormControl>
@@ -1296,7 +1296,7 @@ export default function AdminPostLoadPage() {
                       name="dropoffLandmark"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark</FormLabel>
+                          <FormLabel>Landmark (Optional)</FormLabel>
                           <FormControl>
                             <Input placeholder="Near..." {...field} data-testid="admin-input-dropoff-landmark" />
                           </FormControl>

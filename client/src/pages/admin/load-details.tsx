@@ -316,15 +316,10 @@ function CommodityCombobox({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0" align="start">
-          <Command
-            filter={(value, search) => {
-              if (value.toLowerCase().startsWith(search.toLowerCase())) return 1;
-              return 0;
-            }}
-          >
+        <PopoverContent className="w-[400px] p-0" align="start" side="top" sideOffset={5}>
+          <Command>
             <CommandInput placeholder="Type to search commodities..." />
-            <CommandList className="max-h-[400px] overflow-y-auto">
+            <CommandList className="max-h-[300px]">
               <CommandEmpty>No commodity found.</CommandEmpty>
               {commodityCategories.map((category) => (
                 <CommandGroup key={category.category} heading={category.category}>

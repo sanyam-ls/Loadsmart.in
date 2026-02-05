@@ -14502,6 +14502,300 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   });
 
+  // ============ Recommended Carriers for Load ============
+  
+  // Get recommended carriers for a specific load based on matching criteria
+  app.get("/api/loads/:id/recommended-carriers", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const load = await storage.getLoad(req.params.id);
+      if (!load) {
+        return res.status(404).json({ error: "Load not found" });
+      }
+
+      // Get all verified carriers with their profiles and trucks
+      const allUsers = await storage.getAllUsers();
+      const verifiedCarriers = allUsers.filter(u => u.role === "carrier" && u.isVerified);
+
+      // Get all shipments and loads for historical analysis
+      const allShipments = await db.select().from(shipments);
+      const allLoads = await db.select().from(loads);
+      const allTrucks = await db.select().from(trucks);
+
+      const recommendations: Array<{
+        carrierId: string;
+        carrierName: string;
+        carrierCompany: string | null;
+        carrierPhone: string | null;
+        carrierType: string;
+        score: number;
+        matchReasons: string[];
+        truckTypeMatch: boolean;
+        capacityMatch: boolean;
+        routeExperience: boolean;
+        commodityExperience: boolean;
+        shipperExperience: boolean;
+      }> = [];
+
+      for (const carrier of verifiedCarriers) {
+        let score = 0;
+        const matchReasons: string[] = [];
+        let truckTypeMatch = false;
+        let capacityMatch = false;
+        let routeExperience = false;
+        let commodityExperience = false;
+        let shipperExperience = false;
+
+        // Get carrier profile
+        const carrierProfile = await storage.getCarrierProfile(carrier.id);
+        const carrierType = carrierProfile?.carrierType || "enterprise";
+
+        // Get carrier's trucks
+        const carrierTrucks = allTrucks.filter(t => t.carrierId === carrier.id);
+
+        // 1. Truck type match (30 points)
+        if (load.requiredTruckType && carrierTrucks.some(t => t.type === load.requiredTruckType)) {
+          score += 30;
+          truckTypeMatch = true;
+          matchReasons.push(`Has matching truck type: ${load.requiredTruckType}`);
+        }
+
+        // 2. Capacity match (25 points) - check if any truck can carry the load weight
+        const loadWeight = parseFloat(load.weight?.toString() || "0");
+        if (carrierTrucks.some(t => {
+          const capacity = parseFloat(t.capacity?.toString() || "0");
+          return capacity >= loadWeight;
+        })) {
+          score += 25;
+          capacityMatch = true;
+          matchReasons.push(`Can carry ${loadWeight} MT`);
+        }
+
+        // 3. Route experience (20 points) - has done similar routes before
+        const carrierShipments = allShipments.filter(s => s.carrierId === carrier.id);
+        const carrierCompletedLoads = carrierShipments.map(s => 
+          allLoads.find(l => l.id === s.loadId)
+        ).filter(Boolean);
+        
+        const hasRouteExperience = carrierCompletedLoads.some(l => 
+          l && (
+            (l.pickupCity === load.pickupCity && l.dropoffCity === load.dropoffCity) ||
+            (l.pickupState === load.pickupState && l.dropoffState === load.dropoffState)
+          )
+        );
+        if (hasRouteExperience) {
+          score += 20;
+          routeExperience = true;
+          matchReasons.push(`Has experience on ${load.pickupCity} to ${load.dropoffCity} route`);
+        }
+
+        // 4. Commodity experience (15 points) - has carried similar materials before
+        const hasCommodityExperience = carrierCompletedLoads.some(l => 
+          l && l.materialType && load.materialType && 
+          l.materialType.toLowerCase().includes(load.materialType.toLowerCase().split(" ")[0])
+        );
+        if (hasCommodityExperience) {
+          score += 15;
+          commodityExperience = true;
+          matchReasons.push(`Has carried similar commodity: ${load.materialType}`);
+        }
+
+        // 5. Shipper experience (10 points) - has worked with this shipper before
+        const hasShipperExperience = carrierShipments.some(s => s.shipperId === load.shipperId);
+        if (hasShipperExperience) {
+          score += 10;
+          shipperExperience = true;
+          matchReasons.push("Has worked with this shipper before");
+        }
+
+        // Only include carriers with at least some match
+        if (score > 0) {
+          recommendations.push({
+            carrierId: carrier.id,
+            carrierName: carrier.username,
+            carrierCompany: carrierProfile?.companyName || carrier.companyName,
+            carrierPhone: carrier.phone,
+            carrierType,
+            score,
+            matchReasons,
+            truckTypeMatch,
+            capacityMatch,
+            routeExperience,
+            commodityExperience,
+            shipperExperience,
+          });
+        }
+      }
+
+      // Sort by score descending
+      recommendations.sort((a, b) => b.score - a.score);
+
+      // Return top 10 recommendations
+      res.json(recommendations.slice(0, 10));
+    } catch (error: any) {
+      console.error("Get recommended carriers error:", error);
+      res.status(500).json({ error: "Failed to get recommended carriers" });
+    }
+  });
+
+  // ============ Recommended Loads for Carrier ============
+  
+  // Get recommended loads for a carrier based on their profile and history
+  app.get("/api/carrier/recommended-loads", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "carrier") {
+        return res.status(403).json({ error: "Carrier access required" });
+      }
+
+      // Get carrier's trucks and profile
+      const carrierProfile = await storage.getCarrierProfile(user.id);
+      const carrierTrucks = await db.select().from(trucks).where(eq(trucks.carrierId, user.id));
+
+      // Get available loads (posted to carriers, open for bid)
+      const availableLoads = await db.select().from(loads).where(
+        or(
+          eq(loads.status, "posted_to_carriers"),
+          eq(loads.status, "open_for_bid"),
+          eq(loads.status, "counter_received")
+        )
+      );
+
+      // Get carrier's shipment history for route/commodity matching
+      const carrierShipments = await db.select().from(shipments).where(eq(shipments.carrierId, user.id));
+      const allLoads = await db.select().from(loads);
+      const completedLoadIds = carrierShipments.map(s => s.loadId);
+      const historicalLoads = allLoads.filter(l => completedLoadIds.includes(l.id));
+
+      // Collect carrier's route and commodity experience
+      const routesExperienced = new Set<string>();
+      const commoditiesExperienced = new Set<string>();
+      const shippersWorkedWith = new Set<string>();
+
+      for (const l of historicalLoads) {
+        if (l.pickupCity && l.dropoffCity) {
+          routesExperienced.add(`${l.pickupCity}-${l.dropoffCity}`);
+          routesExperienced.add(`${l.pickupState}-${l.dropoffState}`);
+        }
+        if (l.materialType) {
+          commoditiesExperienced.add(l.materialType.toLowerCase().split(" ")[0]);
+        }
+      }
+      for (const s of carrierShipments) {
+        if (s.shipperId) shippersWorkedWith.add(s.shipperId);
+      }
+
+      // Score each available load
+      const recommendations: Array<{
+        loadId: string;
+        loadNumber: string;
+        pickupCity: string;
+        dropoffCity: string;
+        weight: string;
+        materialType: string | null;
+        requiredTruckType: string | null;
+        pickupDate: Date | null;
+        price: number | null;
+        score: number;
+        matchReasons: string[];
+        truckTypeMatch: boolean;
+        capacityMatch: boolean;
+        routeMatch: boolean;
+        commodityMatch: boolean;
+        shipperMatch: boolean;
+      }> = [];
+
+      for (const load of availableLoads) {
+        let score = 0;
+        const matchReasons: string[] = [];
+        let truckTypeMatch = false;
+        let capacityMatch = false;
+        let routeMatch = false;
+        let commodityMatch = false;
+        let shipperMatch = false;
+
+        // 1. Truck type match (30 points)
+        if (load.requiredTruckType && carrierTrucks.some(t => t.type === load.requiredTruckType)) {
+          score += 30;
+          truckTypeMatch = true;
+          matchReasons.push(`Your truck matches: ${load.requiredTruckType}`);
+        }
+
+        // 2. Capacity match (25 points)
+        const loadWeight = parseFloat(load.weight?.toString() || "0");
+        if (carrierTrucks.some(t => {
+          const capacity = parseFloat(t.capacity?.toString() || "0");
+          return capacity >= loadWeight;
+        })) {
+          score += 25;
+          capacityMatch = true;
+          matchReasons.push(`Your truck can carry ${loadWeight} MT`);
+        }
+
+        // 3. Route experience (20 points)
+        const routeKey = `${load.pickupCity}-${load.dropoffCity}`;
+        const stateRouteKey = `${load.pickupState}-${load.dropoffState}`;
+        if (routesExperienced.has(routeKey) || routesExperienced.has(stateRouteKey)) {
+          score += 20;
+          routeMatch = true;
+          matchReasons.push(`You've done ${load.pickupCity} to ${load.dropoffCity} route before`);
+        }
+
+        // 4. Commodity experience (15 points)
+        if (load.materialType && commoditiesExperienced.has(load.materialType.toLowerCase().split(" ")[0])) {
+          score += 15;
+          commodityMatch = true;
+          matchReasons.push(`You've carried ${load.materialType} before`);
+        }
+
+        // 5. Shipper familiarity (10 points)
+        if (shippersWorkedWith.has(load.shipperId)) {
+          score += 10;
+          shipperMatch = true;
+          matchReasons.push("You've worked with this shipper before");
+        }
+
+        recommendations.push({
+          loadId: load.id,
+          loadNumber: `LD-${String(load.shipperLoadNumber || 0).padStart(3, '0')}`,
+          pickupCity: load.pickupCity,
+          dropoffCity: load.dropoffCity,
+          weight: load.weight?.toString() || "0",
+          materialType: load.materialType,
+          requiredTruckType: load.requiredTruckType,
+          pickupDate: load.pickupDate,
+          price: load.adminFinalPrice ? parseFloat(load.adminFinalPrice.toString()) : null,
+          score,
+          matchReasons,
+          truckTypeMatch,
+          capacityMatch,
+          routeMatch,
+          commodityMatch,
+          shipperMatch,
+        });
+      }
+
+      // Sort by score descending, then by pickup date
+      recommendations.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (a.pickupDate && b.pickupDate) {
+          return new Date(a.pickupDate).getTime() - new Date(b.pickupDate).getTime();
+        }
+        return 0;
+      });
+
+      // Return recommendations (all loads, sorted by match score)
+      res.json(recommendations);
+    } catch (error: any) {
+      console.error("Get recommended loads error:", error);
+      res.status(500).json({ error: "Failed to get recommended loads" });
+    }
+  });
+
   // Setup WebSocket for real-time telemetry
   setupTelemetryWebSocket(httpServer);
 

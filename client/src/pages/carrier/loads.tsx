@@ -863,7 +863,15 @@ export default function CarrierLoadsPage() {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
               {topRecommendations.map((load) => (
-                <Card key={load.id} className="hover-elevate" data-testid={`rec-load-${load.id}`}>
+                <Card 
+                  key={load.id} 
+                  className="hover-elevate cursor-pointer" 
+                  data-testid={`rec-load-${load.id}`}
+                  onClick={() => {
+                    setDetailLoad(load);
+                    setDetailDialogOpen(true);
+                  }}
+                >
                   <CardContent className="pt-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -1399,6 +1407,92 @@ export default function CarrierLoadsPage() {
                       <p className="text-sm text-muted-foreground">No advance payment required for this load.</p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+              
+              {/* Why This Load Matches Section */}
+              <Card className="border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20">
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target className="h-4 w-4 text-blue-600" />
+                    <span className="font-semibold text-blue-700 dark:text-blue-400">Why This Load Matches</span>
+                    <Badge className={`ml-auto ${getMatchScoreBadge((detailLoad as any).matchScore || 0)} no-default-hover-elevate no-default-active-elevate`}>
+                      {(detailLoad as any).matchScore || 0} pts
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    {(detailLoad as any).truckTypeMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-blue-200 dark:border-blue-800">
+                        <Truck className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Truck Type Match</div>
+                          <div className="text-xs text-muted-foreground">
+                            Your truck type matches the required type for this load: {detailLoad.loadType || 'Any'}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-blue-100 dark:bg-blue-900/30 no-default-hover-elevate no-default-active-elevate">+30 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {(detailLoad as any).capacityMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-green-200 dark:border-green-800">
+                        <Package className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Capacity Match</div>
+                          <div className="text-xs text-muted-foreground">
+                            Your truck can carry the load weight: {detailLoad.weight || 'Not specified'} tons
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-green-100 dark:bg-green-900/30 no-default-hover-elevate no-default-active-elevate">+25 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {(detailLoad as any).routeMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-purple-200 dark:border-purple-800">
+                        <MapPin className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Route Experience</div>
+                          <div className="text-xs text-muted-foreground">
+                            You've completed shipments on this route: {detailLoad.origin} to {detailLoad.destination}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-purple-100 dark:bg-purple-900/30 no-default-hover-elevate no-default-active-elevate">+20 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {(detailLoad as any).commodityMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-orange-200 dark:border-orange-800">
+                        <Package className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Commodity Experience</div>
+                          <div className="text-xs text-muted-foreground">
+                            You've carried similar materials before: {detailLoad.cargoDescription || 'General cargo'}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-orange-100 dark:bg-orange-900/30 no-default-hover-elevate no-default-active-elevate">+15 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {(detailLoad as any).shipperMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-yellow-200 dark:border-yellow-800">
+                        <Building2 className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Shipper Experience</div>
+                          <div className="text-xs text-muted-foreground">
+                            You've worked with this shipper before: {detailLoad.shipperName || 'Unknown'}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-yellow-100 dark:bg-yellow-900/30 no-default-hover-elevate no-default-active-elevate">+10 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {!(detailLoad as any).truckTypeMatch && !(detailLoad as any).capacityMatch && !(detailLoad as any).routeMatch && !(detailLoad as any).commodityMatch && !(detailLoad as any).shipperMatch && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">No specific matching criteria found. Build your history by completing loads to get better recommendations.</p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>

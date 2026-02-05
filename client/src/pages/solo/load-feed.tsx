@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { 
   MapPin, Package, Truck, ArrowRight, IndianRupee, 
   Clock, Lock, Unlock, Loader2, RefreshCw, ChevronRight,
-  Sparkles, Route, Box, Users
+  Sparkles, Route, Box, Users, Target, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,16 +40,21 @@ interface LoadCard {
   origin: string;
   destination: string;
   loadType: string | null;
+  truckType: string | null;
   weight: string | null;
+  distance: number | null;
   estimatedDistance: number | null;
   finalPrice: string | null;
   allowCounterBids: boolean | null;
+  allowBids: boolean;
   shipperName: string | null;
   bidCount: number;
   myBid: any | null;
   postedByAdmin: boolean;
   priceFixed: boolean;
   createdAt: string;
+  loadNumber: string | null;
+  material: string | null;
 }
 
 export default function SoloLoadFeed() {
@@ -60,6 +65,9 @@ export default function SoloLoadFeed() {
   const [bidAmount, setBidAmount] = useState("");
   const [bidNotes, setBidNotes] = useState("");
   const [isAccepting, setIsAccepting] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailLoad, setDetailLoad] = useState<LoadCard | null>(null);
+  const [detailLoadScore, setDetailLoadScore] = useState<RecommendedLoadData | null>(null);
 
   const { data: loadsData, isLoading, refetch, isRefetching } = useQuery<LoadCard[]>({
     queryKey: ["/api/carrier/available-loads"],
@@ -194,23 +202,32 @@ export default function SoloLoadFeed() {
                   const load = loads.find(l => l.id === rec.loadId);
                   if (!load) return null;
                   return (
-                    <Card key={rec.loadId} className="p-3 bg-primary/5 border-primary/20">
+                    <Card 
+                      key={rec.loadId} 
+                      className="p-3 bg-primary/5 border-primary/20 hover-elevate cursor-pointer"
+                      onClick={() => {
+                        setDetailLoad(load);
+                        setDetailLoadScore(rec);
+                        setDetailDialogOpen(true);
+                      }}
+                    >
                       <div className="flex flex-wrap items-center gap-1 mb-2">
-                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary no-default-hover-elevate no-default-active-elevate">
+                          <Target className="h-3 w-3 mr-1" />
                           {rec.score} pts
                         </Badge>
                         {rec.truckTypeMatch && (
-                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 no-default-hover-elevate no-default-active-elevate">
                             <Truck className="h-3 w-3 mr-0.5" /> Truck
                           </Badge>
                         )}
                         {rec.capacityMatch && (
-                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 no-default-hover-elevate no-default-active-elevate">
                             <Package className="h-3 w-3 mr-0.5" /> Capacity
                           </Badge>
                         )}
                         {rec.routeMatch && (
-                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 no-default-hover-elevate no-default-active-elevate">
                             <Route className="h-3 w-3 mr-0.5" /> Route
                           </Badge>
                         )}
@@ -222,7 +239,11 @@ export default function SoloLoadFeed() {
                         <span className="text-primary font-bold text-sm">
                           Rs. {formatPrice(load.finalPrice)}
                         </span>
-                        <Button size="sm" className="h-7 text-xs" onClick={() => handleAcceptPrice(load)}>
+                        <Button 
+                          size="sm" 
+                          className="h-7 text-xs" 
+                          onClick={(e) => { e.stopPropagation(); handleAcceptPrice(load); }}
+                        >
                           Accept
                         </Button>
                       </div>
@@ -389,6 +410,232 @@ export default function SoloLoadFeed() {
           )}
         </div>
       </ScrollArea>
+
+      {/* Load Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Load Details
+            </DialogTitle>
+            <DialogDescription>
+              Complete information about this load
+            </DialogDescription>
+          </DialogHeader>
+          
+          {detailLoad && (
+            <div className="space-y-4 py-4">
+              <Card>
+                <CardContent className="pt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={`${(detailLoadScore?.score || 0) >= 75 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : (detailLoadScore?.score || 0) >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'} no-default-hover-elevate no-default-active-elevate`}>
+                        <Target className="h-3 w-3 mr-1" />
+                        {detailLoadScore?.score || 0} pts
+                      </Badge>
+                      {!detailLoad.allowBids ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate">
+                          <Lock className="h-3 w-3 mr-1" />
+                          Fixed Price
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 no-default-hover-elevate no-default-active-elevate">
+                          <Unlock className="h-3 w-3 mr-1" />
+                          Negotiable
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-sm font-mono text-muted-foreground">{detailLoad.loadNumber}</span>
+                  </div>
+                  
+                  {/* Route Details */}
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium">{detailLoad.origin}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium">{detailLoad.destination}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {detailLoad.truckType && (
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Type:</span>
+                        <span className="font-medium">{detailLoad.truckType}</span>
+                      </div>
+                    )}
+                    {detailLoad.weight && (
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Weight:</span>
+                        <span className="font-medium">{detailLoad.weight} Tons</span>
+                      </div>
+                    )}
+                    {detailLoad.distance && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Distance:</span>
+                        <span className="font-medium">{detailLoad.distance} km</span>
+                      </div>
+                    )}
+                    {detailLoad.material && (
+                      <div className="flex items-center gap-2 col-span-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Commodity:</span>
+                        <span className="font-medium">{detailLoad.material}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Price & Payment Information */}
+              <Card className="border-primary/30">
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Total Price</span>
+                    <span className="text-xl font-bold text-primary">Rs. {formatPrice(detailLoad.finalPrice)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Why This Load Matches Section */}
+              <Card className="border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20">
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target className="h-4 w-4 text-blue-600" />
+                    <span className="font-semibold text-blue-700 dark:text-blue-400">Why This Load Matches</span>
+                    <Badge className={`ml-auto ${(detailLoadScore?.score || 0) >= 75 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : (detailLoadScore?.score || 0) >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'} no-default-hover-elevate no-default-active-elevate`}>
+                      {detailLoadScore?.score || 0} pts
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    {detailLoadScore?.truckTypeMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-blue-200 dark:border-blue-800">
+                        <Truck className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Truck Type Match</div>
+                          <div className="text-xs text-muted-foreground">
+                            Your truck type matches the required type: {detailLoad.truckType || 'Any'}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-blue-100 dark:bg-blue-900/30 no-default-hover-elevate no-default-active-elevate">+30 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {detailLoadScore?.capacityMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-green-200 dark:border-green-800">
+                        <Package className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Capacity Match</div>
+                          <div className="text-xs text-muted-foreground">
+                            Your truck can carry this load: {detailLoad.weight || 'Not specified'} tons
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-green-100 dark:bg-green-900/30 no-default-hover-elevate no-default-active-elevate">+25 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {detailLoadScore?.routeMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-purple-200 dark:border-purple-800">
+                        <MapPin className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Route Experience</div>
+                          <div className="text-xs text-muted-foreground">
+                            You've completed shipments on this route: {detailLoad.origin} to {detailLoad.destination}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-purple-100 dark:bg-purple-900/30 no-default-hover-elevate no-default-active-elevate">+20 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {detailLoadScore?.commodityMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-orange-200 dark:border-orange-800">
+                        <Package className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Commodity Experience</div>
+                          <div className="text-xs text-muted-foreground">
+                            You've carried similar materials before: {detailLoad.material || 'General cargo'}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-orange-100 dark:bg-orange-900/30 no-default-hover-elevate no-default-active-elevate">+15 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {detailLoadScore?.shipperMatch && (
+                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-yellow-200 dark:border-yellow-800">
+                        <Building2 className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">Shipper Experience</div>
+                          <div className="text-xs text-muted-foreground">
+                            You've worked with this shipper before
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-xs bg-yellow-100 dark:bg-yellow-900/30 no-default-hover-elevate no-default-active-elevate">+10 pts</Badge>
+                      </div>
+                    )}
+                    
+                    {!detailLoadScore?.truckTypeMatch && !detailLoadScore?.capacityMatch && !detailLoadScore?.routeMatch && !detailLoadScore?.commodityMatch && !detailLoadScore?.shipperMatch && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">No specific matching criteria found. Build your history by completing loads to get better recommendations.</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)} data-testid="button-close-detail">
+              Close
+            </Button>
+            {detailLoad && (
+              <>
+                <Button 
+                  onClick={() => {
+                    setDetailDialogOpen(false);
+                    if (detailLoad) {
+                      handleAcceptPrice(detailLoad);
+                    }
+                  }}
+                  disabled={submitBidMutation.isPending}
+                  data-testid="button-accept-from-detail"
+                >
+                  Accept Load
+                </Button>
+                {detailLoad.allowBids && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setDetailDialogOpen(false);
+                      if (detailLoad) {
+                        handleCounterBid(detailLoad);
+                      }
+                    }}
+                    data-testid="button-bid-from-detail"
+                  >
+                    Place Bid
+                  </Button>
+                )}
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showBidDialog} onOpenChange={setShowBidDialog}>
         <DialogContent>

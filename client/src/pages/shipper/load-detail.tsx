@@ -217,12 +217,25 @@ export default function LoadDetailPage() {
   };
   
   const getStateForCity = (cityName: string) => {
+    const normalizedCityName = cityName.toLowerCase().trim();
     for (const state of indianStates) {
-      if (state.cities.some(city => city.name === cityName)) {
+      if (state.cities.some(city => city.name.toLowerCase() === normalizedCityName)) {
         return state.name;
       }
     }
     return "";
+  };
+  
+  // Helper to find the correct city name from the predefined list (case-insensitive)
+  const normalizeCity = (cityName: string) => {
+    const normalizedInput = cityName.toLowerCase().trim();
+    for (const state of indianStates) {
+      const matchingCity = state.cities.find(c => c.name.toLowerCase() === normalizedInput);
+      if (matchingCity) {
+        return matchingCity.name; // Return the properly-cased name from the list
+      }
+    }
+    return cityName; // Return as-is if not found
   };
   
   const allCities = getAllCities();
@@ -277,17 +290,34 @@ export default function LoadDetailPage() {
         return parts[0].trim();
       };
       
+      // Helper to convert state code to full name
+      const normalizeStateName = (stateValue: string | null) => {
+        if (!stateValue) return "";
+        // Check if it's already a full state name
+        const directMatch = indianStates.find(s => s.name === stateValue);
+        if (directMatch) return directMatch.name;
+        // Check if it's a state code
+        const codeMatch = indianStates.find(s => 
+          s.code === stateValue || s.code === stateValue.toUpperCase()
+        );
+        if (codeMatch) return codeMatch.name;
+        return stateValue;
+      };
+      
       // Try to find state from city if state is not set
       const findStateFromCity = (cityValue: string | null, existingState: string | null) => {
-        if (existingState) return existingState;
+        // If we have an existing state, normalize it (convert code to name)
+        if (existingState) return normalizeStateName(existingState);
         if (!cityValue) return "";
         
-        // First check if city is in "City, State" format
+        // First check if city is in "City, State" or "City,State" format
         const parts = cityValue.split(",");
         if (parts.length > 1) {
           const statePart = parts[1].trim();
-          // Check if statePart matches any state name
-          const matchedState = indianStates.find(s => s.name === statePart);
+          // Check if statePart matches any state name or code
+          const matchedState = indianStates.find(s => 
+            s.name === statePart || s.code === statePart || s.code === statePart.toUpperCase()
+          );
           if (matchedState) return matchedState.name;
         }
         
@@ -296,10 +326,26 @@ export default function LoadDetailPage() {
         return getStateForCity(cityName);
       };
       
-      const pickupCityName = extractCityName(load.pickupCity);
-      const dropoffCityName = extractCityName(load.dropoffCity);
+      const rawPickupCity = extractCityName(load.pickupCity);
+      const rawDropoffCity = extractCityName(load.dropoffCity);
+      // Normalize city names to match the predefined list (for Select component matching)
+      const pickupCityName = normalizeCity(rawPickupCity);
+      const dropoffCityName = normalizeCity(rawDropoffCity);
       const pickupStateName = findStateFromCity(load.pickupCity, load.pickupState);
       const dropoffStateName = findStateFromCity(load.dropoffCity, load.dropoffState);
+      
+      console.log("[EditLoad] Populating form with:", {
+        originalPickupCity: load.pickupCity,
+        originalPickupState: load.pickupState,
+        rawPickupCity,
+        normalizedPickupCity: pickupCityName,
+        resolvedPickupState: pickupStateName,
+        originalDropoffCity: load.dropoffCity,
+        originalDropoffState: load.dropoffState,
+        rawDropoffCity,
+        normalizedDropoffCity: dropoffCityName,
+        resolvedDropoffState: dropoffStateName,
+      });
       
       editForm.reset({
         shipperContactName: load.shipperContactName || "",

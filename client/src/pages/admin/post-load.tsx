@@ -98,6 +98,9 @@ const adminLoadFormSchema = z.object({
   adminGrossPrice: z.string().optional(),
   platformMargin: z.string().optional(),
   carrierAdvancePercent: z.string().optional(),
+  // Admin employee details (who is filling the form)
+  adminEmployeeCode: z.string().optional(),
+  adminEmployeeName: z.string().optional(),
 }).refine((data) => {
   if (data.rateType === "per_ton") {
     return data.shipperPricePerTon && data.shipperPricePerTon.trim() !== "";
@@ -651,6 +654,8 @@ export default function AdminPostLoadPage() {
       adminGrossPrice: "",
       platformMargin: "10",
       carrierAdvancePercent: "30",
+      adminEmployeeCode: "",
+      adminEmployeeName: "",
     },
   });
 
@@ -742,6 +747,9 @@ export default function AdminPostLoadPage() {
         adminGrossPrice: data.adminGrossPrice ? data.adminGrossPrice.replace(/,/g, '') : null,
         platformMargin: data.platformMargin || null,
         carrierAdvancePercent: data.carrierAdvancePercent || null,
+        // Admin employee info
+        adminEmployeeCode: data.adminEmployeeCode || null,
+        adminEmployeeName: data.adminEmployeeName || null,
       });
       
       const result = await response.json();
@@ -898,6 +906,47 @@ export default function AdminPostLoadPage() {
         <div className="flex-1 space-y-6 min-w-0">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              {/* Admin Details Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    Admin Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Your employee information (shown in load details)</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="adminEmployeeCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Employee Code (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. EMP001" {...field} data-testid="admin-input-employee-code" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="adminEmployeeName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Employee Name (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your name" {...field} data-testid="admin-input-employee-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Shipper Details Card */}
               <Card>
                 <CardHeader>

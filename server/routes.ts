@@ -2713,6 +2713,9 @@ export async function registerRoutes(
         submittedAt: new Date(),
         adminFinalPrice: body.postImmediately && body.adminGrossPrice ? String(body.adminGrossPrice) : null,
         postedAt: body.postImmediately ? new Date() : null,
+        // Admin employee info (who filled the form)
+        adminEmployeeCode: body.adminEmployeeCode || null,
+        adminEmployeeName: body.adminEmployeeName || null,
       });
 
       const load = await storage.createLoad(loadData);

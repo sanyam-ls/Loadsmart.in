@@ -461,6 +461,10 @@ export const loads = pgTable("loads", {
   kycVerified: boolean("kyc_verified").default(false),
   priority: text("priority").default("normal"),
   
+  // Admin employee info (when admin posts load on behalf of shipper)
+  adminEmployeeCode: text("admin_employee_code"),
+  adminEmployeeName: text("admin_employee_name"),
+  
   // Optimistic locking
   version: integer("version").default(1),
   

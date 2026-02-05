@@ -922,7 +922,7 @@ export default function AdminPostLoadPage() {
                       name="adminEmployeeCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Employee Code (Optional)</FormLabel>
+                          <FormLabel>Employee Code</FormLabel>
                           <FormControl>
                             <Input placeholder="e.g. EMP001" {...field} data-testid="admin-input-employee-code" />
                           </FormControl>
@@ -935,7 +935,7 @@ export default function AdminPostLoadPage() {
                       name="adminEmployeeName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Employee Name (Optional)</FormLabel>
+                          <FormLabel>Employee Name</FormLabel>
                           <FormControl>
                             <Input placeholder="Your name" {...field} data-testid="admin-input-employee-name" />
                           </FormControl>

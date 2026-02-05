@@ -271,7 +271,7 @@ function getCommodityLabel(value: string): string {
   return value;
 }
 
-// Commodity Select Component - uses standard Select for proper sheet scrolling
+// Searchable Commodity Combobox - uses Popover portal to render outside Sheet
 function CommodityCombobox({ 
   value, 
   onChange,
@@ -283,34 +283,116 @@ function CommodityCombobox({
   customValue?: string;
   onCustomChange: (value: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  
+  const selectedCommodity = value ? allCommodities.find(c => c.value === value) : null;
   const isCustomSelected = value === "other";
+
+  // Filter commodities based on search
+  const filteredCategories = useMemo(() => {
+    if (!search.trim()) return commodityCategories;
+    
+    const searchLower = search.toLowerCase();
+    return commodityCategories
+      .map(category => ({
+        ...category,
+        items: category.items.filter(item => 
+          item.label.toLowerCase().includes(searchLower) ||
+          item.value.toLowerCase().includes(searchLower)
+        )
+      }))
+      .filter(category => category.items.length > 0);
+  }, [search]);
+
+  // Get display text for the button
+  const getDisplayText = () => {
+    if (isCustomSelected && customValue) {
+      return customValue;
+    }
+    if (selectedCommodity) {
+      return selectedCommodity.label;
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-2">
-      <Select value={value || ""} onValueChange={(val) => {
-        onChange(val);
-        if (val !== "other") {
-          onCustomChange("");
-        }
-      }}>
-        <SelectTrigger className="w-full" data-testid="select-goods-to-be-carried">
-          <SelectValue placeholder="Select commodity type..." />
-        </SelectTrigger>
-        <SelectContent className="max-h-[300px]">
-          {commodityCategories.map((category) => (
-            <SelectGroup key={category.category}>
-              <SelectLabel className="text-xs font-semibold text-muted-foreground px-2 py-1.5">
-                {category.category}
-              </SelectLabel>
-              {category.items.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))}
-        </SelectContent>
-      </Select>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+            data-testid="select-goods-to-be-carried"
+          >
+            {getDisplayText() ? (
+              <span className="truncate">{getDisplayText()}</span>
+            ) : (
+              <span className="text-muted-foreground">Select commodity type...</span>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent 
+          className="w-[350px] p-0" 
+          align="start" 
+          sideOffset={4}
+          style={{ zIndex: 9999 }}
+        >
+          <div className="flex flex-col">
+            <div className="flex items-center border-b px-3">
+              <ChevronsUpDown className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+              <input
+                placeholder="Search commodities..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                data-testid="input-commodity-search"
+              />
+            </div>
+            <div className="max-h-[280px] overflow-y-auto">
+              {filteredCategories.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  No commodity found.
+                </div>
+              ) : (
+                filteredCategories.map((category) => (
+                  <div key={category.category}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                      {category.category}
+                    </div>
+                    {category.items.map((item) => (
+                      <div
+                        key={item.value}
+                        className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${
+                          value === item.value ? "bg-accent" : ""
+                        }`}
+                        onClick={() => {
+                          onChange(item.value);
+                          if (item.value !== "other") {
+                            onCustomChange("");
+                          }
+                          setSearch("");
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={`mr-2 h-4 w-4 ${
+                            value === item.value ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                        {item.label}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
       
       {/* Custom commodity input when "Other / Custom" is selected */}
       {isCustomSelected && (

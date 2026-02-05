@@ -42,6 +42,8 @@ import {
   Receipt,
   Target,
   ChevronRight,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,6 +92,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   Table,
   TableBody,
   TableCell,
@@ -106,6 +121,253 @@ import { indianStates, getCitiesByState } from "@shared/indian-locations";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { connectMarketplace, onMarketplaceEvent, disconnectMarketplace } from "@/lib/marketplace-socket";
 import { useAuth } from "@/lib/auth-context";
+
+// Commodity categories for goods selection
+const commodityCategories = [
+  {
+    category: "Agricultural & Food Products",
+    items: [
+      { value: "rice", label: "Rice / Paddy" },
+      { value: "wheat", label: "Wheat" },
+      { value: "pulses", label: "Pulses / Daal" },
+      { value: "sugar", label: "Sugar" },
+      { value: "jaggery", label: "Jaggery (Gud)" },
+      { value: "tea", label: "Tea" },
+      { value: "coffee", label: "Coffee" },
+      { value: "spices", label: "Spices" },
+      { value: "edible_oil", label: "Edible Oil" },
+      { value: "fruits", label: "Fresh Fruits" },
+      { value: "vegetables", label: "Fresh Vegetables" },
+      { value: "onions_potatoes", label: "Onions / Potatoes" },
+      { value: "cotton", label: "Cotton" },
+      { value: "tobacco", label: "Tobacco" },
+      { value: "jute", label: "Jute" },
+      { value: "animal_feed", label: "Animal Feed / Fodder" },
+      { value: "seeds", label: "Seeds" },
+      { value: "fertilizer", label: "Fertilizer" },
+      { value: "pesticides", label: "Pesticides / Insecticides" },
+    ],
+  },
+  {
+    category: "Construction Materials",
+    items: [
+      { value: "cement", label: "Cement Bags" },
+      { value: "cement_bulk", label: "Cement (Bulk)" },
+      { value: "sand", label: "Sand" },
+      { value: "gravel", label: "Gravel / Stone Chips" },
+      { value: "bricks", label: "Bricks" },
+      { value: "tiles", label: "Tiles / Ceramics" },
+      { value: "marble", label: "Marble / Granite" },
+      { value: "steel_rods", label: "Steel Rods / TMT Bars" },
+      { value: "steel_coils", label: "Steel Coils" },
+      { value: "steel_plates", label: "Steel Plates / Sheets" },
+      { value: "pipes", label: "Pipes (Steel/PVC)" },
+      { value: "plywood", label: "Plywood / Timber" },
+      { value: "glass", label: "Glass" },
+      { value: "paint", label: "Paint / Coatings" },
+      { value: "concrete_blocks", label: "Concrete Blocks" },
+      { value: "gypsum", label: "Gypsum" },
+    ],
+  },
+  {
+    category: "Metals & Minerals",
+    items: [
+      { value: "iron_ore", label: "Iron Ore" },
+      { value: "coal", label: "Coal" },
+      { value: "limestone", label: "Limestone" },
+      { value: "bauxite", label: "Bauxite" },
+      { value: "copper", label: "Copper" },
+      { value: "aluminium", label: "Aluminium" },
+      { value: "zinc", label: "Zinc" },
+      { value: "scrap_metal", label: "Scrap Metal" },
+      { value: "manganese", label: "Manganese" },
+      { value: "silica_sand", label: "Silica Sand" },
+    ],
+  },
+  {
+    category: "Chemicals & Petroleum",
+    items: [
+      { value: "chemicals_general", label: "Chemicals (General)" },
+      { value: "chemicals_industrial", label: "Chemicals (Industrial)" },
+      { value: "chemicals_hazardous", label: "Chemicals (Hazardous)" },
+      { value: "caustic_soda", label: "Caustic Soda" },
+      { value: "petroleum_products", label: "Petroleum Products" },
+      { value: "lng_lpg", label: "LNG / LPG" },
+      { value: "bitumen", label: "Bitumen" },
+      { value: "lubricants", label: "Lubricants / Oils" },
+    ],
+  },
+  {
+    category: "Industrial & Manufacturing",
+    items: [
+      { value: "machinery", label: "Machinery / Equipment" },
+      { value: "auto_parts", label: "Auto Parts / Components" },
+      { value: "automobiles", label: "Automobiles / Vehicles" },
+      { value: "textiles", label: "Textiles / Fabrics" },
+      { value: "garments", label: "Garments / Apparel" },
+      { value: "yarn", label: "Yarn / Thread" },
+      { value: "leather", label: "Leather / Leather Goods" },
+      { value: "paper", label: "Paper / Cardboard" },
+      { value: "packaging", label: "Packaging Materials" },
+      { value: "electrical", label: "Electrical Equipment" },
+      { value: "electronics", label: "Electronics" },
+    ],
+  },
+  {
+    category: "Consumer Goods",
+    items: [
+      { value: "fmcg", label: "FMCG Products" },
+      { value: "beverages", label: "Beverages" },
+      { value: "dairy", label: "Dairy Products" },
+      { value: "frozen_foods", label: "Frozen Foods" },
+      { value: "packaged_foods", label: "Packaged Foods" },
+      { value: "medicines", label: "Medicines / Pharmaceuticals" },
+      { value: "cosmetics", label: "Cosmetics / Personal Care" },
+      { value: "furniture", label: "Furniture" },
+      { value: "appliances", label: "Home Appliances" },
+      { value: "household", label: "Household Goods" },
+    ],
+  },
+  {
+    category: "Containers & Special Cargo",
+    items: [
+      { value: "container_20ft", label: "Container (20ft)" },
+      { value: "container_40ft", label: "Container (40ft)" },
+      { value: "odc_cargo", label: "ODC (Over Dimensional Cargo)" },
+      { value: "project_cargo", label: "Project Cargo" },
+      { value: "hazardous", label: "Hazardous Materials" },
+      { value: "perishables", label: "Perishables (Temperature Controlled)" },
+      { value: "livestock", label: "Livestock" },
+      { value: "empty_containers", label: "Empty Containers" },
+    ],
+  },
+  {
+    category: "Others",
+    items: [
+      { value: "e_commerce", label: "E-commerce Parcels" },
+      { value: "courier", label: "Courier / Packages" },
+      { value: "exhibition", label: "Exhibition Materials" },
+      { value: "shifting", label: "Household Shifting" },
+      { value: "waste", label: "Industrial Waste" },
+      { value: "recyclables", label: "Recyclables" },
+      { value: "other", label: "Other / Custom" },
+    ],
+  },
+];
+
+// Flatten all commodities for searching
+const allCommodities = commodityCategories.flatMap(cat => 
+  cat.items.map(item => ({ ...item, category: cat.category }))
+);
+
+// Get commodity label from value
+function getCommodityLabel(value: string): string {
+  for (const category of commodityCategories) {
+    const item = category.items.find(i => i.value === value);
+    if (item) return item.label;
+  }
+  return value;
+}
+
+// Searchable Commodity Combobox Component
+function CommodityCombobox({ 
+  value, 
+  onChange,
+  customValue,
+  onCustomChange
+}: { 
+  value?: string; 
+  onChange: (value: string) => void;
+  customValue?: string;
+  onCustomChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  
+  const selectedCommodity = value ? allCommodities.find(c => c.value === value) : null;
+  const isCustomSelected = value === "other";
+
+  // Get display text for the button
+  const getDisplayText = () => {
+    if (isCustomSelected && customValue) {
+      return customValue;
+    }
+    if (selectedCommodity) {
+      return selectedCommodity.label;
+    }
+    return null;
+  };
+
+  return (
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+            data-testid="select-goods-to-be-carried"
+          >
+            {getDisplayText() ? (
+              <span className="truncate">{getDisplayText()}</span>
+            ) : (
+              <span className="text-muted-foreground">Select commodity type...</span>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[400px] p-0" align="start">
+          <Command
+            filter={(value, search) => {
+              if (value.toLowerCase().startsWith(search.toLowerCase())) return 1;
+              return 0;
+            }}
+          >
+            <CommandInput placeholder="Type to search commodities..." />
+            <CommandList className="max-h-[400px]">
+              <CommandEmpty>No commodity found.</CommandEmpty>
+              {commodityCategories.map((category) => (
+                <CommandGroup key={category.category} heading={category.category}>
+                  {category.items.map((item) => (
+                    <CommandItem
+                      key={item.value}
+                      value={item.label}
+                      onSelect={() => {
+                        onChange(item.value);
+                        if (item.value !== "other") {
+                          onCustomChange("");
+                        }
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={`mr-2 h-4 w-4 ${
+                          value === item.value ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
+                      {item.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      
+      {/* Custom commodity input when "Other / Custom" is selected */}
+      {isCustomSelected && (
+        <Input
+          placeholder="Enter your commodity type..."
+          value={customValue || ""}
+          onChange={(e) => onCustomChange(e.target.value)}
+          className="mt-2"
+          data-testid="input-custom-commodity"
+        />
+      )}
+    </div>
+  );
+}
 
 const formatCurrency = (amount: number) => {
   if (amount >= 100000) {
@@ -599,6 +861,7 @@ export default function AdminLoadDetailsPage() {
   const [selectedStatus, setSelectedStatus] = useState<AdminLoad["status"]>("Active");
   const [selectedCarrierId, setSelectedCarrierId] = useState("");
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [customCommodity, setCustomCommodity] = useState("");
   
   // WebSocket connection for real-time updates from shipper edits
   useEffect(() => {
@@ -848,6 +1111,24 @@ export default function AdminLoadDetailsPage() {
         resolvedDropoffState: dropoffStateName,
       });
       
+      // Convert goods label to value for the combobox
+      const normalizeGoodsValue = (goods: string | null) => {
+        if (!goods) return "";
+        // First check if it's already a value
+        const directMatch = allCommodities.find(c => c.value === goods);
+        if (directMatch) return directMatch.value;
+        // Check if it's a label and convert to value
+        const labelMatch = allCommodities.find(c => 
+          c.label.toLowerCase() === goods.toLowerCase()
+        );
+        if (labelMatch) return labelMatch.value;
+        // If not found in list, it's a custom value
+        setCustomCommodity(goods);
+        return "other";
+      };
+      
+      const goodsValue = normalizeGoodsValue(apiLoad.goodsToBeCarried);
+      
       editForm.reset({
         shipperContactName: apiLoad.shipperContactName || "",
         shipperCompanyAddress: apiLoad.shipperCompanyAddress || "",
@@ -869,7 +1150,7 @@ export default function AdminLoadDetailsPage() {
         receiverPhone: apiLoad.receiverPhone || "",
         receiverEmail: apiLoad.receiverEmail || "",
         weight: apiLoad.weight?.toString() || "",
-        goodsToBeCarried: apiLoad.goodsToBeCarried || "",
+        goodsToBeCarried: goodsValue,
         specialNotes: apiLoad.specialNotes || "",
         pickupDate: apiLoad.pickupDate ? new Date(apiLoad.pickupDate).toISOString().slice(0, 16) : "",
         deliveryDate: apiLoad.deliveryDate ? new Date(apiLoad.deliveryDate).toISOString().slice(0, 16) : "",
@@ -894,6 +1175,16 @@ export default function AdminLoadDetailsPage() {
       }
       if (data.dropoffCity) {
         payload.dropoffCity = data.dropoffState ? `${data.dropoffCity}, ${data.dropoffState}` : data.dropoffCity;
+      }
+      
+      // Convert goods value to label for storage, or use custom value
+      if (data.goodsToBeCarried) {
+        if (data.goodsToBeCarried === "other" && customCommodity) {
+          payload.goodsToBeCarried = customCommodity;
+        } else {
+          const goodsLabel = getCommodityLabel(data.goodsToBeCarried);
+          payload.goodsToBeCarried = goodsLabel;
+        }
       }
       
       return apiRequest("PATCH", `/api/loads/${loadId}`, payload);
@@ -2880,11 +3171,14 @@ export default function AdminLoadDetailsPage() {
                   control={editForm.control}
                   name="goodsToBeCarried"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Goods Description</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-goods-description" />
-                      </FormControl>
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Goods to be Carried</FormLabel>
+                      <CommodityCombobox 
+                        value={field.value}
+                        onChange={field.onChange}
+                        customValue={customCommodity}
+                        onCustomChange={setCustomCommodity}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}

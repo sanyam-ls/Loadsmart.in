@@ -342,6 +342,27 @@ export default function CarrierShipmentsPage() {
                     </div>
                   </div>
 
+                  <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">{t("loads.pickupDate")}</p>
+                      <p className="font-medium flex items-center gap-1">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        {selectedShipment.load?.pickupDate 
+                          ? format(new Date(selectedShipment.load.pickupDate), "MMM d, yyyy")
+                          : "Not scheduled"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">{t("loads.deliveryDate")}</p>
+                      <p className="font-medium flex items-center gap-1">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        {selectedShipment.load?.deliveryDate 
+                          ? format(new Date(selectedShipment.load.deliveryDate), "MMM d, yyyy")
+                          : "Not scheduled"}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-3 pt-2 border-t">
                     <div>
                       <p className="text-xs text-muted-foreground">{t("loads.cargo")}</p>

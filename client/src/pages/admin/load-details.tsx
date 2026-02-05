@@ -102,7 +102,7 @@ import { useAdminData, type DetailedLoad, type AdminLoad, type AdminCarrier, typ
 import { useBidsByLoad, type GroupedBidsResponse } from "@/lib/api-hooks";
 import { format } from "date-fns";
 import type { Load } from "@shared/schema";
-import { indianStates } from "@shared/indian-locations";
+import { indianStates, getIndianCitiesByState } from "@shared/indian-locations";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { connectMarketplace, onMarketplaceEvent, disconnectMarketplace } from "@/lib/marketplace-socket";
 import { useAuth } from "@/lib/auth-context";
@@ -781,15 +781,46 @@ export default function AdminLoadDetailsPage() {
         return parts[0].trim();
       };
       
+      // Helper to normalize city names - case-insensitive match to predefined list
+      const normalizeCity = (rawCity: string) => {
+        if (!rawCity) return "";
+        // Find matching city (case-insensitive) from indian locations
+        for (const state of indianStates) {
+          const cities = getIndianCitiesByState(state.name) || [];
+          const match = cities.find((c: { name: string }) => 
+            c.name.toLowerCase() === rawCity.toLowerCase()
+          );
+          if (match) return match.name;
+        }
+        return rawCity;
+      };
+      
+      // Helper to convert state code to full name
+      const normalizeStateName = (stateValue: string | null) => {
+        if (!stateValue) return "";
+        // Check if it's already a full state name
+        const directMatch = indianStates.find(s => s.name === stateValue);
+        if (directMatch) return directMatch.name;
+        // Check if it's a state code
+        const codeMatch = indianStates.find(s => 
+          s.code === stateValue || s.code === stateValue.toUpperCase()
+        );
+        if (codeMatch) return codeMatch.name;
+        return stateValue;
+      };
+      
       // Try to find state from city if state is not set
       const findStateFromCity = (cityValue: string | null, existingState: string | null) => {
-        if (existingState) return existingState;
+        // If we have an existing state, normalize it (convert code to name)
+        if (existingState) return normalizeStateName(existingState);
         if (!cityValue) return "";
         
         const parts = cityValue.split(",");
         if (parts.length > 1) {
           const statePart = parts[1].trim();
-          const matchedState = indianStates.find(s => s.name === statePart);
+          const matchedState = indianStates.find(s => 
+            s.name === statePart || s.code === statePart || s.code === statePart.toUpperCase()
+          );
           if (matchedState) return matchedState.name;
         }
         
@@ -797,10 +828,25 @@ export default function AdminLoadDetailsPage() {
         return getStateForCity(cityName);
       };
       
-      const pickupCityName = extractCityName(apiLoad.pickupCity);
-      const dropoffCityName = extractCityName(apiLoad.dropoffCity);
+      const rawPickupCity = extractCityName(apiLoad.pickupCity);
+      const rawDropoffCity = extractCityName(apiLoad.dropoffCity);
+      const pickupCityName = normalizeCity(rawPickupCity);
+      const dropoffCityName = normalizeCity(rawDropoffCity);
       const pickupStateName = findStateFromCity(apiLoad.pickupCity, apiLoad.pickupState);
       const dropoffStateName = findStateFromCity(apiLoad.dropoffCity, apiLoad.dropoffState);
+      
+      console.log("[AdminEditLoad] Populating form with:", {
+        originalPickupCity: apiLoad.pickupCity,
+        originalPickupState: apiLoad.pickupState,
+        rawPickupCity,
+        normalizedPickupCity: pickupCityName,
+        resolvedPickupState: pickupStateName,
+        originalDropoffCity: apiLoad.dropoffCity,
+        originalDropoffState: apiLoad.dropoffState,
+        rawDropoffCity,
+        normalizedDropoffCity: dropoffCityName,
+        resolvedDropoffState: dropoffStateName,
+      });
       
       editForm.reset({
         shipperContactName: apiLoad.shipperContactName || "",

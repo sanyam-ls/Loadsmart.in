@@ -1460,7 +1460,18 @@ export default function AdminLoadDetailsPage() {
                   <Mail className="h-4 w-4 mr-2" />
                   Email Shipper
                 </Button>
-                <Button variant="outline" onClick={() => setLocation(`/admin/users`)} data-testid="button-view-profile">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    const shipperId = apiLoad?.shipperId || apiLoad?.shipper?.id;
+                    if (shipperId) {
+                      setLocation(`/admin/users/${shipperId}`);
+                    } else {
+                      setLocation(`/admin/users`);
+                    }
+                  }} 
+                  data-testid="button-view-profile"
+                >
                   <User className="h-4 w-4 mr-2" />
                   View Profile
                 </Button>

@@ -586,7 +586,9 @@ export default function AdminInvoicesPage() {
                       <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                         <TableCell className="font-mono text-sm text-muted-foreground">
-                          {invoice.loadId ? `#${invoice.loadId}` : '-'}
+                          {invoice.load?.shipperLoadNumber 
+                            ? `LD-${String(invoice.load.shipperLoadNumber).padStart(3, '0')}` 
+                            : (invoice.loadId ? `#${invoice.loadId.substring(0, 8)}` : '-')}
                         </TableCell>
                         <TableCell>{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
                         <TableCell className="text-sm">
@@ -767,7 +769,9 @@ export default function AdminInvoicesPage() {
                             >
                               <TableCell className="font-medium whitespace-nowrap">{invoice.invoiceNumber}</TableCell>
                               <TableCell className="font-mono text-sm text-muted-foreground whitespace-nowrap">
-                                {invoice.loadId ? `#${invoice.loadId}` : '-'}
+                                {invoice.load?.shipperLoadNumber 
+                                  ? `LD-${String(invoice.load.shipperLoadNumber).padStart(3, '0')}` 
+                                  : (invoice.loadId ? `#${invoice.loadId.substring(0, 8)}` : '-')}
                               </TableCell>
                               <TableCell className="whitespace-nowrap">{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
                               <TableCell className="text-sm whitespace-nowrap">

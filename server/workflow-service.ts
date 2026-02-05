@@ -317,6 +317,13 @@ export async function acceptBid(
   
   console.log(`${logPrefix} Accepted amount: Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`);
 
+  // Get the name of who accepted this bid for notes
+  const acceptedByUser = await storage.getUser(acceptedBy);
+  const acceptedByName = acceptedByUser?.companyName || acceptedByUser?.username || 'Admin';
+  const acceptedDate = new Date().toLocaleDateString('en-IN', { 
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+  });
+
   // =========================================================================
   // STEP 4: UPDATE BID STATUS TO ACCEPTED
   // =========================================================================
@@ -324,7 +331,7 @@ export async function acceptBid(
   const updatedBid = await storage.updateBid(bidId, { 
     status: "accepted",
     amount: acceptedAmount,
-    notes: `Accepted by ${acceptedBy} at ${new Date().toISOString()} for Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`
+    notes: `Accepted by ${acceptedByName} on ${acceptedDate} for Rs. ${parseFloat(acceptedAmount).toLocaleString("en-IN")}`
   });
 
   // =========================================================================

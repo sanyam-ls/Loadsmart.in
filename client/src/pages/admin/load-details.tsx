@@ -341,7 +341,7 @@ function RecommendedCarriersSection({ loadId }: { loadId: string }) {
 
       {/* Carrier Match Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Target className="h-5 w-5 text-primary" />
@@ -353,7 +353,7 @@ function RecommendedCarriersSection({ loadId }: { loadId: string }) {
           </DialogHeader>
           
           {selectedCarrier && (
-            <ScrollArea className="flex-1 pr-4 -mr-4">
+            <div className="flex-1 overflow-y-auto pr-2 -mr-2">
             <div className="space-y-4 pb-2">
               {/* Carrier Info */}
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
@@ -570,7 +570,7 @@ function RecommendedCarriersSection({ loadId }: { loadId: string }) {
                 </div>
               </div>
             </div>
-            </ScrollArea>
+            </div>
           )}
 
           <DialogFooter className="flex-shrink-0 pt-4">

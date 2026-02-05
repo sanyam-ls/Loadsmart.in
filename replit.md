@@ -101,6 +101,25 @@ New carriers complete a verification process based on their type ("Solo Operator
 
 The platform provides ML-powered truck type suggestions based on weight, commodity type, and market trends. It uses multi-factor analysis, commodity category mappings, and weight-based capacity matching, with an ensemble approach prioritizing AI suggestions (if confident), then market trends, and finally rule-based fallbacks. Recommendations include confidence scores and track their source (AI/ML, market, rule-based).
 
+### Intelligent Carrier/Load Recommendation System
+
+The platform uses a weighted scoring algorithm to match carriers with loads and vice versa. Both admins and carriers see recommendations based on historical data and matching criteria.
+
+**Scoring Algorithm (100 points max)**:
+-   Truck type match: 30 points (carrier has matching truck type for load)
+-   Capacity match: 25 points (carrier's truck can carry the load weight)
+-   Route experience: 20 points (carrier has completed shipments on similar routes)
+-   Commodity experience: 15 points (carrier has carried similar materials before)
+-   Shipper experience: 10 points (carrier has worked with the shipper before)
+
+**Admin Load Details**: Shows "Recommended Carriers" section with top 10 matching carriers, displaying match score and reason badges (Truck Match, Capacity OK, Route Exp, Commodity Exp, Shipper Exp).
+
+**Carrier Marketplace**: Shows "Recommended For Your Fleet" section with top loads scoring 50+ points, displaying match score and reason badges. Loads without matches show score of 0.
+
+API Endpoints:
+-   `GET /api/loads/:id/recommended-carriers` (admin-only) - Returns top 10 recommended carriers for a load
+-   `GET /api/carrier/recommended-loads` (carrier-only) - Returns all available loads with match scores
+
 ### Shipper Edit Load Feature
 
 Shippers can edit load details directly from the load detail page via a side sheet/drawer interface. The Edit button appears only for loads in editable statuses (not `cancelled`, `delivered`, `closed`, `in_transit`, or `unavailable`). Editable fields include:

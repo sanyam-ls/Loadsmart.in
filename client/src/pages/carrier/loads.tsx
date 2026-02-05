@@ -293,8 +293,31 @@ function getMatchScoreBadge(score: number) {
   return "bg-muted text-muted-foreground";
 }
 
-function calculateMatchScore(load: CarrierLoad): number {
-  return Math.floor(70 + Math.random() * 25);
+interface RecommendedLoadData {
+  loadId: string;
+  loadNumber: string;
+  pickupCity: string;
+  dropoffCity: string;
+  weight: string;
+  materialType: string | null;
+  requiredTruckType: string | null;
+  pickupDate: string | null;
+  price: number | null;
+  score: number;
+  matchReasons: string[];
+  truckTypeMatch: boolean;
+  capacityMatch: boolean;
+  routeMatch: boolean;
+  commodityMatch: boolean;
+  shipperMatch: boolean;
+}
+
+function calculateMatchScore(load: CarrierLoad, recommendations?: RecommendedLoadData[]): number {
+  if (recommendations && recommendations.length > 0) {
+    const rec = recommendations.find(r => r.loadId === load.id);
+    if (rec) return rec.score;
+  }
+  return 0;
 }
 
 export default function CarrierLoadsPage() {
@@ -418,6 +441,19 @@ export default function CarrierLoadsPage() {
     queryKey: ['/api/carrier/loads'],
   });
 
+  // Fetch AI-powered load recommendations
+  const { data: recommendations = [] } = useQuery<RecommendedLoadData[]>({
+    queryKey: ['/api/carrier/recommended-loads'],
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  // Create a lookup map for recommendation data
+  const recommendationMap = useMemo(() => {
+    const map = new Map<string, RecommendedLoadData>();
+    recommendations.forEach(rec => map.set(rec.loadId, rec));
+    return map;
+  }, [recommendations]);
+
   // Transform API data to match CarrierLoad interface
   const apiLoads: CarrierLoad[] = useMemo(() => {
     return rawApiLoads.map(load => ({
@@ -493,13 +529,20 @@ export default function CarrierLoadsPage() {
   const loadsWithScores = useMemo(() => {
     return loads.map(load => {
       const simState = load.isSimulated ? simulatedLoadStates[load.id] : undefined;
+      const rec = recommendationMap.get(load.id);
       return {
         ...load,
-        matchScore: calculateMatchScore(load),
+        matchScore: rec ? rec.score : calculateMatchScore(load, recommendations),
+        matchReasons: rec?.matchReasons || [],
+        truckTypeMatch: rec?.truckTypeMatch || false,
+        capacityMatch: rec?.capacityMatch || false,
+        routeMatch: rec?.routeMatch || false,
+        commodityMatch: rec?.commodityMatch || false,
+        shipperMatch: rec?.shipperMatch || false,
         myBid: simState?.myBid || load.myBid,
       };
     });
-  }, [loads, simulatedLoadStates]);
+  }, [loads, simulatedLoadStates, recommendationMap, recommendations]);
 
   const filteredAndSortedLoads = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -546,7 +589,7 @@ export default function CarrierLoadsPage() {
 
   const stats = useMemo(() => {
     const total = loads.length;
-    const highMatch = loadsWithScores.filter(l => l.matchScore >= 85).length;
+    const highMatch = loadsWithScores.filter(l => l.matchScore >= 50).length;
     const avgRate = loads.length > 0
       ? Math.round(loads.reduce((sum, l) => sum + getCarrierPrice(l), 0) / loads.length)
       : 0;
@@ -722,7 +765,7 @@ export default function CarrierLoadsPage() {
   };
 
   const topRecommendations = filteredAndSortedLoads
-    .filter(l => l.matchScore >= 85)
+    .filter(l => l.matchScore >= 50)
     .slice(0, 3);
 
   if (isLoading) {
@@ -789,7 +832,7 @@ export default function CarrierLoadsPage() {
           title={t("carrier.highMatch")}
           value={stats.highMatch}
           icon={Target}
-          subtitle={t("carrier.compatibility85")}
+          subtitle="50+ match score"
           testId="stat-high-match"
         />
         <StatCard
@@ -815,7 +858,7 @@ export default function CarrierLoadsPage() {
               <Sparkles className="h-5 w-5 text-primary" />
               {t("carrier.recommendedForFleet")}
             </CardTitle>
-            <CardDescription>{t("carrier.topMatchesDesc")}</CardDescription>
+            <CardDescription>Matched based on your truck, route history, and experience</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -826,7 +869,7 @@ export default function CarrierLoadsPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge className={`${getMatchScoreBadge(load.matchScore)} no-default-hover-elevate no-default-active-elevate`}>
                           <Target className="h-3 w-3 mr-1" />
-                          {load.matchScore}% {t("carrier.match")}
+                          {load.matchScore} pts
                         </Badge>
                         {load.postedByAdmin && !load.isSimulated && (
                           <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">
@@ -842,6 +885,39 @@ export default function CarrierLoadsPage() {
                       <span className="font-medium truncate">{load.origin}</span>
                       <ArrowRight className="h-3 w-3" />
                       <span className="font-medium truncate">{load.destination}</span>
+                    </div>
+                    {/* Match reason badges */}
+                    <div className="flex flex-wrap gap-1">
+                      {(load as any).truckTypeMatch && (
+                        <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 no-default-hover-elevate no-default-active-elevate">
+                          <Truck className="h-2.5 w-2.5 mr-1" />
+                          Truck
+                        </Badge>
+                      )}
+                      {(load as any).capacityMatch && (
+                        <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-950 no-default-hover-elevate no-default-active-elevate">
+                          <Package className="h-2.5 w-2.5 mr-1" />
+                          Capacity
+                        </Badge>
+                      )}
+                      {(load as any).routeMatch && (
+                        <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-950 no-default-hover-elevate no-default-active-elevate">
+                          <MapPin className="h-2.5 w-2.5 mr-1" />
+                          Route
+                        </Badge>
+                      )}
+                      {(load as any).commodityMatch && (
+                        <Badge variant="outline" className="text-xs bg-orange-50 dark:bg-orange-950 no-default-hover-elevate no-default-active-elevate">
+                          <Package className="h-2.5 w-2.5 mr-1" />
+                          Cargo
+                        </Badge>
+                      )}
+                      {(load as any).shipperMatch && (
+                        <Badge variant="outline" className="text-xs bg-yellow-50 dark:bg-yellow-950 no-default-hover-elevate no-default-active-elevate">
+                          <Building2 className="h-2.5 w-2.5 mr-1" />
+                          Shipper
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-lg font-bold">{formatCurrency(getCarrierPrice(load))}</span>

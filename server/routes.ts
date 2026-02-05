@@ -2597,13 +2597,80 @@ export async function registerRoutes(
       // Get next sequential global load number
       const shipperLoadNumber = await storage.getNextGlobalLoadNumber();
       
-      // Determine shipperId - use existingShipperId if provided, otherwise use admin as creator
-      // This supports both: 1) selecting an existing shipper, 2) creating for offline shipper contacts
+      // Determine shipperId - use existingShipperId if provided, otherwise auto-create new shipper
       let shipperId = adminUser.id;
+      let newShipperCreated = false;
+      
       if (body.existingShipperId) {
+        // Use existing shipper
         const existingShipper = await storage.getUser(body.existingShipperId);
         if (existingShipper && existingShipper.role === 'shipper') {
           shipperId = existingShipper.id;
+        }
+      } else if (body.shipperContactName && body.shipperPhone) {
+        // Auto-create new shipper account when entering manual details
+        // Normalize phone number for consistent lookup (remove non-digits, keep last 10)
+        const rawPhone = body.shipperPhone;
+        const normalizedPhone = rawPhone.replace(/\D/g, '').slice(-10);
+        
+        // Generate a guaranteed unique email using timestamp + phone (ignore user-supplied email for auto-create)
+        const timestamp = Date.now();
+        const shipperEmail = `shipper_${normalizedPhone}_${timestamp}@loadsmart.auto`;
+        
+        // Check if user with this phone already exists
+        // Try multiple formats: normalized, raw input, with +91 prefix (Indian phones)
+        let existingByPhone = await storage.getUserByPhone(normalizedPhone);
+        if (!existingByPhone && rawPhone !== normalizedPhone) {
+          existingByPhone = await storage.getUserByPhone(rawPhone);
+        }
+        if (!existingByPhone) {
+          existingByPhone = await storage.getUserByPhone(`+91${normalizedPhone}`);
+        }
+        if (existingByPhone) {
+          if (existingByPhone.role === 'shipper') {
+            // Use existing shipper
+            shipperId = existingByPhone.id;
+          } else {
+            // Existing user with same phone is not a shipper (carrier/admin)
+            // Return error - cannot auto-create shipper with conflicting phone
+            return res.status(400).json({ 
+              error: `Phone number ${body.shipperPhone} is already registered to a ${existingByPhone.role} account. Please use a different phone number or select an existing shipper.` 
+            });
+          }
+        } else {
+          // Create new shipper user (auto-verified since admin is creating)
+          // Generate random password and hash it properly
+          const randomPassword = crypto.randomUUID();
+          const hashedPassword = await hashPassword(randomPassword);
+          
+          const newShipperUser = await storage.createUser({
+            username: body.shipperContactName,
+            email: shipperEmail,
+            password: hashedPassword,
+            role: 'shipper',
+            phone: normalizedPhone, // Store normalized phone
+            companyName: body.shipperCompanyName || null,
+            isVerified: true, // Auto-verify since admin is creating
+          });
+          
+          shipperId = newShipperUser.id;
+          newShipperCreated = true;
+          
+          // Create shipper onboarding record (auto-approved)
+          await storage.createShipperOnboarding({
+            shipperId: newShipperUser.id,
+            companyName: body.shipperCompanyName || body.shipperContactName,
+            businessType: 'manufacturer',
+            contactName: body.shipperContactName,
+            contactPhone: normalizedPhone, // Store normalized phone
+            contactEmail: shipperEmail,
+            companyAddress: body.shipperCompanyAddress || 'N/A',
+            status: 'approved',
+            submittedAt: new Date(),
+            reviewedAt: new Date(),
+            reviewedBy: adminUser.id,
+            reviewNotes: 'Auto-created by admin via Post a Load',
+          });
         }
       }
       
@@ -2689,6 +2756,8 @@ export async function registerRoutes(
         load_number: load.shipperLoadNumber, 
         status: load.status,
         posted: body.postImmediately && body.adminGrossPrice ? true : false,
+        shipper_id: shipperId,
+        new_shipper_created: newShipperCreated,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {

@@ -771,11 +771,22 @@ export default function AdminPostLoadPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/loads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/loads'] });
 
+      // Compose toast message based on what happened
+      let toastDescription = data.postImmediately 
+        ? `Load LD-${String(result.load_number).padStart(3, '0')} has been posted to the marketplace.`
+        : `Load LD-${String(result.load_number).padStart(3, '0')} has been added to the pricing queue.`;
+      
+      // Add note about new shipper creation if applicable
+      if (result.new_shipper_created) {
+        toastDescription += ` A new shipper account was automatically created for ${data.shipperContactName}.`;
+        // Also invalidate users queries since a new user was created
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/onboarding-requests'] });
+      }
+      
       toast({ 
         title: data.postImmediately ? "Load Posted to Carriers" : "Load Created Successfully", 
-        description: data.postImmediately 
-          ? `Load LD-${String(result.load_number).padStart(3, '0')} has been posted to the marketplace.`
-          : `Load LD-${String(result.load_number).padStart(3, '0')} has been added to the pricing queue.`
+        description: toastDescription
       });
       
     } catch (error: any) {

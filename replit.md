@@ -47,11 +47,20 @@ Fleet/Enterprise carriers are restricted to assigning one truck and one driver p
 
 Administrators can create loads on behalf of shippers through a dedicated "Post Load" page (/admin/post-load). This feature replicates the shipper's post-load form 100%, with additional admin pricing options. Key capabilities:
 -   Create loads for offline shipper contacts by entering shipper details manually (company name, contact, phone, address)
+-   **Auto-create shipper accounts**: When entering manual shipper details, the system automatically creates a new shipper user and approved onboarding record
 -   Select an existing verified shipper via `existingShipperId` to attribute the load correctly
 -   Submit loads to the pricing queue (status: `pending`) for later pricing
 -   Post loads immediately with admin pricing (status: `posted_to_carriers`) when `postImmediately=true` and `adminGrossPrice` is provided
 -   Full form validation using `insertLoadSchema` with Zod
 -   Supports all shipper form fields: pickup/dropoff locations, cargo details, scheduling, pricing options
+
+**Auto-Create Shipper Logic**:
+-   When admin enters shipper contact name and phone (without selecting existing shipper), the system auto-creates a new shipper
+-   Phone lookup tries multiple formats: normalized (last 10 digits), raw input, and +91 prefix
+-   If phone matches existing shipper, that shipper is reused
+-   If phone matches non-shipper (carrier/admin), returns validation error
+-   New shipper is auto-verified with approved onboarding record
+-   Password is properly hashed; email is auto-generated with timestamp for uniqueness
 
 API Endpoint: `POST /api/admin/loads/create` (admin-only access)
 

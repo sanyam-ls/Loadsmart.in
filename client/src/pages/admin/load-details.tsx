@@ -324,7 +324,7 @@ function CommodityCombobox({
             }}
           >
             <CommandInput placeholder="Type to search commodities..." />
-            <CommandList className="max-h-[400px]">
+            <CommandList className="max-h-[400px] overflow-y-auto">
               <CommandEmpty>No commodity found.</CommandEmpty>
               {commodityCategories.map((category) => (
                 <CommandGroup key={category.category} heading={category.category}>

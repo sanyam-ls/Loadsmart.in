@@ -795,6 +795,25 @@ export default function AdminLoadDetailsPage() {
                   <span className="text-muted-foreground">Priority</span>
                   {getPriorityBadge(detailedLoad.priority || "Normal")}
                 </div>
+                {(apiLoad?.adminEmployeeCode || apiLoad?.adminEmployeeName) && (
+                  <>
+                    <div className="border-t pt-3 mt-3">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Posted by Admin</span>
+                    </div>
+                    {apiLoad?.adminEmployeeCode && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Employee Code</span>
+                        <span className="font-medium">{apiLoad.adminEmployeeCode}</span>
+                      </div>
+                    )}
+                    {apiLoad?.adminEmployeeName && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Employee Name</span>
+                        <span className="font-medium">{apiLoad.adminEmployeeName}</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
 

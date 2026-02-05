@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { 
   MapPin, Package, Truck, ArrowRight, IndianRupee, 
-  Clock, Lock, Unlock, Loader2, RefreshCw, ChevronRight
+  Clock, Lock, Unlock, Loader2, RefreshCw, ChevronRight,
+  Sparkles, Route, Box, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
+
+interface RecommendedLoadData {
+  loadId: string;
+  score: number;
+  matchReasons: string[];
+  truckTypeMatch: boolean;
+  capacityMatch: boolean;
+  routeMatch: boolean;
+  commodityMatch: boolean;
+  shipperMatch: boolean;
+}
 
 interface LoadCard {
   id: string;
@@ -52,6 +64,24 @@ export default function SoloLoadFeed() {
   const { data: loadsData, isLoading, refetch, isRefetching } = useQuery<LoadCard[]>({
     queryKey: ["/api/carrier/available-loads"],
   });
+
+  // Fetch AI-powered load recommendations
+  const { data: recommendations = [] } = useQuery<RecommendedLoadData[]>({
+    queryKey: ['/api/carrier/recommended-loads'],
+    staleTime: 60000,
+  });
+
+  // Create a lookup map for recommendation data
+  const recommendationMap = useMemo(() => {
+    const map = new Map<string, RecommendedLoadData>();
+    recommendations.forEach(rec => map.set(rec.loadId, rec));
+    return map;
+  }, [recommendations]);
+
+  // Get high-match loads (50+ points)
+  const highMatchLoads = useMemo(() => {
+    return recommendations.filter(r => r.score >= 50).slice(0, 4);
+  }, [recommendations]);
 
   const submitBidMutation = useMutation({
     mutationFn: async (data: { load_id: string; amount: string; bid_type: string; notes?: string }) => {
@@ -118,6 +148,15 @@ export default function SoloLoadFeed() {
     return `${diffMins}m ago`;
   };
 
+  const getMatchScore = (loadId: string): number => {
+    const rec = recommendationMap.get(loadId);
+    return rec ? rec.score : 0;
+  };
+
+  const getMatchData = (loadId: string): RecommendedLoadData | undefined => {
+    return recommendationMap.get(loadId);
+  };
+
   const loads = loadsData || [];
 
   return (
@@ -140,6 +179,60 @@ export default function SoloLoadFeed() {
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-3">
+          {/* Recommended Loads Section */}
+          {highMatchLoads.length > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h2 className="font-semibold">Recommended for You</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Matched based on your truck, route history, and experience
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {highMatchLoads.map((rec) => {
+                  const load = loads.find(l => l.id === rec.loadId);
+                  if (!load) return null;
+                  return (
+                    <Card key={rec.loadId} className="p-3 bg-primary/5 border-primary/20">
+                      <div className="flex flex-wrap items-center gap-1 mb-2">
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                          {rec.score} pts
+                        </Badge>
+                        {rec.truckTypeMatch && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            <Truck className="h-3 w-3 mr-0.5" /> Truck
+                          </Badge>
+                        )}
+                        {rec.capacityMatch && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            <Package className="h-3 w-3 mr-0.5" /> Capacity
+                          </Badge>
+                        )}
+                        {rec.routeMatch && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            <Route className="h-3 w-3 mr-0.5" /> Route
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm font-medium truncate">
+                        {load.origin} <ArrowRight className="inline h-3 w-3" /> {load.destination}
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-primary font-bold text-sm">
+                          Rs. {formatPrice(load.finalPrice)}
+                        </span>
+                        <Button size="sm" className="h-7 text-xs" onClick={() => handleAcceptPrice(load)}>
+                          Accept
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <Card key={i} className="p-4">
@@ -153,7 +246,10 @@ export default function SoloLoadFeed() {
               <p className="text-sm">Check back later for new opportunities</p>
             </div>
           ) : (
-            loads.map((load) => (
+            loads.map((load) => {
+              const matchScore = getMatchScore(load.id);
+              const matchData = getMatchData(load.id);
+              return (
               <Card 
                 key={load.id} 
                 className="overflow-hidden hover-elevate"
@@ -161,6 +257,39 @@ export default function SoloLoadFeed() {
               >
                 <CardContent className="p-0">
                   <div className="p-4">
+                    {/* Match Score and Badges Row */}
+                    {matchScore > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                        <Badge variant="secondary" className={`text-xs ${matchScore >= 50 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                          {matchScore}% Match
+                        </Badge>
+                        {matchData?.truckTypeMatch && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            <Truck className="h-3 w-3 mr-0.5" /> Truck
+                          </Badge>
+                        )}
+                        {matchData?.capacityMatch && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            <Package className="h-3 w-3 mr-0.5" /> Capacity
+                          </Badge>
+                        )}
+                        {matchData?.routeMatch && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            <Route className="h-3 w-3 mr-0.5" /> Route
+                          </Badge>
+                        )}
+                        {matchData?.commodityMatch && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            <Box className="h-3 w-3 mr-0.5" /> Cargo
+                          </Badge>
+                        )}
+                        {matchData?.shipperMatch && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                            <Users className="h-3 w-3 mr-0.5" /> Shipper
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -255,7 +384,8 @@ export default function SoloLoadFeed() {
                   </div>
                 </CardContent>
               </Card>
-            ))
+              );
+            })
           )}
         </div>
       </ScrollArea>

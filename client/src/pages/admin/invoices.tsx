@@ -139,12 +139,25 @@ interface Invoice {
 }
 
 // Format load ID for display - shows LD-1001 (admin ref) or LD-044 (shipper seq)
-function formatLoadId(invoice: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; loadId: string }): string {
+function formatLoadId(invoice: { 
+  shipperLoadNumber?: number | null; 
+  adminReferenceNumber?: number | null; 
+  loadId?: string | null;
+  load?: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null } | null;
+}): string {
+  // First check invoice-level fields
   if (invoice.adminReferenceNumber) {
     return `LD-${String(invoice.adminReferenceNumber).padStart(3, '0')}`;
   }
   if (invoice.shipperLoadNumber) {
     return `LD-${String(invoice.shipperLoadNumber).padStart(3, '0')}`;
+  }
+  // Then check load-level fields
+  if (invoice.load?.adminReferenceNumber) {
+    return `LD-${String(invoice.load.adminReferenceNumber).padStart(3, '0')}`;
+  }
+  if (invoice.load?.shipperLoadNumber) {
+    return `LD-${String(invoice.load.shipperLoadNumber).padStart(3, '0')}`;
   }
   // Fallback to first 8 chars of loadId UUID
   return invoice.loadId?.slice(0, 8)?.toUpperCase() || "N/A";
@@ -586,9 +599,7 @@ export default function AdminInvoicesPage() {
                       <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                         <TableCell className="font-mono text-sm text-muted-foreground">
-                          {invoice.load?.shipperLoadNumber 
-                            ? `LD-${String(invoice.load.shipperLoadNumber).padStart(3, '0')}` 
-                            : (invoice.loadId ? `#${invoice.loadId.substring(0, 8)}` : '-')}
+                          {formatLoadId(invoice)}
                         </TableCell>
                         <TableCell>{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
                         <TableCell className="text-sm">
@@ -769,9 +780,7 @@ export default function AdminInvoicesPage() {
                             >
                               <TableCell className="font-medium whitespace-nowrap">{invoice.invoiceNumber}</TableCell>
                               <TableCell className="font-mono text-sm text-muted-foreground whitespace-nowrap">
-                                {invoice.load?.shipperLoadNumber 
-                                  ? `LD-${String(invoice.load.shipperLoadNumber).padStart(3, '0')}` 
-                                  : (invoice.loadId ? `#${invoice.loadId.substring(0, 8)}` : '-')}
+                                {formatLoadId(invoice)}
                               </TableCell>
                               <TableCell className="whitespace-nowrap">{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
                               <TableCell className="text-sm whitespace-nowrap">

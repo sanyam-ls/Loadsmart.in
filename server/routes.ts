@@ -6224,6 +6224,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
               finalPrice: load.finalPrice,
               weight: load.weight,
               cargoDescription: load.goodsToBeCarried || load.cargoDescription,
+              shipperLoadNumber: load.shipperLoadNumber,
+              adminReferenceNumber: load.adminReferenceNumber,
             } : null,
           };
         } catch (err) {

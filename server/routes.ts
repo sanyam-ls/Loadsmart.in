@@ -14533,6 +14533,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         carrierName: string;
         carrierCompany: string | null;
         carrierPhone: string | null;
+        carrierEmail: string | null;
         carrierType: string;
         score: number;
         matchReasons: string[];
@@ -14541,6 +14542,16 @@ RESPOND IN THIS EXACT JSON FORMAT:
         routeExperience: boolean;
         commodityExperience: boolean;
         shipperExperience: boolean;
+        trucks: Array<{
+          id: string;
+          truckType: string | null;
+          registrationNumber: string | null;
+          capacity: string | null;
+          manufacturer: string | null;
+          model: string | null;
+        }>;
+        fleetSize: number | null;
+        completedTrips: number;
       }> = [];
 
       for (const carrier of verifiedCarriers) {
@@ -14616,11 +14627,17 @@ RESPOND IN THIS EXACT JSON FORMAT:
 
         // Only include carriers with at least some match
         if (score > 0) {
+          // Count completed trips for this carrier
+          const completedTrips = carrierShipments.filter(s => 
+            s.status === "delivered" || s.status === "closed" || s.status === "completed"
+          ).length;
+
           recommendations.push({
             carrierId: carrier.id,
             carrierName: carrier.username,
             carrierCompany: carrierProfile?.companyName || carrier.companyName,
             carrierPhone: carrier.phone,
+            carrierEmail: carrier.email,
             carrierType,
             score,
             matchReasons,
@@ -14629,6 +14646,16 @@ RESPOND IN THIS EXACT JSON FORMAT:
             routeExperience,
             commodityExperience,
             shipperExperience,
+            trucks: carrierTrucks.map(t => ({
+              id: t.id,
+              truckType: t.truckType,
+              registrationNumber: t.registrationNumber,
+              capacity: t.capacity?.toString() || null,
+              manufacturer: t.make,
+              model: t.model,
+            })),
+            fleetSize: carrierProfile?.fleetSize || null,
+            completedTrips,
           });
         }
       }

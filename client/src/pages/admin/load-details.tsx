@@ -159,11 +159,21 @@ type LoadWithRelations = Load & {
   carrierOnboarding?: CarrierOnboarding | null;
 };
 
+interface RecommendedCarrierTruck {
+  id: string;
+  truckType: string | null;
+  registrationNumber: string | null;
+  capacity: string | null;
+  manufacturer: string | null;
+  model: string | null;
+}
+
 interface RecommendedCarrier {
   carrierId: string;
   carrierName: string;
   carrierCompany: string | null;
   carrierPhone: string | null;
+  carrierEmail: string | null;
   carrierType: string;
   score: number;
   matchReasons: string[];
@@ -172,6 +182,9 @@ interface RecommendedCarrier {
   routeExperience: boolean;
   commodityExperience: boolean;
   shipperExperience: boolean;
+  trucks: RecommendedCarrierTruck[];
+  fleetSize: number | null;
+  completedTrips: number;
 }
 
 function RecommendedCarriersSection({ loadId }: { loadId: string }) {
@@ -342,23 +355,17 @@ function RecommendedCarriersSection({ loadId }: { loadId: string }) {
               {/* Carrier Info */}
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Truck className="h-6 w-6 text-primary" />
+                  <User className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-lg">{selectedCarrier.carrierName}</span>
                     <Badge variant="outline" className="text-xs">
-                      {selectedCarrier.carrierType === "solo" ? "Solo" : "Fleet"}
+                      {selectedCarrier.carrierType === "solo" ? "Solo Driver" : "Fleet Carrier"}
                     </Badge>
                   </div>
                   {selectedCarrier.carrierCompany && (
                     <p className="text-sm text-muted-foreground">{selectedCarrier.carrierCompany}</p>
-                  )}
-                  {selectedCarrier.carrierPhone && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <Phone className="h-3 w-3" />
-                      {selectedCarrier.carrierPhone}
-                    </p>
                   )}
                 </div>
                 <div className="text-right">
@@ -366,6 +373,71 @@ function RecommendedCarriersSection({ loadId }: { loadId: string }) {
                   <p className="text-xs text-muted-foreground">Match Score</p>
                 </div>
               </div>
+
+              {/* Contact Details */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Contact Details
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedCarrier.carrierPhone || "Not provided"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="truncate">{selectedCarrier.carrierEmail || "Not provided"}</span>
+                  </div>
+                  {selectedCarrier.carrierType !== "solo" && selectedCarrier.fleetSize && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      <span>Fleet Size: {selectedCarrier.fleetSize} trucks</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    <span>Completed Trips: {selectedCarrier.completedTrips}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Truck Details */}
+              {selectedCarrier.trucks && selectedCarrier.trucks.length > 0 && (
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    {selectedCarrier.carrierType === "solo" ? "Truck Details" : `Fleet Vehicles (${selectedCarrier.trucks.length})`}
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedCarrier.trucks.slice(0, 3).map((truck, idx) => (
+                      <div key={truck.id} className="flex items-center justify-between p-2 bg-muted/30 rounded text-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {truck.truckType || "Unknown"}
+                          </Badge>
+                          {truck.manufacturer && truck.model && (
+                            <span className="text-muted-foreground">{truck.manufacturer} {truck.model}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {truck.registrationNumber && (
+                            <span>{truck.registrationNumber}</span>
+                          )}
+                          {truck.capacity && (
+                            <span>{truck.capacity} MT</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {selectedCarrier.trucks.length > 3 && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        +{selectedCarrier.trucks.length - 3} more vehicles
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Score Breakdown */}
               <div className="border rounded-lg p-4">

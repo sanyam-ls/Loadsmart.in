@@ -5,12 +5,14 @@ import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { storage } from "./storage";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { 
   insertUserSchema, insertLoadSchema, insertTruckSchema, insertDriverSchema, insertBidSchema,
   insertCarrierVerificationSchema, insertCarrierVerificationDocumentSchema, insertBidNegotiationSchema, insertShipperInvoiceResponseSchema,
   trucks as trucksTable,
   carrierProfiles as carrierProfilesTable,
+  loads as loadsTable,
+  shipments as shipmentsTable,
   ratings,
   shipperRatings,
   insertShipperRatingSchema,
@@ -14522,9 +14524,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
       const verifiedCarriers = allUsers.filter(u => u.role === "carrier" && u.isVerified);
 
       // Get all shipments and loads for historical analysis
-      const allShipments = await db.select().from(shipments);
-      const allLoads = await db.select().from(loads);
-      const allTrucks = await db.select().from(trucks);
+      const allShipments = await db.select().from(shipmentsTable);
+      const allLoads = await db.select().from(loadsTable);
+      const allTrucks = await db.select().from(trucksTable);
 
       const recommendations: Array<{
         carrierId: string;
@@ -14558,7 +14560,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         const carrierTrucks = allTrucks.filter(t => t.carrierId === carrier.id);
 
         // 1. Truck type match (30 points)
-        if (load.requiredTruckType && carrierTrucks.some(t => t.type === load.requiredTruckType)) {
+        if (load.requiredTruckType && carrierTrucks.some(t => t.truckType === load.requiredTruckType)) {
           score += 30;
           truckTypeMatch = true;
           matchReasons.push(`Has matching truck type: ${load.requiredTruckType}`);
@@ -14654,20 +14656,20 @@ RESPOND IN THIS EXACT JSON FORMAT:
 
       // Get carrier's trucks and profile
       const carrierProfile = await storage.getCarrierProfile(user.id);
-      const carrierTrucks = await db.select().from(trucks).where(eq(trucks.carrierId, user.id));
+      const carrierTrucks = await db.select().from(trucksTable).where(eq(trucksTable.carrierId, user.id));
 
       // Get available loads (posted to carriers, open for bid)
-      const availableLoads = await db.select().from(loads).where(
+      const availableLoads = await db.select().from(loadsTable).where(
         or(
-          eq(loads.status, "posted_to_carriers"),
-          eq(loads.status, "open_for_bid"),
-          eq(loads.status, "counter_received")
+          eq(loadsTable.status, "posted_to_carriers"),
+          eq(loadsTable.status, "open_for_bid"),
+          eq(loadsTable.status, "counter_received")
         )
       );
 
       // Get carrier's shipment history for route/commodity matching
-      const carrierShipments = await db.select().from(shipments).where(eq(shipments.carrierId, user.id));
-      const allLoads = await db.select().from(loads);
+      const carrierShipments = await db.select().from(shipmentsTable).where(eq(shipmentsTable.carrierId, user.id));
+      const allLoads = await db.select().from(loadsTable);
       const completedLoadIds = carrierShipments.map(s => s.loadId);
       const historicalLoads = allLoads.filter(l => completedLoadIds.includes(l.id));
 
@@ -14719,7 +14721,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         let shipperMatch = false;
 
         // 1. Truck type match (30 points)
-        if (load.requiredTruckType && carrierTrucks.some(t => t.type === load.requiredTruckType)) {
+        if (load.requiredTruckType && carrierTrucks.some(t => t.truckType === load.requiredTruckType)) {
           score += 30;
           truckTypeMatch = true;
           matchReasons.push(`Your truck matches: ${load.requiredTruckType}`);

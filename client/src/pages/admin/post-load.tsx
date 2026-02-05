@@ -992,7 +992,7 @@ export default function AdminPostLoadPage() {
                                     <div className="flex flex-col flex-1 min-w-0">
                                       <span className="font-medium truncate">{shipper.companyName || shipper.username}</span>
                                       <span className="text-xs text-muted-foreground truncate">
-                                        {shipper.email} {shipper.phone && `| ${shipper.phone}`}
+                                        {shipper.username} | {shipper.email} {shipper.phone && `| ${shipper.phone}`}
                                       </span>
                                     </div>
                                   </div>

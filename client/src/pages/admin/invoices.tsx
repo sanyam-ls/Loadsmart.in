@@ -571,6 +571,7 @@ export default function AdminInvoicesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Invoice #</TableHead>
+                      <TableHead>Load ID</TableHead>
                       <TableHead>Shipper</TableHead>
                       <TableHead>Route</TableHead>
                       <TableHead>Amount</TableHead>
@@ -584,6 +585,9 @@ export default function AdminInvoicesPage() {
                     {filteredInvoices.map((invoice) => (
                       <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {invoice.loadId ? `#${invoice.loadId}` : '-'}
+                        </TableCell>
                         <TableCell>{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
                         <TableCell className="text-sm">
                           {invoice.load ? `${invoice.load.pickupCity} → ${invoice.load.dropoffCity}` : '-'}
@@ -685,6 +689,7 @@ export default function AdminInvoicesPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="whitespace-nowrap">Invoice #</TableHead>
+                          <TableHead className="whitespace-nowrap">Load ID</TableHead>
                           <TableHead className="whitespace-nowrap">Shipper</TableHead>
                           <TableHead className="whitespace-nowrap">Route</TableHead>
                           <TableHead className="whitespace-nowrap text-right">
@@ -761,6 +766,9 @@ export default function AdminInvoicesPage() {
                               }}
                             >
                               <TableCell className="font-medium whitespace-nowrap">{invoice.invoiceNumber}</TableCell>
+                              <TableCell className="font-mono text-sm text-muted-foreground whitespace-nowrap">
+                                {invoice.loadId ? `#${invoice.loadId}` : '-'}
+                              </TableCell>
                               <TableCell className="whitespace-nowrap">{invoice.shipper?.companyName || invoice.shipper?.username || '-'}</TableCell>
                               <TableCell className="text-sm whitespace-nowrap">
                                 {invoice.load ? `${invoice.load.pickupCity} → ${invoice.load.dropoffCity}` : '-'}

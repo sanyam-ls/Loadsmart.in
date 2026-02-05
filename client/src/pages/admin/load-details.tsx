@@ -157,6 +157,166 @@ type LoadWithRelations = Load & {
   carrierOnboarding?: CarrierOnboarding | null;
 };
 
+interface RecommendedCarrier {
+  carrierId: string;
+  carrierName: string;
+  carrierCompany: string | null;
+  carrierPhone: string | null;
+  carrierType: string;
+  score: number;
+  matchReasons: string[];
+  truckTypeMatch: boolean;
+  capacityMatch: boolean;
+  routeExperience: boolean;
+  commodityExperience: boolean;
+  shipperExperience: boolean;
+}
+
+function RecommendedCarriersSection({ loadId }: { loadId: string }) {
+  const { data: recommendations, isLoading } = useQuery<RecommendedCarrier[]>({
+    queryKey: ['/api/loads', loadId, 'recommended-carriers'],
+    queryFn: async () => {
+      const res = await fetch(`/api/loads/${loadId}/recommended-carriers`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch recommended carriers');
+      return res.json();
+    },
+    enabled: !!loadId,
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-500" />
+            Recommended Carriers
+          </CardTitle>
+          <CardDescription>Finding best matches based on truck, route, and history...</CardDescription>
+        </CardHeader>
+        <CardContent className="py-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!recommendations || recommendations.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-500" />
+            Recommended Carriers
+          </CardTitle>
+          <CardDescription>AI-powered carrier matching</CardDescription>
+        </CardHeader>
+        <CardContent className="py-8 text-center">
+          <Truck className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground">No matching carriers found based on current criteria</p>
+          <p className="text-xs text-muted-foreground mt-1">Matches are based on truck type, capacity, route history, commodity experience, and shipper interactions</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const getScoreBadgeVariant = (score: number) => {
+    if (score >= 80) return "default";
+    if (score >= 50) return "secondary";
+    return "outline";
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-600";
+    if (score >= 50) return "text-yellow-600";
+    return "text-muted-foreground";
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-yellow-500" />
+          Recommended Carriers
+        </CardTitle>
+        <CardDescription>
+          Top {recommendations.length} carriers matched by truck type, capacity, route history, commodity, and shipper experience
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {recommendations.map((carrier, idx) => (
+            <div 
+              key={carrier.carrierId} 
+              className="flex items-start justify-between p-4 border rounded-lg hover-elevate"
+              data-testid={`recommended-carrier-${idx}`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">
+                  #{idx + 1}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{carrier.carrierName}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {carrier.carrierType === "solo" ? "Solo" : "Fleet"}
+                    </Badge>
+                  </div>
+                  {carrier.carrierCompany && (
+                    <p className="text-sm text-muted-foreground">{carrier.carrierCompany}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {carrier.truckTypeMatch && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950">
+                        <Truck className="h-3 w-3 mr-1" />
+                        Truck Match
+                      </Badge>
+                    )}
+                    {carrier.capacityMatch && (
+                      <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-950">
+                        <Weight className="h-3 w-3 mr-1" />
+                        Capacity OK
+                      </Badge>
+                    )}
+                    {carrier.routeExperience && (
+                      <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-950">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        Route Exp
+                      </Badge>
+                    )}
+                    {carrier.commodityExperience && (
+                      <Badge variant="outline" className="text-xs bg-orange-50 dark:bg-orange-950">
+                        <Package className="h-3 w-3 mr-1" />
+                        Commodity Exp
+                      </Badge>
+                    )}
+                    {carrier.shipperExperience && (
+                      <Badge variant="outline" className="text-xs bg-yellow-50 dark:bg-yellow-950">
+                        <Building2 className="h-3 w-3 mr-1" />
+                        Shipper Exp
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-2xl font-bold ${getScoreColor(carrier.score)}`}>
+                  {carrier.score}
+                </div>
+                <Badge variant={getScoreBadgeVariant(carrier.score)} className="text-xs">
+                  Match Score
+                </Badge>
+                {carrier.carrierPhone && (
+                  <p className="text-xs text-muted-foreground mt-2">{carrier.carrierPhone}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminLoadDetailsPage() {
   const [, setLocation] = useLocation();
   const params = useParams<{ loadId: string }>();
@@ -1266,6 +1426,9 @@ export default function AdminLoadDetailsPage() {
               </CardContent>
             </Card>
           )}
+          
+          {/* Recommended Carriers Section */}
+          <RecommendedCarriersSection loadId={loadId} />
         </TabsContent>
 
         <TabsContent value="route" className="space-y-4">

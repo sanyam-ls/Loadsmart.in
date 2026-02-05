@@ -1217,12 +1217,15 @@ export default function AdminLoadDetailsPage() {
       }
       
       // Convert goods value to label for storage, or use custom value
+      // Update both materialType and goodsToBeCarried to keep them in sync
       if (data.goodsToBeCarried) {
         if (data.goodsToBeCarried === "other" && customCommodity) {
           payload.goodsToBeCarried = customCommodity;
+          payload.materialType = customCommodity;
         } else {
           const goodsLabel = getCommodityLabel(data.goodsToBeCarried);
           payload.goodsToBeCarried = goodsLabel;
+          payload.materialType = goodsLabel;
         }
       }
       

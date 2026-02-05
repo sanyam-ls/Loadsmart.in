@@ -81,10 +81,10 @@ const AdminPostLoadPage = lazy(() => import("@/pages/admin").then(m => ({ defaul
 
 function PageLoader() {
   return (
-    <div className="flex h-full items-center justify-center min-h-[200px]">
+    <div className="flex h-full items-center justify-center min-h-[200px] bg-background">
       <div className="flex flex-col items-center gap-4">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground text-sm">Loading page...</p>
       </div>
     </div>
   );
@@ -114,10 +114,11 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-6">
+          <div className="text-2xl font-bold text-primary">LoadSmart</div>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground text-sm">Starting up...</p>
         </div>
       </div>
     );

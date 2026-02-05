@@ -102,7 +102,7 @@ import { useAdminData, type DetailedLoad, type AdminLoad, type AdminCarrier, typ
 import { useBidsByLoad, type GroupedBidsResponse } from "@/lib/api-hooks";
 import { format } from "date-fns";
 import type { Load } from "@shared/schema";
-import { indianStates, getIndianCitiesByState } from "@shared/indian-locations";
+import { indianStates, getCitiesByState } from "@shared/indian-locations";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { connectMarketplace, onMarketplaceEvent, disconnectMarketplace } from "@/lib/marketplace-socket";
 import { useAuth } from "@/lib/auth-context";
@@ -786,7 +786,7 @@ export default function AdminLoadDetailsPage() {
         if (!rawCity) return "";
         // Find matching city (case-insensitive) from indian locations
         for (const state of indianStates) {
-          const cities = getIndianCitiesByState(state.name) || [];
+          const cities = getCitiesByState(state.code) || [];
           const match = cities.find((c: { name: string }) => 
             c.name.toLowerCase() === rawCity.toLowerCase()
           );

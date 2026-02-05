@@ -40,6 +40,8 @@ import {
   Calculator,
   TrendingUp,
   Receipt,
+  Target,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -173,6 +175,9 @@ interface RecommendedCarrier {
 }
 
 function RecommendedCarriersSection({ loadId }: { loadId: string }) {
+  const [selectedCarrier, setSelectedCarrier] = useState<RecommendedCarrier | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
   const { data: recommendations, isLoading } = useQuery<RecommendedCarrier[]>({
     queryKey: ['/api/loads', loadId, 'recommended-carriers'],
     queryFn: async () => {
@@ -247,8 +252,12 @@ function RecommendedCarriersSection({ loadId }: { loadId: string }) {
           {recommendations.map((carrier, idx) => (
             <div 
               key={carrier.carrierId} 
-              className="flex items-start justify-between p-4 border rounded-lg hover-elevate"
+              className="flex items-start justify-between p-4 border rounded-lg hover-elevate cursor-pointer"
               data-testid={`recommended-carrier-${idx}`}
+              onClick={() => {
+                setSelectedCarrier(carrier);
+                setDetailDialogOpen(true);
+              }}
             >
               <div className="flex items-start gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">
@@ -308,11 +317,168 @@ function RecommendedCarriersSection({ loadId }: { loadId: string }) {
                 {carrier.carrierPhone && (
                   <p className="text-xs text-muted-foreground mt-2">{carrier.carrierPhone}</p>
                 )}
+                <ChevronRight className="h-4 w-4 text-muted-foreground mt-1" />
               </div>
             </div>
           ))}
         </div>
       </CardContent>
+
+      {/* Carrier Match Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Carrier Match Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed breakdown of how this carrier matches your load requirements
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedCarrier && (
+            <div className="space-y-4">
+              {/* Carrier Info */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Truck className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-lg">{selectedCarrier.carrierName}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedCarrier.carrierType === "solo" ? "Solo" : "Fleet"}
+                    </Badge>
+                  </div>
+                  {selectedCarrier.carrierCompany && (
+                    <p className="text-sm text-muted-foreground">{selectedCarrier.carrierCompany}</p>
+                  )}
+                  {selectedCarrier.carrierPhone && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <Phone className="h-3 w-3" />
+                      {selectedCarrier.carrierPhone}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-primary">{selectedCarrier.score}</div>
+                  <p className="text-xs text-muted-foreground">Match Score</p>
+                </div>
+              </div>
+
+              {/* Score Breakdown */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Calculator className="h-4 w-4" />
+                  Score Breakdown (100 pts max)
+                </h4>
+                <div className="space-y-3">
+                  {/* Truck Type Match - 30 pts */}
+                  <div className={`flex items-center justify-between p-2 rounded ${selectedCarrier.truckTypeMatch ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800' : 'bg-muted/30'}`}>
+                    <div className="flex items-center gap-2">
+                      <Truck className={`h-4 w-4 ${selectedCarrier.truckTypeMatch ? 'text-blue-600' : 'text-muted-foreground'}`} />
+                      <span className="text-sm font-medium">Truck Type Match</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${selectedCarrier.truckTypeMatch ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                        {selectedCarrier.truckTypeMatch ? '+30' : '0'} pts
+                      </span>
+                      {selectedCarrier.truckTypeMatch && <CheckCircle className="h-4 w-4 text-blue-600" />}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground ml-6 -mt-2">
+                    Carrier has a truck type that matches load requirements
+                  </p>
+
+                  {/* Capacity Match - 25 pts */}
+                  <div className={`flex items-center justify-between p-2 rounded ${selectedCarrier.capacityMatch ? 'bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800' : 'bg-muted/30'}`}>
+                    <div className="flex items-center gap-2">
+                      <Weight className={`h-4 w-4 ${selectedCarrier.capacityMatch ? 'text-green-600' : 'text-muted-foreground'}`} />
+                      <span className="text-sm font-medium">Capacity Match</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${selectedCarrier.capacityMatch ? 'text-green-600' : 'text-muted-foreground'}`}>
+                        {selectedCarrier.capacityMatch ? '+25' : '0'} pts
+                      </span>
+                      {selectedCarrier.capacityMatch && <CheckCircle className="h-4 w-4 text-green-600" />}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground ml-6 -mt-2">
+                    Carrier's truck capacity can handle the load weight
+                  </p>
+
+                  {/* Route Experience - 20 pts */}
+                  <div className={`flex items-center justify-between p-2 rounded ${selectedCarrier.routeExperience ? 'bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800' : 'bg-muted/30'}`}>
+                    <div className="flex items-center gap-2">
+                      <MapPin className={`h-4 w-4 ${selectedCarrier.routeExperience ? 'text-purple-600' : 'text-muted-foreground'}`} />
+                      <span className="text-sm font-medium">Route Experience</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${selectedCarrier.routeExperience ? 'text-purple-600' : 'text-muted-foreground'}`}>
+                        {selectedCarrier.routeExperience ? '+20' : '0'} pts
+                      </span>
+                      {selectedCarrier.routeExperience && <CheckCircle className="h-4 w-4 text-purple-600" />}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground ml-6 -mt-2">
+                    Carrier has completed deliveries on similar routes before
+                  </p>
+
+                  {/* Commodity Experience - 15 pts */}
+                  <div className={`flex items-center justify-between p-2 rounded ${selectedCarrier.commodityExperience ? 'bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800' : 'bg-muted/30'}`}>
+                    <div className="flex items-center gap-2">
+                      <Package className={`h-4 w-4 ${selectedCarrier.commodityExperience ? 'text-orange-600' : 'text-muted-foreground'}`} />
+                      <span className="text-sm font-medium">Commodity Experience</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${selectedCarrier.commodityExperience ? 'text-orange-600' : 'text-muted-foreground'}`}>
+                        {selectedCarrier.commodityExperience ? '+15' : '0'} pts
+                      </span>
+                      {selectedCarrier.commodityExperience && <CheckCircle className="h-4 w-4 text-orange-600" />}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground ml-6 -mt-2">
+                    Carrier has experience transporting similar materials
+                  </p>
+
+                  {/* Shipper Experience - 10 pts */}
+                  <div className={`flex items-center justify-between p-2 rounded ${selectedCarrier.shipperExperience ? 'bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800' : 'bg-muted/30'}`}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className={`h-4 w-4 ${selectedCarrier.shipperExperience ? 'text-yellow-600' : 'text-muted-foreground'}`} />
+                      <span className="text-sm font-medium">Shipper Experience</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${selectedCarrier.shipperExperience ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                        {selectedCarrier.shipperExperience ? '+10' : '0'} pts
+                      </span>
+                      {selectedCarrier.shipperExperience && <CheckCircle className="h-4 w-4 text-yellow-600" />}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground ml-6 -mt-2">
+                    Carrier has previously worked with this shipper
+                  </p>
+                </div>
+              </div>
+
+              {/* Total Score Summary */}
+              <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <span className="font-medium">Total Match Score</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-primary">{selectedCarrier.score}</span>
+                  <span className="text-sm text-muted-foreground">/ 100 pts</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -14552,6 +14552,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
         }>;
         fleetSize: number | null;
         completedTrips: number;
+        serviceZones: string[];
+        operatingRegion: string | null;
       }> = [];
 
       for (const carrier of verifiedCarriers) {
@@ -14656,6 +14658,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
             })),
             fleetSize: carrierProfile?.fleetSize || null,
             completedTrips,
+            serviceZones: carrierProfile?.serviceZones || [],
+            operatingRegion: carrierProfile?.operatingRegion || null,
           });
         }
       }

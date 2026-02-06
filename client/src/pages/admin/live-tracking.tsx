@@ -891,7 +891,7 @@ export default function AdminLiveTrackingPage() {
                     {selectedShipment.financeReview && (
                       <div className="text-sm space-y-1 p-2 bg-muted/50 rounded-lg">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-muted-foreground">Current Status:</span>
+                          <span className="text-muted-foreground">Review Status:</span>
                           {(() => {
                             const config = reviewStatusConfig[selectedShipment.financeReview.status] || reviewStatusConfig.pending;
                             const Icon = config.icon;

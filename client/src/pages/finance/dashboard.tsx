@@ -429,14 +429,14 @@ export default function FinanceDashboard() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" /> Finance Decision
+                    <CheckCircle className="h-4 w-4" /> Document Review
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {selectedShipment.financeReview && (
                     <div className="text-sm space-y-1 p-2 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Current Status:</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-muted-foreground">Review Status:</span>
                         {(() => {
                           const config = reviewStatusConfig[selectedShipment.financeReview.status] || reviewStatusConfig.pending;
                           const Icon = config.icon;

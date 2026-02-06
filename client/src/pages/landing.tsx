@@ -131,7 +131,7 @@ export default function LandingPage() {
                 Solutions <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-[#1a1a2e] border-gray-700">
-                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-brokers">For Brokers</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-brokers">For Drivers</DropdownMenuItem>
                 <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-carriers">For Carriers</DropdownMenuItem>
                 <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-shippers">For Shippers</DropdownMenuItem>
               </DropdownMenuContent>

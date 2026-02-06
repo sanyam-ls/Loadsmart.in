@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import newsFreepImg from "@assets/image_1770402429539.png";
-import newsTruckerImg from "@/assets/images/news-trucker.jpg";
+import newsTruckerImg from "@assets/image_1770402550795.png";
 import newsMliveImg from "@/assets/images/news-mlive.jpg";
 
 export default function PressRoomPage() {

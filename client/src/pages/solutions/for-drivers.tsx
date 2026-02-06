@@ -68,7 +68,7 @@ export default function ForDriversPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Button>
-          <Button onClick={() => setLocation("/auth")} data-testid="button-get-started-drivers">
+          <Button onClick={() => setLocation("/auth?tab=register&role=carrier&carrierType=solo")} data-testid="button-get-started-drivers">
             Get Started
           </Button>
         </div>
@@ -94,7 +94,7 @@ export default function ForDriversPage() {
                 just freight that fits your schedule and your truck.
               </p>
               <div className="flex items-center gap-4 flex-wrap">
-                <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-signup-driver">
+                <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth?tab=register&role=carrier&carrierType=solo")} data-testid="button-signup-driver">
                   Start Earning Today
                 </Button>
               </div>
@@ -186,7 +186,7 @@ export default function ForDriversPage() {
                   <span className="text-gray-600">Quick actions to mark deliveries complete</span>
                 </div>
               </div>
-              <Button className="mt-8 bg-[#1a3a8a] border-[#1a3a8a]" size="lg" onClick={() => setLocation("/auth")} data-testid="button-join-driver">
+              <Button className="mt-8 bg-[#1a3a8a] border-[#1a3a8a]" size="lg" onClick={() => setLocation("/auth?tab=register&role=carrier&carrierType=solo")} data-testid="button-join-driver">
                 Join as a Driver
               </Button>
             </div>
@@ -204,7 +204,7 @@ export default function ForDriversPage() {
             Sign up in minutes, add your truck details, and start browsing available freight. 
             No paperwork headaches, no waiting around.
           </p>
-          <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-cta-driver">
+          <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth?tab=register&role=carrier&carrierType=solo")} data-testid="button-cta-driver">
             Create Your Free Account
           </Button>
         </div>

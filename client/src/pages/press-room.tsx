@@ -13,17 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ArrowLeft, Newspaper, Calendar, ArrowRight, Send,
-  Building2, Globe, TrendingUp, Users, Truck, CheckCircle2
+  ArrowLeft, Newspaper, Send,
+  Globe, TrendingUp, Users, Truck, CheckCircle2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface PressRelease {
-  date: string;
-  title: string;
-  summary: string;
-  category: string;
-}
 
 export default function PressRoomPage() {
   const [, setLocation] = useLocation();
@@ -36,45 +29,6 @@ export default function PressRoomPage() {
     inquiryType: "",
     message: "",
   });
-
-  const pressReleases: PressRelease[] = [
-    {
-      date: "January 2026",
-      title: "LoadSmart Launches AI-Powered Carrier Matching System",
-      summary: "New intelligent recommendation engine uses weighted scoring across five criteria to match carriers with optimal freight opportunities, improving match rates by 40%.",
-      category: "Product"
-    },
-    {
-      date: "December 2025",
-      title: "LoadSmart Expands Multi-Language Support Across India",
-      summary: "Platform now available in Hindi, Punjabi, Marathi, and Tamil in addition to English, making digital freight accessible to millions of regional transporters.",
-      category: "Expansion"
-    },
-    {
-      date: "November 2025",
-      title: "LoadSmart Introduces Solo Driver Portal for Owner-Operators",
-      summary: "Dedicated portal designed for independent truck drivers features simplified navigation, earnings tracking, document management, and compliance monitoring.",
-      category: "Product"
-    },
-    {
-      date: "October 2025",
-      title: "LoadSmart Rolls Out Real-Time Vehicle Telematics Integration",
-      summary: "New CAN-Bus GPS integration provides shippers with live tracking, AI-driven ETA predictions, and driver behavior analytics for complete shipment visibility.",
-      category: "Technology"
-    },
-    {
-      date: "September 2025",
-      title: "LoadSmart Achieves 500+ Daily Active Loads Milestone",
-      summary: "Growing marketplace reaches significant volume milestone with loads across all major Indian freight corridors, demonstrating strong shipper and carrier adoption.",
-      category: "Milestone"
-    },
-    {
-      date: "August 2025",
-      title: "LoadSmart Partners with Leading Fleet Operators Across Western India",
-      summary: "Strategic partnerships with major fleet companies in Maharashtra and Gujarat expand carrier network, increasing capacity and route coverage for shippers.",
-      category: "Partnership"
-    },
-  ];
 
   const stats = [
     { icon: Truck, value: "500+", label: "Daily Active Loads" },
@@ -98,14 +52,6 @@ export default function PressRoomPage() {
       title: "Inquiry Submitted",
       description: "Thank you for your interest. Our press team will get back to you within 24 hours.",
     });
-  };
-
-  const categoryColors: Record<string, string> = {
-    Product: "bg-[#1a3a8a] text-white",
-    Expansion: "bg-emerald-600 text-white",
-    Technology: "bg-violet-600 text-white",
-    Milestone: "bg-amber-600 text-white",
-    Partnership: "bg-teal-600 text-white",
   };
 
   return (
@@ -156,33 +102,6 @@ export default function PressRoomPage() {
       </section>
 
       <section className="bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-releases-title">Latest Press Releases</h2>
-          <p className="text-gray-600 mb-8">Recent announcements and company updates from LoadSmart.</p>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {pressReleases.map((release, i) => (
-              <Card key={i} className="border-gray-200" data-testid={`press-release-${i}`}>
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${categoryColors[release.category] || "bg-gray-200 text-gray-700"}`}>
-                      {release.category}
-                    </span>
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {release.date}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2 leading-snug">{release.title}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{release.summary}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white py-12">
         <div className="max-w-3xl mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-inquiry-title">Press Inquiry Form</h2>

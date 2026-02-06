@@ -298,6 +298,7 @@ function AppContent() {
                 <Route path="/admin/invoices" component={AdminInvoicesPage} />
                 <Route path="/admin/otp-queue" component={AdminOtpQueuePage} />
                 <Route path="/admin/live-tracking" component={AdminLiveTrackingPage} />
+                <Route path="/admin/finance-review" component={FinanceDashboard} />
                 
                 <Route path="/finance" component={FinanceDashboard} />
                 <Route path="/finance/review" component={FinanceDashboard} />

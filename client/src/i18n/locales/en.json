@@ -142,7 +142,8 @@
     "overview": "Overview",
     "earnings": "Earnings",
     "myTrips": "My Trips",
-    "loadFeed": "Load Feed"
+    "loadFeed": "Load Feed",
+    "documentReview": "Document Review"
   },
   "roles": {
     "admin": "Admin",

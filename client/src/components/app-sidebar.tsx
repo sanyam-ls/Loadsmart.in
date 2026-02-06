@@ -101,6 +101,7 @@ const adminItems: NavItem[] = [
   { titleKey: "nav.allLoads", url: "/admin/loads", icon: Package },
   { titleKey: "nav.carriers", url: "/admin/carriers", icon: Truck },
   { titleKey: "nav.verification", url: "/admin/verification", icon: Shield },
+  { titleKey: "nav.documentReview", url: "/admin/finance-review", icon: FileText },
   { titleKey: "nav.reports", url: "/admin/reports", icon: BarChart3 },
 ];
 

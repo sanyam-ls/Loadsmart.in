@@ -60,10 +60,10 @@ export default function ForDriversPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a1a] text-white">
-      <div className="sticky top-0 z-50 bg-[#0a0a1a]/90 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Button variant="ghost" className="text-gray-300 gap-2" onClick={() => setLocation("/")} data-testid="button-back-home">
+    <div className="min-h-screen bg-white text-gray-900">
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+          <Button variant="ghost" className="text-gray-600 gap-2" onClick={() => setLocation("/")} data-testid="button-back-home">
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Button>
@@ -73,29 +73,30 @@ export default function ForDriversPage() {
         </div>
       </div>
 
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-transparent to-purple-600/10" />
+      <section className="relative overflow-hidden bg-[#1a3a8a]">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1e40af] via-[#1a3a8a] to-[#162d6e]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_60%)]" />
         <div className="max-w-7xl mx-auto px-4 py-20 relative">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-blue-100 text-sm mb-6">
                 <Truck className="h-4 w-4" />
                 Built for Independent Drivers
               </div>
-              <h1 data-testid="text-hero-title" className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+              <h1 data-testid="text-hero-title" className="text-4xl lg:text-5xl font-bold mb-6 leading-tight text-white">
                 Your truck, your rules.
-                <span className="text-blue-400"> We just make it easier.</span>
+                <span className="text-blue-200"> We just make it easier.</span>
               </h1>
-              <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+              <p className="text-lg text-blue-100 mb-8 leading-relaxed">
                 LoadSmart puts owner-operators in the driver's seat. Find the best-paying loads near you, 
                 manage your trips with one tap, and get paid faster. No middlemen, no confusion, 
                 just freight that fits your schedule and your truck.
               </p>
               <div className="flex items-center gap-4 flex-wrap">
-                <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-signup-driver">
+                <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-signup-driver">
                   Start Earning Today
                 </Button>
-                <Button size="lg" variant="outline" className="backdrop-blur-sm" onClick={() => {
+                <Button size="lg" variant="outline" className="text-white border-white/30 backdrop-blur-sm" onClick={() => {
                   document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
                 }} data-testid="button-see-how-it-works">
                   See How It Works
@@ -103,45 +104,45 @@ export default function ForDriversPage() {
               </div>
             </div>
             <div className="relative">
-              <div className="rounded-md overflow-hidden border border-white/10 shadow-2xl shadow-blue-500/10">
-                <img src={loadFeedImg} alt="LoadSmart driver load feed" className="w-full" />
+              <div className="rounded-md overflow-hidden border border-white/20 shadow-2xl">
+                <img src={loadFeedImg} alt="LoadSmart driver dashboard" className="w-full" />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-16 border-t border-white/5" data-testid="section-stats">
+      <section className="py-16 bg-[#1e40af]" data-testid="section-stats">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {stats.map((stat, index) => (
               <div key={stat.label} data-testid={`stat-item-${index}`}>
-                <div className="text-3xl font-bold text-blue-400 mb-1" data-testid={`stat-value-${index}`}>{stat.value}</div>
-                <div className="text-sm text-gray-400" data-testid={`stat-label-${index}`}>{stat.label}</div>
+                <div className="text-3xl font-bold text-white mb-1" data-testid={`stat-value-${index}`}>{stat.value}</div>
+                <div className="text-sm text-blue-200" data-testid={`stat-label-${index}`}>{stat.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="features" className="py-20 border-t border-white/5">
+      <section id="features" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 data-testid="text-features-title" className="text-3xl font-bold mb-4">Everything a driver needs, nothing they don't</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <h2 data-testid="text-features-title" className="text-3xl font-bold mb-4 text-gray-900">Everything a driver needs, nothing they don't</h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">
               We built every feature around what independent drivers actually need on the road. 
               Simple tools that save time and put more money in your pocket.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <Card key={feature.title} className="bg-white/5 border-white/10 hover-elevate" data-testid={`card-feature-${index}`}>
+              <Card key={feature.title} className="bg-white border-gray-200 hover-elevate" data-testid={`card-feature-${index}`}>
                 <CardContent className="p-6">
-                  <div className="h-10 w-10 rounded-md bg-blue-500/10 flex items-center justify-center mb-4">
-                    <feature.icon className="h-5 w-5 text-blue-400" />
+                  <div className="h-10 w-10 rounded-md bg-[#1a3a8a]/10 flex items-center justify-center mb-4">
+                    <feature.icon className="h-5 w-5 text-[#1a3a8a]" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">{feature.description}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -149,23 +150,23 @@ export default function ForDriversPage() {
         </div>
       </section>
 
-      <section className="py-20 border-t border-white/5">
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="rounded-md overflow-hidden border border-white/10 shadow-2xl shadow-blue-500/10">
+            <div className="rounded-md overflow-hidden border border-gray-200 shadow-lg">
               <img src={trackingImg} alt="LoadSmart driver tracking and earnings" className="w-full" />
             </div>
             <div>
-              <h2 data-testid="text-tracking-title" className="text-3xl font-bold mb-6">Track your trips. Watch your earnings grow.</h2>
+              <h2 data-testid="text-tracking-title" className="text-3xl font-bold mb-6 text-gray-900">Track your trips. Watch your earnings grow.</h2>
               <div className="space-y-4">
                 {checklistItems.map((item, index) => (
                   <div key={item} className="flex items-start gap-3" data-testid={`checklist-item-${index}`}>
-                    <CheckCircle2 className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-300">{item}</span>
+                    <CheckCircle2 className="h-5 w-5 text-[#1a3a8a] flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-600">{item}</span>
                   </div>
                 ))}
               </div>
-              <Button className="mt-8" size="lg" onClick={() => setLocation("/auth")} data-testid="button-join-driver">
+              <Button className="mt-8 bg-[#1a3a8a] border-[#1a3a8a]" size="lg" onClick={() => setLocation("/auth")} data-testid="button-join-driver">
                 Join as a Driver
               </Button>
             </div>
@@ -173,14 +174,14 @@ export default function ForDriversPage() {
         </div>
       </section>
 
-      <section className="py-20 border-t border-white/5 bg-gradient-to-t from-blue-600/5 to-transparent">
+      <section className="py-20 bg-[#1a3a8a]">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 data-testid="text-cta-title" className="text-3xl font-bold mb-4">Ready to hit the road with better loads?</h2>
-          <p className="text-gray-400 mb-8">
+          <h2 data-testid="text-cta-title" className="text-3xl font-bold mb-4 text-white">Ready to hit the road with better loads?</h2>
+          <p className="text-blue-200 mb-8">
             Sign up in minutes, add your truck details, and start browsing available freight. 
             No paperwork headaches, no waiting around.
           </p>
-          <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-cta-driver">
+          <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-cta-driver">
             Create Your Free Account
           </Button>
         </div>

@@ -55,8 +55,7 @@ const soloFormSchema = z.object({
   fitnessUrl: z.string().optional(),
   tdsDeclarationUrl: z.string().optional(),
   selfieUrl: z.string().optional(),
-  msmeUrl: z.string().optional(),
-  udyamUrl: z.string().optional(),
+  msmeUdyamUrl: z.string().optional(),
   // Bank details
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
@@ -97,8 +96,7 @@ const fleetFormSchema = z.object({
   insuranceUrl: z.string().optional(),
   fitnessUrl: z.string().optional(),
   tdsDeclarationUrl: z.string().optional(),
-  msmeUrl: z.string().optional(),
-  udyamUrl: z.string().optional(),
+  msmeUdyamUrl: z.string().optional(),
   // Bank details
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
@@ -185,8 +183,7 @@ export default function CarrierOnboarding() {
       insuranceUrl: "",
       fitnessUrl: "",
       selfieUrl: "",
-      msmeUrl: "",
-      udyamUrl: "",
+      msmeUdyamUrl: "",
       bankName: "",
       bankAccountNumber: "",
       bankIfscCode: "",
@@ -225,8 +222,7 @@ export default function CarrierOnboarding() {
       rcUrl: "",
       insuranceUrl: "",
       fitnessUrl: "",
-      msmeUrl: "",
-      udyamUrl: "",
+      msmeUdyamUrl: "",
       bankName: "",
       bankAccountNumber: "",
       bankIfscCode: "",
@@ -252,8 +248,7 @@ export default function CarrierOnboarding() {
             fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
             tdsDeclarationUrl: onboardingStatus.documents.find(d => d.documentType === "tds_declaration")?.fileUrl || "",
             selfieUrl: onboardingStatus.documents.find(d => d.documentType === "selfie")?.fileUrl || "",
-            msmeUrl: onboardingStatus.documents.find(d => d.documentType === "msme")?.fileUrl || "",
-            udyamUrl: onboardingStatus.documents.find(d => d.documentType === "udyam")?.fileUrl || "",
+            msmeUdyamUrl: onboardingStatus.documents.find(d => d.documentType === "msme_udyam" || d.documentType === "msme" || d.documentType === "udyam")?.fileUrl || "",
             voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
           };
           for (const [key, val] of Object.entries(docFields)) {
@@ -272,8 +267,7 @@ export default function CarrierOnboarding() {
             insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
             fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
             tdsDeclarationUrl: onboardingStatus.documents.find(d => d.documentType === "tds_declaration")?.fileUrl || "",
-            msmeUrl: onboardingStatus.documents.find(d => d.documentType === "msme")?.fileUrl || "",
-            udyamUrl: onboardingStatus.documents.find(d => d.documentType === "udyam")?.fileUrl || "",
+            msmeUdyamUrl: onboardingStatus.documents.find(d => d.documentType === "msme_udyam" || d.documentType === "msme" || d.documentType === "udyam")?.fileUrl || "",
             voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
           };
           for (const [key, val] of Object.entries(docFields)) {
@@ -306,8 +300,7 @@ export default function CarrierOnboarding() {
           fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
           tdsDeclarationUrl: onboardingStatus.documents.find(d => d.documentType === "tds_declaration")?.fileUrl || "",
           selfieUrl: onboardingStatus.documents.find(d => d.documentType === "selfie")?.fileUrl || "",
-          msmeUrl: onboardingStatus.documents.find(d => d.documentType === "msme")?.fileUrl || "",
-          udyamUrl: onboardingStatus.documents.find(d => d.documentType === "udyam")?.fileUrl || "",
+          msmeUdyamUrl: onboardingStatus.documents.find(d => d.documentType === "msme_udyam" || d.documentType === "msme" || d.documentType === "udyam")?.fileUrl || "",
           bankName: onboardingStatus.bankName || "",
           bankAccountNumber: onboardingStatus.bankAccountNumber || "",
           bankIfscCode: onboardingStatus.bankIfscCode || "",
@@ -346,8 +339,7 @@ export default function CarrierOnboarding() {
           insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
           fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
           tdsDeclarationUrl: onboardingStatus.documents.find(d => d.documentType === "tds_declaration")?.fileUrl || "",
-          msmeUrl: onboardingStatus.documents.find(d => d.documentType === "msme")?.fileUrl || "",
-          udyamUrl: onboardingStatus.documents.find(d => d.documentType === "udyam")?.fileUrl || "",
+          msmeUdyamUrl: onboardingStatus.documents.find(d => d.documentType === "msme_udyam" || d.documentType === "msme" || d.documentType === "udyam")?.fileUrl || "",
           bankName: onboardingStatus.bankName || "",
           bankAccountNumber: onboardingStatus.bankAccountNumber || "",
           bankIfscCode: onboardingStatus.bankIfscCode || "",
@@ -1133,27 +1125,15 @@ export default function CarrierOnboarding() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-2 block">MSME Certificate (If applicable)</label>
+                        <label className="text-sm font-medium mb-2 block">MSME / Udyam Certificate (If applicable)</label>
                         <DocumentUploadWithCamera
-                          value={soloForm.watch("msmeUrl") || ""}
+                          value={soloForm.watch("msmeUdyamUrl") || ""}
                           onChange={(val) => {
-                            soloForm.setValue("msmeUrl", val);
-                            handleDocumentUpload("msme", val);
+                            soloForm.setValue("msmeUdyamUrl", val);
+                            handleDocumentUpload("msme_udyam", val);
                           }}
                           disabled={!canEdit}
-                          documentType="msme"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Udyam Certificate (If applicable)</label>
-                        <DocumentUploadWithCamera
-                          value={soloForm.watch("udyamUrl") || ""}
-                          onChange={(val) => {
-                            soloForm.setValue("udyamUrl", val);
-                            handleDocumentUpload("udyam", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="udyam"
+                          documentType="msme_udyam"
                         />
                       </div>
                     </div>
@@ -1691,27 +1671,15 @@ export default function CarrierOnboarding() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-2 block">MSME Certificate (If applicable)</label>
+                        <label className="text-sm font-medium mb-2 block">MSME / Udyam Certificate (If applicable)</label>
                         <DocumentUploadWithCamera
-                          value={fleetForm.watch("msmeUrl") || ""}
+                          value={fleetForm.watch("msmeUdyamUrl") || ""}
                           onChange={(val) => {
-                            fleetForm.setValue("msmeUrl", val);
-                            handleDocumentUpload("msme", val);
+                            fleetForm.setValue("msmeUdyamUrl", val);
+                            handleDocumentUpload("msme_udyam", val);
                           }}
                           disabled={!canEdit}
-                          documentType="msme"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Udyam Certificate (If applicable)</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("udyamUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("udyamUrl", val);
-                            handleDocumentUpload("udyam", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="udyam"
+                          documentType="msme_udyam"
                         />
                       </div>
                     </div>

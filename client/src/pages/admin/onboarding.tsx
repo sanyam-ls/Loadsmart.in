@@ -619,8 +619,7 @@ export default function AdminOnboardingPage() {
                           <p className="text-sm">
                             <span className="text-muted-foreground">Type: </span>
                             <span className="font-medium">
-                              {selectedRequest.request.alternativeDocumentType === "msme_certificate" && "MSME Certificate"}
-                              {selectedRequest.request.alternativeDocumentType === "udyam_registration" && "Udyam Registration"}
+                              {(selectedRequest.request.alternativeDocumentType === "msme_certificate" || selectedRequest.request.alternativeDocumentType === "udyam_registration") && "MSME / Udyam Certificate"}
                               {selectedRequest.request.alternativeDocumentType === "shop_establishment" && "Shop & Establishment License"}
                               {selectedRequest.request.alternativeDocumentType === "trade_license" && "Trade License"}
                               {selectedRequest.request.alternativeDocumentType === "iec_certificate" && "IEC Certificate"}
@@ -681,17 +680,9 @@ export default function AdminOnboardingPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-muted-foreground">MSME Certificate</Label>
-                    {selectedRequest?.request.msmeUrl ? (
-                      <DocumentLink value={selectedRequest.request.msmeUrl} />
-                    ) : (
-                      <p className="text-muted-foreground">{t("common.notProvided")}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground">Udyam Certificate</Label>
-                    {selectedRequest?.request.udyamUrl ? (
-                      <DocumentLink value={selectedRequest.request.udyamUrl} />
+                    <Label className="text-muted-foreground">MSME / Udyam Certificate</Label>
+                    {(selectedRequest?.request.msmeUrl || selectedRequest?.request.udyamUrl) ? (
+                      <DocumentLink value={selectedRequest.request.msmeUrl || selectedRequest.request.udyamUrl || ""} />
                     ) : (
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}

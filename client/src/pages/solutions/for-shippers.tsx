@@ -5,7 +5,7 @@ import {
   ArrowLeft, Package, MapPin, IndianRupee, Shield, Clock,
   FileText, Eye, CheckCircle2, BarChart3, Bell, Zap
 } from "lucide-react";
-import dashboardImg from "../../assets/images/solution-shippers-dashboard.png";
+import dashboardImg from "@assets/Screenshot_2026-02-06_at_5.09.04_PM_1770377946011.png";
 import trackingImg from "../../assets/images/solution-shippers-tracking.png";
 
 export default function ForShippersPage() {

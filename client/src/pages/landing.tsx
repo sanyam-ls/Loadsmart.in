@@ -131,6 +131,7 @@ export default function LandingPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-[#1a1a2e] border-gray-700">
                 <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-faqs" onClick={() => setLocation("/faqs")}>FAQs</DropdownMenuItem>
+                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-press-room" onClick={() => setLocation("/press-room")}>Press Room</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button 
@@ -533,7 +534,7 @@ export default function LandingPage() {
               <h4 className="text-[#3366FF] font-bold text-sm uppercase tracking-wider mb-4" data-testid="footer-resources">RESOURCES</h4>
               <ul className="space-y-2">
                 <li><a href="/faqs" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-faqs">FAQs</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-press-room">Press Room</a></li>
+                <li><a href="/press-room" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-press-room">Press Room</a></li>
               </ul>
             </div>
             <div>

@@ -32,6 +32,7 @@ const ForDriversPage = lazy(() => import("@/pages/solutions/for-drivers"));
 const ForCarriersPage = lazy(() => import("@/pages/solutions/for-carriers"));
 const ForShippersPage = lazy(() => import("@/pages/solutions/for-shippers"));
 const FAQsPage = lazy(() => import("@/pages/faqs"));
+const PressRoomPage = lazy(() => import("@/pages/press-room"));
 
 const ShipperDashboard = lazy(() => import("@/pages/shipper").then(m => ({ default: m.ShipperDashboard })));
 const PostLoadPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.PostLoadPage })));
@@ -184,7 +185,15 @@ function AppContent() {
     );
   }
 
-  if (!user && location !== "/auth" && location !== "/" && location !== "/load-board" && location !== "/contact" && !location.startsWith("/solutions/") && location !== "/faqs") {
+  if (!user && location === "/press-room") {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <PressRoomPage />
+      </Suspense>
+    );
+  }
+
+  if (!user && location !== "/auth" && location !== "/" && location !== "/load-board" && location !== "/contact" && !location.startsWith("/solutions/") && location !== "/faqs" && location !== "/press-room") {
     return <Redirect to="/auth" />;
   }
 

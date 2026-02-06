@@ -1,0 +1,191 @@
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { 
+  ArrowLeft, Truck, Users, IndianRupee, Shield, BarChart3,
+  FileText, Target, CheckCircle2, Layers, Settings, Award
+} from "lucide-react";
+import fleetImg from "../../assets/images/solution-carriers-fleet.png";
+import marketplaceImg from "../../assets/images/solution-carriers-marketplace.png";
+
+export default function ForCarriersPage() {
+  const [, setLocation] = useLocation();
+
+  const features = [
+    {
+      icon: Layers,
+      title: "Fleet Management at Scale",
+      description: "Manage your entire fleet from a single dashboard. Track every truck, assign drivers, monitor availability, and ensure no vehicle sits idle when there is freight to move."
+    },
+    {
+      icon: Target,
+      title: "Smart Load Recommendations",
+      description: "Our intelligent matching engine scores every available load against your fleet's capabilities. Get personalized recommendations based on truck type, capacity, route history, and commodity experience."
+    },
+    {
+      icon: IndianRupee,
+      title: "Competitive Bidding Marketplace",
+      description: "Bid on loads that match your fleet's strengths. Accept fixed-price loads instantly or submit counter-offers on negotiable freight. Every bid is tracked, and you are notified the moment a decision is made."
+    },
+    {
+      icon: Users,
+      title: "Driver Assignment and Tracking",
+      description: "Assign drivers to specific loads with a single click. Track their trip progress in real time, manage compliance documents, and keep your operations running smoothly across multiple routes."
+    },
+    {
+      icon: BarChart3,
+      title: "Revenue Analytics",
+      description: "Understand your business performance with detailed revenue breakdowns by route, truck, and time period. Identify your most profitable lanes and make data-driven decisions to grow your fleet's earnings."
+    },
+    {
+      icon: Shield,
+      title: "Document Compliance Engine",
+      description: "Stay ahead of regulatory requirements with automated document tracking. Upload insurance, permits, and fitness certificates. Get advance warnings before any document expires so you never lose a bid."
+    },
+  ];
+
+  const stats = [
+    { value: "30+", label: "Truck Types Supported" },
+    { value: "Smart", label: "Load Matching" },
+    { value: "Real-Time", label: "Fleet Tracking" },
+    { value: "Instant", label: "Bid Notifications" },
+  ];
+
+  const checklistItems = [
+    "Browse all available loads in a real-time marketplace",
+    "Get match scores showing how well each load fits your fleet",
+    "Submit bids or accept fixed-price loads instantly",
+    "Counter-offer on negotiable loads to get the best rate",
+    "Automatic resource checks prevent double-booking trucks",
+    "Assign truck and driver at bid time for faster dispatch",
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#0a0a1a] text-white">
+      <div className="sticky top-0 z-50 bg-[#0a0a1a]/90 backdrop-blur-sm border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <Button variant="ghost" className="text-gray-300 gap-2" onClick={() => setLocation("/")} data-testid="button-back-home">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Button>
+          <Button onClick={() => setLocation("/auth")} data-testid="button-get-started-carriers">
+            Get Started
+          </Button>
+        </div>
+      </div>
+
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/20 via-transparent to-blue-600/10" />
+        <div className="max-w-7xl mx-auto px-4 py-20 relative">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm mb-6">
+                <Truck className="h-4 w-4" />
+                Built for Fleet Operators
+              </div>
+              <h1 data-testid="text-hero-title" className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+                Scale your fleet.
+                <span className="text-emerald-400"> Multiply your profits.</span>
+              </h1>
+              <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+                LoadSmart gives fleet carriers the tools to manage multiple trucks, 
+                assign the right driver to the right load, and win more freight through 
+                intelligent matching. Stop chasing loads and let the best ones come to you.
+              </p>
+              <div className="flex items-center gap-4 flex-wrap">
+                <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-signup-carrier">
+                  Register Your Fleet
+                </Button>
+                <Button size="lg" variant="outline" className="backdrop-blur-sm" onClick={() => {
+                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+                }} data-testid="button-explore-features">
+                  Explore Features
+                </Button>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="rounded-md overflow-hidden border border-white/10 shadow-2xl shadow-emerald-500/10">
+                <img src={fleetImg} alt="LoadSmart fleet management dashboard" className="w-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 border-t border-white/5" data-testid="section-stats">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {stats.map((stat, index) => (
+              <div key={stat.label} data-testid={`stat-item-${index}`}>
+                <div className="text-3xl font-bold text-emerald-400 mb-1" data-testid={`stat-value-${index}`}>{stat.value}</div>
+                <div className="text-sm text-gray-400" data-testid={`stat-label-${index}`}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="features" className="py-20 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 data-testid="text-features-title" className="text-3xl font-bold mb-4">Run your fleet like a modern logistics company</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              From a single truck to a hundred, LoadSmart scales with you. 
+              Every tool is designed to reduce empty miles, improve utilisation, and grow revenue.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, index) => (
+              <Card key={feature.title} className="bg-white/5 border-white/10 hover-elevate" data-testid={`card-feature-${index}`}>
+                <CardContent className="p-6">
+                  <div className="h-10 w-10 rounded-md bg-emerald-500/10 flex items-center justify-center mb-4">
+                    <feature.icon className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-400 leading-relaxed">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 data-testid="text-bidding-title" className="text-3xl font-bold mb-6">Win more loads with smarter bidding</h2>
+              <div className="space-y-4">
+                {checklistItems.map((item, index) => (
+                  <div key={item} className="flex items-start gap-3" data-testid={`checklist-item-${index}`}>
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-300">{item}</span>
+                  </div>
+                ))}
+              </div>
+              <Button className="mt-8" size="lg" onClick={() => setLocation("/auth")} data-testid="button-join-carrier">
+                Start Bidding on Loads
+              </Button>
+            </div>
+            <div className="rounded-md overflow-hidden border border-white/10 shadow-2xl shadow-emerald-500/10">
+              <img src={marketplaceImg} alt="LoadSmart carrier marketplace" className="w-full" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 border-t border-white/5 bg-gradient-to-t from-emerald-600/5 to-transparent">
+        <div className="max-w-3xl mx-auto px-4 text-center">
+          <h2 data-testid="text-cta-title" className="text-3xl font-bold mb-4">Ready to put your fleet to work?</h2>
+          <p className="text-gray-400 mb-8">
+            Register your fleet, add your trucks and drivers, and start receiving 
+            load recommendations matched to your capabilities. It takes minutes to get started.
+          </p>
+          <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-cta-carrier">
+            Create Your Fleet Account
+          </Button>
+        </div>
+      </section>
+    </div>
+  );
+}

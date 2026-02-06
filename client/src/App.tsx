@@ -28,6 +28,9 @@ const SettingsPage = lazy(() => import("@/pages/settings"));
 const LandingPage = lazy(() => import("@/pages/landing"));
 const LoadBoardPage = lazy(() => import("@/pages/load-board"));
 const ContactPage = lazy(() => import("@/pages/contact"));
+const ForDriversPage = lazy(() => import("@/pages/solutions/for-drivers"));
+const ForCarriersPage = lazy(() => import("@/pages/solutions/for-carriers"));
+const ForShippersPage = lazy(() => import("@/pages/solutions/for-shippers"));
 
 const ShipperDashboard = lazy(() => import("@/pages/shipper").then(m => ({ default: m.ShipperDashboard })));
 const PostLoadPage = lazy(() => import("@/pages/shipper").then(m => ({ default: m.PostLoadPage })));
@@ -148,7 +151,31 @@ function AppContent() {
     );
   }
 
-  if (!user && location !== "/auth" && location !== "/" && location !== "/load-board" && location !== "/contact") {
+  if (!user && location === "/solutions/drivers") {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <ForDriversPage />
+      </Suspense>
+    );
+  }
+
+  if (!user && location === "/solutions/carriers") {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <ForCarriersPage />
+      </Suspense>
+    );
+  }
+
+  if (!user && location === "/solutions/shippers") {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <ForShippersPage />
+      </Suspense>
+    );
+  }
+
+  if (!user && location !== "/auth" && location !== "/" && location !== "/load-board" && location !== "/contact" && !location.startsWith("/solutions/")) {
     return <Redirect to="/auth" />;
   }
 

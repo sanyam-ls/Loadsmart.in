@@ -87,6 +87,7 @@ const fleetFormSchema = z.object({
   cinUrl: z.string().optional(),
   addressProofType: z.enum(["rent_agreement", "electricity_bill", "office_photo_with_board"]).optional(),
   addressProofUrl: z.string().optional(),
+  selfieUrl: z.string().optional(),
   rcUrl: z.string().optional(),
   insuranceUrl: z.string().optional(),
   fitnessUrl: z.string().optional(),
@@ -209,6 +210,7 @@ export default function CarrierOnboarding() {
       cinUrl: "",
       addressProofType: undefined,
       addressProofUrl: "",
+      selfieUrl: "",
       rcUrl: "",
       insuranceUrl: "",
       fitnessUrl: "",
@@ -249,6 +251,7 @@ export default function CarrierOnboarding() {
             gstinUrl: onboardingStatus.documents.find(d => d.documentType === "gstin")?.fileUrl || "",
             cinUrl: onboardingStatus.documents.find(d => d.documentType === "cin")?.fileUrl || "",
             addressProofUrl: onboardingStatus.documents.find(d => d.documentType === "address_proof")?.fileUrl || "",
+            selfieUrl: onboardingStatus.documents.find(d => d.documentType === "selfie")?.fileUrl || "",
             rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
             insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
             fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
@@ -316,6 +319,7 @@ export default function CarrierOnboarding() {
           cinUrl: onboardingStatus.documents.find(d => d.documentType === "cin")?.fileUrl || "",
           addressProofType: (onboardingStatus as any).addressProofType || undefined,
           addressProofUrl: onboardingStatus.documents.find(d => d.documentType === "address_proof")?.fileUrl || "",
+          selfieUrl: onboardingStatus.documents.find(d => d.documentType === "selfie")?.fileUrl || "",
           rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
           insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
           fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
@@ -1541,6 +1545,19 @@ export default function CarrierOnboarding() {
                           preferCamera={true}
                         />
                         <p className="text-xs text-muted-foreground mt-1">{t("onboarding.addressProofDesc")}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Selfie</label>
+                        <DocumentUploadWithCamera
+                          value={fleetForm.watch("selfieUrl") || ""}
+                          onChange={(val) => {
+                            fleetForm.setValue("selfieUrl", val);
+                            handleDocumentUpload("selfie", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="selfie"
+                          preferCamera={true}
+                        />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">{t("carrierOnboarding.rcDoc")} *</label>

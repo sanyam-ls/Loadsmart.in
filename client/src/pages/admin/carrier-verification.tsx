@@ -80,6 +80,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   tan_certificate: "TAN Certificate",
   tds_declaration: "TDS Declaration",
   cin: "CIN Certificate",
+  selfie: "Selfie",
   void_cheque: "Void Cheque / Cancelled Cheque",
 };
 

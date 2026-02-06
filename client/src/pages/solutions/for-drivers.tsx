@@ -97,11 +97,6 @@ export default function ForDriversPage() {
                 <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-signup-driver">
                   Start Earning Today
                 </Button>
-                <Button size="lg" variant="outline" className="text-white border-white/30 backdrop-blur-sm" onClick={() => {
-                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
-                }} data-testid="button-see-how-it-works">
-                  See How It Works
-                </Button>
               </div>
             </div>
             <div className="relative">

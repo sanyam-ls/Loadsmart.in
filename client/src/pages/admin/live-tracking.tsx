@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { 
   MapPin, Truck, Package, Phone, Mail, Building2, User, 
   Navigation, Clock, RefreshCw, Loader2, Eye,
-  Radio, CheckCircle, AlertCircle, ArrowRight, X, ChevronLeft, List
+  Radio, CheckCircle, AlertCircle, ArrowRight, X, ChevronLeft, List, Calendar
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -278,6 +278,7 @@ export default function AdminLiveTrackingPage() {
     inTransit: shipments.filter(s => s.currentStage === "in_transit").length,
     atPickup: shipments.filter(s => s.currentStage === "at_pickup").length,
     awaiting: shipments.filter(s => s.currentStage === "pickup_scheduled").length,
+    delivered: shipments.filter(s => s.currentStage === "delivered").length,
   };
 
   const handleSelectShipment = useCallback((shipment: TrackedShipment) => {
@@ -339,7 +340,7 @@ export default function AdminLiveTrackingPage() {
           <div className="flex items-center justify-between p-4 border-b">
             <div>
               <h1 className="text-lg font-bold">Live Tracking</h1>
-              <p className="text-xs text-muted-foreground">{stats.total} active shipments</p>
+              <p className="text-xs text-muted-foreground">{stats.total} shipments</p>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -367,32 +368,36 @@ export default function AdminLiveTrackingPage() {
           </div>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-4 gap-2 p-3 border-b bg-muted/30">
+          <div className="grid grid-cols-5 gap-1 p-3 border-b bg-muted/30">
             <div className="text-center">
               <p className="text-lg font-bold">{stats.total}</p>
               <p className="text-[10px] text-muted-foreground">Total</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-green-600">{stats.inTransit}</p>
-              <p className="text-[10px] text-muted-foreground">In Transit</p>
+              <p className="text-lg font-bold text-yellow-600">{stats.awaiting}</p>
+              <p className="text-[10px] text-muted-foreground">Awaiting</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-blue-600">{stats.atPickup}</p>
               <p className="text-[10px] text-muted-foreground">At Pickup</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-yellow-600">{stats.awaiting}</p>
-              <p className="text-[10px] text-muted-foreground">Awaiting</p>
+              <p className="text-lg font-bold text-green-600">{stats.inTransit}</p>
+              <p className="text-[10px] text-muted-foreground">In Transit</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-gray-600">{stats.delivered}</p>
+              <p className="text-[10px] text-muted-foreground">Delivered</p>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-2 p-3 border-b">
+          <div className="flex items-center flex-wrap gap-2 p-3 border-b">
             <Input
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 text-sm"
+              className="h-8 text-sm flex-1 min-w-[120px]"
               data-testid="input-search"
             />
             <Select value={stageFilter} onValueChange={setStageFilter}>
@@ -404,6 +409,7 @@ export default function AdminLiveTrackingPage() {
                 <SelectItem value="pickup_scheduled">Awaiting</SelectItem>
                 <SelectItem value="at_pickup">At Pickup</SelectItem>
                 <SelectItem value="in_transit">In Transit</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -417,7 +423,7 @@ export default function AdminLiveTrackingPage() {
             ) : filteredShipments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Truck className="h-12 w-12 mb-4 opacity-50" />
-                <p>No active shipments</p>
+                <p>No shipments found</p>
               </div>
             ) : (
               <div className="divide-y">
@@ -463,6 +469,12 @@ export default function AdminLiveTrackingPage() {
                           <div className="text-[11px] text-muted-foreground">
                             {shipment.truck?.registrationNumber || "No truck"} • {shipment.carrier?.companyName?.substring(0, 20) || "N/A"}
                           </div>
+                          {shipment.load?.pickupDate && (
+                            <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
+                              <Calendar className="h-3 w-3" />
+                              <span>Pickup: {format(new Date(shipment.load.pickupDate), "dd MMM yyyy")}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

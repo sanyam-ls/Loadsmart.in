@@ -2151,17 +2151,12 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get all shipments
+      // Get all shipments - show all shipments with pickup dates
       const allShipments = await storage.getAllShipments();
-      
-      // Filter to active shipments: exclude fully completed ones (delivered with OTP verified)
-      const activeShipments = allShipments.filter(s => 
-        !(s.status === "delivered" && s.endOtpVerified === true)
-      );
 
       // Enrich each shipment with full details
       const enrichedShipments = await Promise.all(
-        activeShipments.map(async (shipment) => {
+        allShipments.map(async (shipment) => {
           const load = await storage.getLoad(shipment.loadId);
           const shipper = load ? await storage.getUser(load.shipperId) : null;
           const carrier = await storage.getUser(shipment.carrierId);

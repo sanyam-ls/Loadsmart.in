@@ -65,9 +65,12 @@ const fleetFormSchema = z.object({
   carrierType: z.literal("enterprise"),
   // Identity tab fields
   aadhaarNumber: z.string().min(12, "Aadhaar must be 12 digits").max(12),
-  driverLicenseNumber: z.string().min(1, "Driver license is required"),
-  panNumber: z.string().min(10, "PAN must be 10 characters").max(10),
-  gstinNumber: z.string().optional(), // GSTIN is optional
+  driverLicenseNumber: z.string().optional(),
+  panNumber: z.string().optional(),
+  gstinNumber: z.string().optional(),
+  businessType: z.enum(["sole_proprietor", "registered_partnership", "non_registered_partnership", "other"]).optional(),
+  cinNumber: z.string().optional(),
+  partnerName: z.string().optional(),
   businessAddress: z.string().min(1, "Business address is required"),
   businessLocality: z.string().min(1, "Locality is required"),
   fleetSize: z.number().int().min(1),
@@ -81,6 +84,7 @@ const fleetFormSchema = z.object({
   licenseUrl: z.string().optional(),
   panUrl: z.string().optional(),
   gstinUrl: z.string().optional(),
+  cinUrl: z.string().optional(),
   addressProofType: z.enum(["rent_agreement", "electricity_bill", "office_photo_with_board"]).optional(),
   addressProofUrl: z.string().optional(),
   rcUrl: z.string().optional(),
@@ -112,6 +116,9 @@ interface OnboardingResponse {
   chassisNumber?: string;
   licensePlateNumber?: string;
   incorporationType?: string;
+  businessType?: string;
+  cinNumber?: string;
+  partnerName?: string;
   businessRegistrationNumber?: string;
   businessAddress?: string;
   businessLocality?: string;
@@ -185,6 +192,9 @@ export default function CarrierOnboarding() {
       driverLicenseNumber: "",
       panNumber: "",
       gstinNumber: "",
+      businessType: undefined,
+      cinNumber: "",
+      partnerName: "",
       businessAddress: "",
       businessLocality: "",
       fleetSize: 1,
@@ -196,6 +206,7 @@ export default function CarrierOnboarding() {
       licenseUrl: "",
       panUrl: "",
       gstinUrl: "",
+      cinUrl: "",
       addressProofType: undefined,
       addressProofUrl: "",
       rcUrl: "",
@@ -236,6 +247,7 @@ export default function CarrierOnboarding() {
             licenseUrl: onboardingStatus.documents.find(d => d.documentType === "license")?.fileUrl || "",
             panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
             gstinUrl: onboardingStatus.documents.find(d => d.documentType === "gstin")?.fileUrl || "",
+            cinUrl: onboardingStatus.documents.find(d => d.documentType === "cin")?.fileUrl || "",
             addressProofUrl: onboardingStatus.documents.find(d => d.documentType === "address_proof")?.fileUrl || "",
             rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
             insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
@@ -287,6 +299,9 @@ export default function CarrierOnboarding() {
           driverLicenseNumber: onboardingStatus.driverLicenseNumber || "",
           panNumber: onboardingStatus.panNumber || "",
           gstinNumber: onboardingStatus.gstinNumber || "",
+          businessType: (onboardingStatus.businessType as "sole_proprietor" | "registered_partnership" | "non_registered_partnership" | "other") || undefined,
+          cinNumber: onboardingStatus.cinNumber || "",
+          partnerName: onboardingStatus.partnerName || "",
           businessAddress: onboardingStatus.businessAddress || "",
           businessLocality: onboardingStatus.businessLocality || "",
           fleetSize: onboardingStatus.fleetSize || 1,
@@ -298,6 +313,7 @@ export default function CarrierOnboarding() {
           licenseUrl: onboardingStatus.documents.find(d => d.documentType === "license")?.fileUrl || "",
           panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
           gstinUrl: onboardingStatus.documents.find(d => d.documentType === "gstin")?.fileUrl || "",
+          cinUrl: onboardingStatus.documents.find(d => d.documentType === "cin")?.fileUrl || "",
           addressProofType: (onboardingStatus as any).addressProofType || undefined,
           addressProofUrl: onboardingStatus.documents.find(d => d.documentType === "address_proof")?.fileUrl || "",
           rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
@@ -496,21 +512,37 @@ export default function CarrierOnboarding() {
       const values = fleetForm.getValues();
       const missingFields: string[] = [];
       
-      // Check Identity tab fields
       if (!values.aadhaarNumber || values.aadhaarNumber.length < 12) {
         missingFields.push("Aadhaar Number (Identity tab)");
       }
-      if (!values.driverLicenseNumber) {
-        missingFields.push("Driver License Number (Identity tab)");
+      if (!values.businessType) {
+        missingFields.push("Business Type (Identity tab)");
       }
-      if (!values.panNumber || values.panNumber.length < 10) {
-        missingFields.push("PAN Number (Identity tab)");
+      if (values.businessType === "registered_partnership") {
+        if (!values.gstinNumber) {
+          missingFields.push("GSTIN Number (Identity tab)");
+        }
+      }
+      if (values.businessType === "non_registered_partnership") {
+        if (!values.driverLicenseNumber) {
+          missingFields.push("Partner Driver License Number (Identity tab)");
+        }
+        if (!values.panNumber || values.panNumber.length < 10) {
+          missingFields.push("Partner PAN Number (Identity tab)");
+        }
+        if (!values.partnerName) {
+          missingFields.push("Partner Name (Identity tab)");
+        }
+      }
+      if (values.businessType === "other") {
+        if (!values.cinNumber) {
+          missingFields.push("CIN Number (Identity tab)");
+        }
       }
       if (!values.businessAddress) {
         missingFields.push("Business Address (Identity tab)");
       }
       
-      // Check Vehicle tab fields
       if (!values.licensePlateNumber) {
         missingFields.push("License Plate Number (Vehicle tab)");
       }
@@ -1098,6 +1130,29 @@ export default function CarrierOnboarding() {
                   <CardContent className="space-y-4">
                     <FormField
                       control={fleetForm.control}
+                      name="businessType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Type *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""} disabled={!canEdit}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-fleet-business-type">
+                                <SelectValue placeholder="Select your business type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="sole_proprietor">Sole Proprietor</SelectItem>
+                              <SelectItem value="registered_partnership">Registered Partnership</SelectItem>
+                              <SelectItem value="non_registered_partnership">Non-Registered Partnership</SelectItem>
+                              <SelectItem value="other">Other (Pvt Ltd, LLP, etc.)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={fleetForm.control}
                       name="aadhaarNumber"
                       render={({ field }) => (
                         <FormItem>
@@ -1109,45 +1164,82 @@ export default function CarrierOnboarding() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={fleetForm.control}
-                      name="driverLicenseNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("carrierOnboarding.driverLicense")} *</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="DL-XXXXXXXXX" disabled={!canEdit} data-testid="input-fleet-license" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={fleetForm.control}
-                      name="panNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>PAN Number *</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="XXXXX0000X" maxLength={10} disabled={!canEdit} data-testid="input-fleet-pan" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={fleetForm.control}
-                      name="gstinNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>GSTIN Number (Optional)</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="22XXXXX0000X1Z5" maxLength={15} disabled={!canEdit} data-testid="input-fleet-gstin" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {fleetForm.watch("businessType") === "registered_partnership" && (
+                      <FormField
+                        control={fleetForm.control}
+                        name="gstinNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>GSTIN Number *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="22XXXXX0000X1Z5" maxLength={15} disabled={!canEdit} data-testid="input-fleet-gstin" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    {fleetForm.watch("businessType") === "non_registered_partnership" && (
+                      <>
+                        <div className="border-t pt-4 mt-4">
+                          <p className="text-sm font-medium mb-3">Partner Details (for one partner)</p>
+                        </div>
+                        <FormField
+                          control={fleetForm.control}
+                          name="partnerName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Partner Full Name *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Full name of partner" disabled={!canEdit} data-testid="input-fleet-partner-name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={fleetForm.control}
+                          name="driverLicenseNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Partner Driver License Number *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="DL-XXXXXXXXX" disabled={!canEdit} data-testid="input-fleet-license" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={fleetForm.control}
+                          name="panNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Partner PAN Number *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="XXXXX0000X" maxLength={10} disabled={!canEdit} data-testid="input-fleet-pan" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                    {fleetForm.watch("businessType") === "other" && (
+                      <FormField
+                        control={fleetForm.control}
+                        name="cinNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>CIN Number *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="U12345MH2020PTC123456" disabled={!canEdit} data-testid="input-fleet-cin" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                     <FormField
                       control={fleetForm.control}
                       name="businessAddress"
@@ -1365,42 +1457,62 @@ export default function CarrierOnboarding() {
                           documentType="aadhaar"
                         />
                       </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Driver's License *</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("licenseUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("licenseUrl", val);
-                            handleDocumentUpload("license", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="license"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">PAN Card *</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("panUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("panUrl", val);
-                            handleDocumentUpload("pan", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="pan_card"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">GSTIN Certificate (Optional)</label>
-                        <DocumentUploadWithCamera
-                          value={fleetForm.watch("gstinUrl") || ""}
-                          onChange={(val) => {
-                            fleetForm.setValue("gstinUrl", val);
-                            handleDocumentUpload("gstin", val);
-                          }}
-                          disabled={!canEdit}
-                          documentType="gstin_certificate"
-                        />
-                      </div>
+                      {fleetForm.watch("businessType") === "registered_partnership" && (
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">GSTIN Certificate *</label>
+                          <DocumentUploadWithCamera
+                            value={fleetForm.watch("gstinUrl") || ""}
+                            onChange={(val) => {
+                              fleetForm.setValue("gstinUrl", val);
+                              handleDocumentUpload("gstin", val);
+                            }}
+                            disabled={!canEdit}
+                            documentType="gstin_certificate"
+                          />
+                        </div>
+                      )}
+                      {fleetForm.watch("businessType") === "non_registered_partnership" && (
+                        <>
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">Partner Driver's License *</label>
+                            <DocumentUploadWithCamera
+                              value={fleetForm.watch("licenseUrl") || ""}
+                              onChange={(val) => {
+                                fleetForm.setValue("licenseUrl", val);
+                                handleDocumentUpload("license", val);
+                              }}
+                              disabled={!canEdit}
+                              documentType="license"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">Partner PAN Card *</label>
+                            <DocumentUploadWithCamera
+                              value={fleetForm.watch("panUrl") || ""}
+                              onChange={(val) => {
+                                fleetForm.setValue("panUrl", val);
+                                handleDocumentUpload("pan", val);
+                              }}
+                              disabled={!canEdit}
+                              documentType="pan_card"
+                            />
+                          </div>
+                        </>
+                      )}
+                      {fleetForm.watch("businessType") === "other" && (
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">CIN Certificate *</label>
+                          <DocumentUploadWithCamera
+                            value={fleetForm.watch("cinUrl") || ""}
+                            onChange={(val) => {
+                              fleetForm.setValue("cinUrl", val);
+                              handleDocumentUpload("cin", val);
+                            }}
+                            disabled={!canEdit}
+                            documentType="cin"
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="text-sm font-medium mb-2 block">TDS Declaration (Optional)</label>
                         <DocumentUploadWithCamera

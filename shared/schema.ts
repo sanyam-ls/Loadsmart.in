@@ -1411,6 +1411,9 @@ export const carrierVerifications = pgTable("carrier_verifications", {
   
   // Fleet/Company specific fields
   incorporationType: text("incorporation_type"), // pvt_ltd, llp, proprietorship, partnership
+  businessType: text("business_type"), // sole_proprietor, registered_partnership, non_registered_partnership, other
+  cinNumber: text("cin_number"),
+  partnerName: text("partner_name"),
   businessRegistrationNumber: text("business_registration_number"),
   businessAddress: text("business_address"),
   businessLocality: text("business_locality"),

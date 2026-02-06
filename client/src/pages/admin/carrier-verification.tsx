@@ -79,6 +79,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   gstin_certificate: "GSTIN Certificate",
   tan_certificate: "TAN Certificate",
   tds_declaration: "TDS Declaration",
+  cin: "CIN Certificate",
   void_cheque: "Void Cheque / Cancelled Cheque",
 };
 
@@ -159,6 +160,9 @@ interface CarrierVerification {
   chassisNumber?: string;
   licensePlateNumber?: string;
   incorporationType?: "pvt_ltd" | "llp" | "proprietorship" | "partnership";
+  businessType?: string;
+  cinNumber?: string;
+  partnerName?: string;
   businessRegistrationNumber?: string;
   businessAddress?: string;
   businessLocality?: string;
@@ -949,18 +953,46 @@ export default function CarrierVerificationPage() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <Label className="text-muted-foreground">Incorporation Type</Label>
+                        <Label className="text-muted-foreground">Business Type</Label>
                         <p className="font-medium">
-                          {selectedVerification.incorporationType === "pvt_ltd" ? "Private Limited" :
-                           selectedVerification.incorporationType === "llp" ? "LLP" :
-                           selectedVerification.incorporationType === "proprietorship" ? "Proprietorship" :
-                           selectedVerification.incorporationType === "partnership" ? "Partnership" : "Not provided"}
+                          {selectedVerification.businessType === "sole_proprietor" ? "Sole Proprietor" :
+                           selectedVerification.businessType === "registered_partnership" ? "Registered Partnership" :
+                           selectedVerification.businessType === "non_registered_partnership" ? "Non-Registered Partnership" :
+                           selectedVerification.businessType === "other" ? "Other (Pvt Ltd, LLP, etc.)" : "Not provided"}
                         </p>
                       </div>
                       <div>
-                        <Label className="text-muted-foreground">Business Registration Number</Label>
-                        <p className="font-medium">{selectedVerification.businessRegistrationNumber || "Not provided"}</p>
+                        <Label className="text-muted-foreground">Aadhaar Number</Label>
+                        <p className="font-medium">{selectedVerification.aadhaarNumber || "Not provided"}</p>
                       </div>
+                      {selectedVerification.businessType === "registered_partnership" && (
+                        <div>
+                          <Label className="text-muted-foreground">GSTIN Number</Label>
+                          <p className="font-medium">{selectedVerification.gstinNumber || "Not provided"}</p>
+                        </div>
+                      )}
+                      {selectedVerification.businessType === "non_registered_partnership" && (
+                        <>
+                          <div>
+                            <Label className="text-muted-foreground">Partner Name</Label>
+                            <p className="font-medium">{selectedVerification.partnerName || "Not provided"}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Partner Driver License</Label>
+                            <p className="font-medium">{selectedVerification.driverLicenseNumber || "Not provided"}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Partner PAN Number</Label>
+                            <p className="font-medium">{selectedVerification.panNumber || "Not provided"}</p>
+                          </div>
+                        </>
+                      )}
+                      {selectedVerification.businessType === "other" && (
+                        <div>
+                          <Label className="text-muted-foreground">CIN Number</Label>
+                          <p className="font-medium">{selectedVerification.cinNumber || "Not provided"}</p>
+                        </div>
+                      )}
                       <div>
                         <Label className="text-muted-foreground">Locality / Area</Label>
                         <p className="font-medium">{selectedVerification.businessLocality || "Not provided"}</p>
@@ -968,18 +1000,6 @@ export default function CarrierVerificationPage() {
                       <div className="col-span-2">
                         <Label className="text-muted-foreground">Business Address</Label>
                         <p className="font-medium">{selectedVerification.businessAddress || "Not provided"}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">PAN Number</Label>
-                        <p className="font-medium">{selectedVerification.panNumber || "Not provided"}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">GSTIN Number</Label>
-                        <p className="font-medium">{selectedVerification.gstinNumber || "Not provided"}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">TAN Number</Label>
-                        <p className="font-medium">{selectedVerification.tanNumber || "Not provided"}</p>
                       </div>
                       <div>
                         <Label className="text-muted-foreground">Fleet Size</Label>

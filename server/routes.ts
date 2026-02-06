@@ -10759,6 +10759,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
         licensePlateNumber: z.string().optional(),
         // Fleet/Company fields (also used by solo operators for address)
         incorporationType: z.enum(["pvt_ltd", "llp", "proprietorship", "partnership"]).optional(),
+        businessType: z.enum(["sole_proprietor", "registered_partnership", "non_registered_partnership", "other"]).optional(),
+        cinNumber: z.string().optional(),
+        partnerName: z.string().optional(),
         businessRegistrationNumber: z.string().optional(),
         businessAddress: z.string().optional(),
         businessLocality: z.string().optional(),
@@ -10863,6 +10866,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
         licensePlateNumber: z.string().optional(),
         // Fleet/Company fields (also used by solo operators for address)
         incorporationType: z.enum(["pvt_ltd", "llp", "proprietorship", "partnership"]).optional(),
+        businessType: z.enum(["sole_proprietor", "registered_partnership", "non_registered_partnership", "other"]).optional(),
+        cinNumber: z.string().optional(),
+        partnerName: z.string().optional(),
         businessRegistrationNumber: z.string().optional(),
         businessAddress: z.string().optional(),
         businessLocality: z.string().optional(),

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Package, Truck, FileText, CheckCircle, AlertCircle, Clock, Eye,
   Search, DollarSign, Phone, Building2, XCircle, PauseCircle,
-  User, MapPin, Filter
+  User, MapPin, Filter, ArrowDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -28,8 +28,15 @@ interface FinanceShipment {
     referenceNumber: number | null;
     pickupCity: string;
     pickupAddress: string;
+    pickupState: string | null;
+    pickupLocality: string | null;
+    pickupLandmark: string | null;
     dropoffCity: string;
     dropoffAddress: string;
+    dropoffState: string | null;
+    dropoffLocality: string | null;
+    dropoffLandmark: string | null;
+    dropoffBusinessName: string | null;
     materialType: string | null;
     weight: string;
     requiredTruckType: string | null;
@@ -319,18 +326,52 @@ export default function FinanceDashboard() {
                     <Package className="h-4 w-4" /> Load Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Route:</span> {selectedShipment.load?.pickupCity} to {selectedShipment.load?.dropoffCity}</p>
-                  <p><span className="text-muted-foreground">Material:</span> {selectedShipment.load?.materialType || "N/A"}</p>
-                  <p><span className="text-muted-foreground">Weight:</span> {selectedShipment.load?.weight || "N/A"} MT</p>
-                  <p><span className="text-muted-foreground">Truck Type:</span> {selectedShipment.load?.requiredTruckType?.replace(/_/g, " ") || "N/A"}</p>
-                  {selectedShipment.load?.adminFinalPrice && (
-                    <p><span className="text-muted-foreground">Price:</span> INR {parseFloat(selectedShipment.load.adminFinalPrice).toLocaleString()}</p>
-                  )}
-                  {selectedShipment.load?.pickupDate && (
-                    <p><span className="text-muted-foreground">Pickup:</span> {format(new Date(selectedShipment.load.pickupDate), "MMM d, yyyy")}</p>
-                  )}
-                  <p><span className="text-muted-foreground">Status:</span> <Badge variant="outline" className="text-xs ml-1">{selectedShipment.status}</Badge></p>
+                <CardContent className="text-sm space-y-3">
+                  <div className="space-y-2">
+                    <div className="p-2 bg-muted/50 rounded-lg space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium flex items-center gap-1"><MapPin className="h-3 w-3" /> Pickup</p>
+                      <p className="font-medium">{selectedShipment.load?.pickupAddress}</p>
+                      {selectedShipment.load?.pickupLocality && (
+                        <p className="text-muted-foreground">{selectedShipment.load.pickupLocality}</p>
+                      )}
+                      <p>{selectedShipment.load?.pickupCity}{selectedShipment.load?.pickupState ? `, ${selectedShipment.load.pickupState}` : ""}</p>
+                      {selectedShipment.load?.pickupLandmark && (
+                        <p className="text-xs text-muted-foreground">Landmark: {selectedShipment.load.pickupLandmark}</p>
+                      )}
+                      {selectedShipment.load?.pickupDate && (
+                        <p className="text-xs text-muted-foreground">{format(new Date(selectedShipment.load.pickupDate), "MMM d, yyyy")}</p>
+                      )}
+                    </div>
+                    <div className="flex justify-center">
+                      <ArrowDown className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="p-2 bg-muted/50 rounded-lg space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium flex items-center gap-1"><MapPin className="h-3 w-3" /> Dropoff</p>
+                      {selectedShipment.load?.dropoffBusinessName && (
+                        <p className="font-medium">{selectedShipment.load.dropoffBusinessName}</p>
+                      )}
+                      <p className={selectedShipment.load?.dropoffBusinessName ? "" : "font-medium"}>{selectedShipment.load?.dropoffAddress}</p>
+                      {selectedShipment.load?.dropoffLocality && (
+                        <p className="text-muted-foreground">{selectedShipment.load.dropoffLocality}</p>
+                      )}
+                      <p>{selectedShipment.load?.dropoffCity}{selectedShipment.load?.dropoffState ? `, ${selectedShipment.load.dropoffState}` : ""}</p>
+                      {selectedShipment.load?.dropoffLandmark && (
+                        <p className="text-xs text-muted-foreground">Landmark: {selectedShipment.load.dropoffLandmark}</p>
+                      )}
+                      {selectedShipment.load?.deliveryDate && (
+                        <p className="text-xs text-muted-foreground">{format(new Date(selectedShipment.load.deliveryDate), "MMM d, yyyy")}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1 pt-1 border-t">
+                    <p><span className="text-muted-foreground">Material:</span> {selectedShipment.load?.materialType || "N/A"}</p>
+                    <p><span className="text-muted-foreground">Weight:</span> {selectedShipment.load?.weight || "N/A"} MT</p>
+                    <p><span className="text-muted-foreground">Truck Type:</span> {selectedShipment.load?.requiredTruckType?.replace(/_/g, " ") || "N/A"}</p>
+                    {selectedShipment.load?.adminFinalPrice && (
+                      <p><span className="text-muted-foreground">Price:</span> INR {parseFloat(selectedShipment.load.adminFinalPrice).toLocaleString()}</p>
+                    )}
+                    <p><span className="text-muted-foreground">Status:</span> <Badge variant="outline" className="text-xs ml-1">{selectedShipment.status?.replace(/_/g, " ")}</Badge></p>
+                  </div>
                 </CardContent>
               </Card>
 

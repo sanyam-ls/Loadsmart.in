@@ -19,7 +19,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import newsFreepImg from "@assets/image_1770402429539.png";
 import newsTruckerImg from "@assets/image_1770402550795.png";
-import newsMliveImg from "@/assets/images/news-mlive.jpg";
+import newsMliveImg from "@assets/image_1770402663970.png";
 
 export default function PressRoomPage() {
   const [, setLocation] = useLocation();

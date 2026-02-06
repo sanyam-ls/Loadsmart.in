@@ -6,7 +6,8 @@ import {
   FileText, Navigation, Smartphone, CheckCircle2, Star, Route
 } from "lucide-react";
 import loadFeedImg from "@assets/Screenshot_2026-02-06_at_4.22.53_PM_1770375176508.png";
-import trackingImg from "../../assets/images/solution-drivers-tracking.png";
+import trackingImg from "@assets/Screenshot_2026-02-06_at_4.48.12_PM_1770376694148.png";
+import docsImg from "@assets/Screenshot_2026-02-06_at_4.48.57_PM_1770376738784.png";
 
 export default function ForDriversPage() {
   const [, setLocation] = useLocation();
@@ -154,7 +155,7 @@ export default function ForDriversPage() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="rounded-md overflow-hidden border border-gray-200 shadow-lg">
-              <img src={trackingImg} alt="LoadSmart driver tracking and earnings" className="w-full" />
+              <img src={trackingImg} alt="LoadSmart trip intelligence and active trips" className="w-full" />
             </div>
             <div>
               <h2 data-testid="text-tracking-title" className="text-3xl font-bold mb-6 text-gray-900">Track your trips. Watch your earnings grow.</h2>
@@ -166,9 +167,36 @@ export default function ForDriversPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-12 items-center mt-20">
+            <div className="order-2 lg:order-1">
+              <h2 data-testid="text-docs-title" className="text-3xl font-bold mb-6 text-gray-900">Share documents in real-time. Stay compliant effortlessly.</h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-[#1a3a8a] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Upload LR, e-way bills, POD, and invoices instantly</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-[#1a3a8a] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Shippers see documents the moment you share them</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-[#1a3a8a] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Automatic document status tracking and timestamps</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-[#1a3a8a] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Quick actions to mark deliveries complete</span>
+                </div>
+              </div>
               <Button className="mt-8 bg-[#1a3a8a] border-[#1a3a8a]" size="lg" onClick={() => setLocation("/auth")} data-testid="button-join-driver">
                 Join as a Driver
               </Button>
+            </div>
+            <div className="order-1 lg:order-2 rounded-md overflow-hidden border border-gray-200 shadow-lg">
+              <img src={docsImg} alt="LoadSmart real-time document sharing" className="w-full" />
             </div>
           </div>
         </div>

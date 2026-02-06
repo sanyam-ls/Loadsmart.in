@@ -15039,6 +15039,22 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   });
 
+  // GET /api/finance/reviews/all - Get all finance reviews (must be before :shipmentId route)
+  app.get("/api/finance/reviews/all", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const allReviews = await storage.getAllFinanceReviews();
+      res.json(allReviews);
+    } catch (error) {
+      console.error("Get all finance reviews error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // GET /api/finance/reviews/:shipmentId - Get finance review for a specific shipment
   app.get("/api/finance/reviews/:shipmentId", requireAuth, async (req, res) => {
     try {

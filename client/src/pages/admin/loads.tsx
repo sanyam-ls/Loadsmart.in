@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { connectMarketplace, disconnectMarketplace, onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { useAuth } from "@/lib/auth-context";
-import type { Load } from "@shared/schema";
+import type { Load, FinanceReview } from "@shared/schema";
 import { 
   Package, 
   Search, 
@@ -32,6 +32,9 @@ import {
   Gavel,
   Navigation,
   Building2,
+  FileCheck,
+  PauseCircle,
+  XCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,9 +143,24 @@ export default function AdminLoadsPage() {
   const { toast } = useToast();
   const { carriers, updateLoad, assignCarrier, updateLoadStatus, addActivity } = useAdminData();
   
+  const { user } = useAuth();
+
   const { data: apiLoads = [], isLoading: isLoadingLoads, refetch: refetchLoads } = useQuery<LoadWithBidCount[]>({
     queryKey: ['/api/loads'],
   });
+
+  const { data: financeReviews = [] } = useQuery<FinanceReview[]>({
+    queryKey: ['/api/finance/reviews/all'],
+    enabled: user?.role === "admin",
+  });
+
+  const financeReviewsByLoadId = useMemo(() => {
+    const map: Record<string, FinanceReview> = {};
+    financeReviews.forEach((r) => {
+      if (r.loadId) map[r.loadId] = r;
+    });
+    return map;
+  }, [financeReviews]);
   
   const loads: AdminLoad[] = useMemo(() => {
     return apiLoads.map(transformLoadToAdminLoad);
@@ -170,7 +188,6 @@ export default function AdminLoadsPage() {
   });
   const [selectedCarrierId, setSelectedCarrierId] = useState<string>("");
   const itemsPerPage = 10;
-  const { user } = useAuth();
 
   useEffect(() => {
     if (user?.id && user?.role === "admin") {
@@ -675,13 +692,14 @@ export default function AdminLoadsPage() {
                       <ArrowUpDown className="ml-2 h-3 w-3" />
                     </Button>
                   </TableHead>
+                  <TableHead>Review</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedLoads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       No loads found
                     </TableCell>
                   </TableRow>
@@ -773,6 +791,33 @@ export default function AdminLoadsPage() {
                         {load.bidCount > 0 && (
                           <div className="text-xs text-muted-foreground">{load.bidCount} bids</div>
                         )}
+                      </TableCell>
+                      <TableCell data-testid={`text-review-${load.loadId}`}>
+                        {(() => {
+                          const review = financeReviewsByLoadId[load._originalId || ""];
+                          if (!review) {
+                            return <span className="text-xs text-muted-foreground">-</span>;
+                          }
+                          const statusConfig: Record<string, { label: string; className: string }> = {
+                            pending: { label: "Pending", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" },
+                            approved: { label: "Approved", className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+                            on_hold: { label: "On Hold", className: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300" },
+                            rejected: { label: "Rejected", className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
+                          };
+                          const paymentConfig: Record<string, { label: string; className: string }> = {
+                            not_released: { label: "Not Released", className: "bg-muted text-muted-foreground" },
+                            processing: { label: "Processing", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" },
+                            released: { label: "Released", className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+                          };
+                          const s = statusConfig[review.status] || statusConfig.pending;
+                          const p = paymentConfig[review.paymentStatus || "not_released"] || paymentConfig.not_released;
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${s.className}`}>{s.label}</Badge>
+                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${p.className}`}>{p.label}</Badge>
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

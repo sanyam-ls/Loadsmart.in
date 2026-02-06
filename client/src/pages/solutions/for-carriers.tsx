@@ -6,7 +6,7 @@ import {
   FileText, Target, CheckCircle2, Layers, Settings, Award
 } from "lucide-react";
 import fleetImg from "@assets/Screenshot_2026-02-06_at_5.02.46_PM_1770377568893.png";
-import marketplaceImg from "../../assets/images/solution-carriers-marketplace.png";
+import marketplaceImg from "@assets/Screenshot_2026-02-06_at_5.04.53_PM_1770377694702.png";
 
 export default function ForCarriersPage() {
   const [, setLocation] = useLocation();

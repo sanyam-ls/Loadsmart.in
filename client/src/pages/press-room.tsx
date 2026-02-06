@@ -17,6 +17,9 @@ import {
   Globe, TrendingUp, Users, Truck, CheckCircle2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import newsFreepImg from "@/assets/images/news-freep.jpg";
+import newsTruckerImg from "@/assets/images/news-trucker.jpg";
+import newsMliveImg from "@/assets/images/news-mlive.jpg";
 
 export default function PressRoomPage() {
   const [, setLocation] = useLocation();
@@ -104,7 +107,8 @@ export default function PressRoomPage() {
       <section className="py-12">
         <div className="max-w-4xl mx-auto px-4">
           <h2 className="text-2xl font-bold text-gray-900 mb-6" data-testid="text-news-title">In the News</h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Article 1 - Detroit Free Press */}
             <a
               href="https://www.freep.com/story/money/business/2021/11/08/trucking-finance-company-roadex-livonia-jagdeep-dhillon-dispatch/6247650001/"
               target="_blank"
@@ -113,20 +117,95 @@ export default function PressRoomPage() {
               data-testid="link-news-freep"
             >
               <Card className="border-gray-200 hover-elevate transition-all">
-                <CardContent className="p-5 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="w-12 h-12 rounded-md bg-[#1a3a8a]/10 flex items-center justify-center shrink-0">
-                    <Newspaper className="h-6 w-6 text-[#1a3a8a]" />
-                  </div>
+                <CardContent className="p-5 flex flex-col md:flex-row gap-5">
+                  <img
+                    src={newsFreepImg}
+                    alt="RoadEx Detroit Free Press feature"
+                    className="w-full md:w-40 h-28 object-cover rounded-md shrink-0"
+                    data-testid="img-news-freep"
+                  />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-gray-500 mb-1">Detroit Free Press | November 8, 2021</div>
-                    <h3 className="font-semibold text-gray-900 mb-1 leading-snug">
-                      Trucking finance company RoadEx in Livonia founded by Jagdeep Dhillon offers dispatch services
+                    <div className="flex items-center gap-2 mb-2">
+                      <Newspaper className="h-4 w-4 text-[#1a3a8a]" />
+                      <span className="text-xs font-medium text-[#1a3a8a]">Detroit Free Press</span>
+                      <span className="text-xs text-gray-400">|</span>
+                      <span className="text-xs text-gray-500">8 Nov 2021</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2 leading-snug text-lg">
+                      Livonia trucking finance company's revenue doubles, fueled by pandemic shipping demands
                     </h3>
                     <p className="text-sm text-gray-600 leading-relaxed">
-                      How RoadEx founder Jagdeep Dhillon built a one-stop-shop for owner-operators, offering freight bill factoring, dispatch, and insurance services all in one place.
+                      RoadEx in Livonia is seeing its revenue nearly double and offers a mix of trucking financial services.
                     </p>
                   </div>
-                  <Globe className="h-5 w-5 text-gray-400 shrink-0 hidden md:block" />
+                </CardContent>
+              </Card>
+            </a>
+
+            {/* Article 2 - TheTrucker.com */}
+            <a
+              href="https://www.thetrucker.com/trucking-news/business/mother-daughter-team-works-to-serve-trucking-industry"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+              data-testid="link-news-trucker"
+            >
+              <Card className="border-gray-200 hover-elevate transition-all">
+                <CardContent className="p-5 flex flex-col md:flex-row gap-5">
+                  <img
+                    src={newsTruckerImg}
+                    alt="Mother daughter team at RoadEx"
+                    className="w-full md:w-40 h-28 object-cover rounded-md shrink-0"
+                    data-testid="img-news-trucker"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Newspaper className="h-4 w-4 text-[#1a3a8a]" />
+                      <span className="text-xs font-medium text-[#1a3a8a]">TheTrucker.com</span>
+                      <span className="text-xs text-gray-400">|</span>
+                      <span className="text-xs text-gray-500">11 Jan 2022</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2 leading-snug text-lg">
+                      Mother-daughter team works to serve trucking industry
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      JagDeep (Deep) Dhillon, founder and CEO of Livonia, Michigan-based RoadEx, and her daughter, Simran Dhillon, work together to provide vital services to the trucking industry.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </a>
+
+            {/* Article 3 - MLive.com */}
+            <a
+              href="https://www.mlive.com/public-interest/2022/10/supply-chain-chaos-kept-independent-truckers-busy-now-work-is-drying-up.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+              data-testid="link-news-mlive"
+            >
+              <Card className="border-gray-200 hover-elevate transition-all">
+                <CardContent className="p-5 flex flex-col md:flex-row gap-5">
+                  <img
+                    src={newsMliveImg}
+                    alt="Independent truckers supply chain"
+                    className="w-full md:w-40 h-28 object-cover rounded-md shrink-0"
+                    data-testid="img-news-mlive"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Newspaper className="h-4 w-4 text-[#1a3a8a]" />
+                      <span className="text-xs font-medium text-[#1a3a8a]">MLive.com</span>
+                      <span className="text-xs text-gray-400">|</span>
+                      <span className="text-xs text-gray-500">1 Oct 2022</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2 leading-snug text-lg">
+                      Supply chain chaos kept independent truckers busy. Now work is drying up.
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      Dropping rates, high fuel costs and the risk of expensive repairs are pushing some Michigan independent truck drivers off the road.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </a>

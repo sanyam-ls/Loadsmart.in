@@ -141,6 +141,14 @@ export default function LandingPage() {
             >
               Contact
             </Button>
+            <Button 
+              variant="ghost" 
+              className="text-sm text-gray-300" 
+              data-testid="nav-about"
+              onClick={() => setLocation("/about")}
+            >
+              About Us
+            </Button>
           </nav>
 
           {/* Right side actions */}

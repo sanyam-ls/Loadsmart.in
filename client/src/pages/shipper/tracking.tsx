@@ -313,9 +313,14 @@ function getCityCoords(cityName: string): [number, number] | null {
   if (indianCityCoords[normalizedCity]) {
     return indianCityCoords[normalizedCity];
   }
+  const cityPart = normalizedCity.split(",")[0].trim();
+  if (indianCityCoords[cityPart]) {
+    return indianCityCoords[cityPart];
+  }
   for (const [city, coords] of Object.entries(indianCityCoords)) {
-    if (normalizedCity.toLowerCase().includes(city.toLowerCase()) || 
-        city.toLowerCase().includes(normalizedCity.toLowerCase())) {
+    if (cityPart.toLowerCase().includes(city.toLowerCase()) || 
+        city.toLowerCase().includes(cityPart.toLowerCase()) ||
+        normalizedCity.toLowerCase().includes(city.toLowerCase())) {
       return coords;
     }
   }
@@ -387,12 +392,47 @@ function ShipmentMap({ shipment, onExpand, isFullscreen = false }: ShipmentMapPr
     : getCityCoords(load.dropoffCity);
   
   if (!pickupCoords || !dropoffCoords) {
+    const indiaCenter: [number, number] = [22.5, 78.9];
+    const availableCoord = pickupCoords || dropoffCoords;
+    const mapCenter = availableCoord || indiaCenter;
     return (
-      <div className="aspect-video rounded-lg bg-muted/50 flex items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Location data unavailable</p>
+      <div 
+        className={`relative ${isFullscreen ? 'h-[70vh]' : 'aspect-video'} rounded-lg overflow-hidden ${!isFullscreen && onExpand ? 'cursor-pointer' : ''}`}
+        onClick={!isFullscreen && onExpand ? onExpand : undefined}
+        data-testid="map-container"
+      >
+        <MapContainer
+          center={mapCenter}
+          zoom={availableCoord ? 8 : 5}
+          style={{ height: '100%', width: '100%', pointerEvents: isFullscreen ? 'auto' : 'none' }}
+          scrollWheelZoom={isFullscreen}
+          zoomControl={isFullscreen}
+          dragging={isFullscreen}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {availableCoord && (
+            <Marker position={availableCoord} icon={pickupCoords ? pickupIcon : dropoffIcon}>
+              <Popup>
+                <strong>{pickupCoords ? 'Pickup' : 'Dropoff'}</strong><br/>
+                {pickupCoords ? load.pickupCity : load.dropoffCity}
+              </Popup>
+            </Marker>
+          )}
+        </MapContainer>
+        <div className="absolute bottom-2 left-2 z-[999] bg-background/80 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-muted-foreground">
+          {availableCoord ? 'Partial route data available' : 'Awaiting location data'}
         </div>
+        {!isFullscreen && onExpand && (
+          <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
+            <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-md p-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+              <Maximize2 className="h-3 w-3" />
+              Click to expand
+            </div>
+          </div>
+        )}
       </div>
     );
   }

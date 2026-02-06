@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth-context";
-import { ChevronLeft, ChevronRight, ChevronDown, Search, UserCheck, LayoutGrid, Zap, ShieldCheck, MapPin, BarChart3, Smartphone } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Search, UserCheck, LayoutGrid, Zap, ShieldCheck, MapPin, BarChart3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,16 +141,6 @@ export default function LandingPage() {
             >
               Contact
             </Button>
-            <a
-              href="https://play.google.com/store"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors"
-              data-testid="nav-carrier-app"
-            >
-              <Smartphone className="h-4 w-4" />
-              Carrier App
-            </a>
           </nav>
 
           {/* Right side actions */}
@@ -539,6 +529,28 @@ export default function LandingPage() {
                 <li><a href="/contact" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-contact-us">Contact Us</a></li>
                 <li><a href="/auth" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-login">Login / Register</a></li>
               </ul>
+            </div>
+          </div>
+
+          {/* Carrier App Download */}
+          <div className="text-center mb-8">
+            <p className="text-gray-500 text-sm mb-4">Download the LoadSmart Carrier App</p>
+            <div className="flex justify-center">
+              <a
+                href="https://play.google.com/store"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-black border border-gray-600 rounded-lg px-4 py-2 flex items-center gap-2 hover:border-gray-400 transition-colors"
+                data-testid="badge-google-play"
+              >
+                <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current text-white">
+                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
+                </svg>
+                <div className="text-left">
+                  <p className="text-gray-400 text-[10px]">GET IT ON</p>
+                  <p className="text-white text-sm font-semibold">Google Play</p>
+                </div>
+              </a>
             </div>
           </div>
 

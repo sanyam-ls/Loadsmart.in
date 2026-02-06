@@ -1944,7 +1944,25 @@ export async function registerRoutes(
       if (!user) return res.status(401).json({ error: "Unauthorized" });
 
       const shipmentsList = await storage.getShipmentsByCarrier(user.id);
-      res.json(shipmentsList);
+      const enriched = await Promise.all(
+        shipmentsList.map(async (s) => {
+          const load = await storage.getLoad(s.loadId);
+          return {
+            ...s,
+            load: load ? {
+              pickupCity: load.pickupCity,
+              pickupAddress: load.pickupAddress,
+              dropoffCity: load.dropoffCity,
+              dropoffAddress: load.dropoffAddress,
+              weight: load.weight,
+              finalPrice: load.finalPrice,
+              pickupDate: load.pickupDate,
+              deliveryDate: load.deliveryDate,
+            } : undefined,
+          };
+        })
+      );
+      res.json(enriched);
     } catch (error) {
       console.error("Get shipments error:", error);
       res.status(500).json({ error: "Internal server error" });

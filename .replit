@@ -49,3 +49,6 @@ SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = "587"
 SMTP_SECURE = "false"
 SMTP_FROM = "info@loadsmart.in"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-f33d79cc-7433-405e-9121-4d9951a52eec"

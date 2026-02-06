@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { 
-  MapPin, ArrowRight, IndianRupee, Clock, 
+  MapPin, ArrowRight, IndianRupee, Clock, Calendar,
   Truck, Package, Navigation, CheckCircle2, AlertCircle
 } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,8 @@ interface Trip {
     dropoffAddress: string;
     weight: string;
     finalPrice: string;
+    pickupDate: string | null;
+    deliveryDate: string | null;
   };
 }
 
@@ -121,22 +124,44 @@ export default function SoloMyTrips() {
                     </div>
 
                     {trip.load && (
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <div className="font-medium text-sm">{trip.load.pickupCity}</div>
-                            <div className="text-xs text-muted-foreground">{trip.load.pickupAddress}</div>
+                      <>
+                        <div className="flex items-center gap-4 mb-3 flex-wrap">
+                          <div className="flex items-center gap-1.5 text-sm">
+                            <Calendar className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-muted-foreground">Pickup:</span>
+                            <span className="font-medium">
+                              {trip.load.pickupDate
+                                ? format(new Date(trip.load.pickupDate), "MMM d, yyyy")
+                                : "Not scheduled"}
+                            </span>
+                          </div>
+                          {trip.load.deliveryDate && (
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-muted-foreground">Delivery:</span>
+                              <span className="font-medium">
+                                {format(new Date(trip.load.deliveryDate), "MMM d, yyyy")}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <div className="font-medium text-sm">{trip.load.pickupCity}</div>
+                              <div className="text-xs text-muted-foreground">{trip.load.pickupAddress}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <div className="font-medium text-sm">{trip.load.dropoffCity}</div>
+                              <div className="text-xs text-muted-foreground">{trip.load.dropoffAddress}</div>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <div className="font-medium text-sm">{trip.load.dropoffCity}</div>
-                            <div className="text-xs text-muted-foreground">{trip.load.dropoffAddress}</div>
-                          </div>
-                        </div>
-                      </div>
+                      </>
                     )}
 
                     {trip.currentLocation && activeTab === "active" && (

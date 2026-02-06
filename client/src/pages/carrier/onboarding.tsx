@@ -78,7 +78,7 @@ const fleetFormSchema = z.object({
   partnerName: z.string().optional(),
   businessAddress: z.string().min(1, "Business address is required"),
   businessLocality: z.string().min(1, "Locality is required"),
-  fleetSize: z.number().int().min(1),
+  fleetSize: z.coerce.number().int().min(1),
   // Vehicle tab fields (for one truck)
   licensePlateNumber: z.string().min(1, "License plate is required"),
   chassisNumber: z.string().min(1, "Chassis number is required"),
@@ -1373,17 +1373,10 @@ export default function CarrierOnboarding() {
                               min={1} 
                               placeholder="Number of trucks in your fleet"
                               {...field} 
-                              value={field.value ?? ""}
+                              value={field.value === 0 ? "" : field.value}
                               onChange={(e) => {
                                 const val = e.target.value;
-                                if (val === "") {
-                                  field.onChange(0);
-                                } else {
-                                  const num = parseInt(val);
-                                  if (!isNaN(num)) {
-                                    field.onChange(num);
-                                  }
-                                }
+                                field.onChange(val === "" ? "" : parseInt(val) || "");
                               }}
                               disabled={!canEdit} 
                               data-testid="input-fleet-size" 

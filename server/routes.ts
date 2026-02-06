@@ -11038,13 +11038,15 @@ RESPOND IN THIS EXACT JSON FORMAT:
       const userInputSchema = z.object({
         documentType: z.enum([
           // Solo operator documents
-          "aadhaar", "license", "permit", "rc", "insurance", "fitness",
+          "aadhaar", "license", "permit", "rc", "insurance", "fitness", "selfie",
           // Fleet/Company documents
-          "incorporation", "trade_license", "address_proof", "pan", "gstin", "tan",
+          "incorporation", "trade_license", "address_proof", "pan", "gstin", "tan", "cin",
           // Bank documents
           "void_cheque",
           // Tax documents
           "tds_declaration",
+          // MSME / Udyam certificate
+          "msme_udyam", "msme", "udyam",
           // Legacy types
           "gst", "aadhar", "fleet_proof", "other"
         ]),

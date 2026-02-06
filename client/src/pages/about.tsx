@@ -22,6 +22,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import logoPath from "@assets/Purple_and_Black_Modern_Software_Developer_LinkedIn_Banner_1770118882647.png";
+import heroCollagePath from "@assets/image_1770401884913.png";
+import roadexLogoPath from "@assets/image_1770401901765.png";
 
 export default function AboutPage() {
   const { user } = useAuth();
@@ -179,7 +181,7 @@ export default function AboutPage() {
         </div>
       </header>
 
-      {/* Hero Section - Royal Blue */}
+      {/* Hero Section - Royal Blue with Collage */}
       <section
         className="relative overflow-hidden"
         style={{ backgroundColor: "#1a3a8f" }}
@@ -194,32 +196,49 @@ export default function AboutPage() {
             }}
           />
         </div>
-        <div className="relative z-10 container mx-auto px-4 py-20 md:py-28 text-center">
-          <h1
-            className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight"
-            data-testid="text-about-title"
-          >
-            About LoadSmart
-          </h1>
-          <p
-            className="text-lg md:text-xl text-blue-100 max-w-3xl mx-auto mb-4 leading-relaxed"
-            data-testid="text-about-subtitle"
-          >
-            India's digital freight marketplace, built to simplify logistics for
-            every shipper, carrier, and driver on the road.
-          </p>
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <span className="text-blue-200 text-sm">Powered by</span>
-            <a
-              href="https://www.roadex.com/about-us/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-white font-bold text-lg underline underline-offset-4 decoration-blue-300"
-              data-testid="link-roadex"
-            >
-              RoadEx
-              <ExternalLink className="h-4 w-4" />
-            </a>
+        <div className="relative z-10 container mx-auto px-4 py-16 md:py-24">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+            {/* Left - Text Content */}
+            <div className="text-left">
+              <h1
+                className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight"
+                data-testid="text-about-title"
+              >
+                About LoadSmart
+              </h1>
+              <p
+                className="text-lg md:text-xl text-blue-100 mb-6 leading-relaxed"
+                data-testid="text-about-subtitle"
+              >
+                India's digital freight marketplace, built to simplify logistics
+                for every shipper, carrier, and driver on the road.
+              </p>
+              <div className="flex items-center gap-3 mt-4">
+                <span className="text-blue-200 text-sm">Powered by</span>
+                <a
+                  href="https://www.roadex.com/about-us/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="link-roadex"
+                >
+                  <img
+                    src={roadexLogoPath}
+                    alt="RoadEx"
+                    className="h-10 md:h-12 w-auto object-contain brightness-0 invert"
+                    data-testid="img-roadex-logo"
+                  />
+                </a>
+              </div>
+            </div>
+            {/* Right - Collage Image */}
+            <div className="flex justify-center md:justify-end">
+              <img
+                src={heroCollagePath}
+                alt="LoadSmart - Trucking collage"
+                className="w-full max-w-md md:max-w-lg object-contain"
+                data-testid="img-hero-collage"
+              />
+            </div>
           </div>
         </div>
       </section>

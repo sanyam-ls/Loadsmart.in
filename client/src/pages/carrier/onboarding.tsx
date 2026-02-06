@@ -1373,7 +1373,18 @@ export default function CarrierOnboarding() {
                               min={1} 
                               placeholder="Number of trucks in your fleet"
                               {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              value={field.value ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "") {
+                                  field.onChange(0);
+                                } else {
+                                  const num = parseInt(val);
+                                  if (!isNaN(num)) {
+                                    field.onChange(num);
+                                  }
+                                }
+                              }}
                               disabled={!canEdit} 
                               data-testid="input-fleet-size" 
                             />

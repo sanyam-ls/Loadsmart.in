@@ -101,6 +101,39 @@ export default function PressRoomPage() {
         </div>
       </section>
 
+      <section className="py-12">
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6" data-testid="text-news-title">In the News</h2>
+          <div className="space-y-4">
+            <a
+              href="https://www.freep.com/story/money/business/2021/11/08/trucking-finance-company-roadex-livonia-jagdeep-dhillon-dispatch/6247650001/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+              data-testid="link-news-freep"
+            >
+              <Card className="border-gray-200 hover-elevate transition-all">
+                <CardContent className="p-5 flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-12 h-12 rounded-md bg-[#1a3a8a]/10 flex items-center justify-center shrink-0">
+                    <Newspaper className="h-6 w-6 text-[#1a3a8a]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-gray-500 mb-1">Detroit Free Press | November 8, 2021</div>
+                    <h3 className="font-semibold text-gray-900 mb-1 leading-snug">
+                      Trucking finance company RoadEx in Livonia founded by Jagdeep Dhillon offers dispatch services
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      How RoadEx founder Jagdeep Dhillon built a one-stop-shop for owner-operators, offering freight bill factoring, dispatch, and insurance services all in one place.
+                    </p>
+                  </div>
+                  <Globe className="h-5 w-5 text-gray-400 shrink-0 hidden md:block" />
+                </CardContent>
+              </Card>
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-gray-50 py-12">
         <div className="max-w-3xl mx-auto px-4">
           <div className="text-center mb-8">

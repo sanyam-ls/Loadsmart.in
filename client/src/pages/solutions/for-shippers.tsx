@@ -6,7 +6,7 @@ import {
   FileText, Eye, CheckCircle2, BarChart3, Bell, Zap
 } from "lucide-react";
 import dashboardImg from "@assets/Screenshot_2026-02-06_at_5.09.04_PM_1770377946011.png";
-import trackingImg from "../../assets/images/solution-shippers-tracking.png";
+import trackingImg from "@assets/Screenshot_2026-02-06_at_5.16.19_PM_1770378380816.png";
 
 export default function ForShippersPage() {
   const [, setLocation] = useLocation();

@@ -916,7 +916,7 @@ export default function AdminLiveTrackingPage() {
                     )}
 
                     <Textarea
-                      placeholder="Add a comment for this review decision..."
+                      placeholder="Add a comment for this finance decision..."
                       value={reviewComment}
                       onChange={(e) => setReviewComment(e.target.value)}
                       className="text-sm"

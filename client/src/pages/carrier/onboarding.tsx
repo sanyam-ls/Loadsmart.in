@@ -143,6 +143,7 @@ export default function CarrierOnboarding() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedDataRef = useRef<string>("");
+  const formInitializedRef = useRef<boolean>(false);
 
   const { data: onboardingStatus, isLoading: isLoadingStatus } = useQuery<OnboardingResponse>({
     queryKey: ["/api/carrier/onboarding"],
@@ -213,6 +214,44 @@ export default function CarrierOnboarding() {
       const type = onboardingStatus.carrierType === "enterprise" ? "enterprise" : "solo";
       setCarrierType(type);
       
+      if (formInitializedRef.current) {
+        if (type === "solo") {
+          const docFields: Partial<Record<string, string>> = {
+            aadhaarUrl: onboardingStatus.documents.find(d => d.documentType === "aadhaar")?.fileUrl || "",
+            licenseUrl: onboardingStatus.documents.find(d => d.documentType === "license")?.fileUrl || "",
+            panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
+            permitUrl: onboardingStatus.documents.find(d => d.documentType === "permit")?.fileUrl || "",
+            rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
+            insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
+            fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
+            tdsDeclarationUrl: onboardingStatus.documents.find(d => d.documentType === "tds_declaration")?.fileUrl || "",
+            voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
+          };
+          for (const [key, val] of Object.entries(docFields)) {
+            if (val) soloForm.setValue(key as any, val);
+          }
+        } else {
+          const docFields: Partial<Record<string, string>> = {
+            aadhaarUrl: onboardingStatus.documents.find(d => d.documentType === "aadhaar")?.fileUrl || "",
+            licenseUrl: onboardingStatus.documents.find(d => d.documentType === "license")?.fileUrl || "",
+            panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
+            gstinUrl: onboardingStatus.documents.find(d => d.documentType === "gstin")?.fileUrl || "",
+            addressProofUrl: onboardingStatus.documents.find(d => d.documentType === "address_proof")?.fileUrl || "",
+            rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
+            insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
+            fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
+            tdsDeclarationUrl: onboardingStatus.documents.find(d => d.documentType === "tds_declaration")?.fileUrl || "",
+            voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
+          };
+          for (const [key, val] of Object.entries(docFields)) {
+            if (val) fleetForm.setValue(key as any, val);
+          }
+        }
+        return;
+      }
+      
+      formInitializedRef.current = true;
+
       if (type === "solo") {
         const formData = {
           carrierType: "solo" as const,
@@ -240,7 +279,6 @@ export default function CarrierOnboarding() {
           voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
         };
         soloForm.reset(formData);
-        // Initialize lastSavedDataRef with loaded data to prevent unnecessary initial save
         lastSavedDataRef.current = JSON.stringify(formData);
       } else {
         const formData = {
@@ -273,7 +311,6 @@ export default function CarrierOnboarding() {
           voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
         };
         fleetForm.reset(formData);
-        // Initialize lastSavedDataRef with loaded data to prevent unnecessary initial save
         lastSavedDataRef.current = JSON.stringify(formData);
       }
     }

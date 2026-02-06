@@ -68,7 +68,7 @@ export default function ForCarriersPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Button>
-          <Button onClick={() => setLocation("/auth")} data-testid="button-get-started-carriers">
+          <Button onClick={() => setLocation("/auth?tab=register&role=carrier&carrierType=enterprise")} data-testid="button-get-started-carriers">
             Get Started
           </Button>
         </div>
@@ -94,7 +94,7 @@ export default function ForCarriersPage() {
                 intelligent matching. Stop chasing loads and let the best ones come to you.
               </p>
               <div className="flex items-center gap-4 flex-wrap">
-                <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-signup-carrier">
+                <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth?tab=register&role=carrier&carrierType=enterprise")} data-testid="button-signup-carrier">
                   Register Your Fleet
                 </Button>
               </div>
@@ -159,7 +159,7 @@ export default function ForCarriersPage() {
                   </div>
                 ))}
               </div>
-              <Button className="mt-8 bg-[#1a3a8a] border-[#1a3a8a]" size="lg" onClick={() => setLocation("/auth")} data-testid="button-join-carrier">
+              <Button className="mt-8 bg-[#1a3a8a] border-[#1a3a8a]" size="lg" onClick={() => setLocation("/auth?tab=register&role=carrier&carrierType=enterprise")} data-testid="button-join-carrier">
                 Start Bidding on Loads
               </Button>
             </div>
@@ -177,7 +177,7 @@ export default function ForCarriersPage() {
             Register your fleet, add your trucks and drivers, and start receiving 
             load recommendations matched to your capabilities. It takes minutes to get started.
           </p>
-          <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-cta-carrier">
+          <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth?tab=register&role=carrier&carrierType=enterprise")} data-testid="button-cta-carrier">
             Create Your Fleet Account
           </Button>
         </div>

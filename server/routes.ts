@@ -14876,8 +14876,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
   app.get("/api/finance/shipments", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || (user.role !== "finance" && user.role !== "admin")) {
-        return res.status(403).json({ error: "Finance access required" });
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       const allShipments = await storage.getAllShipments();
@@ -14958,8 +14958,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
   app.post("/api/finance/reviews", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || (user.role !== "finance" && user.role !== "admin")) {
-        return res.status(403).json({ error: "Finance access required" });
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       const reviewSchema = z.object({
@@ -15011,8 +15011,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
   app.patch("/api/finance/reviews/:id/payment", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || (user.role !== "finance" && user.role !== "admin")) {
-        return res.status(403).json({ error: "Finance access required" });
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       const paymentSchema = z.object({
@@ -15043,8 +15043,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
   app.get("/api/finance/reviews/:shipmentId", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || (user.role !== "finance" && user.role !== "admin")) {
-        return res.status(403).json({ error: "Finance or admin access required" });
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       const review = await storage.getFinanceReviewByShipment(req.params.shipmentId);

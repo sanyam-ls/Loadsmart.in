@@ -204,7 +204,7 @@ function AppContent() {
   }
 
   if (location === "/auth" && user) {
-    const defaultRoute = user.role === "admin" ? "/admin" : user.role === "carrier" ? "/carrier" : user.role === "finance" ? "/finance" : "/shipper";
+    const defaultRoute = user.role === "admin" ? "/admin" : user.role === "carrier" ? "/carrier" : "/shipper";
     return <Redirect to={defaultRoute} />;
   }
 
@@ -240,7 +240,7 @@ function AppContent() {
             <Suspense fallback={<PageLoader />}>
               <Switch>
                 <Route path="/" component={() => {
-                  const defaultRoute = user?.role === "admin" ? "/admin" : user?.role === "carrier" ? "/carrier" : user?.role === "finance" ? "/finance" : "/shipper";
+                  const defaultRoute = user?.role === "admin" ? "/admin" : user?.role === "carrier" ? "/carrier" : "/shipper";
                   return <Redirect to={defaultRoute} />;
                 }} />
                 
@@ -299,9 +299,6 @@ function AppContent() {
                 <Route path="/admin/otp-queue" component={AdminOtpQueuePage} />
                 <Route path="/admin/live-tracking" component={AdminLiveTrackingPage} />
                 <Route path="/admin/finance-review" component={FinanceDashboard} />
-                
-                <Route path="/finance" component={FinanceDashboard} />
-                <Route path="/finance/review" component={FinanceDashboard} />
                 
                 <Route path="/settings" component={SettingsPage} />
                 

@@ -5,7 +5,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // User roles enum
-export const userRoles = ["shipper", "carrier", "admin", "finance"] as const;
+export const userRoles = ["shipper", "carrier", "admin"] as const;
 export type UserRole = typeof userRoles[number];
 
 // Load status enum - Admin-Managed Freight Exchange Lifecycle (12 Core States + Terminal)

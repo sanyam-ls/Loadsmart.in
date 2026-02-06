@@ -49,7 +49,7 @@ const registerSchema = z.object({
   email: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
-  role: z.enum(["shipper", "carrier", "admin", "finance"]),
+  role: z.enum(["shipper", "carrier", "admin"]),
   companyName: z.string().optional(),
   companyPhone: z.string().optional(),
   city: z.string().optional(),
@@ -848,7 +848,6 @@ export default function AuthPage() {
                                 <SelectItem value="shipper">{t("roles.shipper")}</SelectItem>
                                 <SelectItem value="carrier">{t("roles.carrier")}</SelectItem>
                                 <SelectItem value="admin">{t("roles.admin")}</SelectItem>
-                                <SelectItem value="finance">Finance</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />

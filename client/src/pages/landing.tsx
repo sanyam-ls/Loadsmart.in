@@ -529,6 +529,7 @@ export default function LandingPage() {
               <ul className="space-y-2">
                 <li><a href="/faqs" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-faqs">FAQs</a></li>
                 <li><a href="/press-room" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-press-room">Press Room</a></li>
+                <li><a href="/about" className="text-gray-400 hover:text-white text-sm transition-colors" data-testid="link-about-us">About Us</a></li>
               </ul>
             </div>
             <div>

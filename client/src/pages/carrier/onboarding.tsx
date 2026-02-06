@@ -38,6 +38,7 @@ const soloFormSchema = z.object({
   carrierType: z.literal("solo"),
   aadhaarNumber: z.string().min(12, "Aadhaar must be 12 digits").max(12),
   driverLicenseNumber: z.string().min(1, "License number is required"),
+  panNumber: z.string().min(10, "PAN must be 10 characters").max(10),
   permitType: z.enum(["national", "domestic"]),
   uniqueRegistrationNumber: z.string().optional(),
   chassisNumber: z.string().min(1, "Chassis number is required"),
@@ -46,6 +47,7 @@ const soloFormSchema = z.object({
   businessLocality: z.string().min(1, "Locality is required"),
   aadhaarUrl: z.string().optional(),
   licenseUrl: z.string().optional(),
+  panUrl: z.string().optional(),
   permitUrl: z.string().optional(),
   rcUrl: z.string().optional(),
   insuranceUrl: z.string().optional(),
@@ -152,6 +154,7 @@ export default function CarrierOnboarding() {
       carrierType: "solo",
       aadhaarNumber: "",
       driverLicenseNumber: "",
+      panNumber: "",
       permitType: "national",
       uniqueRegistrationNumber: "",
       chassisNumber: "",
@@ -160,6 +163,7 @@ export default function CarrierOnboarding() {
       businessLocality: "",
       aadhaarUrl: "",
       licenseUrl: "",
+      panUrl: "",
       permitUrl: "",
       rcUrl: "",
       insuranceUrl: "",
@@ -214,6 +218,7 @@ export default function CarrierOnboarding() {
           carrierType: "solo" as const,
           aadhaarNumber: onboardingStatus.aadhaarNumber || "",
           driverLicenseNumber: onboardingStatus.driverLicenseNumber || "",
+          panNumber: onboardingStatus.panNumber || "",
           permitType: (onboardingStatus.permitType as "national" | "domestic") || "national",
           uniqueRegistrationNumber: onboardingStatus.uniqueRegistrationNumber || "",
           chassisNumber: onboardingStatus.chassisNumber || "",
@@ -222,6 +227,7 @@ export default function CarrierOnboarding() {
           businessLocality: onboardingStatus.businessLocality || "",
           aadhaarUrl: onboardingStatus.documents.find(d => d.documentType === "aadhaar")?.fileUrl || "",
           licenseUrl: onboardingStatus.documents.find(d => d.documentType === "license")?.fileUrl || "",
+          panUrl: onboardingStatus.documents.find(d => d.documentType === "pan")?.fileUrl || "",
           permitUrl: onboardingStatus.documents.find(d => d.documentType === "permit")?.fileUrl || "",
           rcUrl: onboardingStatus.documents.find(d => d.documentType === "rc")?.fileUrl || "",
           insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
@@ -411,6 +417,9 @@ export default function CarrierOnboarding() {
       }
       if (!values.driverLicenseNumber) {
         missingFields.push("Driver License Number (Identity tab)");
+      }
+      if (!values.panNumber || values.panNumber.length < 10) {
+        missingFields.push("PAN Number (Identity tab)");
       }
       if (!values.permitType) {
         missingFields.push("Permit Type (Vehicle tab)");
@@ -722,6 +731,19 @@ export default function CarrierOnboarding() {
                     />
                     <FormField
                       control={soloForm.control}
+                      name="panNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>PAN Number *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="XXXXX0000X" maxLength={10} disabled={!canEdit} data-testid="input-solo-pan" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={soloForm.control}
                       name="businessAddress"
                       render={({ field }) => (
                         <FormItem>
@@ -926,6 +948,18 @@ export default function CarrierOnboarding() {
                           }}
                           disabled={!canEdit}
                           documentType="driver_license"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">PAN Card *</label>
+                        <DocumentUploadWithCamera
+                          value={soloForm.watch("panUrl") || ""}
+                          onChange={(val) => {
+                            soloForm.setValue("panUrl", val);
+                            handleDocumentUpload("pan", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="pan_card"
                         />
                       </div>
                       <div>

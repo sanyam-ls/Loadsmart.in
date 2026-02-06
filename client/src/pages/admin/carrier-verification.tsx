@@ -33,6 +33,7 @@ import { format } from "date-fns";
 const SOLO_DOCUMENT_REQUIREMENTS = [
   { type: "aadhaar_card", name: "Aadhaar Card", formats: "JPG / PNG / PDF" },
   { type: "driver_license", name: "Driver License", formats: "JPG / PNG / PDF" },
+  { type: "pan_card", name: "PAN Card", formats: "JPG / PNG / PDF" },
   { type: "permit_document", name: "Permit Document (National/Domestic)", formats: "JPG / PNG / PDF" },
   { type: "rc", name: "RC (Registration Certificate)", formats: "JPG / PNG / PDF" },
   { type: "insurance_certificate", name: "Insurance Certificate", formats: "JPG / PNG / PDF" },
@@ -901,6 +902,10 @@ export default function CarrierVerificationPage() {
                       <div>
                         <Label className="text-muted-foreground">Driver License Number</Label>
                         <p className="font-medium">{selectedVerification.driverLicenseNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">PAN Number</Label>
+                        <p className="font-medium">{selectedVerification.panNumber || "Not provided"}</p>
                       </div>
                       <div>
                         <Label className="text-muted-foreground">Permit Type</Label>

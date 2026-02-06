@@ -2342,6 +2342,19 @@ export async function registerRoutes(
               isVerified: doc.isVerified,
               createdAt: doc.createdAt,
             })),
+            financeReview: await (async () => {
+              const review = await storage.getFinanceReviewByShipment(shipment.id);
+              if (!review) return null;
+              const reviewer = await storage.getUser(review.reviewerId);
+              return {
+                id: review.id,
+                status: review.status,
+                comment: review.comment,
+                paymentStatus: review.paymentStatus,
+                reviewedAt: review.reviewedAt,
+                reviewerName: reviewer?.username || "Unknown",
+              };
+            })(),
           };
         })
       );
@@ -14854,6 +14867,199 @@ RESPOND IN THIS EXACT JSON FORMAT:
     } catch (error: any) {
       console.error("Get recommended loads error:", error);
       res.status(500).json({ error: "Failed to get recommended loads" });
+    }
+  });
+
+  // ==================== FINANCE ROUTES ====================
+
+  // GET /api/finance/shipments - Get all shipments with docs for finance review
+  app.get("/api/finance/shipments", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "finance" && user.role !== "admin")) {
+        return res.status(403).json({ error: "Finance access required" });
+      }
+
+      const allShipments = await storage.getAllShipments();
+
+      const enrichedShipments = await Promise.all(
+        allShipments.map(async (shipment) => {
+          const load = await storage.getLoad(shipment.loadId);
+          const carrier = await storage.getUser(shipment.carrierId);
+          const carrierProfile = carrier ? await storage.getCarrierProfile(carrier.id) : null;
+          const shipper = load ? await storage.getUser(load.shipperId) : null;
+          const documents = await storage.getDocumentsByShipment(shipment.id);
+          const financeReview = await storage.getFinanceReviewByShipment(shipment.id);
+          const reviewer = financeReview?.reviewerId ? await storage.getUser(financeReview.reviewerId) : null;
+
+          return {
+            id: shipment.id,
+            loadId: shipment.loadId,
+            status: shipment.status,
+            createdAt: shipment.createdAt,
+            startedAt: shipment.startedAt,
+            completedAt: shipment.completedAt,
+            load: load ? {
+              id: load.id,
+              referenceNumber: load.shipperLoadNumber || load.adminReferenceNumber,
+              pickupCity: load.pickupCity,
+              pickupAddress: load.pickupAddress,
+              dropoffCity: load.dropoffCity,
+              dropoffAddress: load.dropoffAddress,
+              materialType: load.materialType,
+              weight: load.weight,
+              requiredTruckType: load.requiredTruckType,
+              pickupDate: load.pickupDate,
+              deliveryDate: load.deliveryDate,
+              adminFinalPrice: load.adminFinalPrice,
+            } : null,
+            shipper: shipper ? {
+              id: shipper.id,
+              username: shipper.username,
+              companyName: load?.shipperCompanyName || shipper.companyName || shipper.username,
+              phone: shipper.phone,
+            } : null,
+            carrier: carrier ? {
+              id: carrier.id,
+              username: carrier.username,
+              companyName: carrierProfile?.companyName || carrier.companyName || carrier.username,
+              phone: carrier.phone,
+              carrierType: carrierProfile?.carrierType || "solo",
+            } : null,
+            documents: documents.map(doc => ({
+              id: doc.id,
+              documentType: doc.documentType,
+              fileName: doc.fileName,
+              fileUrl: doc.fileUrl,
+              fileSize: doc.fileSize,
+              isVerified: doc.isVerified,
+              createdAt: doc.createdAt,
+            })),
+            financeReview: financeReview ? {
+              id: financeReview.id,
+              status: financeReview.status,
+              comment: financeReview.comment,
+              paymentStatus: financeReview.paymentStatus,
+              reviewedAt: financeReview.reviewedAt,
+              reviewerName: reviewer?.username || "Unknown",
+            } : null,
+          };
+        })
+      );
+
+      res.json(enrichedShipments);
+    } catch (error) {
+      console.error("Get finance shipments error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/finance/reviews - Create or update a finance review for a shipment
+  app.post("/api/finance/reviews", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "finance" && user.role !== "admin")) {
+        return res.status(403).json({ error: "Finance access required" });
+      }
+
+      const reviewSchema = z.object({
+        shipmentId: z.string().min(1),
+        loadId: z.string().min(1),
+        status: z.enum(["pending", "approved", "on_hold", "rejected"]),
+        comment: z.string().optional(),
+        paymentStatus: z.enum(["not_released", "processing", "released"]).optional(),
+      });
+
+      const parsed = reviewSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid review data", details: parsed.error.issues });
+      }
+
+      const { shipmentId, loadId, status, comment, paymentStatus } = parsed.data;
+
+      const existing = await storage.getFinanceReviewByShipment(shipmentId);
+
+      if (existing) {
+        const updated = await storage.updateFinanceReview(existing.id, {
+          status,
+          comment: comment || existing.comment,
+          paymentStatus: paymentStatus || existing.paymentStatus,
+          reviewerId: user.id,
+          reviewedAt: new Date(),
+        });
+        return res.json(updated);
+      }
+
+      const review = await storage.createFinanceReview({
+        shipmentId,
+        loadId,
+        reviewerId: user.id,
+        status,
+        comment: comment || null,
+        paymentStatus: paymentStatus || "not_released",
+        reviewedAt: new Date(),
+      });
+
+      res.json(review);
+    } catch (error) {
+      console.error("Create finance review error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/finance/reviews/:id/payment - Update payment status
+  app.patch("/api/finance/reviews/:id/payment", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "finance" && user.role !== "admin")) {
+        return res.status(403).json({ error: "Finance access required" });
+      }
+
+      const paymentSchema = z.object({
+        paymentStatus: z.enum(["not_released", "processing", "released"]),
+      });
+      const parsed = paymentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid payment status", details: parsed.error.issues });
+      }
+      const { paymentStatus } = parsed.data;
+
+      const updated = await storage.updateFinanceReview(req.params.id, {
+        paymentStatus,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "Finance review not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Update payment status error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/finance/reviews/:shipmentId - Get finance review for a specific shipment
+  app.get("/api/finance/reviews/:shipmentId", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "finance" && user.role !== "admin")) {
+        return res.status(403).json({ error: "Finance or admin access required" });
+      }
+
+      const review = await storage.getFinanceReviewByShipment(req.params.shipmentId);
+      if (!review) {
+        return res.json(null);
+      }
+
+      const reviewer = await storage.getUser(review.reviewerId);
+      res.json({
+        ...review,
+        reviewerName: reviewer?.username || "Unknown",
+      });
+    } catch (error) {
+      console.error("Get finance review error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 

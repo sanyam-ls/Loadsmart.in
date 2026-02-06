@@ -84,6 +84,8 @@ const AdminOtpQueuePage = lazy(() => import("@/pages/admin").then(m => ({ defaul
 const AdminNearbyTrucksPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminNearbyTrucksPage })));
 const AdminPostLoadPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPostLoadPage })));
 
+const FinanceDashboard = lazy(() => import("@/pages/finance/dashboard"));
+
 function PageLoader() {
   return (
     <div className="flex h-full items-center justify-center min-h-[200px] bg-background">
@@ -202,7 +204,7 @@ function AppContent() {
   }
 
   if (location === "/auth" && user) {
-    const defaultRoute = user.role === "admin" ? "/admin" : user.role === "carrier" ? "/carrier" : "/shipper";
+    const defaultRoute = user.role === "admin" ? "/admin" : user.role === "carrier" ? "/carrier" : user.role === "finance" ? "/finance" : "/shipper";
     return <Redirect to={defaultRoute} />;
   }
 
@@ -238,7 +240,7 @@ function AppContent() {
             <Suspense fallback={<PageLoader />}>
               <Switch>
                 <Route path="/" component={() => {
-                  const defaultRoute = user?.role === "admin" ? "/admin" : user?.role === "carrier" ? "/carrier" : "/shipper";
+                  const defaultRoute = user?.role === "admin" ? "/admin" : user?.role === "carrier" ? "/carrier" : user?.role === "finance" ? "/finance" : "/shipper";
                   return <Redirect to={defaultRoute} />;
                 }} />
                 
@@ -296,6 +298,9 @@ function AppContent() {
                 <Route path="/admin/invoices" component={AdminInvoicesPage} />
                 <Route path="/admin/otp-queue" component={AdminOtpQueuePage} />
                 <Route path="/admin/live-tracking" component={AdminLiveTrackingPage} />
+                
+                <Route path="/finance" component={FinanceDashboard} />
+                <Route path="/finance/review" component={FinanceDashboard} />
                 
                 <Route path="/settings" component={SettingsPage} />
                 

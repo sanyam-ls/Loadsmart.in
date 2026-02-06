@@ -5,7 +5,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // User roles enum
-export const userRoles = ["shipper", "carrier", "admin"] as const;
+export const userRoles = ["shipper", "carrier", "admin", "finance"] as const;
 export type UserRole = typeof userRoles[number];
 
 // Load status enum - Admin-Managed Freight Exchange Lifecycle (12 Core States + Terminal)
@@ -2052,3 +2052,44 @@ export const insertContactSubmissionSchema = createInsertSchema(contactSubmissio
 });
 export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSchema>;
 export type ContactSubmission = typeof contactSubmissions.$inferSelect;
+
+// Finance review statuses
+export const financeReviewStatuses = ["pending", "approved", "on_hold", "rejected"] as const;
+export type FinanceReviewStatus = typeof financeReviewStatuses[number];
+
+// Finance payment statuses
+export const financePaymentStatuses = ["not_released", "released", "processing"] as const;
+export type FinancePaymentStatus = typeof financePaymentStatuses[number];
+
+// Finance Reviews table - tracks finance team decisions on shipment documents
+export const financeReviews = pgTable("finance_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  shipmentId: varchar("shipment_id").notNull().references(() => shipments.id),
+  loadId: varchar("load_id").notNull().references(() => loads.id),
+  reviewerId: varchar("reviewer_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"),
+  comment: text("comment"),
+  paymentStatus: text("payment_status").notNull().default("not_released"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const financeReviewsRelations = relations(financeReviews, ({ one }) => ({
+  shipment: one(shipments, {
+    fields: [financeReviews.shipmentId],
+    references: [shipments.id],
+  }),
+  load: one(loads, {
+    fields: [financeReviews.loadId],
+    references: [loads.id],
+  }),
+  reviewer: one(users, {
+    fields: [financeReviews.reviewerId],
+    references: [users.id],
+  }),
+}));
+
+export const insertFinanceReviewSchema = createInsertSchema(financeReviews).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertFinanceReview = z.infer<typeof insertFinanceReviewSchema>;
+export type FinanceReview = typeof financeReviews.$inferSelect;

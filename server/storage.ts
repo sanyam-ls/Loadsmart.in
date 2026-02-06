@@ -10,6 +10,7 @@ import {
   otpVerifications, otpRequests,
   shipperCreditProfiles, shipperCreditEvaluations,
   shipperOnboardingRequests,
+  financeReviews,
   validStateTransitions,
   type User, type InsertUser,
   type Truck, type InsertTruck,
@@ -45,6 +46,7 @@ import {
   type ShipperCreditProfile, type InsertShipperCreditProfile,
   type ShipperCreditEvaluation, type InsertShipperCreditEvaluation,
   type ShipperOnboardingRequest, type InsertShipperOnboardingRequest,
+  type FinanceReview, type InsertFinanceReview,
   type LoadStatus,
 } from "@shared/schema";
 
@@ -281,6 +283,13 @@ export interface IStorage {
   getAllShipperOnboardingRequests(): Promise<ShipperOnboardingRequest[]>;
   getShipperOnboardingRequestsByStatus(status: string): Promise<ShipperOnboardingRequest[]>;
   updateShipperOnboardingRequest(id: string, updates: Partial<ShipperOnboardingRequest>): Promise<ShipperOnboardingRequest | undefined>;
+
+  // Finance Review methods
+  getFinanceReview(id: string): Promise<FinanceReview | undefined>;
+  getFinanceReviewByShipment(shipmentId: string): Promise<FinanceReview | undefined>;
+  getAllFinanceReviews(): Promise<FinanceReview[]>;
+  createFinanceReview(review: InsertFinanceReview): Promise<FinanceReview>;
+  updateFinanceReview(id: string, updates: Partial<FinanceReview>): Promise<FinanceReview | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2010,6 +2019,33 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db.update(shipperOnboardingRequests)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(shipperOnboardingRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getFinanceReview(id: string): Promise<FinanceReview | undefined> {
+    const [review] = await db.select().from(financeReviews).where(eq(financeReviews.id, id));
+    return review;
+  }
+
+  async getFinanceReviewByShipment(shipmentId: string): Promise<FinanceReview | undefined> {
+    const [review] = await db.select().from(financeReviews).where(eq(financeReviews.shipmentId, shipmentId));
+    return review;
+  }
+
+  async getAllFinanceReviews(): Promise<FinanceReview[]> {
+    return db.select().from(financeReviews).orderBy(desc(financeReviews.createdAt));
+  }
+
+  async createFinanceReview(review: InsertFinanceReview): Promise<FinanceReview> {
+    const [created] = await db.insert(financeReviews).values(review).returning();
+    return created;
+  }
+
+  async updateFinanceReview(id: string, updates: Partial<FinanceReview>): Promise<FinanceReview | undefined> {
+    const [updated] = await db.update(financeReviews)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(financeReviews.id, id))
       .returning();
     return updated;
   }

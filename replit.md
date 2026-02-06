@@ -2,7 +2,7 @@
 
 ## Overview
 
-Load Smart is a full-stack logistics marketplace connecting shippers with carriers, featuring Shipper, Carrier, and Admin roles. It aims to streamline freight transportation through an "Admin-as-Mediator" pricing model, session-based authentication, real-time UI, and a comprehensive design system, enhancing efficiency and transparency in freight management. The platform includes an AI Concierge, a Solo Carrier Portal, dual marketplace bidding, real-time tracking, and document sharing.
+Load Smart is a full-stack logistics marketplace connecting shippers with carriers, featuring Shipper, Carrier, Admin, and Finance roles. It aims to streamline freight transportation through an "Admin-as-Mediator" pricing model, session-based authentication, real-time UI, and a comprehensive design system, enhancing efficiency and transparency in freight management. The platform includes an AI Concierge, a Solo Carrier Portal, dual marketplace bidding, real-time tracking, and document sharing.
 
 ## User Preferences
 
@@ -153,6 +153,21 @@ Changes sync across all portals (shipper, admin, carrier) via query cache invali
 ### AI Integrations
 
 -   **OpenAI**: For ML-powered truck suggestions.
+
+### Finance Module
+
+The Finance module enables finance team members to review shipment documents against load details and manage payment releases. Key features:
+
+-   **Finance Portal** (`/finance/review`): Document review dashboard listing all shipments with uploaded documents
+-   **Review Actions**: Approve, Hold, or Reject shipments with comments
+-   **Payment Status Tracking**: Track payment status (Not Released / Processing / Released) per shipment
+-   **Admin Visibility**: Finance review decisions and payment status are visible on the admin live-tracking page
+-   **Database Table**: `finance_reviews` table with status, comment, paymentStatus, reviewerId, reviewedAt fields
+-   **API Endpoints**:
+    -   `GET /api/finance/shipments` - List shipments with documents for review (finance/admin)
+    -   `POST /api/finance/reviews` - Create or update finance review (finance/admin)
+    -   `PATCH /api/finance/reviews/:id/payment` - Update payment status (finance/admin)
+    -   `GET /api/finance/reviews/:shipmentId` - Get review for a shipment (finance/admin)
 
 ### Shared Data Files
 

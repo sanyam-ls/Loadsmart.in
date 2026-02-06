@@ -102,6 +102,14 @@ interface TrackedShipment {
     isVerified: boolean | null;
     createdAt: string | null;
   }[];
+  financeReview: {
+    id: string;
+    status: string;
+    comment: string | null;
+    paymentStatus: string;
+    reviewedAt: string | null;
+    reviewerName: string;
+  } | null;
 }
 
 const stageLabels: Record<string, string> = {
@@ -800,6 +808,51 @@ export default function AdminLiveTrackingPage() {
                     })}
                   </CardContent>
                 </Card>
+
+                {selectedShipment.financeReview && (
+                  <Card data-testid="finance-review-card">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        Finance Review
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge className={`text-xs ${
+                          selectedShipment.financeReview.status === "approved" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+                          selectedShipment.financeReview.status === "on_hold" ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" :
+                          selectedShipment.financeReview.status === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
+                          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        }`}>
+                          {selectedShipment.financeReview.status === "approved" ? "Approved" :
+                           selectedShipment.financeReview.status === "on_hold" ? "On Hold" :
+                           selectedShipment.financeReview.status === "rejected" ? "Rejected" : "Pending"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-muted-foreground">Payment:</span>
+                        <Badge className={`text-xs ${
+                          selectedShipment.financeReview.paymentStatus === "released" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+                          selectedShipment.financeReview.paymentStatus === "processing" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
+                          "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+                        }`}>
+                          {selectedShipment.financeReview.paymentStatus === "released" ? "Released" :
+                           selectedShipment.financeReview.paymentStatus === "processing" ? "Processing" : "Not Released"}
+                        </Badge>
+                      </div>
+                      {selectedShipment.financeReview.comment && (
+                        <p><span className="text-muted-foreground">Comment:</span> {selectedShipment.financeReview.comment}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Reviewed by {selectedShipment.financeReview.reviewerName}
+                        {selectedShipment.financeReview.reviewedAt && (
+                          <> on {format(new Date(selectedShipment.financeReview.reviewedAt), "MMM d, yyyy")}</>
+                        )}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="shipper" className="p-4 space-y-4 mt-0">

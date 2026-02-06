@@ -83,6 +83,11 @@ const soloItems: NavItem[] = [
   { titleKey: "nav.myDocuments", url: "/carrier/my-documents", icon: FileText },
 ];
 
+const financeItems: NavItem[] = [
+  { titleKey: "nav.overview", url: "/finance", icon: LayoutDashboard },
+  { titleKey: "nav.documentReview", url: "/finance/review", icon: FileText },
+];
+
 const adminItems: NavItem[] = [
   { titleKey: "nav.overview", url: "/admin", icon: LayoutDashboard },
   { titleKey: "nav.postLoad", url: "/admin/post-load", icon: Plus },
@@ -115,6 +120,8 @@ export function AppSidebar() {
         return isSoloCarrier ? soloItems : carrierItems;
       case "admin":
         return adminItems;
+      case "finance":
+        return financeItems;
       default:
         return shipperItems;
     }
@@ -128,6 +135,8 @@ export function AppSidebar() {
         return isSoloCarrier ? t("roles.soloDriver") : t("roles.carrierPortal");
       case "admin":
         return t("roles.adminConsole");
+      case "finance":
+        return "Finance Portal";
       default:
         return "Portal";
     }
@@ -139,6 +148,8 @@ export function AppSidebar() {
         return "destructive";
       case "carrier":
         return "secondary";
+      case "finance":
+        return "default" as const;
       default:
         return "default";
     }

@@ -68,7 +68,7 @@ export default function ForShippersPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Button>
-          <Button onClick={() => setLocation("/auth")} data-testid="button-get-started-shippers">
+          <Button onClick={() => setLocation("/auth?tab=register&role=shipper")} data-testid="button-get-started-shippers">
             Get Started
           </Button>
         </div>
@@ -94,7 +94,7 @@ export default function ForShippersPage() {
                 into every shipment. Post your load and let the best carrier come to you.
               </p>
               <div className="flex items-center gap-4 flex-wrap">
-                <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-signup-shipper">
+                <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth?tab=register&role=shipper")} data-testid="button-signup-shipper">
                   Start Shipping
                 </Button>
               </div>
@@ -162,7 +162,7 @@ export default function ForShippersPage() {
                   </div>
                 ))}
               </div>
-              <Button className="mt-8 bg-[#1a3a8a] border-[#1a3a8a]" size="lg" onClick={() => setLocation("/auth")} data-testid="button-join-shipper">
+              <Button className="mt-8 bg-[#1a3a8a] border-[#1a3a8a]" size="lg" onClick={() => setLocation("/auth?tab=register&role=shipper")} data-testid="button-join-shipper">
                 Post Your First Load
               </Button>
             </div>
@@ -177,7 +177,7 @@ export default function ForShippersPage() {
             Create your account, complete a quick business verification, 
             and start posting loads to India's most trusted carrier network.
           </p>
-          <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth")} data-testid="button-cta-shipper">
+          <Button size="lg" className="bg-white text-[#1a3a8a] border-white/80" onClick={() => setLocation("/auth?tab=register&role=shipper")} data-testid="button-cta-shipper">
             Create Your Shipper Account
           </Button>
         </div>

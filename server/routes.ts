@@ -10935,17 +10935,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(400).json({ error: "Cannot submit onboarding request in current status" });
       }
 
-      // Validate minimum required fields (documents are checked by admin during review)
-      if (onboarding.carrierType === "solo") {
-        if (!onboarding.aadhaarNumber || !onboarding.driverLicenseNumber || !onboarding.licensePlateNumber) {
-          return res.status(400).json({ error: "Please fill all required fields (Aadhaar, License, License Plate)" });
-        }
-      } else {
-        if (!onboarding.aadhaarNumber || !onboarding.panNumber || 
-            !onboarding.businessAddress || !onboarding.licensePlateNumber) {
-          return res.status(400).json({ error: "Please fill all required fields (Aadhaar, PAN, Business Address, License Plate)" });
-        }
-      }
+      // No strict field/document validation - admin reviews submissions during verification
 
       const updated = await storage.updateCarrierVerification(onboarding.id, {
         status: "pending",

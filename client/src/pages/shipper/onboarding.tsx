@@ -121,6 +121,8 @@ const onboardingFormSchema = z.object({
   businessAddressProofType: z.enum(["rent_agreement", "electricity_bill", "office_photo_with_board"]).optional(),
   businessAddressProofUrl: z.string().optional(),
   selfieUrl: z.string().optional(),
+  msmeUrl: z.string().optional(),
+  udyamUrl: z.string().optional(),
   lrCopyUrl: z.string().optional(),
   tradeReference1Company: z.string().optional(),
   tradeReference1Contact: z.string().optional(),
@@ -184,6 +186,8 @@ export default function ShipperOnboarding() {
       businessAddressProofType: undefined,
       businessAddressProofUrl: "",
       selfieUrl: "",
+      msmeUrl: "",
+      udyamUrl: "",
       lrCopyUrl: "",
       tradeReference1Company: "",
       tradeReference1Contact: "",
@@ -253,6 +257,8 @@ export default function ShipperOnboarding() {
         businessAddressProofType: onboardingStatus.businessAddressProofType || undefined,
         businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || "",
         selfieUrl: onboardingStatus.selfieUrl || "",
+        msmeUrl: onboardingStatus.msmeUrl || "",
+        udyamUrl: onboardingStatus.udyamUrl || "",
         lrCopyUrl: onboardingStatus.lrCopyUrl || "",
         tradeReference1Company: onboardingStatus.tradeReference1Company || "",
         tradeReference1Contact: onboardingStatus.tradeReference1Contact || "",
@@ -413,7 +419,7 @@ export default function ShipperOnboarding() {
   const getTabWithError = (errors: any): string | null => {
     const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredLocality", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
-    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl", "selfieUrl"];
+    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl", "selfieUrl", "msmeUrl", "udyamUrl"];
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.some(key => businessFields.includes(key))) return "business";
@@ -1490,6 +1496,42 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                             testId="upload-selfie"
                             documentType="selfie"
                             preferCamera={true}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="msmeUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>MSME Certificate (If applicable)</FormLabel>
+                        <FormControl>
+                          <DocumentUploadWithCamera
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-msme"
+                            documentType="msme"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="udyamUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Udyam Certificate (If applicable)</FormLabel>
+                        <FormControl>
+                          <DocumentUploadWithCamera
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-udyam"
+                            documentType="udyam"
                           />
                         </FormControl>
                       </FormItem>

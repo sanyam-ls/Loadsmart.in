@@ -81,6 +81,8 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   tds_declaration: "TDS Declaration",
   cin: "CIN Certificate",
   selfie: "Selfie",
+  msme: "MSME Certificate",
+  udyam: "Udyam Certificate",
   void_cheque: "Void Cheque / Cancelled Cheque",
 };
 

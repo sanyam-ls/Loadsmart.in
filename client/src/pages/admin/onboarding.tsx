@@ -680,6 +680,22 @@ export default function AdminOnboardingPage() {
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">MSME Certificate</Label>
+                    {selectedRequest?.request.msmeUrl ? (
+                      <DocumentLink value={selectedRequest.request.msmeUrl} />
+                    ) : (
+                      <p className="text-muted-foreground">{t("common.notProvided")}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Udyam Certificate</Label>
+                    {selectedRequest?.request.udyamUrl ? (
+                      <DocumentLink value={selectedRequest.request.udyamUrl} />
+                    ) : (
+                      <p className="text-muted-foreground">{t("common.notProvided")}</p>
+                    )}
+                  </div>
                   {selectedRequest?.request.shipperRole === "transporter" && (
                     <div className="space-y-2">
                       <Label className="text-muted-foreground">{t("onboarding.lrCopy")}</Label>

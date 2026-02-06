@@ -431,12 +431,13 @@ export default function FinanceDashboard() {
                   ].map((docItem) => {
                     const doc = selectedShipment.documents.find(d => d.documentType === docItem.key);
                     const hasDocument = doc?.fileUrl;
+                    const isVerified = doc?.isVerified === true;
                     return (
                       <div
                         key={docItem.key}
-                        className={`flex items-center justify-between p-2 bg-muted/50 rounded-lg ${hasDocument ? "cursor-pointer hover-elevate" : ""}`}
+                        className={`flex items-center justify-between p-2 bg-muted/50 rounded-lg ${isVerified ? "cursor-pointer hover-elevate" : ""}`}
                         onClick={() => {
-                          if (hasDocument && doc.fileUrl) {
+                          if (isVerified && doc.fileUrl) {
                             const url = doc.fileUrl.startsWith("http") || doc.fileUrl.startsWith("data:") || doc.fileUrl.startsWith("/objects/")
                               ? doc.fileUrl
                               : `/objects/${doc.fileUrl}`;
@@ -450,14 +451,19 @@ export default function FinanceDashboard() {
                           <span className="text-sm">{docItem.label}</span>
                         </div>
                         <div>
-                          {hasDocument ? (
-                            <Badge variant="secondary" className="cursor-pointer">
-                              <Eye className="h-3 w-3 mr-1" />
+                          {isVerified ? (
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-pointer">
+                              <CheckCircle className="h-3 w-3 mr-1" />
                               View
+                            </Badge>
+                          ) : hasDocument ? (
+                            <Badge variant="outline" className="text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Awaiting Approval
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-muted-foreground">
-                              Pending
+                              Not Uploaded
                             </Badge>
                           )}
                         </div>

@@ -262,6 +262,21 @@ export default function AdminLiveTrackingPage() {
     },
   });
 
+  const verifyDocumentMutation = useMutation({
+    mutationFn: async (data: { documentId: string; isVerified: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/documents/${data.documentId}/verify`, { isVerified: data.isVerified });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/live-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/finance/shipments"] });
+      toast({ title: "Document Approved", description: "Document has been verified and is now visible for review." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to verify document.", variant: "destructive" });
+    },
+  });
+
   const handleReview = (status: string) => {
     if (!selectedShipment || !selectedShipment.load) return;
     reviewMutation.mutate({
@@ -858,20 +873,35 @@ export default function AdminLiveTrackingPage() {
                             <Package className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">{docItem.label}</span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {doc?.isVerified ? (
                               <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-pointer">
                                 <CheckCircle className="h-3 w-3 mr-1" />
-                                View
+                                Approved
                               </Badge>
                             ) : doc?.fileUrl ? (
-                              <Badge variant="secondary" className="cursor-pointer">
-                                <Eye className="h-3 w-3 mr-1" />
-                                View
-                              </Badge>
+                              <>
+                                <Badge variant="secondary" className="cursor-pointer">
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  View
+                                </Badge>
+                                <Button
+                                  size="sm"
+                                  className="h-6 text-xs bg-green-600 text-white"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    verifyDocumentMutation.mutate({ documentId: doc.id, isVerified: true });
+                                  }}
+                                  disabled={verifyDocumentMutation.isPending}
+                                  data-testid={`button-approve-doc-${docItem.key}`}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Approve
+                                </Button>
+                              </>
                             ) : (
                               <Badge variant="outline" className="text-muted-foreground">
-                                Pending
+                                Not Uploaded
                               </Badge>
                             )}
                           </div>

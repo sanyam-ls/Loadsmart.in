@@ -5,7 +5,7 @@ import {
   ArrowLeft, Truck, MapPin, IndianRupee, Shield, Clock, 
   FileText, Navigation, Smartphone, CheckCircle2, Star, Route
 } from "lucide-react";
-import loadFeedImg from "../../assets/images/solution-drivers-loadfeed.png";
+import loadFeedImg from "@assets/Screenshot_2026-02-06_at_4.22.53_PM_1770375176508.png";
 import trackingImg from "../../assets/images/solution-drivers-tracking.png";
 
 export default function ForDriversPage() {

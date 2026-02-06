@@ -10935,38 +10935,15 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(400).json({ error: "Cannot submit onboarding request in current status" });
       }
 
-      // Validate required documents based on carrier type
-      const documents = await storage.getVerificationDocuments(onboarding.id);
-      const docTypes = documents.map(d => d.documentType);
-
+      // Validate minimum required fields (documents are checked by admin during review)
       if (onboarding.carrierType === "solo") {
-        // Solo requires: aadhaar, license, permit, rc, insurance, fitness
-        const requiredSoloDocs = ["aadhaar", "license", "permit", "rc", "insurance", "fitness"];
-        const missingSoloDocs = requiredSoloDocs.filter(d => !docTypes.includes(d));
-        if (missingSoloDocs.length > 0) {
-          return res.status(400).json({ 
-            error: "Missing required documents", 
-            missingDocuments: missingSoloDocs 
-          });
-        }
-        // Validate required fields for solo
         if (!onboarding.aadhaarNumber || !onboarding.driverLicenseNumber || !onboarding.licensePlateNumber) {
-          return res.status(400).json({ error: "Please fill all required fields" });
+          return res.status(400).json({ error: "Please fill all required fields (Aadhaar, License, License Plate)" });
         }
       } else {
-        // Fleet/Enterprise requires: aadhaar, license, pan, rc, insurance, fitness (gstin is optional)
-        const requiredFleetDocs = ["aadhaar", "license", "pan", "rc", "insurance", "fitness"];
-        const missingFleetDocs = requiredFleetDocs.filter(d => !docTypes.includes(d));
-        if (missingFleetDocs.length > 0) {
-          return res.status(400).json({ 
-            error: "Missing required documents", 
-            missingDocuments: missingFleetDocs 
-          });
-        }
-        // Validate required fields for fleet (matches solo structure + fleet-specific fields)
-        if (!onboarding.aadhaarNumber || !onboarding.driverLicenseNumber || !onboarding.panNumber || 
-            !onboarding.businessAddress || !onboarding.licensePlateNumber || !onboarding.chassisNumber) {
-          return res.status(400).json({ error: "Please fill all required fields" });
+        if (!onboarding.aadhaarNumber || !onboarding.panNumber || 
+            !onboarding.businessAddress || !onboarding.licensePlateNumber) {
+          return res.status(400).json({ error: "Please fill all required fields (Aadhaar, PAN, Business Address, License Plate)" });
         }
       }
 

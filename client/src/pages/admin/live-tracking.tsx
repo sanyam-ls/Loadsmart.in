@@ -858,53 +858,84 @@ export default function AdminLiveTrackingPage() {
                       return (
                         <div 
                           key={docItem.key} 
-                          className={`flex items-center justify-between p-2 bg-muted/50 rounded-lg ${hasDocument ? 'cursor-pointer hover-elevate' : ''}`}
-                          onClick={() => {
-                            if (hasDocument && doc.fileUrl) {
-                              const url = doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('data:') || doc.fileUrl.startsWith('/objects/') 
-                                ? doc.fileUrl 
-                                : `/objects/${doc.fileUrl}`;
-                              window.open(url, '_blank');
-                            }
-                          }}
+                          className="p-2 bg-muted/50 rounded-lg space-y-1.5"
                           data-testid={`admin-document-${docItem.key}`}
                         >
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{docItem.label}</span>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-sm truncate">{docItem.label}</span>
+                            </div>
                             {doc?.isVerified ? (
-                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-pointer">
+                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 shrink-0">
                                 <CheckCircle className="h-3 w-3 mr-1" />
                                 Approved
                               </Badge>
-                            ) : doc?.fileUrl ? (
-                              <>
-                                <Badge variant="secondary" className="cursor-pointer">
-                                  <Eye className="h-3 w-3 mr-1" />
-                                  View
-                                </Badge>
-                                <Button
-                                  size="sm"
-                                  className="h-6 text-xs bg-green-600 text-white"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    verifyDocumentMutation.mutate({ documentId: doc.id, isVerified: true });
-                                  }}
-                                  disabled={verifyDocumentMutation.isPending}
-                                  data-testid={`button-approve-doc-${docItem.key}`}
-                                >
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Approve
-                                </Button>
-                              </>
+                            ) : hasDocument ? (
+                              <Badge variant="outline" className="text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700 shrink-0">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Pending
+                              </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-muted-foreground">
+                              <Badge variant="outline" className="text-muted-foreground shrink-0">
                                 Not Uploaded
                               </Badge>
                             )}
                           </div>
+                          {hasDocument && !doc?.isVerified && (
+                            <div className="flex items-center gap-2 pl-6">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  if (doc.fileUrl) {
+                                    const url = doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('data:') || doc.fileUrl.startsWith('/objects/') 
+                                      ? doc.fileUrl 
+                                      : `/objects/${doc.fileUrl}`;
+                                    window.open(url, '_blank');
+                                  }
+                                }}
+                                data-testid={`button-view-doc-${docItem.key}`}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs bg-green-600 text-white"
+                                onClick={() => {
+                                  verifyDocumentMutation.mutate({ documentId: doc.id, isVerified: true });
+                                }}
+                                disabled={verifyDocumentMutation.isPending}
+                                data-testid={`button-approve-doc-${docItem.key}`}
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Approve
+                              </Button>
+                            </div>
+                          )}
+                          {doc?.isVerified && (
+                            <div className="pl-6">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  if (doc.fileUrl) {
+                                    const url = doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('data:') || doc.fileUrl.startsWith('/objects/') 
+                                      ? doc.fileUrl 
+                                      : `/objects/${doc.fileUrl}`;
+                                    window.open(url, '_blank');
+                                  }
+                                }}
+                                data-testid={`button-view-doc-${docItem.key}`}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View Document
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

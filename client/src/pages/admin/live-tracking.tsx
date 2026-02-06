@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { 
   MapPin, Truck, Package, Phone, Mail, Building2, User, 
   Navigation, Clock, RefreshCw, Loader2, Eye,
-  Radio, CheckCircle, AlertCircle, ArrowRight, X, ChevronLeft, List, Calendar
+  Radio, CheckCircle, AlertCircle, ArrowRight, X, ChevronLeft, List, Calendar,
+  PauseCircle, XCircle, DollarSign, FileText
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,9 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface TrackedShipment {
   id: string;
@@ -201,17 +205,72 @@ function CenterOnShipment({ position }: { position: [number, number] | null }) {
   return null;
 }
 
+const reviewStatusConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
+  pending: { label: "Pending Review", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400", icon: Clock },
+  approved: { label: "Approved", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400", icon: CheckCircle },
+  on_hold: { label: "On Hold", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400", icon: PauseCircle },
+  rejected: { label: "Rejected", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400", icon: XCircle },
+};
+
+const paymentStatusConfig: Record<string, { label: string; color: string }> = {
+  not_released: { label: "Not Released", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
+  processing: { label: "Processing", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
+  released: { label: "Released", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+};
+
 export default function AdminLiveTrackingPage() {
+  const { toast } = useToast();
   const [selectedShipment, setSelectedShipment] = useState<TrackedShipment | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [telemetryData, setTelemetryData] = useState<Record<string, { lat: number; lng: number; speed?: number }>>({});
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [reviewComment, setReviewComment] = useState("");
 
   const { data: shipments = [], isLoading, refetch, isRefetching } = useQuery<TrackedShipment[]>({
     queryKey: ["/api/admin/live-tracking"],
     refetchInterval: 30000,
   });
+
+  const reviewMutation = useMutation({
+    mutationFn: async (data: { shipmentId: string; loadId: string; status: string; comment: string }) => {
+      const res = await apiRequest("POST", "/api/finance/reviews", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/live-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/finance/shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/finance/reviews/all"] });
+      toast({ title: "Review Submitted", description: "Document review has been recorded." });
+      setReviewComment("");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to submit review.", variant: "destructive" });
+    },
+  });
+
+  const paymentMutation = useMutation({
+    mutationFn: async (data: { reviewId: string; paymentStatus: string }) => {
+      const res = await apiRequest("PATCH", `/api/finance/reviews/${data.reviewId}/payment`, { paymentStatus: data.paymentStatus });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/live-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/finance/shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/finance/reviews/all"] });
+      toast({ title: "Payment Updated", description: "Payment status has been updated." });
+    },
+  });
+
+  const handleReview = (status: string) => {
+    if (!selectedShipment || !selectedShipment.load) return;
+    reviewMutation.mutate({
+      shipmentId: selectedShipment.id,
+      loadId: selectedShipment.loadId,
+      status,
+      comment: reviewComment,
+    });
+  };
 
   // Connect to telemetry WebSocket for real-time updates
   useEffect(() => {
@@ -283,6 +342,7 @@ export default function AdminLiveTrackingPage() {
 
   const handleSelectShipment = useCallback((shipment: TrackedShipment) => {
     setSelectedShipment(shipment);
+    setReviewComment(shipment.financeReview?.comment || "");
   }, []);
 
   // Get position for a shipment (from telemetry or fallback)
@@ -821,50 +881,113 @@ export default function AdminLiveTrackingPage() {
                   </CardContent>
                 </Card>
 
-                {selectedShipment.financeReview && (
-                  <Card data-testid="finance-review-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        Finance Review
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-muted-foreground">Status:</span>
-                        <Badge className={`text-xs ${
-                          selectedShipment.financeReview.status === "approved" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
-                          selectedShipment.financeReview.status === "on_hold" ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" :
-                          selectedShipment.financeReview.status === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
-                          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                        }`}>
-                          {selectedShipment.financeReview.status === "approved" ? "Approved" :
-                           selectedShipment.financeReview.status === "on_hold" ? "On Hold" :
-                           selectedShipment.financeReview.status === "rejected" ? "Rejected" : "Pending"}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-muted-foreground">Payment:</span>
-                        <Badge className={`text-xs ${
-                          selectedShipment.financeReview.paymentStatus === "released" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
-                          selectedShipment.financeReview.paymentStatus === "processing" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
-                          "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-                        }`}>
-                          {selectedShipment.financeReview.paymentStatus === "released" ? "Released" :
-                           selectedShipment.financeReview.paymentStatus === "processing" ? "Processing" : "Not Released"}
-                        </Badge>
-                      </div>
-                      {selectedShipment.financeReview.comment && (
-                        <p><span className="text-muted-foreground">Comment:</span> {selectedShipment.financeReview.comment}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Reviewed by {selectedShipment.financeReview.reviewerName}
-                        {selectedShipment.financeReview.reviewedAt && (
-                          <> on {format(new Date(selectedShipment.financeReview.reviewedAt), "MMM d, yyyy")}</>
+                <Card data-testid="finance-review-card">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileText className="h-4 w-4" /> Document Review
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {selectedShipment.financeReview && (
+                      <div className="text-sm space-y-1 p-2 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-muted-foreground">Current Status:</span>
+                          {(() => {
+                            const config = reviewStatusConfig[selectedShipment.financeReview.status] || reviewStatusConfig.pending;
+                            const Icon = config.icon;
+                            return (
+                              <Badge className={`text-xs ${config.color}`}>
+                                <Icon className="h-3 w-3 mr-1" />
+                                {config.label}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
+                        {selectedShipment.financeReview.comment && (
+                          <p><span className="text-muted-foreground">Comment:</span> {selectedShipment.financeReview.comment}</p>
                         )}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
+                        <p className="text-xs text-muted-foreground">
+                          By {selectedShipment.financeReview.reviewerName}
+                          {selectedShipment.financeReview.reviewedAt && (
+                            <> on {format(new Date(selectedShipment.financeReview.reviewedAt), "MMM d, yyyy 'at' h:mm a")}</>
+                          )}
+                        </p>
+                      </div>
+                    )}
+
+                    <Textarea
+                      placeholder="Add a comment for this review decision..."
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      className="text-sm"
+                      data-testid="input-review-comment"
+                    />
+
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        className="bg-green-600 text-white"
+                        onClick={() => handleReview("approved")}
+                        disabled={reviewMutation.isPending}
+                        data-testid="button-approve"
+                      >
+                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-orange-500 text-white"
+                        onClick={() => handleReview("on_hold")}
+                        disabled={reviewMutation.isPending}
+                        data-testid="button-hold"
+                      >
+                        <PauseCircle className="h-3.5 w-3.5 mr-1" />
+                        Hold
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleReview("rejected")}
+                        disabled={reviewMutation.isPending}
+                        data-testid="button-reject"
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+
+                    {selectedShipment.financeReview?.status === "approved" && (
+                      <div className="pt-2 border-t space-y-2">
+                        <p className="text-sm font-medium flex items-center gap-1">
+                          <DollarSign className="h-4 w-4" /> Payment Status
+                        </p>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant={selectedShipment.financeReview.paymentStatus === "processing" ? "default" : "outline"}
+                            onClick={() => paymentMutation.mutate({ reviewId: selectedShipment.financeReview!.id, paymentStatus: "processing" })}
+                            disabled={paymentMutation.isPending}
+                            data-testid="button-payment-processing"
+                          >
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            Processing
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={selectedShipment.financeReview.paymentStatus === "released" ? "default" : "outline"}
+                            className={selectedShipment.financeReview.paymentStatus === "released" ? "bg-green-600 text-white" : ""}
+                            onClick={() => paymentMutation.mutate({ reviewId: selectedShipment.financeReview!.id, paymentStatus: "released" })}
+                            disabled={paymentMutation.isPending}
+                            data-testid="button-payment-released"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                            Released
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="shipper" className="p-4 space-y-4 mt-0">

@@ -169,10 +169,12 @@ export async function registerRoutes(
       }
       
       if (otpRecord.status !== "verified") {
-        return res.status(400).json({ error: "Phone number not verified. Please complete OTP verification." });
+        console.log(`[Register] OTP status check failed. Status: ${otpRecord.status}, ID: ${otpId}`);
+        return res.status(400).json({ error: `Phone verification expired or already used. Please verify your phone again.` });
       }
       
-      if (otpRecord.phoneNumber !== data.phone) {
+      const normalizePhone = (p: string) => p.replace(/[\s\-\+]/g, "").slice(-10);
+      if (normalizePhone(otpRecord.phoneNumber || "") !== normalizePhone(data.phone || "")) {
         return res.status(400).json({ error: "Phone number mismatch. The verified phone number doesn't match the one provided." });
       }
       

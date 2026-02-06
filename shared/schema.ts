@@ -1850,6 +1850,7 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   cancelledChequeUrl: text("cancelled_cheque_url"),
   businessAddressProofType: text("business_address_proof_type"), // rent_agreement, electricity_bill, office_photo_with_board
   businessAddressProofUrl: text("business_address_proof_url"),
+  selfieUrl: text("selfie_url"),
   lrCopyUrl: text("lr_copy_url"), // LR Copy - mandatory for Transporters
   
   // Trade References

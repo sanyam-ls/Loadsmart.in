@@ -672,6 +672,14 @@ export default function AdminOnboardingPage() {
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Selfie</Label>
+                    {selectedRequest?.request.selfieUrl ? (
+                      <DocumentLink value={selectedRequest.request.selfieUrl} />
+                    ) : (
+                      <p className="text-muted-foreground">{t("common.notProvided")}</p>
+                    )}
+                  </div>
                   {selectedRequest?.request.shipperRole === "transporter" && (
                     <div className="space-y-2">
                       <Label className="text-muted-foreground">{t("onboarding.lrCopy")}</Label>

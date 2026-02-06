@@ -53,6 +53,7 @@ const soloFormSchema = z.object({
   insuranceUrl: z.string().optional(),
   fitnessUrl: z.string().optional(),
   tdsDeclarationUrl: z.string().optional(),
+  selfieUrl: z.string().optional(),
   // Bank details
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
@@ -177,6 +178,7 @@ export default function CarrierOnboarding() {
       rcUrl: "",
       insuranceUrl: "",
       fitnessUrl: "",
+      selfieUrl: "",
       bankName: "",
       bankAccountNumber: "",
       bankIfscCode: "",
@@ -238,6 +240,7 @@ export default function CarrierOnboarding() {
             insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
             fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
             tdsDeclarationUrl: onboardingStatus.documents.find(d => d.documentType === "tds_declaration")?.fileUrl || "",
+            selfieUrl: onboardingStatus.documents.find(d => d.documentType === "selfie")?.fileUrl || "",
             voidChequeUrl: onboardingStatus.documents.find(d => d.documentType === "void_cheque")?.fileUrl || "",
           };
           for (const [key, val] of Object.entries(docFields)) {
@@ -287,6 +290,7 @@ export default function CarrierOnboarding() {
           insuranceUrl: onboardingStatus.documents.find(d => d.documentType === "insurance")?.fileUrl || "",
           fitnessUrl: onboardingStatus.documents.find(d => d.documentType === "fitness")?.fileUrl || "",
           tdsDeclarationUrl: onboardingStatus.documents.find(d => d.documentType === "tds_declaration")?.fileUrl || "",
+          selfieUrl: onboardingStatus.documents.find(d => d.documentType === "selfie")?.fileUrl || "",
           bankName: onboardingStatus.bankName || "",
           bankAccountNumber: onboardingStatus.bankAccountNumber || "",
           bankIfscCode: onboardingStatus.bankIfscCode || "",
@@ -1093,6 +1097,19 @@ export default function CarrierOnboarding() {
                           }}
                           disabled={!canEdit}
                           documentType="tds_declaration"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Selfie</label>
+                        <DocumentUploadWithCamera
+                          value={soloForm.watch("selfieUrl") || ""}
+                          onChange={(val) => {
+                            soloForm.setValue("selfieUrl", val);
+                            handleDocumentUpload("selfie", val);
+                          }}
+                          disabled={!canEdit}
+                          documentType="selfie"
+                          preferCamera={true}
                         />
                       </div>
                     </div>

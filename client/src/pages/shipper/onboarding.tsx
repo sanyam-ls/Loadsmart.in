@@ -120,6 +120,7 @@ const onboardingFormSchema = z.object({
   incorporationCertificateUrl: z.string().optional(),
   businessAddressProofType: z.enum(["rent_agreement", "electricity_bill", "office_photo_with_board"]).optional(),
   businessAddressProofUrl: z.string().optional(),
+  selfieUrl: z.string().optional(),
   lrCopyUrl: z.string().optional(),
   tradeReference1Company: z.string().optional(),
   tradeReference1Contact: z.string().optional(),
@@ -182,6 +183,7 @@ export default function ShipperOnboarding() {
       incorporationCertificateUrl: "",
       businessAddressProofType: undefined,
       businessAddressProofUrl: "",
+      selfieUrl: "",
       lrCopyUrl: "",
       tradeReference1Company: "",
       tradeReference1Contact: "",
@@ -250,6 +252,7 @@ export default function ShipperOnboarding() {
         incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || "",
         businessAddressProofType: onboardingStatus.businessAddressProofType || undefined,
         businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || "",
+        selfieUrl: onboardingStatus.selfieUrl || "",
         lrCopyUrl: onboardingStatus.lrCopyUrl || "",
         tradeReference1Company: onboardingStatus.tradeReference1Company || "",
         tradeReference1Contact: onboardingStatus.tradeReference1Contact || "",
@@ -410,7 +413,7 @@ export default function ShipperOnboarding() {
   const getTabWithError = (errors: any): string | null => {
     const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredLocality", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
-    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl"];
+    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl", "selfieUrl"];
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.some(key => businessFields.includes(key))) return "business";
@@ -1470,6 +1473,25 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                           />
                         </FormControl>
                         <FormDescription>{t("onboarding.addressProofDesc")}</FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="selfieUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Selfie</FormLabel>
+                        <FormControl>
+                          <DocumentUploadWithCamera
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder={t("onboarding.noFileSelected")}
+                            testId="upload-selfie"
+                            documentType="selfie"
+                            preferCamera={true}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />

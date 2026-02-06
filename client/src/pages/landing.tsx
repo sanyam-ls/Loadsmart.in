@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth-context";
-import { ChevronLeft, ChevronRight, ChevronDown, Search, UserCheck, LayoutGrid, Zap, ShieldCheck, MapPin, BarChart3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Search, UserCheck, LayoutGrid, Zap, ShieldCheck, MapPin, BarChart3, Smartphone } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,6 +141,16 @@ export default function LandingPage() {
             >
               Contact
             </Button>
+            <a
+              href="https://play.google.com/store"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors"
+              data-testid="nav-carrier-app"
+            >
+              <Smartphone className="h-4 w-4" />
+              Carrier App
+            </a>
           </nav>
 
           {/* Right side actions */}

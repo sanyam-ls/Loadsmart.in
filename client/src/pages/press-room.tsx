@@ -31,10 +31,10 @@ export default function PressRoomPage() {
   });
 
   const stats = [
-    { icon: Truck, value: "500+", label: "Daily Active Loads" },
-    { icon: Users, value: "10,000+", label: "Registered Users" },
-    { icon: Globe, value: "28+", label: "States Covered" },
-    { icon: TrendingUp, value: "40%", label: "Improved Match Rates" },
+    { icon: Truck, value: "3", label: "User Roles Supported" },
+    { icon: Users, value: "5", label: "Languages Available" },
+    { icon: Globe, value: "Pan-India", label: "Route Coverage" },
+    { icon: TrendingUp, value: "12-Step", label: "Load Lifecycle" },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {

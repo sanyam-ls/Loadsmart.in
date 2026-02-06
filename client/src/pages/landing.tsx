@@ -116,17 +116,6 @@ export default function LandingPage() {
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 text-sm text-gray-300" data-testid="nav-products">
-                Products <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-[#1a1a2e] border-gray-700">
-                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-load-board" onClick={() => window.location.href = '/load-board'}>Load Board</DropdownMenuItem>
-                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-rateview">Rateview Analytics</DropdownMenuItem>
-                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-iq">iQ Analytics</DropdownMenuItem>
-                <DropdownMenuItem className="text-white hover:text-white focus:text-white hover:bg-white/10 focus:bg-white/10" data-testid="menu-item-outgo">LoadSmart Outgo</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-1 text-sm text-gray-300" data-testid="nav-solutions">
                 Solutions <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>

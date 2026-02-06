@@ -10877,6 +10877,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         businessLocality: z.string().optional(),
         panNumber: z.string().optional(),
         gstinNumber: z.string().optional(),
+        noGstinNumber: z.boolean().optional(),
         tanNumber: z.string().optional(),
         // Bank details (both solo and fleet)
         bankName: z.string().optional(),

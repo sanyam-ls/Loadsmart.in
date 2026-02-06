@@ -1419,6 +1419,7 @@ export const carrierVerifications = pgTable("carrier_verifications", {
   businessLocality: text("business_locality"),
   panNumber: text("pan_number"),
   gstinNumber: text("gstin_number"),
+  noGstinNumber: boolean("no_gstin_number").default(false),
   tanNumber: text("tan_number"),
   addressProofType: text("address_proof_type"), // rent_agreement, electricity_bill, office_photo_with_board
   

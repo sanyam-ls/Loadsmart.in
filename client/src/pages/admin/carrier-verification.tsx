@@ -971,7 +971,11 @@ export default function CarrierVerificationPage() {
                       {selectedVerification.businessType === "registered_partnership" && (
                         <div>
                           <Label className="text-muted-foreground">GSTIN Number</Label>
-                          <p className="font-medium">{selectedVerification.gstinNumber || "Not provided"}</p>
+                          <p className="font-medium">
+                            {selectedVerification.noGstinNumber 
+                              ? "Does not have GSTIN" 
+                              : (selectedVerification.gstinNumber || "Not provided")}
+                          </p>
                         </div>
                       )}
                       {selectedVerification.businessType === "non_registered_partnership" && (

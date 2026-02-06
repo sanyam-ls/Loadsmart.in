@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -71,6 +72,7 @@ const fleetFormSchema = z.object({
   driverLicenseNumber: z.string().optional(),
   panNumber: z.string().optional(),
   gstinNumber: z.string().optional(),
+  noGstinNumber: z.boolean().optional(),
   businessType: z.enum(["sole_proprietor", "registered_partnership", "non_registered_partnership", "other"]).optional(),
   cinNumber: z.string().optional(),
   partnerName: z.string().optional(),
@@ -201,6 +203,7 @@ export default function CarrierOnboarding() {
       driverLicenseNumber: "",
       panNumber: "",
       gstinNumber: "",
+      noGstinNumber: false,
       businessType: undefined,
       cinNumber: "",
       partnerName: "",
@@ -320,6 +323,7 @@ export default function CarrierOnboarding() {
           driverLicenseNumber: onboardingStatus.driverLicenseNumber || "",
           panNumber: onboardingStatus.panNumber || "",
           gstinNumber: onboardingStatus.gstinNumber || "",
+          noGstinNumber: onboardingStatus.noGstinNumber || false,
           businessType: (onboardingStatus.businessType as "sole_proprietor" | "registered_partnership" | "non_registered_partnership" | "other") || undefined,
           cinNumber: onboardingStatus.cinNumber || "",
           partnerName: onboardingStatus.partnerName || "",
@@ -543,7 +547,7 @@ export default function CarrierOnboarding() {
         missingFields.push("Business Type (Identity tab)");
       }
       if (values.businessType === "registered_partnership") {
-        if (!values.gstinNumber) {
+        if (!values.noGstinNumber && !values.gstinNumber) {
           missingFields.push("GSTIN Number (Identity tab)");
         }
       }
@@ -1226,19 +1230,49 @@ export default function CarrierOnboarding() {
                       )}
                     />
                     {fleetForm.watch("businessType") === "registered_partnership" && (
-                      <FormField
-                        control={fleetForm.control}
-                        name="gstinNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>GSTIN Number *</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="22XXXXX0000X1Z5" maxLength={15} disabled={!canEdit} data-testid="input-fleet-gstin" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                      <>
+                        {!fleetForm.watch("noGstinNumber") && (
+                          <FormField
+                            control={fleetForm.control}
+                            name="gstinNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>GSTIN Number *</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="22XXXXX0000X1Z5" maxLength={15} disabled={!canEdit} data-testid="input-fleet-gstin" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         )}
-                      />
+                        <FormField
+                          control={fleetForm.control}
+                          name="noGstinNumber"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    field.onChange(checked);
+                                    if (checked) {
+                                      fleetForm.setValue("gstinNumber", "");
+                                    }
+                                  }}
+                                  disabled={!canEdit}
+                                  data-testid="checkbox-no-gstin"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel className="cursor-pointer">
+                                  I do not have GSTIN Number
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </>
                     )}
                     {fleetForm.watch("businessType") === "non_registered_partnership" && (
                       <>
@@ -1518,7 +1552,7 @@ export default function CarrierOnboarding() {
                           documentType="aadhaar"
                         />
                       </div>
-                      {fleetForm.watch("businessType") === "registered_partnership" && (
+                      {fleetForm.watch("businessType") === "registered_partnership" && !fleetForm.watch("noGstinNumber") && (
                         <div>
                           <label className="text-sm font-medium mb-2 block">GSTIN Certificate *</label>
                           <DocumentUploadWithCamera

@@ -4,6 +4,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useUpload } from "@/hooks/use-upload";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLoads } from "@/lib/api-hooks";
+import { useAuth } from "@/lib/auth-context";
 import { onMarketplaceEvent } from "@/lib/marketplace-socket";
 import { 
   FileText, Upload, Search, Filter, Download, Eye, Trash2, AlertCircle, 
@@ -44,7 +46,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
-import { useMockData } from "@/lib/mock-data-store";
 import {
   useDocumentVault,
   documentCategoryLabels,
@@ -199,9 +200,7 @@ export default function DocumentsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [location] = useLocation();
-  const { getActiveLoads } = useMockData();
   const {
-    documents: mockDocuments,
     templates,
     uploadDocument,
     deleteDocument,
@@ -210,8 +209,21 @@ export default function DocumentsPage() {
     getExpiringDocuments,
     getExpiredDocuments,
   } = useDocumentVault();
-  
-  const activeLoads = getActiveLoads();
+  const { user } = useAuth();
+  const { data: allLoads } = useLoads();
+  const activeLoads = useMemo(() => {
+    return (allLoads || [])
+      .filter((load: any) => load.shipperId === user?.id)
+      .map((load: any) => {
+        const loadNum = load.adminReferenceNumber || load.shipperLoadNumber;
+        const loadId = loadNum ? `LD-${String(loadNum).padStart(3, '0')}` : load.id.slice(0, 8);
+        return {
+          loadId,
+          pickup: load.pickupCity || load.pickupLocation || '',
+          drop: load.dropoffCity || load.dropoffLocation || '',
+        };
+      });
+  }, [allLoads, user?.id]);
   
   // Get initial load filter from URL query parameter
   const getInitialLoadFilter = () => {
@@ -240,7 +252,7 @@ export default function DocumentsPage() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
   
-  // Convert API documents to VaultDocument format and merge with mock documents
+  // Convert API documents to VaultDocument format (real data only)
   const documents = useMemo(() => {
     const convertedApiDocs: VaultDocument[] = apiDocuments.map((doc) => {
       const category = apiDocTypeToCategory[doc.documentType] || "other";
@@ -265,13 +277,8 @@ export default function DocumentsPage() {
       };
     });
     
-    // Merge: API documents first (real), then mock documents
-    // Filter out mock documents that might duplicate API documents
-    const apiDocIds = new Set(convertedApiDocs.map(d => d.fileName));
-    const filteredMockDocs = mockDocuments.filter(d => !apiDocIds.has(d.fileName));
-    
-    return [...convertedApiDocs, ...filteredMockDocs];
-  }, [apiDocuments, mockDocuments]);
+    return convertedApiDocs;
+  }, [apiDocuments]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<DocumentCategory | "all">("all");

@@ -721,34 +721,6 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                 <CardDescription>{t("onboarding.businessDetailsDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* I am a - Shipper/Transporter dropdown */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="shipperRole"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>I am a</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-shipper-role">
-                              <SelectValue placeholder="Select your role" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="shipper">Shipper</SelectItem>
-                            <SelectItem value="transporter">Transporter</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Select whether you are a Shipper or Transporter
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}

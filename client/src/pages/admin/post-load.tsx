@@ -1629,7 +1629,7 @@ export default function AdminPostLoadPage() {
                       name="deliveryDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Expected Delivery Date (Optional)</FormLabel>
+                          <FormLabel>Expected Delivery Date</FormLabel>
                           <FormControl>
                             <Input type="date" {...field} data-testid="admin-input-delivery-date" />
                           </FormControl>

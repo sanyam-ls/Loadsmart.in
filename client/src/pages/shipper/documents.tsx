@@ -1380,13 +1380,32 @@ export default function DocumentsPage() {
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
                               target.style.display = 'none';
-                              target.parentElement?.querySelector('.fallback')?.classList.remove('hidden');
+                              const fallbackIframe = target.parentElement?.querySelector('.fallback-iframe') as HTMLElement;
+                              const fallbackIcon = target.parentElement?.querySelector('.fallback-icon') as HTMLElement;
+                              if (fallbackIframe) {
+                                fallbackIframe.classList.remove('hidden');
+                              } else if (fallbackIcon) {
+                                fallbackIcon.classList.remove('hidden');
+                              }
                             }}
                           />
-                          <div className="fallback hidden text-center py-8">
+                          <iframe 
+                            src={selectedDocument.fileUrl}
+                            className="fallback-iframe hidden w-full h-[400px] border-0 rounded-lg"
+                            title={selectedDocument.fileName}
+                            onError={() => {
+                              const fallbackIcon = document.querySelector('.fallback-icon') as HTMLElement;
+                              if (fallbackIcon) fallbackIcon.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="fallback-icon hidden text-center py-8">
                             <FileImage className="h-16 w-16 mx-auto mb-4 text-blue-500" />
                             <p className="font-medium">{selectedDocument.fileName}</p>
                             <p className="text-sm text-muted-foreground">Preview not available</p>
+                            <Button className="mt-4" onClick={() => handleView(selectedDocument)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              {t('documents.openInNewTab', { defaultValue: 'Open in New Tab' })}
+                            </Button>
                           </div>
                         </div>
                       ) : (

@@ -12190,7 +12190,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   });
 
-  // GET /api/shipper/documents - Get all documents for shipper's loads
+  // GET /api/shipper/documents - Get all documents for shipper's loads + onboarding verification docs
   app.get("/api/shipper/documents", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -12205,7 +12205,6 @@ RESPOND IN THIS EXACT JSON FORMAT:
       const allDocs: any[] = [];
       for (const load of shipperLoads) {
         const loadDocs = await storage.getDocumentsByLoad(load.id);
-        // Add load info to each document
         for (const doc of loadDocs) {
           allDocs.push({
             ...doc,
@@ -12214,6 +12213,44 @@ RESPOND IN THIS EXACT JSON FORMAT:
               adminReferenceNumber: load.adminReferenceNumber,
             },
           });
+        }
+      }
+
+      // Also include shipper onboarding/verification documents
+      const onboarding = await storage.getShipperOnboardingRequest(user.id);
+      if (onboarding) {
+        const docFields: Array<{ field: string; type: string; label: string }> = [
+          { field: "gstCertificateUrl", type: "gst_certificate", label: "GST Certificate" },
+          { field: "panCardUrl", type: "pan_card", label: "PAN Card" },
+          { field: "incorporationCertificateUrl", type: "incorporation_certificate", label: "Incorporation Certificate" },
+          { field: "cancelledChequeUrl", type: "cancelled_cheque", label: "Cancelled Cheque" },
+          { field: "businessAddressProofUrl", type: "address_proof", label: "Business Address Proof" },
+          { field: "selfieUrl", type: "selfie", label: "Selfie Verification" },
+          { field: "msmeUrl", type: "msme_certificate", label: "MSME/Udyam Certificate" },
+          { field: "udyamUrl", type: "udyam_certificate", label: "Udyam Registration" },
+          { field: "lrCopyUrl", type: "lr_copy", label: "LR Copy" },
+          { field: "alternativeAuthorizationUrl", type: "alternative_authorization", label: "Alternative Authorization" },
+        ];
+
+        for (const docField of docFields) {
+          const url = (onboarding as any)[docField.field];
+          if (url) {
+            const fileName = url.split("/").pop() || docField.label;
+            allDocs.push({
+              id: `onboarding-${docField.field}`,
+              userId: user.id,
+              loadId: null,
+              shipmentId: null,
+              documentType: docField.type,
+              fileName: docField.label,
+              fileUrl: url,
+              fileSize: null,
+              isVerified: onboarding.status === "approved",
+              createdAt: onboarding.submittedAt || onboarding.updatedAt,
+              load: null,
+              isOnboardingDoc: true,
+            });
+          }
         }
       }
 

@@ -157,6 +157,16 @@ const apiDocTypeToCategory: Record<string, DocumentCategory> = {
   weight_slip: "weight_slip",
   bol: "bol",
   other: "other",
+  gst_certificate: "other",
+  pan_card: "other",
+  incorporation_certificate: "other",
+  cancelled_cheque: "other",
+  address_proof: "other",
+  selfie: "other",
+  msme_certificate: "other",
+  udyam_certificate: "other",
+  lr_copy: "lr",
+  alternative_authorization: "other",
 };
 
 interface ApiDocument {
@@ -173,7 +183,8 @@ interface ApiDocument {
   load?: {
     shipperLoadNumber?: number;
     adminReferenceNumber?: number;
-  };
+  } | null;
+  isOnboardingDoc?: boolean;
 }
 
 export default function DocumentsPage() {
@@ -235,12 +246,12 @@ export default function DocumentsPage() {
         fileType: doc.fileName.toLowerCase().endsWith('.pdf') ? "pdf" as const : "image" as const,
         fileUrl: doc.fileUrl,
         category,
-        loadId: loadIdStr,
+        loadId: doc.isOnboardingDoc ? "Verification" : loadIdStr,
         shipmentId: doc.shipmentId,
-        uploadedBy: "Carrier",
+        uploadedBy: doc.isOnboardingDoc ? "Shipper (Onboarding)" : "Carrier",
         uploadedDate: new Date(doc.createdAt),
         status: "active" as DocumentStatus,
-        tags: [doc.documentType],
+        tags: doc.isOnboardingDoc ? [doc.documentType, "verification"] : [doc.documentType],
         version: 1,
         isVerified: doc.isVerified,
       };

@@ -272,8 +272,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Hero Section with Video Background */}
-      <section className="relative h-[600px] overflow-hidden" data-testid="section-hero">
+      {/* Hero Section with Video Background + Role Cards Overlay */}
+      <section className="relative py-16 md:py-24 overflow-hidden" data-testid="section-hero">
         {/* Video Background */}
         <video 
           autoPlay 
@@ -285,65 +285,99 @@ export default function LandingPage() {
         >
           <source src="/assets/Load_Smart_Video_1770143671918.mov" type="video/mp4" />
         </video>
-        {/* Dark overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a2e]/90 via-[#1a1a2e]/70 to-transparent" />
+        {/* Dark overlay */}
+        <div className="absolute inset-0 bg-[#1a1a2e]/60" />
 
-        {/* Hero Content */}
-        <div className="relative z-10 container mx-auto h-full flex items-center px-4">
-          <div className="max-w-xl">
-            <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6" data-testid="text-hero-title">
-              {heroSlides[currentHeroSlide].title}
-            </h1>
-            <p className="text-lg text-gray-300 mb-8 leading-relaxed" data-testid="text-hero-subtitle">
-              {heroSlides[currentHeroSlide].subtitle}
-            </p>
-            <Button 
-              onClick={handleGetStarted}
-              size="lg"
-              className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
-              data-testid="button-get-started"
-            >
-              Get Started
-            </Button>
+        {/* Role Cards on top of video */}
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8">
+            {roleCards.map((card) => (
+              <div 
+                key={card.role}
+                className="relative h-[500px] cursor-pointer"
+                style={{ perspective: '1000px' }}
+                onClick={() => setFlippedCards(prev => ({ ...prev, [card.role]: !prev[card.role] }))}
+                data-testid={`card-role-video-${card.role.toLowerCase()}`}
+              >
+                <div 
+                  className="relative w-full h-full transition-transform duration-700"
+                  style={{ 
+                    transformStyle: 'preserve-3d',
+                    transform: flippedCards[card.role] ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                  }}
+                >
+                  {/* Front of card */}
+                  <div 
+                    className="absolute inset-0 bg-white dark:bg-[#161b22] rounded-lg shadow-xl backface-hidden"
+                    style={{ backfaceVisibility: 'hidden' }}
+                  >
+                    <div className="p-8 text-center">
+                      <p className="text-gray-600 dark:text-gray-300 text-xl mb-2">I am a</p>
+                      <h3 className="text-4xl font-black text-[#2855CC] mb-6">{card.role}</h3>
+                      <Button 
+                        className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
+                        data-testid={`button-get-started-video-${card.role.toLowerCase()}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFlippedCards(prev => ({ ...prev, [card.role]: true }));
+                        }}
+                      >
+                        Get Started
+                      </Button>
+                    </div>
+                    <div className="relative h-48 overflow-hidden">
+                      <img 
+                        src={card.image} 
+                        alt={card.role}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-6">
+                      <p className="text-gray-600 dark:text-gray-400 text-sm text-center leading-relaxed">
+                        {card.shortDescription}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Back of card */}
+                  <div 
+                    className="absolute inset-0 bg-[#2855CC] dark:bg-[#1e4499] rounded-lg shadow-xl p-8 flex flex-col justify-between"
+                    style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                  >
+                    <div>
+                      <h3 className="text-3xl font-black text-white mb-4">{card.role}</h3>
+                      <p className="text-white/90 text-base leading-relaxed mb-6">
+                        {card.detailedDescription}
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      <Button 
+                        className="w-full bg-white text-[#2855CC] rounded-full text-sm font-semibold uppercase tracking-wider"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCardSignup(card.role);
+                        }}
+                        data-testid={`button-signup-video-${card.role.toLowerCase()}`}
+                      >
+                        Sign Up Now
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        className="w-full border-white text-white rounded-full text-sm font-semibold uppercase tracking-wider"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFlippedCards(prev => ({ ...prev, [card.role]: false }));
+                        }}
+                        data-testid={`button-back-video-${card.role.toLowerCase()}`}
+                      >
+                        Go Back
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-
-        {/* Carousel Navigation Arrows */}
-        <Button 
-          onClick={prevHeroSlide}
-          variant="ghost"
-          size="icon"
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 text-white/70"
-          data-testid="button-hero-prev"
-        >
-          <ChevronLeft className="h-8 w-8" />
-        </Button>
-        <Button 
-          onClick={nextHeroSlide}
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 text-white/70"
-          data-testid="button-hero-next"
-        >
-          <ChevronRight className="h-8 w-8" />
-        </Button>
-
-        {/* Carousel Dots */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-          {heroSlides.map((_, index) => (
-            <Button
-              key={index}
-              onClick={() => setCurrentHeroSlide(index)}
-              variant="ghost"
-              size="icon"
-              className={`rounded-full ${
-                index === currentHeroSlide ? 'bg-white' : 'bg-white/40'
-              }`}
-              data-testid={`button-hero-dot-${index}`}
-            >
-              <span className="sr-only">Slide {index + 1}</span>
-            </Button>
-          ))}
         </div>
       </section>
 

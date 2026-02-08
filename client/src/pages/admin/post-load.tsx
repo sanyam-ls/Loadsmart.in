@@ -958,7 +958,7 @@ export default function AdminPostLoadPage() {
                 <CardContent className="space-y-4">
                   {/* Shipper Selector - Autocomplete Input */}
                   <div className="space-y-2">
-                    <FormLabel>Select Existing Shipper (Optional)</FormLabel>
+                    <FormLabel>Select Existing Shipper</FormLabel>
                     <div className="relative" ref={shipperDropdownRef}>
                       <Input
                         placeholder="Type to search verified shippers..."

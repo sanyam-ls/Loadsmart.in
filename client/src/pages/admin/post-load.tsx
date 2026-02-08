@@ -1484,7 +1484,7 @@ export default function AdminPostLoadPage() {
                     name="receiverEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Receiver Email (Optional)</FormLabel>
+                        <FormLabel>Receiver Email</FormLabel>
                         <FormControl>
                           <Input type="email" placeholder="email@example.com" {...field} data-testid="admin-input-receiver-email" />
                         </FormControl>

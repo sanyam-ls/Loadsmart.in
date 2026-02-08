@@ -3872,12 +3872,20 @@ RESPOND IN THIS EXACT JSON FORMAT:
       if (body.deliveryDate && typeof body.deliveryDate === 'string') {
         body.deliveryDate = new Date(body.deliveryDate);
       }
+      if (typeof body.weight === 'string') {
+        const parsed = parseFloat(body.weight);
+        body.weight = (!body.weight || isNaN(parsed)) ? null : parsed;
+      }
 
       // Get next sequential global load number
       const shipperLoadNumber = await storage.getNextGlobalLoadNumber();
 
       const data = insertLoadSchema.parse({
         ...body,
+        pickupAddress: body.pickupAddress || "",
+        pickupCity: body.pickupCity || "",
+        dropoffAddress: body.dropoffAddress || "",
+        dropoffCity: body.dropoffCity || "",
         shipperId: user.id,
         shipperLoadNumber,
         status: 'pending',
@@ -3892,7 +3900,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         await storage.createNotification({
           userId: admin.id,
           title: "New Load Submitted",
-          message: `${user.companyName || user.username} submitted a new load from ${load.pickupCity} to ${load.dropoffCity}`,
+          message: `${user.companyName || user.username} submitted a new load${load.pickupCity && load.dropoffCity ? ` from ${load.pickupCity} to ${load.dropoffCity}` : ''}`,
           type: "info",
           relatedLoadId: load.id,
         });

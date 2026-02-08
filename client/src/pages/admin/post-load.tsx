@@ -617,11 +617,11 @@ export default function AdminPostLoadPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const { data: savedPickupAddresses = [] } = useQuery({
+  const { data: savedPickupAddresses = [] } = useQuery<any[]>({
     queryKey: ['/api/admin/saved-addresses', selectedShipperId, 'pickup'],
     enabled: !!selectedShipperId,
   });
-  const { data: savedDropoffAddresses = [] } = useQuery({
+  const { data: savedDropoffAddresses = [] } = useQuery<any[]>({
     queryKey: ['/api/admin/saved-addresses', selectedShipperId, 'dropoff'],
     enabled: !!selectedShipperId,
   });

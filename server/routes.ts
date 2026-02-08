@@ -14416,8 +14416,14 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(400).json({ error: "Invalid address type. Must be 'pickup' or 'dropoff'" });
       }
 
+      const shipperUser = await storage.getUser(shipperId);
+      if (!shipperUser) {
+        return res.json([]);
+      }
+      const shipperNumericId = shipperUser.userNumber || parseInt(shipperId) || 0;
+
       const addresses = await db.select().from(savedAddresses)
-        .where(eq(savedAddresses.shipperId, parseInt(shipperId)));
+        .where(eq(savedAddresses.shipperId, shipperNumericId));
       
       const filteredAddresses = addresses
         .filter(a => a.addressType === type && a.isActive)
@@ -14439,9 +14445,12 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(403).json({ error: "Only admins can save addresses" });
       }
 
+      const shipperUser = await storage.getUser(req.body.shipperId);
+      const shipperNumericId = shipperUser?.userNumber || parseInt(req.body.shipperId) || 0;
+
       const parsed = insertSavedAddressSchema.safeParse({
         ...req.body,
-        shipperId: parseInt(req.body.shipperId),
+        shipperId: shipperNumericId,
       });
 
       if (!parsed.success) {
@@ -14471,8 +14480,10 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(403).json({ error: "Only shippers can access saved addresses" });
       }
 
+      const shipperNumericId = user.userNumber || parseInt(userId) || 0;
+
       const addresses = await db.select().from(savedAddresses)
-        .where(eq(savedAddresses.shipperId, parseInt(userId)))
+        .where(eq(savedAddresses.shipperId, shipperNumericId))
         .orderBy(savedAddresses.usageCount);
       
       // Sort by usage count descending (most used first)
@@ -14500,8 +14511,10 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(400).json({ error: "Invalid address type. Must be 'pickup' or 'dropoff'" });
       }
 
+      const shipperNumericId = user.userNumber || parseInt(userId) || 0;
+
       const addresses = await db.select().from(savedAddresses)
-        .where(eq(savedAddresses.shipperId, parseInt(userId)));
+        .where(eq(savedAddresses.shipperId, shipperNumericId));
       
       // Filter by type and sort by usage count descending
       const filteredAddresses = addresses
@@ -14525,9 +14538,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(403).json({ error: "Only shippers can save addresses" });
       }
 
+      const shipperNumericId = user.userNumber || parseInt(userId) || 0;
+
       const parsed = insertSavedAddressSchema.safeParse({
         ...req.body,
-        shipperId: parseInt(userId),
+        shipperId: shipperNumericId,
       });
 
       if (!parsed.success) {
@@ -14555,8 +14570,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
 
       // Verify ownership
+      const shipperNumericId = user.userNumber || parseInt(userId) || 0;
       const [address] = await db.select().from(savedAddresses).where(eq(savedAddresses.id, addressId));
-      if (!address || address.shipperId !== parseInt(userId)) {
+      if (!address || address.shipperId !== shipperNumericId) {
         return res.status(404).json({ error: "Address not found" });
       }
 
@@ -14588,8 +14604,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
 
       // Verify ownership
+      const shipperNumericId = user.userNumber || parseInt(userId) || 0;
       const [address] = await db.select().from(savedAddresses).where(eq(savedAddresses.id, addressId));
-      if (!address || address.shipperId !== parseInt(userId)) {
+      if (!address || address.shipperId !== shipperNumericId) {
         return res.status(404).json({ error: "Address not found" });
       }
 

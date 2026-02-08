@@ -526,6 +526,12 @@ export default function AdminOnboardingPage() {
                     <Label className="text-muted-foreground">{t("onboarding.cin")}</Label>
                     <p className="font-medium">{selectedRequest?.request.cinNumber || "-"}</p>
                   </div>
+                  {selectedRequest?.request.businessType === "proprietorship" && (
+                    <div>
+                      <Label className="text-muted-foreground">Aadhaar Number</Label>
+                      <p className="font-medium">{selectedRequest?.request.aadhaarNumber || "-"}</p>
+                    </div>
+                  )}
                 </div>
 
                 <Separator />
@@ -654,20 +660,14 @@ export default function AdminOnboardingPage() {
                     )}
                   </div>
                   {selectedRequest?.request.businessType === "proprietorship" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label className="text-muted-foreground">Aadhaar Number</Label>
-                        <p className="font-medium">{selectedRequest?.request.aadhaarNumber || "-"}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-muted-foreground">Aadhaar Card</Label>
-                        {selectedRequest?.request.aadhaarCardUrl ? (
-                          <DocumentLink value={selectedRequest.request.aadhaarCardUrl} />
-                        ) : (
-                          <p className="text-muted-foreground">{t("common.notProvided")}</p>
-                        )}
-                      </div>
-                    </>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Aadhaar Card</Label>
+                      {selectedRequest?.request.aadhaarCardUrl ? (
+                        <DocumentLink value={selectedRequest.request.aadhaarCardUrl} />
+                      ) : (
+                        <p className="text-muted-foreground">{t("common.notProvided")}</p>
+                      )}
+                    </div>
                   )}
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">{t("onboarding.incorporationCertificate")}</Label>

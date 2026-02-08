@@ -11,7 +11,7 @@ import {
   ChevronLeft, MapPin, Calendar, 
   Users, Copy, X, CheckCircle, AlertCircle, Star, FileText, Loader2,
   Building2, User as UserIcon, Phone, IndianRupee, Package, Truck, StickyNote,
-  Mail, Landmark, Navigation, Percent, Receipt, EyeOff, MessageCircle, Pencil, Save
+  Mail, Landmark, Navigation, Percent, Receipt, EyeOff, MessageCircle, Pencil, Save, Sparkles
 } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -58,26 +58,30 @@ import {
 } from "@/components/ui/select";
 
 const editLoadSchema = z.object({
+  shipperCompanyName: z.string().optional(),
   shipperContactName: z.string().optional(),
   shipperCompanyAddress: z.string().optional(),
   shipperPhone: z.string().optional(),
+  pickupBusinessName: z.string().optional(),
   pickupAddress: z.string().min(1, "Pickup address is required"),
   pickupLocality: z.string().optional(),
   pickupLandmark: z.string().optional(),
   pickupCity: z.string().min(1, "Pickup city is required"),
   pickupState: z.string().optional(),
   pickupPincode: z.string().optional(),
+  dropoffBusinessName: z.string().optional(),
   dropoffAddress: z.string().min(1, "Dropoff address is required"),
   dropoffLocality: z.string().optional(),
   dropoffLandmark: z.string().optional(),
   dropoffCity: z.string().min(1, "Dropoff city is required"),
   dropoffState: z.string().optional(),
   dropoffPincode: z.string().optional(),
-  dropoffBusinessName: z.string().optional(),
   receiverName: z.string().min(1, "Receiver name is required"),
   receiverPhone: z.string().min(1, "Receiver phone is required"),
   receiverEmail: z.string().optional(),
   weight: z.string().optional(),
+  weightUnit: z.string().default("tons"),
+  requiredTruckType: z.string().optional(),
   goodsToBeCarried: z.string().optional(),
   specialNotes: z.string().optional(),
   pickupDate: z.string().optional(),
@@ -211,8 +215,8 @@ export default function LoadDetailPage() {
     return cities;
   };
   
-  const getCitiesForState = (stateName: string) => {
-    const state = indianStates.find(s => s.name === stateName);
+  const getCitiesForState = (stateNameOrCode: string) => {
+    const state = indianStates.find(s => s.name === stateNameOrCode || s.code === stateNameOrCode);
     return state?.cities || [];
   };
   
@@ -253,26 +257,30 @@ export default function LoadDetailPage() {
   const editForm = useForm<EditLoadFormData>({
     resolver: zodResolver(editLoadSchema),
     defaultValues: {
+      shipperCompanyName: "",
       shipperContactName: "",
       shipperCompanyAddress: "",
       shipperPhone: "",
+      pickupBusinessName: "",
       pickupAddress: "",
       pickupLocality: "",
       pickupLandmark: "",
       pickupCity: "",
       pickupState: "",
       pickupPincode: "",
+      dropoffBusinessName: "",
       dropoffAddress: "",
       dropoffLocality: "",
       dropoffLandmark: "",
       dropoffCity: "",
       dropoffState: "",
       dropoffPincode: "",
-      dropoffBusinessName: "",
       receiverName: "",
       receiverPhone: "",
       receiverEmail: "",
       weight: "",
+      weightUnit: "tons",
+      requiredTruckType: "",
       goodsToBeCarried: "",
       specialNotes: "",
       pickupDate: "",
@@ -347,27 +355,33 @@ export default function LoadDetailPage() {
         resolvedDropoffState: dropoffStateName,
       });
       
+      const stateNameToCode = (name: string) => indianStates.find(s => s.name === name || s.code === name)?.code || name;
+      
       editForm.reset({
+        shipperCompanyName: (load as any).shipperCompanyName || "",
         shipperContactName: load.shipperContactName || "",
         shipperCompanyAddress: load.shipperCompanyAddress || "",
         shipperPhone: load.shipperPhone || "",
+        pickupBusinessName: (load as any).pickupBusinessName || "",
         pickupAddress: load.pickupAddress || "",
         pickupLocality: load.pickupLocality || "",
         pickupLandmark: load.pickupLandmark || "",
         pickupCity: pickupCityName,
-        pickupState: pickupStateName,
+        pickupState: stateNameToCode(pickupStateName),
         pickupPincode: load.pickupPincode || "",
+        dropoffBusinessName: load.dropoffBusinessName || "",
         dropoffAddress: load.dropoffAddress || "",
         dropoffLocality: load.dropoffLocality || "",
         dropoffLandmark: load.dropoffLandmark || "",
         dropoffCity: dropoffCityName,
-        dropoffState: dropoffStateName,
+        dropoffState: stateNameToCode(dropoffStateName),
         dropoffPincode: load.dropoffPincode || "",
-        dropoffBusinessName: load.dropoffBusinessName || "",
         receiverName: load.receiverName || "",
         receiverPhone: load.receiverPhone || "",
         receiverEmail: load.receiverEmail || "",
         weight: load.weight?.toString() || "",
+        weightUnit: "tons",
+        requiredTruckType: load.requiredTruckType || "",
         goodsToBeCarried: load.goodsToBeCarried || "",
         specialNotes: load.specialNotes || "",
         pickupDate: load.pickupDate ? new Date(load.pickupDate).toISOString().slice(0, 16) : "",
@@ -1113,17 +1127,51 @@ export default function LoadDetailPage() {
           <ScrollArea className="h-[calc(100vh-180px)]">
             <Form {...editForm}>
               <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-6 px-6 py-4">
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Shipper Contact</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-blue-500" />
+                      Shipper Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={editForm.control}
+                        name="shipperCompanyName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-shipper-company-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="shipperContactName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contact Person Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-shipper-contact" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <FormField
                       control={editForm.control}
-                      name="shipperContactName"
+                      name="shipperCompanyAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Contact Person Name</FormLabel>
+                          <FormLabel>Company Address</FormLabel>
                           <FormControl>
-                            <Input placeholder="Contact name" {...field} data-testid="input-edit-shipper-contact" />
+                            <Input {...field} data-testid="input-edit-shipper-address" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1134,56 +1182,33 @@ export default function LoadDetailPage() {
                       name="shipperPhone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone</FormLabel>
+                          <FormLabel>Phone Number</FormLabel>
                           <FormControl>
-                            <Input placeholder="Phone number" {...field} data-testid="input-edit-shipper-phone" />
+                            <Input {...field} data-testid="input-edit-shipper-phone" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  <FormField
-                    control={editForm.control}
-                    name="shipperCompanyAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Address</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Company address" {...field} data-testid="input-edit-shipper-address" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                  </CardContent>
+                </Card>
 
-                <Separator />
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Pickup Location</h3>
-                  <FormField
-                    control={editForm.control}
-                    name="pickupAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Street address" {...field} data-testid="input-edit-pickup-address" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid gap-4 sm:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-green-500" />
+                      Pickup Location
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <FormField
                       control={editForm.control}
-                      name="pickupLocality"
+                      name="pickupBusinessName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Locality</FormLabel>
+                          <FormLabel>Business Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Locality/Area" {...field} data-testid="input-edit-pickup-locality" />
+                            <Input {...field} data-testid="input-edit-pickup-business-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1191,96 +1216,113 @@ export default function LoadDetailPage() {
                     />
                     <FormField
                       control={editForm.control}
-                      name="pickupLandmark"
+                      name="pickupAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark (optional)</FormLabel>
+                          <FormLabel>Street Address</FormLabel>
                           <FormControl>
-                            <Input placeholder="Nearby landmark" {...field} data-testid="input-edit-pickup-landmark" />
+                            <Input {...field} data-testid="input-edit-pickup-address" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={editForm.control}
-                      name="pickupCity"
-                      render={({ field }) => {
-                        const selectedState = editForm.watch("pickupState");
-                        const availableCities = selectedState 
-                          ? getCitiesForState(selectedState)
-                          : allCities;
-                        return (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={editForm.control}
+                        name="pickupLocality"
+                        render={({ field }) => (
                           <FormItem>
-                            <FormLabel>City *</FormLabel>
+                            <FormLabel>Locality / Area</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-pickup-locality" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="pickupLandmark"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Landmark (optional)</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-pickup-landmark" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={editForm.control}
+                        name="pickupState"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
                             <Select 
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                const state = getStateForCity(value);
-                                if (state) {
-                                  editForm.setValue("pickupState", state);
-                                }
+                              onValueChange={(val) => {
+                                field.onChange(val);
+                                editForm.setValue("pickupCity", "");
                               }} 
-                              value={field.value || ""}
+                              value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger data-testid="select-edit-pickup-city">
-                                  <SelectValue placeholder="Select city" />
+                                <SelectTrigger data-testid="select-edit-pickup-state">
+                                  <SelectValue placeholder="Select state" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {availableCities.map((city, index) => {
-                                  const cityName = 'stateName' in city ? city.name : city.name;
-                                  return (
-                                    <SelectItem key={`${cityName}-${index}`} value={cityName}>
-                                      {cityName}
+                                <ScrollArea className="h-[300px]">
+                                  {indianStates.map((state) => (
+                                    <SelectItem key={state.code} value={state.code}>
+                                      {state.name}
                                     </SelectItem>
-                                  );
-                                })}
+                                  ))}
+                                </ScrollArea>
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
-                        );
-                      }}
-                    />
-                    <FormField
-                      control={editForm.control}
-                      name="pickupState"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Clear city if it doesn't belong to new state
-                              const currentCity = editForm.getValues("pickupCity");
-                              const citiesInState = getCitiesForState(value);
-                              if (currentCity && !citiesInState.some(c => c.name === currentCity)) {
-                                editForm.setValue("pickupCity", "");
-                              }
-                            }} 
-                            value={field.value || ""}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-edit-pickup-state">
-                                <SelectValue placeholder="Select state" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {indianStates.map((state) => (
-                                <SelectItem key={state.code} value={state.name}>
-                                  {state.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="pickupCity"
+                        render={({ field }) => {
+                          const selectedState = editForm.watch("pickupState");
+                          const pickupCities = selectedState ? getCitiesForState(selectedState) : [];
+                          return (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                value={field.value}
+                                disabled={!selectedState}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-edit-pickup-city">
+                                    <SelectValue placeholder={selectedState ? "Select city" : "Select state first"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <ScrollArea className="h-[300px]">
+                                    {pickupCities.map((city) => (
+                                      <SelectItem key={city.name} value={city.name}>
+                                        {city.name}
+                                      </SelectItem>
+                                    ))}
+                                  </ScrollArea>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    </div>
                     <FormField
                       control={editForm.control}
                       name="pickupPincode"
@@ -1288,41 +1330,31 @@ export default function LoadDetailPage() {
                         <FormItem>
                           <FormLabel>Pincode</FormLabel>
                           <FormControl>
-                            <Input placeholder="Pincode" {...field} data-testid="input-edit-pickup-pincode" />
+                            <Input placeholder="Enter pincode" {...field} data-testid="input-edit-pickup-pincode" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
 
-                <Separator />
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Dropoff Location</h3>
-                  <FormField
-                    control={editForm.control}
-                    name="dropoffAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Street address" {...field} data-testid="input-edit-dropoff-address" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid gap-4 sm:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-red-500" />
+                      Dropoff Location
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <FormField
                       control={editForm.control}
-                      name="dropoffLocality"
+                      name="dropoffBusinessName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Locality</FormLabel>
+                          <FormLabel>Business Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Locality/Area" {...field} data-testid="input-edit-dropoff-locality" />
+                            <Input {...field} data-testid="input-edit-dropoff-business" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1330,96 +1362,113 @@ export default function LoadDetailPage() {
                     />
                     <FormField
                       control={editForm.control}
-                      name="dropoffLandmark"
+                      name="dropoffAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Landmark (optional)</FormLabel>
+                          <FormLabel>Street Address</FormLabel>
                           <FormControl>
-                            <Input placeholder="Nearby landmark" {...field} data-testid="input-edit-dropoff-landmark" />
+                            <Input {...field} data-testid="input-edit-dropoff-address" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={editForm.control}
-                      name="dropoffCity"
-                      render={({ field }) => {
-                        const selectedState = editForm.watch("dropoffState");
-                        const availableCities = selectedState 
-                          ? getCitiesForState(selectedState)
-                          : allCities;
-                        return (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={editForm.control}
+                        name="dropoffLocality"
+                        render={({ field }) => (
                           <FormItem>
-                            <FormLabel>City *</FormLabel>
+                            <FormLabel>Locality / Area</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-dropoff-locality" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="dropoffLandmark"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Landmark (optional)</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-dropoff-landmark" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={editForm.control}
+                        name="dropoffState"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
                             <Select 
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                const state = getStateForCity(value);
-                                if (state) {
-                                  editForm.setValue("dropoffState", state);
-                                }
+                              onValueChange={(val) => {
+                                field.onChange(val);
+                                editForm.setValue("dropoffCity", "");
                               }} 
-                              value={field.value || ""}
+                              value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger data-testid="select-edit-dropoff-city">
-                                  <SelectValue placeholder="Select city" />
+                                <SelectTrigger data-testid="select-edit-dropoff-state">
+                                  <SelectValue placeholder="Select state" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {availableCities.map((city, index) => {
-                                  const cityName = 'stateName' in city ? city.name : city.name;
-                                  return (
-                                    <SelectItem key={`${cityName}-${index}`} value={cityName}>
-                                      {cityName}
+                                <ScrollArea className="h-[300px]">
+                                  {indianStates.map((state) => (
+                                    <SelectItem key={state.code} value={state.code}>
+                                      {state.name}
                                     </SelectItem>
-                                  );
-                                })}
+                                  ))}
+                                </ScrollArea>
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
-                        );
-                      }}
-                    />
-                    <FormField
-                      control={editForm.control}
-                      name="dropoffState"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Clear city if it doesn't belong to new state
-                              const currentCity = editForm.getValues("dropoffCity");
-                              const citiesInState = getCitiesForState(value);
-                              if (currentCity && !citiesInState.some(c => c.name === currentCity)) {
-                                editForm.setValue("dropoffCity", "");
-                              }
-                            }} 
-                            value={field.value || ""}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-edit-dropoff-state">
-                                <SelectValue placeholder="Select state" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {indianStates.map((state) => (
-                                <SelectItem key={state.code} value={state.name}>
-                                  {state.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="dropoffCity"
+                        render={({ field }) => {
+                          const selectedState = editForm.watch("dropoffState");
+                          const dropoffCities = selectedState ? getCitiesForState(selectedState) : [];
+                          return (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                value={field.value}
+                                disabled={!selectedState}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-edit-dropoff-city">
+                                    <SelectValue placeholder={selectedState ? "Select city" : "Select state first"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <ScrollArea className="h-[300px]">
+                                    {dropoffCities.map((city) => (
+                                      <SelectItem key={city.name} value={city.name}>
+                                        {city.name}
+                                      </SelectItem>
+                                    ))}
+                                  </ScrollArea>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    </div>
                     <FormField
                       control={editForm.control}
                       name="dropoffPincode"
@@ -1427,155 +1476,176 @@ export default function LoadDetailPage() {
                         <FormItem>
                           <FormLabel>Pincode</FormLabel>
                           <FormControl>
-                            <Input placeholder="Pincode" {...field} data-testid="input-edit-dropoff-pincode" />
+                            <Input placeholder="Enter pincode" {...field} data-testid="input-edit-dropoff-pincode" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  <FormField
-                    control={editForm.control}
-                    name="dropoffBusinessName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Business Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Receiving business name" {...field} data-testid="input-edit-dropoff-business" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                  </CardContent>
+                </Card>
 
-                <Separator />
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Receiver Details</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-purple-500" />
+                      Receiver Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={editForm.control}
+                        name="receiverName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Receiver Full Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-receiver-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="receiverPhone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Receiver Phone</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-receiver-phone" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <FormField
                       control={editForm.control}
-                      name="receiverName"
+                      name="receiverEmail"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Receiver Full Name *</FormLabel>
+                          <FormLabel>Receiver Email (Optional)</FormLabel>
                           <FormControl>
-                            <Input placeholder="Full name" {...field} data-testid="input-edit-receiver-name" />
+                            <Input type="email" {...field} data-testid="input-edit-receiver-email" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={editForm.control}
-                      name="receiverPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Phone number" {...field} data-testid="input-edit-receiver-phone" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={editForm.control}
-                    name="receiverEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Email address" type="email" {...field} data-testid="input-edit-receiver-email" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                  </CardContent>
+                </Card>
 
-                <Separator />
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Cargo Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={editForm.control}
+                        name="weight"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Weight</FormLabel>
+                            <FormControl>
+                              <div className="flex gap-2">
+                                <Input 
+                                  type="number" 
+                                  {...field}
+                                  data-testid="input-edit-weight"
+                                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <Select
+                                  defaultValue="tons"
+                                  onValueChange={(value) => editForm.setValue("weightUnit", value)}
+                                >
+                                  <SelectTrigger className="w-24" data-testid="select-edit-weight-unit">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="tons">tons</SelectItem>
+                                    <SelectItem value="kg">kg</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="goodsToBeCarried"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Goods Description</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-goods" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={editForm.control}
+                      name="specialNotes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Special Notes</FormLabel>
+                          <FormControl>
+                            <Textarea className="resize-none" {...field} data-testid="input-edit-notes" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
 
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Cargo Details</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={editForm.control}
-                      name="weight"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Weight (Tons)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Weight in tons" type="number" step="0.1" {...field} data-testid="input-edit-weight" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={editForm.control}
-                      name="goodsToBeCarried"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Goods Description</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Type of goods" {...field} data-testid="input-edit-goods" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={editForm.control}
-                    name="specialNotes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Special Notes</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Any special handling instructions..." className="resize-none" {...field} data-testid="input-edit-notes" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Schedule</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={editForm.control}
-                      name="pickupDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pickup Date & Time</FormLabel>
-                          <FormControl>
-                            <Input type="datetime-local" {...field} data-testid="input-edit-pickup-date" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={editForm.control}
-                      name="deliveryDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Delivery Date & Time</FormLabel>
-                          <FormControl>
-                            <Input type="datetime-local" {...field} data-testid="input-edit-delivery-date" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Schedule
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={editForm.control}
+                        name="pickupDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Pickup Date</FormLabel>
+                            <FormControl>
+                              <Input type="datetime-local" {...field} data-testid="input-edit-pickup-date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="deliveryDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Delivery Date</FormLabel>
+                            <FormControl>
+                              <Input type="datetime-local" {...field} data-testid="input-edit-delivery-date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={() => setEditSheetOpen(false)} data-testid="button-cancel-edit">

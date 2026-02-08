@@ -1257,9 +1257,9 @@ export default function CarrierRevenuePage() {
               .filter((s: Shipment) => s.carrierId === user?.id && s.status === 'delivered');
             const haltingChargesPerTrip = 500;
             const totalHaltingCharges = deliveredShipments.length * haltingChargesPerTrip;
-            const platformFeeRate = 0.10;
-            const platformFee = totalRevenue * platformFeeRate;
-            const totalDeductions = tdsAmount + totalHaltingCharges + platformFee;
+            const podPenaltyRate = 100;
+            const podGracePeriodDays = 15;
+            const now = new Date();
 
             const perTripDeductions = deliveredShipments.map((shipment: Shipment) => {
               const load = allLoads.find((l: Load) => l.id === shipment.loadId);
@@ -1272,17 +1272,25 @@ export default function CarrierRevenuePage() {
               const loadId = loadNum
                 ? `LD-${String(loadNum).padStart(3, '0')}`
                 : `LD-${shipment.loadId.slice(0, 6)}`;
+              const completedDate = shipment.completedAt ? new Date(shipment.completedAt) : now;
+              const daysSinceCompletion = Math.floor((now.getTime() - completedDate.getTime()) / (1000 * 60 * 60 * 24));
+              const podOverdueDays = Math.max(0, daysSinceCompletion - podGracePeriodDays);
+              const podPenalty = podOverdueDays * podPenaltyRate;
               return {
                 loadId,
                 route,
                 grossRevenue,
                 tds: tripTds,
                 halting: haltingChargesPerTrip,
-                platformFee: grossRevenue * platformFeeRate,
-                total: tripTds + haltingChargesPerTrip + (grossRevenue * platformFeeRate),
-                date: shipment.completedAt ? format(new Date(shipment.completedAt), 'MMM dd, yyyy') : '-',
+                podPenalty,
+                podOverdueDays,
+                total: tripTds + haltingChargesPerTrip + podPenalty,
+                date: shipment.completedAt ? format(completedDate, 'MMM dd, yyyy') : '-',
               };
             });
+
+            const totalPodPenalty = perTripDeductions.reduce((sum, t) => sum + t.podPenalty, 0);
+            const totalDeductions = tdsAmount + totalHaltingCharges + totalPodPenalty;
 
             return (
               <>
@@ -1339,42 +1347,69 @@ export default function CarrierRevenuePage() {
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-red-500/10">
-                          <Building2 className="h-5 w-5 text-red-600" />
+                          <AlertCircle className="h-5 w-5 text-red-600" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Platform Fee</p>
-                          <p className="text-xl font-bold text-red-600" data-testid="text-platform-fee">
-                            {formatCurrency(platformFee)}
+                          <p className="text-sm text-muted-foreground">POD Penalty</p>
+                          <p className="text-xl font-bold text-red-600" data-testid="text-pod-penalty">
+                            {formatCurrency(totalPodPenalty)}
                           </p>
+                          <p className="text-xs text-muted-foreground">Rs. 100/day after 15 days</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">TDS Declaration Status</CardTitle>
-                    <CardDescription>
-                      Submit your TDS declaration to reduce or eliminate the 2% TDS deduction on your earnings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-start gap-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
-                      <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-                      <div className="space-y-1">
-                        <p className="font-medium text-amber-800 dark:text-amber-400">TDS Declaration Not Submitted</p>
-                        <p className="text-sm text-amber-700 dark:text-amber-500">
-                          A 2% TDS is being deducted from your gross earnings because you have not submitted a TDS declaration.
-                          Submit Form 15G/15H or your PAN details to reduce this deduction.
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Total TDS deducted so far: <span className="font-semibold text-amber-700 dark:text-amber-400">{formatCurrency(tdsAmount)}</span>
-                        </p>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">TDS Declaration Status</CardTitle>
+                      <CardDescription>
+                        Submit your TDS declaration to reduce or eliminate the 2% TDS deduction
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-start gap-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
+                        <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                        <div className="space-y-1">
+                          <p className="font-medium text-amber-800 dark:text-amber-400">TDS Declaration Not Submitted</p>
+                          <p className="text-sm text-amber-700 dark:text-amber-500">
+                            A 2% TDS is being deducted from your gross earnings because you have not submitted a TDS declaration.
+                            Submit Form 15G/15H or your PAN details to reduce this deduction.
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Total TDS deducted: <span className="font-semibold text-amber-700 dark:text-amber-400">{formatCurrency(tdsAmount)}</span>
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">POD Submission Status</CardTitle>
+                      <CardDescription>
+                        Submit physical POD copy within 15 days of trip completion to avoid penalty
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-start gap-4 p-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
+                        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+                        <div className="space-y-1">
+                          <p className="font-medium text-red-800 dark:text-red-400">Physical POD Copy Pending</p>
+                          <p className="text-sm text-red-700 dark:text-red-500">
+                            If the physical POD (Proof of Delivery) copy is not submitted within 15 days of trip
+                            completion, a penalty of Rs. 100/day is charged until the POD is received.
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Total POD penalty: <span className="font-semibold text-red-700 dark:text-red-400">{formatCurrency(totalPodPenalty)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
                 <Card>
                   <CardHeader>
@@ -1408,8 +1443,8 @@ export default function CarrierRevenuePage() {
                                   <p className="font-medium text-orange-600">-{formatCurrency(trip.halting)}</p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground text-xs">Platform Fee</p>
-                                  <p className="font-medium text-red-600">-{formatCurrency(trip.platformFee)}</p>
+                                  <p className="text-muted-foreground text-xs">POD Penalty {trip.podOverdueDays > 0 ? `(${trip.podOverdueDays}d)` : ''}</p>
+                                  <p className="font-medium text-red-600">{trip.podPenalty > 0 ? `-${formatCurrency(trip.podPenalty)}` : 'Rs. 0'}</p>
                                 </div>
                               </div>
                               <div className="pt-2 border-t flex items-center justify-between">

@@ -608,7 +608,7 @@ export default function AuthPage() {
           <ThemeToggle />
         </div>
         <div className="flex-1 flex items-center justify-center p-8">
-          <Card className="w-full max-w-md shadow-xl bg-white dark:bg-[#0d1525] border-gray-200 dark:border-[#16254F]">
+          <Card className="w-full max-w-md shadow-xl bg-white/70 dark:bg-[#0d1525]/70 backdrop-blur-md border-white/30 dark:border-[#16254F]/50">
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4 lg:hidden">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">

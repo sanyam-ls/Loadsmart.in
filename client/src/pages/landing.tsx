@@ -193,6 +193,28 @@ export default function LandingPage() {
         {/* Dark overlay */}
         <div className="absolute inset-0 bg-[#1a1a2e]/60" />
 
+        {/* Stats Cards */}
+        <div className="relative z-10 container mx-auto px-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 text-center" data-testid="stat-loads-delivered">
+              <p className="text-3xl md:text-4xl font-black text-white">10,000+</p>
+              <p className="text-white/70 text-sm mt-1">Loads Delivered</p>
+            </div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 text-center" data-testid="stat-trusted-carriers">
+              <p className="text-3xl md:text-4xl font-black text-white">500+</p>
+              <p className="text-white/70 text-sm mt-1">Trusted Carriers</p>
+            </div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 text-center" data-testid="stat-on-time">
+              <p className="text-3xl md:text-4xl font-black text-white">98%</p>
+              <p className="text-white/70 text-sm mt-1">On-time Delivery</p>
+            </div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 text-center" data-testid="stat-support">
+              <p className="text-3xl md:text-4xl font-black text-white">24/7</p>
+              <p className="text-white/70 text-sm mt-1">Support Available</p>
+            </div>
+          </div>
+        </div>
+
         {/* Role Cards on top of video */}
         <div className="relative z-10 container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8">

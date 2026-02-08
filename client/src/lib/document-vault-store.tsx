@@ -13,6 +13,7 @@ export type DocumentCategory =
   | "eway_bill" 
   | "weight_slip" 
   | "photos" 
+  | "verification"
   | "other";
 
 export type DocumentStatus = "active" | "expiring_soon" | "expired";
@@ -59,6 +60,7 @@ export const documentCategoryLabels: Record<DocumentCategory, string> = {
   eway_bill: "E-way Bill",
   weight_slip: "Weight Slip",
   photos: "Photos",
+  verification: "Verification Documents",
   other: "Other",
 };
 

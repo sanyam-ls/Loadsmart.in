@@ -66,7 +66,7 @@ const isDisplayableUrl = (url: string | undefined): boolean => {
 
 // Shipper-specific document categories (excluding carrier documents)
 const shipperDocumentCategories: DocumentCategory[] = [
-  "pod", "invoice", "lr", "eway_bill", "photos", "other"
+  "pod", "invoice", "lr", "eway_bill", "photos", "verification", "other"
 ];
 
 // Folder configuration for shipper document categories
@@ -126,6 +126,13 @@ const documentFolders: Partial<Record<DocumentCategory, {
     bgColor: "bg-cyan-100 dark:bg-cyan-900/30",
     description: "Weighbridge and weight verification slips",
   },
+  verification: {
+    label: "Verification Documents",
+    icon: Shield,
+    color: "text-indigo-600 dark:text-indigo-400",
+    bgColor: "bg-indigo-100 dark:bg-indigo-900/30",
+    description: "Business verification and onboarding documents",
+  },
   other: {
     label: "Other Documents",
     icon: Folder,
@@ -143,6 +150,7 @@ const shipperCategoryLabels: Record<string, string> = {
   eway_bill: "E-way Bill",
   weight_slip: "Weight Slip",
   photos: "Photos",
+  verification: "Verification Document",
   other: "Other",
 };
 
@@ -157,16 +165,16 @@ const apiDocTypeToCategory: Record<string, DocumentCategory> = {
   weight_slip: "weight_slip",
   bol: "bol",
   other: "other",
-  gst_certificate: "other",
-  pan_card: "other",
-  incorporation_certificate: "other",
-  cancelled_cheque: "other",
-  address_proof: "other",
-  selfie: "other",
-  msme_certificate: "other",
-  udyam_certificate: "other",
-  lr_copy: "lr",
-  alternative_authorization: "other",
+  gst_certificate: "verification",
+  pan_card: "verification",
+  incorporation_certificate: "verification",
+  cancelled_cheque: "verification",
+  address_proof: "verification",
+  selfie: "verification",
+  msme_certificate: "verification",
+  udyam_certificate: "verification",
+  lr_copy: "verification",
+  alternative_authorization: "verification",
 };
 
 interface ApiDocument {
@@ -350,6 +358,16 @@ export default function DocumentsPage() {
         invoice: "Invoice",
         weight_slip: "Weight Slip",
         bol: "Bill of Lading",
+        gst_certificate: "Verification Document",
+        pan_card: "Verification Document",
+        incorporation_certificate: "Verification Document",
+        cancelled_cheque: "Verification Document",
+        address_proof: "Verification Document",
+        selfie: "Verification Document",
+        msme_certificate: "Verification Document",
+        udyam_certificate: "Verification Document",
+        lr_copy: "Verification Document",
+        alternative_authorization: "Verification Document",
         other: "Other",
       };
       const categoryName = categoryMapping[docType] || docType || "Document";

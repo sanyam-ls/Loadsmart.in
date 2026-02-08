@@ -730,9 +730,9 @@ export async function registerRoutes(
       if (body.deliveryDate && typeof body.deliveryDate === 'string') {
         body.deliveryDate = new Date(body.deliveryDate);
       }
-      if (body.weight && typeof body.weight === 'string') {
+      if (typeof body.weight === 'string') {
         const parsed = parseFloat(body.weight);
-        body.weight = isNaN(parsed) ? null : parsed;
+        body.weight = (!body.weight || isNaN(parsed)) ? null : parsed;
       }
 
       // Get the next sequential load number for this shipper

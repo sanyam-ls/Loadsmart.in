@@ -177,81 +177,6 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section with Video Background */}
-      <section className="relative h-[600px] overflow-hidden" data-testid="section-hero">
-        {/* Video Background */}
-        <video 
-          autoPlay 
-          loop 
-          muted 
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          data-testid="video-hero-background"
-        >
-          <source src="/assets/Load_Smart_Video_1770143671918.mov" type="video/mp4" />
-        </video>
-        {/* Dark overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a2e]/90 via-[#1a1a2e]/70 to-transparent" />
-
-        {/* Hero Content */}
-        <div className="relative z-10 container mx-auto h-full flex items-center px-4">
-          <div className="max-w-xl">
-            <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6" data-testid="text-hero-title">
-              {heroSlides[currentHeroSlide].title}
-            </h1>
-            <p className="text-lg text-gray-300 mb-8 leading-relaxed" data-testid="text-hero-subtitle">
-              {heroSlides[currentHeroSlide].subtitle}
-            </p>
-            <Button 
-              onClick={handleGetStarted}
-              size="lg"
-              className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
-              data-testid="button-get-started"
-            >
-              Get Started
-            </Button>
-          </div>
-        </div>
-
-        {/* Carousel Navigation Arrows */}
-        <Button 
-          onClick={prevHeroSlide}
-          variant="ghost"
-          size="icon"
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 text-white/70"
-          data-testid="button-hero-prev"
-        >
-          <ChevronLeft className="h-8 w-8" />
-        </Button>
-        <Button 
-          onClick={nextHeroSlide}
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 text-white/70"
-          data-testid="button-hero-next"
-        >
-          <ChevronRight className="h-8 w-8" />
-        </Button>
-
-        {/* Carousel Dots */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-          {heroSlides.map((_, index) => (
-            <Button
-              key={index}
-              onClick={() => setCurrentHeroSlide(index)}
-              variant="ghost"
-              size="icon"
-              className={`rounded-full ${
-                index === currentHeroSlide ? 'bg-white' : 'bg-white/40'
-              }`}
-              data-testid={`button-hero-dot-${index}`}
-            >
-              <span className="sr-only">Slide {index + 1}</span>
-            </Button>
-          ))}
-        </div>
-      </section>
-
       {/* Role Cards Section */}
       <section className="py-20 bg-white dark:bg-[#0d1117]">
         <div className="container mx-auto px-4">
@@ -344,6 +269,81 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Hero Section with Video Background */}
+      <section className="relative h-[600px] overflow-hidden" data-testid="section-hero">
+        {/* Video Background */}
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          data-testid="video-hero-background"
+        >
+          <source src="/assets/Load_Smart_Video_1770143671918.mov" type="video/mp4" />
+        </video>
+        {/* Dark overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a2e]/90 via-[#1a1a2e]/70 to-transparent" />
+
+        {/* Hero Content */}
+        <div className="relative z-10 container mx-auto h-full flex items-center px-4">
+          <div className="max-w-xl">
+            <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6" data-testid="text-hero-title">
+              {heroSlides[currentHeroSlide].title}
+            </h1>
+            <p className="text-lg text-gray-300 mb-8 leading-relaxed" data-testid="text-hero-subtitle">
+              {heroSlides[currentHeroSlide].subtitle}
+            </p>
+            <Button 
+              onClick={handleGetStarted}
+              size="lg"
+              className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
+              data-testid="button-get-started"
+            >
+              Get Started
+            </Button>
+          </div>
+        </div>
+
+        {/* Carousel Navigation Arrows */}
+        <Button 
+          onClick={prevHeroSlide}
+          variant="ghost"
+          size="icon"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 text-white/70"
+          data-testid="button-hero-prev"
+        >
+          <ChevronLeft className="h-8 w-8" />
+        </Button>
+        <Button 
+          onClick={nextHeroSlide}
+          variant="ghost"
+          size="icon"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 text-white/70"
+          data-testid="button-hero-next"
+        >
+          <ChevronRight className="h-8 w-8" />
+        </Button>
+
+        {/* Carousel Dots */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+          {heroSlides.map((_, index) => (
+            <Button
+              key={index}
+              onClick={() => setCurrentHeroSlide(index)}
+              variant="ghost"
+              size="icon"
+              className={`rounded-full ${
+                index === currentHeroSlide ? 'bg-white' : 'bg-white/40'
+              }`}
+              data-testid={`button-hero-dot-${index}`}
+            >
+              <span className="sr-only">Slide {index + 1}</span>
+            </Button>
+          ))}
         </div>
       </section>
 

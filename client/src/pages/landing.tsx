@@ -213,12 +213,12 @@ export default function LandingPage() {
                 >
                   {/* Front of card */}
                   <div 
-                    className="absolute inset-0 bg-white dark:bg-[#161b22] rounded-lg shadow-xl backface-hidden"
+                    className="absolute inset-0 bg-white/20 dark:bg-[#161b22]/20 backdrop-blur-sm rounded-lg shadow-xl backface-hidden border border-white/30"
                     style={{ backfaceVisibility: 'hidden' }}
                   >
                     <div className="p-8 text-center">
-                      <p className="text-gray-600 dark:text-gray-300 text-xl mb-2">I am a</p>
-                      <h3 className="text-4xl font-black text-[#2855CC] mb-6">{card.role}</h3>
+                      <p className="text-white/80 text-xl mb-2">I am a</p>
+                      <h3 className="text-4xl font-black text-white mb-6">{card.role}</h3>
                       <Button 
                         className="bg-[#3366FF] text-white rounded-full text-sm font-semibold uppercase tracking-wider"
                         data-testid={`button-get-started-video-${card.role.toLowerCase()}`}
@@ -238,7 +238,7 @@ export default function LandingPage() {
                       />
                     </div>
                     <div className="p-6">
-                      <p className="text-gray-600 dark:text-gray-400 text-sm text-center leading-relaxed">
+                      <p className="text-white/70 text-sm text-center leading-relaxed">
                         {card.shortDescription}
                       </p>
                     </div>

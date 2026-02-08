@@ -386,7 +386,7 @@ export default function AdminOverview() {
               {inTransitLoads.length > 0 && (
                 <div 
                   className="flex items-center gap-3 p-3 rounded-lg bg-background hover-elevate cursor-pointer border"
-                  onClick={() => setLocation("/admin/tracking")}
+                  onClick={() => setLocation("/admin/live-tracking")}
                   data-testid="action-live-tracking"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900/30">

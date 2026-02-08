@@ -190,7 +190,6 @@ function TruckDocumentCard({ title, icon: Icon, documentUrl, expiryDate, documen
 }
 
 function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; onDocumentUpdate?: (truckId: string, field: string, value: string) => void }) {
-  const daysToFitnessExpiry = getDaysUntilExpiry(truck.fitnessExpiry);
   const [isUploading, setIsUploading] = useState(false);
   
   const handleDocumentUpload = (field: string) => (value: string) => {
@@ -220,11 +219,10 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
       </DialogHeader>
       
       <Tabs defaultValue="overview" className="mt-4">
-        <TabsList className="w-full grid grid-cols-4">
+        <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="specs" data-testid="tab-specs">Specifications</TabsTrigger>
           <TabsTrigger value="documents" data-testid="tab-documents">Documents</TabsTrigger>
-          <TabsTrigger value="maintenance" data-testid="tab-maintenance">Maintenance</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="space-y-4 mt-4">
@@ -380,36 +378,6 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
           </div>
         </TabsContent>
         
-        <TabsContent value="maintenance" className="space-y-4 mt-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">Fitness Certificate</span>
-                </div>
-                <p className="text-2xl font-bold" data-testid="text-fitness-expiry">{formatDate(truck.fitnessExpiry)}</p>
-                <p className={`text-sm ${daysToFitnessExpiry < 0 ? "text-red-500" : daysToFitnessExpiry < 30 ? "text-amber-500" : "text-muted-foreground"}`}>
-                  {daysToFitnessExpiry < 0 ? `Expired ${Math.abs(daysToFitnessExpiry)} days ago` : `Expires in ${daysToFitnessExpiry} days`}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className={daysToFitnessExpiry < 30 ? daysToFitnessExpiry < 0 ? "border-red-500" : "border-amber-500" : ""}>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Calendar className={`h-5 w-5 ${daysToFitnessExpiry < 0 ? "text-red-500" : daysToFitnessExpiry < 30 ? "text-amber-500" : "text-muted-foreground"}`} />
-                  <span className="font-medium">Next Service Due</span>
-                </div>
-                <p className="text-2xl font-bold" data-testid="text-next-service">{formatDate(truck.fitnessExpiry)}</p>
-                <p className={`text-sm ${daysToFitnessExpiry < 0 ? "text-red-500" : daysToFitnessExpiry < 30 ? "text-amber-500" : "text-muted-foreground"}`}>
-                  {daysToFitnessExpiry < 0 ? "Overdue - Renew immediately" : `In ${daysToFitnessExpiry} days`}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          
-        </TabsContent>
       </Tabs>
     </DialogContent>
   );

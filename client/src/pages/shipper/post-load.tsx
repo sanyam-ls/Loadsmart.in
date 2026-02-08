@@ -2005,7 +2005,7 @@ export default function PostLoadPage() {
                     name="receiverEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Receiver Email (Optional)</FormLabel>
+                        <FormLabel>Receiver Email</FormLabel>
                         <FormControl>
                           <Input type="email" {...field} data-testid="input-receiver-email" />
                         </FormControl>

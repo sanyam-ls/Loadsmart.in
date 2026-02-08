@@ -486,12 +486,14 @@ export default function CarrierRevenuePage() {
           {isSoloDriver ? (
             <>
               <TabsTrigger value="earnings" data-testid="tab-earnings">My Earnings</TabsTrigger>
+              <TabsTrigger value="deductions" data-testid="tab-deductions">Deductions</TabsTrigger>
               <TabsTrigger value="overview" data-testid="tab-overview">Trends</TabsTrigger>
               <TabsTrigger value="shippers" data-testid="tab-shippers">Top Shippers</TabsTrigger>
             </>
           ) : (
             <>
               <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+              <TabsTrigger value="deductions" data-testid="tab-deductions">Deductions</TabsTrigger>
               <TabsTrigger value="breakdown" data-testid="tab-breakdown">Breakdown</TabsTrigger>
               <TabsTrigger value="drivers" data-testid="tab-drivers">By Driver</TabsTrigger>
               <TabsTrigger value="shippers" data-testid="tab-shippers">Top Shippers</TabsTrigger>
@@ -1245,6 +1247,191 @@ export default function CarrierRevenuePage() {
             </Card>
           </TabsContent>
         )}
+
+        <TabsContent value="deductions" className="space-y-6">
+          {(() => {
+            const totalRevenue = analytics.totalRevenue;
+            const tdsRate = 0.02;
+            const tdsAmount = totalRevenue * tdsRate;
+            const deliveredShipments = allShipments
+              .filter((s: Shipment) => s.carrierId === user?.id && s.status === 'delivered');
+            const haltingChargesPerTrip = 500;
+            const totalHaltingCharges = deliveredShipments.length * haltingChargesPerTrip;
+            const platformFeeRate = 0.10;
+            const platformFee = totalRevenue * platformFeeRate;
+            const totalDeductions = tdsAmount + totalHaltingCharges + platformFee;
+
+            const perTripDeductions = deliveredShipments.map((shipment: Shipment) => {
+              const load = allLoads.find((l: Load) => l.id === shipment.loadId);
+              const grossRevenue = load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) : 0;
+              const tripTds = grossRevenue * tdsRate;
+              const route = load
+                ? `${(load as any).pickupCity || 'Origin'} to ${(load as any).dropoffCity || 'Destination'}`
+                : 'Route unavailable';
+              const loadId = (load as any)?.adminReferenceNumber
+                ? `LD-${String((load as any).adminReferenceNumber).padStart(3, '0')}`
+                : `LD-${shipment.loadId.slice(0, 6)}`;
+              return {
+                loadId,
+                route,
+                grossRevenue,
+                tds: tripTds,
+                halting: haltingChargesPerTrip,
+                platformFee: grossRevenue * platformFeeRate,
+                total: tripTds + haltingChargesPerTrip + (grossRevenue * platformFeeRate),
+                date: shipment.completedAt ? format(new Date(shipment.completedAt), 'MMM dd, yyyy') : '-',
+              };
+            });
+
+            return (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-red-500/10">
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total Deductions</p>
+                          <p className="text-xl font-bold text-red-600" data-testid="text-total-deductions">
+                            {formatCurrency(totalDeductions)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-amber-500/10">
+                          <DollarSign className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">TDS Deduction (2%)</p>
+                          <p className="text-xl font-bold text-amber-600" data-testid="text-tds-deduction">
+                            {formatCurrency(tdsAmount)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-orange-500/10">
+                          <Clock className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Halting Charges</p>
+                          <p className="text-xl font-bold text-orange-600" data-testid="text-halting-charges">
+                            {formatCurrency(totalHaltingCharges)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-red-500/10">
+                          <Building2 className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Platform Fee</p>
+                          <p className="text-xl font-bold text-red-600" data-testid="text-platform-fee">
+                            {formatCurrency(platformFee)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">TDS Declaration Status</CardTitle>
+                    <CardDescription>
+                      Submit your TDS declaration to reduce or eliminate the 2% TDS deduction on your earnings
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-start gap-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
+                      <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                      <div className="space-y-1">
+                        <p className="font-medium text-amber-800 dark:text-amber-400">TDS Declaration Not Submitted</p>
+                        <p className="text-sm text-amber-700 dark:text-amber-500">
+                          A 2% TDS is being deducted from your gross earnings because you have not submitted a TDS declaration.
+                          Submit Form 15G/15H or your PAN details to reduce this deduction.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Total TDS deducted so far: <span className="font-semibold text-amber-700 dark:text-amber-400">{formatCurrency(tdsAmount)}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Per-Trip Deduction Breakdown</CardTitle>
+                    <CardDescription>Detailed deductions for each completed trip</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[400px]">
+                      {perTripDeductions.length > 0 ? (
+                        <div className="space-y-3">
+                          {perTripDeductions.map((trip, idx) => (
+                            <div key={idx} className="p-4 rounded-lg border space-y-3" data-testid={`deduction-row-${idx}`}>
+                              <div className="flex items-center justify-between gap-4 flex-wrap">
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline">{trip.loadId}</Badge>
+                                  <span className="text-sm font-medium">{trip.route}</span>
+                                </div>
+                                <span className="text-xs text-muted-foreground">{trip.date}</span>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Gross Amount</p>
+                                  <p className="font-medium">{formatCurrency(trip.grossRevenue)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">TDS (2%)</p>
+                                  <p className="font-medium text-amber-600">-{formatCurrency(trip.tds)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Halting Charges</p>
+                                  <p className="font-medium text-orange-600">-{formatCurrency(trip.halting)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Platform Fee</p>
+                                  <p className="font-medium text-red-600">-{formatCurrency(trip.platformFee)}</p>
+                                </div>
+                              </div>
+                              <div className="pt-2 border-t flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Total Deductions</span>
+                                <span className="font-semibold text-red-600">-{formatCurrency(trip.total)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="py-16 text-center text-muted-foreground">
+                          <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p className="font-medium">No deductions yet</p>
+                          <p className="text-sm mt-1">Deductions will appear once you complete deliveries</p>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
+        </TabsContent>
 
         <TabsContent value="shippers" className="space-y-6">
           <Card>

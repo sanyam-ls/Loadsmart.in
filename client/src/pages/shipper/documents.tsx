@@ -1355,7 +1355,7 @@ export default function DocumentsPage() {
                     {selectedDocument.fileType === "pdf" ? (
                       isDisplayableUrl(selectedDocument.fileUrl) ? (
                         <iframe 
-                          src={selectedDocument.fileUrl} 
+                          src={`${selectedDocument.fileUrl}?filename=${encodeURIComponent(selectedDocument.fileName)}`} 
                           className="w-full h-[400px] border-0"
                           title={selectedDocument.fileName}
                         />
@@ -1374,7 +1374,7 @@ export default function DocumentsPage() {
                       isDisplayableUrl(selectedDocument.fileUrl) ? (
                         <div className="w-full p-4">
                           <img 
-                            src={selectedDocument.fileUrl} 
+                            src={`${selectedDocument.fileUrl}?filename=${encodeURIComponent(selectedDocument.fileName)}`} 
                             alt={selectedDocument.fileName}
                             className="max-w-full max-h-[400px] mx-auto rounded-lg object-contain"
                             onError={(e) => {

@@ -95,16 +95,56 @@ export class ObjectStorageService {
   }
 
   // Downloads an object to the response.
-  async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
+  async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600, originalFilename?: string) {
     try {
       // Get file metadata
       const [metadata] = await file.getMetadata();
       // Get the ACL policy for the object.
       const aclPolicy = await getObjectAclPolicy(file);
       const isPublic = aclPolicy?.visibility === "public";
+      
+      let contentType = metadata.contentType || "application/octet-stream";
+      if (contentType === "application/octet-stream") {
+        if (originalFilename) {
+          const ext = originalFilename.split('.').pop()?.toLowerCase();
+          const mimeMap: Record<string, string> = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'svg': 'image/svg+xml',
+            'pdf': 'application/pdf',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          };
+          if (ext && mimeMap[ext]) {
+            contentType = mimeMap[ext];
+          }
+        }
+        if (contentType === "application/octet-stream") {
+          try {
+            const [content] = await file.download({ start: 0, end: 16 });
+            if (content[0] === 0x89 && content[1] === 0x50 && content[2] === 0x4E && content[3] === 0x47) {
+              contentType = 'image/png';
+            } else if (content[0] === 0xFF && content[1] === 0xD8 && content[2] === 0xFF) {
+              contentType = 'image/jpeg';
+            } else if (content[0] === 0x47 && content[1] === 0x49 && content[2] === 0x46) {
+              contentType = 'image/gif';
+            } else if (content[0] === 0x52 && content[1] === 0x49 && content[2] === 0x46 && content[3] === 0x46 &&
+                       content[8] === 0x57 && content[9] === 0x45 && content[10] === 0x42 && content[11] === 0x50) {
+              contentType = 'image/webp';
+            } else if (content[0] === 0x25 && content[1] === 0x50 && content[2] === 0x44 && content[3] === 0x46) {
+              contentType = 'application/pdf';
+            }
+          } catch (e) {
+          }
+        }
+      }
+      
       // Set appropriate headers
       res.set({
-        "Content-Type": metadata.contentType || "application/octet-stream",
+        "Content-Type": contentType,
         "Content-Length": metadata.size,
         "Cache-Control": `${
           isPublic ? "public" : "private"

@@ -47,6 +47,7 @@ interface DeliveredShipment {
     requiredTruckType: string;
     cargoType?: string;
     finalPrice?: string;
+    adminFinalPrice?: string;
   } | null;
   carrier: {
     id: string;
@@ -395,10 +396,10 @@ export default function DeliveredLoadsPage() {
                           <span className="text-muted-foreground">Weight</span>
                           <span className="font-medium">{selectedShipment.load?.weight || "N/A"} tons</span>
                         </div>
-                        {selectedShipment.load?.finalPrice && (
+                        {(selectedShipment.load?.adminFinalPrice || selectedShipment.load?.finalPrice) && (
                           <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">Amount</span>
-                            <span className="font-medium">Rs. {parseFloat(selectedShipment.load.finalPrice).toLocaleString('en-IN')}</span>
+                            <span className="font-medium">Rs. {parseFloat(selectedShipment.load.adminFinalPrice || selectedShipment.load.finalPrice || "0").toLocaleString('en-IN')}</span>
                           </div>
                         )}
                       </div>

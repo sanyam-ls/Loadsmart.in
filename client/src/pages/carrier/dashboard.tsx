@@ -68,7 +68,7 @@ const getDocumentDisplayName = (docType: string): string => {
 
 export default function CarrierDashboard() {
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const { user, carrierType } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
@@ -505,7 +505,7 @@ export default function CarrierDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div 
           className="cursor-pointer hover-elevate rounded-lg"
-          onClick={() => navigate("/carrier/fleet")}
+          onClick={() => navigate(carrierType === "solo" ? "/carrier/my-truck" : "/carrier/fleet")}
           data-testid="tile-active-trucks"
         >
           <StatCard

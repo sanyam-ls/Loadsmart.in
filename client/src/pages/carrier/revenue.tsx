@@ -1268,8 +1268,9 @@ export default function CarrierRevenuePage() {
               const route = load
                 ? `${(load as any).pickupCity || 'Origin'} to ${(load as any).dropoffCity || 'Destination'}`
                 : 'Route unavailable';
-              const loadId = (load as any)?.adminReferenceNumber
-                ? `LD-${String((load as any).adminReferenceNumber).padStart(3, '0')}`
+              const loadNum = (load as any)?.shipperLoadNumber || (load as any)?.adminReferenceNumber;
+              const loadId = loadNum
+                ? `LD-${String(loadNum).padStart(3, '0')}`
                 : `LD-${shipment.loadId.slice(0, 6)}`;
               return {
                 loadId,

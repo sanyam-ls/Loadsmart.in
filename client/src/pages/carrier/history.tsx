@@ -48,8 +48,9 @@ function convertShipmentToCompletedTrip(
   drivers: Driver[], 
   trucks: DbTruck[]
 ): CompletedTrip {
-  const loadId = load?.adminReferenceNumber 
-    ? `LD-${String(load.adminReferenceNumber).padStart(3, '0')}` 
+  const loadNum = (load as any)?.shipperLoadNumber || load?.adminReferenceNumber;
+  const loadId = loadNum
+    ? `LD-${String(loadNum).padStart(3, '0')}` 
     : `LD-${shipment.loadId.slice(0, 6)}`;
   
   const rate = load?.adminFinalPrice ? parseFloat(load.adminFinalPrice) : 50000;

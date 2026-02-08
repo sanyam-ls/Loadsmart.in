@@ -558,11 +558,10 @@ export default function CarrierBidsPage() {
   const bids = useMemo(() => {
     const realBids: CarrierBid[] = realBidsData.map((bid) => {
       const load = bid.load as any;
-      const displayLoadId = load?.adminReferenceNumber 
-        ? `LD-${load.adminReferenceNumber}` 
-        : load?.shipperLoadNumber 
-          ? `LD-${String(load.shipperLoadNumber).padStart(3, '0')}`
-          : bid.loadId.slice(0, 8).toUpperCase();
+      const loadNum = load?.shipperLoadNumber || load?.adminReferenceNumber;
+      const displayLoadId = loadNum
+        ? `LD-${String(loadNum).padStart(3, '0')}`
+        : `LD-${bid.loadId.slice(0, 6).toUpperCase()}`;
       
       // Use latest carrier amount if available, otherwise original bid amount
       const latestCarrierAmount = (bid as any).latestCarrierAmount;

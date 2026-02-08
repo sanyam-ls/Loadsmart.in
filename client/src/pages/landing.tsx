@@ -74,6 +74,34 @@ export default function LandingPage() {
   ];
 
   const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
+  const [flippedStats, setFlippedStats] = useState<Record<string, boolean>>({});
+
+  const statCards = [
+    {
+      key: "loads",
+      value: "10,000+",
+      label: "Loads Delivered",
+      detail: "Successfully completed shipments across 28 Indian states with zero cargo loss record."
+    },
+    {
+      key: "carriers",
+      value: "500+",
+      label: "Trusted Carriers",
+      detail: "Verified fleet owners and solo operators with valid permits, insurance, and compliance documents."
+    },
+    {
+      key: "ontime",
+      value: "98%",
+      label: "On-time Delivery",
+      detail: "Industry-leading delivery performance powered by AI route optimization and real-time tracking."
+    },
+    {
+      key: "support",
+      value: "24/7",
+      label: "Support Available",
+      detail: "Round-the-clock assistance via AI Concierge, phone, and email for shippers and carriers."
+    }
+  ];
 
   const handleGetStarted = () => {
     setLocation("/auth?tab=register");
@@ -193,25 +221,42 @@ export default function LandingPage() {
         {/* Dark overlay */}
         <div className="absolute inset-0 bg-[#1a1a2e]/60" />
 
-        {/* Stats Cards */}
+        {/* Stats Cards with Flip */}
         <div className="relative z-10 container mx-auto px-4 mb-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 text-center" data-testid="stat-loads-delivered">
-              <p className="text-3xl md:text-4xl font-black text-white">10,000+</p>
-              <p className="text-white/70 text-sm mt-1">Loads Delivered</p>
-            </div>
-            <div className="bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 text-center" data-testid="stat-trusted-carriers">
-              <p className="text-3xl md:text-4xl font-black text-white">500+</p>
-              <p className="text-white/70 text-sm mt-1">Trusted Carriers</p>
-            </div>
-            <div className="bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 text-center" data-testid="stat-on-time">
-              <p className="text-3xl md:text-4xl font-black text-white">98%</p>
-              <p className="text-white/70 text-sm mt-1">On-time Delivery</p>
-            </div>
-            <div className="bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 text-center" data-testid="stat-support">
-              <p className="text-3xl md:text-4xl font-black text-white">24/7</p>
-              <p className="text-white/70 text-sm mt-1">Support Available</p>
-            </div>
+            {statCards.map((stat) => (
+              <div
+                key={stat.key}
+                className="relative h-24 cursor-pointer"
+                style={{ perspective: '600px' }}
+                onClick={() => setFlippedStats(prev => ({ ...prev, [stat.key]: !prev[stat.key] }))}
+                data-testid={`stat-${stat.key}`}
+              >
+                <div
+                  className="relative w-full h-full transition-transform duration-500"
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    transform: flippedStats[stat.key] ? 'rotateX(180deg)' : 'rotateX(0deg)'
+                  }}
+                >
+                  {/* Front */}
+                  <div
+                    className="absolute inset-0 bg-white/15 backdrop-blur-sm rounded-lg border border-white/25 p-4 flex flex-col items-center justify-center"
+                    style={{ backfaceVisibility: 'hidden' }}
+                  >
+                    <p className="text-3xl md:text-4xl font-black text-white">{stat.value}</p>
+                    <p className="text-white/70 text-sm mt-1">{stat.label}</p>
+                  </div>
+                  {/* Back */}
+                  <div
+                    className="absolute inset-0 bg-[#2855CC]/80 backdrop-blur-sm rounded-lg border border-white/25 p-4 flex items-center justify-center"
+                    style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
+                  >
+                    <p className="text-white text-xs md:text-sm text-center leading-relaxed">{stat.detail}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

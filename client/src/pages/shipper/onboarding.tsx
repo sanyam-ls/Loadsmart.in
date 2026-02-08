@@ -1497,24 +1497,6 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="msmeUdyamUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>MSME / Udyam Certificate (If applicable)</FormLabel>
-                        <FormControl>
-                          <DocumentUploadWithCamera
-                            value={field.value || ""}
-                            onChange={field.onChange}
-                            placeholder={t("onboarding.noFileSelected")}
-                            testId="upload-msme-udyam"
-                            documentType="msme_udyam"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 {/* LR Copy - Mandatory for Transporters */}

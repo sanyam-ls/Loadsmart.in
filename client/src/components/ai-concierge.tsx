@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Sparkles, ArrowRight, GripVertical } from "lucide-react";
+import { MessageCircle, X, Send, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -108,40 +108,45 @@ export function AIConcierge() {
   const { user } = useAuth();
 
   const [position, setPosition] = useState({ x: 24, y: 24 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
-  const hasDraggedRef = useRef(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dragState = useRef({ startX: 0, startY: 0, posX: 24, posY: 24, moved: false, dragging: false });
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+  const onDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsDragging(true);
-    hasDraggedRef.current = false;
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
+    e.stopPropagation();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    dragState.current = {
+      startX: e.clientX,
+      startY: e.clientY,
       posX: position.x,
       posY: position.y,
+      moved: false,
+      dragging: true,
     };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, [position]);
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging || !dragStartRef.current) return;
-    const dx = e.clientX - dragStartRef.current.x;
-    const dy = e.clientY - dragStartRef.current.y;
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-      hasDraggedRef.current = true;
+  const onDragMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragState.current;
+    if (!d.dragging) return;
+    e.preventDefault();
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      d.moved = true;
     }
-    const newX = Math.max(0, Math.min(window.innerWidth - 56, dragStartRef.current.posX - dx));
-    const newY = Math.max(0, Math.min(window.innerHeight - 56, dragStartRef.current.posY - dy));
-    setPosition({ x: newX, y: newY });
-  }, [isDragging]);
+    if (d.moved) {
+      const newX = Math.max(8, Math.min(window.innerWidth - 64, d.posX - dx));
+      const newY = Math.max(8, Math.min(window.innerHeight - 64, d.posY - dy));
+      setPosition({ x: newX, y: newY });
+    }
+  }, []);
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    setIsDragging(false);
-    dragStartRef.current = null;
-    if (!hasDraggedRef.current) {
+  const onDragEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragState.current;
+    if (!d.dragging) return;
+    d.dragging = false;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (!d.moved) {
       setIsOpen(true);
     }
   }, []);
@@ -230,17 +235,17 @@ export function AIConcierge() {
   return (
     <>
       {!isOpen && (
-        <button
-          ref={buttonRef}
+        <div
           className="fixed h-14 w-14 rounded-full shadow-lg z-50 bg-primary text-primary-foreground flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none"
           style={{ right: `${position.x}px`, bottom: `${position.y}px` }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
           data-testid="button-ai-concierge"
         >
           <MessageCircle className="h-6 w-6 pointer-events-none" />
-        </button>
+        </div>
       )}
 
       {isOpen && (

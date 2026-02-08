@@ -533,7 +533,7 @@ export default function CarrierDriversPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input placeholder="Email address" type="email" {...field} data-testid="input-driver-email" />
                     </FormControl>
@@ -546,7 +546,7 @@ export default function CarrierDriversPage() {
                 name="licenseNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>License Number (Optional)</FormLabel>
+                    <FormLabel>License Number</FormLabel>
                     <FormControl>
                       <Input placeholder="DL-1234567890" {...field} data-testid="input-driver-license" />
                     </FormControl>
@@ -559,7 +559,7 @@ export default function CarrierDriversPage() {
                 name="licenseExpiry"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>License Expiry Date (Optional)</FormLabel>
+                    <FormLabel>License Expiry Date</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} data-testid="input-driver-license-expiry" />
                     </FormControl>
@@ -572,7 +572,7 @@ export default function CarrierDriversPage() {
                 name="licenseImageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>License Image (Optional)</FormLabel>
+                    <FormLabel>License Image</FormLabel>
                     <FormControl>
                       <DocumentUploadWithCamera
                         value={field.value || ""}
@@ -591,7 +591,7 @@ export default function CarrierDriversPage() {
                 name="aadhaarNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Aadhaar Number (Optional)</FormLabel>
+                    <FormLabel>Aadhaar Number</FormLabel>
                     <FormControl>
                       <Input placeholder="1234-5678-9012" {...field} data-testid="input-driver-aadhaar" />
                     </FormControl>
@@ -604,7 +604,7 @@ export default function CarrierDriversPage() {
                 name="aadhaarImageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Aadhaar Card Image (Optional)</FormLabel>
+                    <FormLabel>Aadhaar Card Image</FormLabel>
                     <FormControl>
                       <DocumentUploadWithCamera
                         value={field.value || ""}

@@ -265,6 +265,7 @@ export const users = pgTable("users", {
   defaultPickupLocality: text("default_pickup_locality"),
   defaultPickupLandmark: text("default_pickup_landmark"),
   defaultPickupCity: text("default_pickup_city"),
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1552,7 +1553,7 @@ export const negotiationThreadsRelations = relations(negotiationThreads, ({ one 
 }));
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, userNumber: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, userNumber: true, lastActiveAt: true, createdAt: true });
 export const insertCarrierVerificationSchema = createInsertSchema(carrierVerifications).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCarrierVerificationDocumentSchema = createInsertSchema(carrierVerificationDocuments).omit({ id: true, createdAt: true });
 export const insertBidNegotiationSchema = createInsertSchema(bidNegotiations).omit({ id: true, createdAt: true });

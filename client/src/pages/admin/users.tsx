@@ -66,7 +66,7 @@ export default function AdminUsersPage() {
   const searchString = useSearch();
   const params = useParams<{ id?: string }>();
   const { toast } = useToast();
-  const { users, addUser, updateUser, suspendUser, activateUser, deleteUser, refreshFromShipperPortal } = useAdminData();
+  const { users, addUser, updateUser, suspendUser, activateUser, deleteUser, refreshFromShipperPortal, showAllUsers, setShowAllUsers } = useAdminData();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -292,6 +292,7 @@ export default function AdminUsersPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active": return <Badge className="bg-green-600">Active</Badge>;
+      case "inactive": return <Badge variant="outline" className="text-amber-600 border-amber-400">Inactive</Badge>;
       case "suspended": return <Badge variant="destructive">Suspended</Badge>;
       case "pending": return <Badge variant="secondary">Pending</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
@@ -313,7 +314,9 @@ export default function AdminUsersPage() {
             </Button>
             <h1 className="text-2xl font-bold">Users Management</h1>
           </div>
-          <p className="text-muted-foreground ml-10">Manage all platform users ({users.length} total)</p>
+          <p className="text-muted-foreground ml-10">
+            {showAllUsers ? "All platform users" : "Verified users"} ({users.length} total)
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={refreshFromShipperPortal} data-testid="button-sync-users">
@@ -327,7 +330,7 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-5">
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
@@ -359,6 +362,19 @@ export default function AdminUsersPage() {
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
                 <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Inactive</p>
+                <p className="text-xl font-bold">{users.filter(u => u.status === "inactive").length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                <Shield className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Pending</p>
@@ -415,10 +431,19 @@ export default function AdminUsersPage() {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                variant={showAllUsers ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowAllUsers(!showAllUsers)}
+                data-testid="button-toggle-all-users"
+              >
+                {showAllUsers ? "All Users" : "Verified Only"}
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -924,9 +949,7 @@ export default function AdminUsersPage() {
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground">Status</span>
                     <p>
-                      <Badge variant={profileUser.status === "active" ? "default" : profileUser.status === "suspended" ? "destructive" : "secondary"}>
-                        {profileUser.status === "active" ? "Active" : profileUser.status === "suspended" ? "Suspended" : "Pending"}
-                      </Badge>
+                      {getStatusBadge(profileUser.status)}
                     </p>
                   </div>
                   <div className="space-y-1">

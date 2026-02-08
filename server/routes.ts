@@ -369,7 +369,8 @@ export async function registerRoutes(
 
       req.session.userId = user.id;
       
-      // Seed sample documents for solo driver test account (idempotent)
+      await storage.updateUser(user.id, { lastActiveAt: new Date() } as any);
+      
       if (user.role === "carrier") {
         await seedSampleDocumentsForSoloDriver(user);
       }
@@ -2421,10 +2422,18 @@ export async function registerRoutes(
       }
 
       const allUsers = await storage.getAllUsers();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      // Remove passwords and format for frontend
       const usersWithoutPasswords = allUsers.map(u => {
         const { password: _, ...userWithoutPassword } = u;
+        
+        let status = "pending";
+        if (u.isVerified) {
+          const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt) : (u.createdAt ? new Date(u.createdAt) : new Date());
+          status = lastActive < thirtyDaysAgo ? "inactive" : "active";
+        }
+        
         return {
           ...userWithoutPassword,
           userNumber: u.userNumber,
@@ -2433,12 +2442,15 @@ export async function registerRoutes(
           company: u.companyName || "",
           dateJoined: u.createdAt,
           phone: u.phone || "",
-          status: u.isVerified ? "active" : "pending",
+          status,
           region: "India",
         };
       });
 
-      res.json(usersWithoutPasswords);
+      const showAll = req.query.showAll === "true";
+      const filtered = showAll ? usersWithoutPasswords : usersWithoutPasswords.filter(u => u.isVerified);
+
+      res.json(filtered);
     } catch (error) {
       console.error("Get all users error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -14035,11 +14047,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Create session
       req.session.userId = user.id;
       req.session.role = user.role;
       
-      // Save session
+      await storage.updateUser(user.id, { lastActiveAt: new Date() } as any);
+      
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
           if (err) reject(err);
@@ -14047,7 +14059,6 @@ RESPOND IN THIS EXACT JSON FORMAT:
         });
       });
 
-      // Return user data (excluding password)
       const { password: _, ...userWithoutPassword } = user;
       res.json({ 
         success: true, 

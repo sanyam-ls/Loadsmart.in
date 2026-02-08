@@ -11,7 +11,7 @@ export interface AdminUser {
   email: string;
   company: string;
   role: "shipper" | "carrier" | "admin" | "dispatcher";
-  status: "active" | "suspended" | "pending";
+  status: "active" | "suspended" | "pending" | "inactive";
   dateJoined: Date;
   phone?: string;
   isVerified: boolean;
@@ -573,6 +573,9 @@ interface AdminDataContextType {
   syncToShipperPortal: (loadId: string, updates: Partial<MockLoad>) => void;
   
   getRevenueIntelligence: () => RevenueIntelligence;
+  
+  showAllUsers: boolean;
+  setShowAllUsers: (show: boolean) => void;
 }
 
 const AdminDataContext = createContext<AdminDataContextType | null>(null);
@@ -980,10 +983,13 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => { adminLoadsRef.current = adminLoads; }, [adminLoads]);
 
   // Fetch real users from database API
+  const [showAllUsers, setShowAllUsers] = useState(false);
+  
   const fetchUsersFromAPI = useCallback(async () => {
     try {
       setUsersLoading(true);
-      const response = await fetch("/api/admin/users", { credentials: "include" });
+      const url = showAllUsers ? "/api/admin/users?showAll=true" : "/api/admin/users";
+      const response = await fetch(url, { credentials: "include" });
       if (response.ok) {
         const apiUsers = await response.json();
         const mappedUsers: AdminUser[] = apiUsers.map((u: any) => ({
@@ -998,7 +1004,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
           dateJoined: new Date(u.dateJoined || u.createdAt),
           phone: u.phone || "",
           isVerified: u.isVerified || false,
-          lastActive: u.lastActive ? new Date(u.lastActive) : undefined,
+          lastActive: u.lastActiveAt ? new Date(u.lastActiveAt) : (u.lastActive ? new Date(u.lastActive) : undefined),
           region: u.region || "India",
         }));
         setUsers(mappedUsers);
@@ -1012,7 +1018,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     } finally {
       setUsersLoading(false);
     }
-  }, []);
+  }, [showAllUsers]);
 
   // Fetch users on mount and auto-refresh every 30 seconds
   useEffect(() => {
@@ -2052,6 +2058,8 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       refreshFromShipperPortal,
       syncToShipperPortal,
       getRevenueIntelligence,
+      showAllUsers,
+      setShowAllUsers,
     }}>
       {children}
     </AdminDataContext.Provider>

@@ -697,10 +697,11 @@ export default function PostLoadPage() {
       form.setValue("pickupAddress", address.address || "");
       form.setValue("pickupLocality", address.locality || "");
       form.setValue("pickupLandmark", address.landmark || "");
-      form.setValue("pickupCity", address.city || "");
-      form.setValue("pickupState", address.state || "");
+      form.setValue("pickupState", address.state || "", { shouldDirty: true, shouldValidate: true });
       form.setValue("pickupPincode", address.pincode || "");
-      // Increment usage count
+      setTimeout(() => {
+        form.setValue("pickupCity", address.city || "", { shouldDirty: true, shouldValidate: true });
+      }, 100);
       apiRequest("POST", `/api/shipper/saved-addresses/${address.id}/use`);
     }
   };
@@ -712,13 +713,14 @@ export default function PostLoadPage() {
       form.setValue("dropoffAddress", address.address || "");
       form.setValue("dropoffLocality", address.locality || "");
       form.setValue("dropoffLandmark", address.landmark || "");
-      form.setValue("dropoffCity", address.city || "");
-      form.setValue("dropoffState", address.state || "");
+      form.setValue("dropoffState", address.state || "", { shouldDirty: true, shouldValidate: true });
       form.setValue("dropoffPincode", address.pincode || "");
       form.setValue("receiverName", address.contactName || "");
       form.setValue("receiverPhone", address.contactPhone || "");
       form.setValue("receiverEmail", address.contactEmail || "");
-      // Increment usage count
+      setTimeout(() => {
+        form.setValue("dropoffCity", address.city || "", { shouldDirty: true, shouldValidate: true });
+      }, 100);
       apiRequest("POST", `/api/shipper/saved-addresses/${address.id}/use`);
     }
   };

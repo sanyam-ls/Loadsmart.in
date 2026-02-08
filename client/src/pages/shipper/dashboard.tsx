@@ -110,7 +110,7 @@ export default function ShipperDashboard() {
   // Real document count from API
   const totalDocuments = apiDocuments.length;
   
-  const recentLoads = userLoads.slice(0, 5);
+  const recentLoads = activeLoads.slice(0, 5);
 
   const userInvoices = (invoices || []) as Invoice[];
   
@@ -342,7 +342,7 @@ export default function ShipperDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
             <CardTitle className="text-lg">{t("dashboard.activeLoads")}</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/loads")} data-testid="link-view-all-loads">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/shipper/loads?status=active")} data-testid="link-view-all-loads">
               {t("dashboard.viewAll")}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>

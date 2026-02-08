@@ -852,15 +852,6 @@ export default function CarrierDashboard() {
             <Button 
               variant="outline" 
               className="h-auto py-4 flex-col gap-2"
-              onClick={() => navigate("/carrier/drivers")}
-              data-testid="quick-action-drivers"
-            >
-              <User className="h-5 w-5" />
-              <span className="text-xs">Drivers</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-4 flex-col gap-2"
               onClick={() => navigate("/carrier/revenue")}
               data-testid="quick-action-revenue"
             >

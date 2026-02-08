@@ -443,7 +443,7 @@ export default function ShipperDashboard() {
       </div>
 
       {/* Track Shipments Section */}
-      {shipments.length > 0 && (
+      {shipments.filter(s => s.currentStage !== 'delivered').length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
             <div>
@@ -460,7 +460,7 @@ export default function ShipperDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {shipments.slice(0, 3).map((shipment) => {
+              {shipments.filter(s => s.currentStage !== 'delivered').slice(0, 3).map((shipment) => {
                 const loadNum = shipment.load?.adminReferenceNumber || shipment.load?.shipperLoadNumber;
                 return (
                   <div

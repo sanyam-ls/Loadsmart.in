@@ -229,7 +229,7 @@ export default function ShipperDashboard() {
           value={inTransitShipments.length}
           icon={Truck}
           subtitle={`${deliveredShipments.length} delivered`}
-          onClick={() => navigate("/shipper/tracking")}
+          onClick={() => navigate("/shipper/tracking?tab=in_transit")}
           testId="stat-in-transit"
         />
         <StatCard

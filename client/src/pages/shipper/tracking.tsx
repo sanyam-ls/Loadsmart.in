@@ -603,7 +603,13 @@ export default function TrackingPage() {
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<{ type: string; image: string } | null>(null);
   const [mapFullscreen, setMapFullscreen] = useState(false);
-  const [shipmentFilter, setShipmentFilter] = useState<"all" | "active" | "in_transit">("all");
+  const initialTab = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab === "in_transit" || tab === "active") return tab;
+    return "all";
+  })();
+  const [shipmentFilter, setShipmentFilter] = useState<"all" | "active" | "in_transit">(initialTab);
 
   const allActiveShipments = shipments.filter(s => s.currentStage !== "delivered");
   const activeOnlyShipments = shipments.filter(s => 

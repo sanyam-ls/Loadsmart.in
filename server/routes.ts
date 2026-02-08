@@ -3874,7 +3874,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
       if (typeof body.weight === 'string') {
         const parsed = parseFloat(body.weight);
-        body.weight = (!body.weight || isNaN(parsed)) ? null : parsed;
+        body.weight = (!body.weight || isNaN(parsed)) ? 0 : parsed;
+      } else if (body.weight === undefined || body.weight === null) {
+        body.weight = 0;
       }
 
       // Get next sequential global load number

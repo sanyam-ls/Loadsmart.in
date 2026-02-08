@@ -1567,7 +1567,7 @@ export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, creat
   receiverName: z.string().optional().nullable(),
   receiverPhone: z.string().optional().nullable(),
   receiverEmail: z.string().optional().nullable(),
-  weight: z.number().optional().nullable(),
+  weight: z.number().default(0),
   goodsToBeCarried: z.string().optional().nullable(),
   rateType: z.string().optional().nullable(),
   shipperFixedPrice: z.string().optional().nullable(),

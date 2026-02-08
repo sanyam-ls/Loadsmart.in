@@ -1305,7 +1305,7 @@ export default function AdminPostLoadPage() {
                     name="dropoffBusinessName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Business Name (Optional)</FormLabel>
+                        <FormLabel>Business Name</FormLabel>
                         <FormControl>
                           <Input placeholder="Receiver business name" {...field} data-testid="admin-input-dropoff-business-name" />
                         </FormControl>

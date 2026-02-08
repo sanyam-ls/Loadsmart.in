@@ -1856,6 +1856,10 @@ export const shipperOnboardingRequests = pgTable("shipper_onboarding_requests", 
   udyamUrl: text("udyam_url"),
   lrCopyUrl: text("lr_copy_url"), // LR Copy - mandatory for Transporters
   
+  // Aadhaar Details - mandatory for Proprietorship business type
+  aadhaarNumber: text("aadhaar_number"),
+  aadhaarCardUrl: text("aadhaar_card_url"),
+  
   // Trade References
   tradeReference1Company: text("trade_reference_1_company"),
   tradeReference1Contact: text("trade_reference_1_contact"),

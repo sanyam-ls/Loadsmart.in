@@ -117,6 +117,8 @@ const onboardingFormSchema = z.object({
   alternativeDocumentType: z.string().optional(),
   alternativeAuthorizationUrl: z.string().optional(),
   panCardUrl: z.string().optional(),
+  aadhaarNumber: z.string().optional(),
+  aadhaarCardUrl: z.string().optional(),
   incorporationCertificateUrl: z.string().optional(),
   businessAddressProofType: z.enum(["rent_agreement", "electricity_bill", "office_photo_with_board"]).optional(),
   businessAddressProofUrl: z.string().optional(),
@@ -181,6 +183,8 @@ export default function ShipperOnboarding() {
       alternativeDocumentType: "",
       alternativeAuthorizationUrl: "",
       panCardUrl: "",
+      aadhaarNumber: "",
+      aadhaarCardUrl: "",
       incorporationCertificateUrl: "",
       businessAddressProofType: undefined,
       businessAddressProofUrl: "",
@@ -251,6 +255,8 @@ export default function ShipperOnboarding() {
         alternativeDocumentType: onboardingStatus.alternativeDocumentType || "",
         alternativeAuthorizationUrl: onboardingStatus.alternativeAuthorizationUrl || "",
         panCardUrl: onboardingStatus.panCardUrl || "",
+        aadhaarNumber: onboardingStatus.aadhaarNumber || "",
+        aadhaarCardUrl: onboardingStatus.aadhaarCardUrl || "",
         incorporationCertificateUrl: onboardingStatus.incorporationCertificateUrl || "",
         businessAddressProofType: onboardingStatus.businessAddressProofType || undefined,
         businessAddressProofUrl: onboardingStatus.businessAddressProofUrl || "",
@@ -416,7 +422,7 @@ export default function ShipperOnboarding() {
   const getTabWithError = (errors: any): string | null => {
     const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredLocality", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
-    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl", "selfieUrl", "msmeUdyamUrl"];
+    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "aadhaarNumber", "aadhaarCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl", "selfieUrl", "msmeUdyamUrl"];
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.some(key => businessFields.includes(key))) return "business";
@@ -1434,6 +1440,53 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     )}
                   />
                 </div>
+
+                {form.watch("businessType") === "proprietorship" && (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-foreground">Aadhaar Verification (Required for Proprietorship)</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="aadhaarNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Aadhaar Number <span className="text-destructive">*</span></FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Enter 12-digit Aadhaar number"
+                                maxLength={12}
+                                data-testid="input-aadhaar-number"
+                              />
+                            </FormControl>
+                            <FormDescription>Your 12-digit Aadhaar number for identity verification</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="aadhaarCardUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Aadhaar Card Upload <span className="text-destructive">*</span></FormLabel>
+                            <FormControl>
+                              <DocumentUploadWithCamera
+                                value={field.value || ""}
+                                onChange={field.onChange}
+                                placeholder="Upload Aadhaar card"
+                                testId="upload-aadhaar-card"
+                                documentType="aadhaar_card"
+                              />
+                            </FormControl>
+                            <FormDescription>Upload front side of your Aadhaar card</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField

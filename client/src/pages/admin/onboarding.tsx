@@ -653,6 +653,22 @@ export default function AdminOnboardingPage() {
                       <p className="text-muted-foreground">{t("common.notProvided")}</p>
                     )}
                   </div>
+                  {selectedRequest?.request.businessType === "proprietorship" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-muted-foreground">Aadhaar Number</Label>
+                        <p className="font-medium">{selectedRequest?.request.aadhaarNumber || "-"}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-muted-foreground">Aadhaar Card</Label>
+                        {selectedRequest?.request.aadhaarCardUrl ? (
+                          <DocumentLink value={selectedRequest.request.aadhaarCardUrl} />
+                        ) : (
+                          <p className="text-muted-foreground">{t("common.notProvided")}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">{t("onboarding.incorporationCertificate")}</Label>
                     {selectedRequest?.request.incorporationCertificateUrl ? (

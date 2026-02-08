@@ -10192,6 +10192,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
         businessAddressProofUrl: z.string().optional(),
         selfieUrl: z.string().optional(),
         lrCopyUrl: z.string().optional(),
+        aadhaarNumber: z.string().optional(),
+        aadhaarCardUrl: z.string().optional(),
         tradeReference1Company: z.string().optional(),
         tradeReference1Contact: z.string().optional(),
         tradeReference1Phone: z.string().optional(),
@@ -10210,7 +10212,6 @@ RESPOND IN THIS EXACT JSON FORMAT:
         alternativeDocumentType: z.string().optional(),
         alternativeAuthorizationUrl: z.string().optional(),
       }).refine((data) => {
-        // LR Copy is required for transporters
         if (data.shipperRole === "transporter" && !data.lrCopyUrl) {
           return false;
         }
@@ -10218,6 +10219,22 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }, {
         message: "LR Copy is required for Transporters",
         path: ["lrCopyUrl"]
+      }).refine((data) => {
+        if (data.businessType === "proprietorship" && !data.aadhaarNumber) {
+          return false;
+        }
+        return true;
+      }, {
+        message: "Aadhaar number is required for Proprietorship",
+        path: ["aadhaarNumber"]
+      }).refine((data) => {
+        if (data.businessType === "proprietorship" && !data.aadhaarCardUrl) {
+          return false;
+        }
+        return true;
+      }, {
+        message: "Aadhaar card upload is required for Proprietorship",
+        path: ["aadhaarCardUrl"]
       });
 
       const validatedData = onboardingSchema.parse(req.body);
@@ -10464,6 +10481,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
         businessAddressProofUrl: z.string().optional(),
         selfieUrl: z.string().optional(),
         lrCopyUrl: z.string().optional(),
+        aadhaarNumber: z.string().optional(),
+        aadhaarCardUrl: z.string().optional(),
         tradeReference1Company: z.string().optional(),
         tradeReference1Contact: z.string().optional(),
         tradeReference1Phone: z.string().optional(),

@@ -1717,7 +1717,7 @@ export default function AdminPostLoadPage() {
                     name="advancePaymentPercent"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Advance Payment % (Optional)</FormLabel>
+                        <FormLabel>Advance Payment %</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 

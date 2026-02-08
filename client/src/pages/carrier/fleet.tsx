@@ -246,13 +246,6 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
                     <span className="text-muted-foreground">Driver</span>
                     <span className="font-medium">{truck.assignedDriver || "Unassigned"}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fuel Level</span>
-                    <div className="flex items-center gap-2">
-                      <Progress value={truck.fuelLevel} className="w-20 h-2" />
-                      <span className="font-medium">{truck.fuelLevel}%</span>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -271,10 +264,6 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Body Type</span>
                     <span className="font-medium">{truck.bodyType}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Odometer</span>
-                    <span className="font-medium">{truck.odometerReading.toLocaleString()} km</span>
                   </div>
                 </div>
               </CardContent>
@@ -418,25 +407,6 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
             </Card>
           </div>
           
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Fuel className="h-5 w-5" />
-                  <div>
-                    <p className="font-medium">Current Fuel Level</p>
-                    <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleTimeString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Progress value={truck.fuelLevel} className="w-32 h-3" />
-                  <span className={`font-bold ${truck.fuelLevel < 25 ? "text-red-500" : truck.fuelLevel < 50 ? "text-amber-500" : "text-green-500"}`}>
-                    {truck.fuelLevel}%
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </DialogContent>

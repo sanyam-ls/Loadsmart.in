@@ -420,9 +420,9 @@ export default function ShipperOnboarding() {
 
   // Helper to determine which tab has the first error
   const getTabWithError = (errors: any): string | null => {
-    const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "registeredAddress", "registeredLocality", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
+    const businessFields = ["legalCompanyName", "tradeName", "businessType", "incorporationDate", "cinNumber", "panNumber", "gstinNumber", "aadhaarNumber", "aadhaarCardUrl", "registeredAddress", "registeredLocality", "registeredCity", "registeredCityCustom", "registeredState", "registeredCountry", "registeredPincode", "operatingRegions", "primaryCommodities", "estimatedMonthlyLoads", "avgLoadValueInr"];
     const contactFields = ["contactPersonName", "contactPersonDesignation", "contactPersonPhone", "contactPersonEmail", "tradeReference1Company", "tradeReference1Contact", "tradeReference1Phone", "tradeReference2Company", "tradeReference2Contact", "tradeReference2Phone"];
-    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "aadhaarNumber", "aadhaarCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl", "selfieUrl", "msmeUdyamUrl"];
+    const documentFields = ["gstCertificateUrl", "noGstCertificate", "alternativeDocumentType", "alternativeAuthorizationUrl", "panCardUrl", "incorporationCertificateUrl", "businessAddressProofUrl", "selfieUrl", "msmeUdyamUrl"];
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.some(key => businessFields.includes(key))) return "business";
@@ -835,6 +835,50 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     )}
                   />
                 </div>
+
+                {form.watch("businessType") === "proprietorship" && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="aadhaarNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Aadhaar Number <span className="text-destructive">*</span></FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter 12-digit Aadhaar number"
+                              maxLength={12}
+                              data-testid="input-aadhaar-number"
+                            />
+                          </FormControl>
+                          <FormDescription>Your 12-digit Aadhaar number for identity verification</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="aadhaarCardUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Aadhaar Card Upload <span className="text-destructive">*</span></FormLabel>
+                          <FormControl>
+                            <DocumentUploadWithCamera
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              placeholder="Upload Aadhaar card"
+                              testId="upload-aadhaar-card"
+                              documentType="aadhaar_card"
+                            />
+                          </FormControl>
+                          <FormDescription>Upload front side of your Aadhaar card</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-3">
                   <FormField
@@ -1440,53 +1484,6 @@ function OnboardingFormComponent({ form, onSubmit, onInvalid, isSubmitting, acti
                     )}
                   />
                 </div>
-
-                {form.watch("businessType") === "proprietorship" && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-foreground">Aadhaar Verification (Required for Proprietorship)</h4>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="aadhaarNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Aadhaar Number <span className="text-destructive">*</span></FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="Enter 12-digit Aadhaar number"
-                                maxLength={12}
-                                data-testid="input-aadhaar-number"
-                              />
-                            </FormControl>
-                            <FormDescription>Your 12-digit Aadhaar number for identity verification</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="aadhaarCardUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Aadhaar Card Upload <span className="text-destructive">*</span></FormLabel>
-                            <FormControl>
-                              <DocumentUploadWithCamera
-                                value={field.value || ""}
-                                onChange={field.onChange}
-                                placeholder="Upload Aadhaar card"
-                                testId="upload-aadhaar-card"
-                                documentType="aadhaar_card"
-                              />
-                            </FormControl>
-                            <FormDescription>Upload front side of your Aadhaar card</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField

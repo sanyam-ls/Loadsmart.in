@@ -127,7 +127,7 @@ const documentFolders: Partial<Record<DocumentCategory, {
     description: "Weighbridge and weight verification slips",
   },
   verification: {
-    label: "Verification Documents",
+    label: "Shipper's Documents",
     icon: Shield,
     color: "text-indigo-600 dark:text-indigo-400",
     bgColor: "bg-indigo-100 dark:bg-indigo-900/30",

@@ -637,10 +637,6 @@ export default function FleetPage() {
           <h1 className="text-2xl font-bold" data-testid="text-fleet-title">Fleet Intelligence</h1>
           <p className="text-muted-foreground">Manage your fleet of {trucks.length} trucks</p>
         </div>
-        <Button onClick={() => navigate("/carrier/add-truck")} data-testid="button-add-truck">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Truck
-        </Button>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">

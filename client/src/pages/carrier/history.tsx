@@ -331,7 +331,7 @@ export default function CarrierHistoryPage() {
                               <><Clock className="h-3 w-3 mr-1" /> Delayed</>
                             )}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">{trip.tripId}</span>
+                          <span className="text-sm text-muted-foreground">{trip.loadId}</span>
                           <Badge variant="outline">{trip.loadType}</Badge>
                         </div>
                         
@@ -383,7 +383,7 @@ export default function CarrierHistoryPage() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Trip Details</DialogTitle>
-              <DialogDescription>{selectedTrip.tripId}</DialogDescription>
+              <DialogDescription>{selectedTrip.loadId}</DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4 mt-4">

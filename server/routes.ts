@@ -2656,6 +2656,10 @@ export async function registerRoutes(
       if (body.deliveryDate && typeof body.deliveryDate === 'string') {
         body.deliveryDate = new Date(body.deliveryDate);
       }
+      if (typeof body.weight === 'string') {
+        const parsed = parseFloat(body.weight);
+        body.weight = (!body.weight || isNaN(parsed)) ? null : parsed;
+      }
 
       // Get next sequential global load number
       const shipperLoadNumber = await storage.getNextGlobalLoadNumber();

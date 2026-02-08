@@ -4,7 +4,6 @@ import {
   Users, 
   Plus, 
   Search, 
-  Filter, 
   MoreHorizontal, 
   Edit, 
   Trash2, 
@@ -21,6 +20,8 @@ import {
   RefreshCw,
   FileCheck,
   Truck,
+  Package,
+  ShieldCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminData, type AdminUser } from "@/lib/admin-data-store";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
+
+type TabType = "shippers" | "carriers" | "admins";
 
 export default function AdminUsersPage() {
   const [, setLocation] = useLocation();
@@ -68,33 +71,36 @@ export default function AdminUsersPage() {
   const { toast } = useToast();
   const { users, addUser, updateUser, suspendUser, activateUser, deleteUser, refreshFromShipperPortal, showAllUsers, setShowAllUsers } = useAdminData();
   
+  const [activeTab, setActiveTab] = useState<TabType>("shippers");
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [carrierSubFilter, setCarrierSubFilter] = useState<string>("all");
   const [highlightUserId, setHighlightUserId] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profileUser, setProfileUser] = useState<AdminUser | null>(null);
   
-  // Handle deep-linking from other pages (e.g., from Onboarding "View User")
   useEffect(() => {
     const urlParams = new URLSearchParams(searchString);
     const userId = urlParams.get("userId");
     const role = urlParams.get("role");
     
     if (role) {
-      setRoleFilter(role);
+      if (role === "shipper") setActiveTab("shippers");
+      else if (role === "carrier") setActiveTab("carriers");
+      else if (role === "admin") setActiveTab("admins");
     }
     if (userId) {
       setHighlightUserId(userId);
-      // Auto-search for the user using userId field
       const user = users.find(u => u.userId === userId);
       if (user) {
         setSearchQuery(user.email || user.name || "");
+        if (user.role === "shipper") setActiveTab("shippers");
+        else if (user.role === "carrier") setActiveTab("carriers");
+        else if (user.role === "admin") setActiveTab("admins");
       }
     }
   }, [searchString, users]);
 
-  // Handle URL path parameter for viewing user profile (e.g., /admin/users/:id)
   useEffect(() => {
     if (params.id && users.length > 0) {
       const user = users.find(u => u.userId === params.id);
@@ -104,6 +110,7 @@ export default function AdminUsersPage() {
       }
     }
   }, [params.id, users]);
+
   const [sortField, setSortField] = useState<keyof AdminUser>("dateJoined");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -117,13 +124,26 @@ export default function AdminUsersPage() {
     phone: "",
     role: "shipper" as "shipper" | "carrier" | "admin",
     company: "",
-    status: "active" as "active" | "suspended" | "pending",
+    status: "active" as "active" | "inactive" | "suspended" | "pending",
     region: "North India" as string,
   });
   const itemsPerPage = 10;
 
+  const shippers = useMemo(() => users.filter(u => u.role === "shipper"), [users]);
+  const carriers = useMemo(() => users.filter(u => u.role === "carrier"), [users]);
+  const admins = useMemo(() => users.filter(u => u.role === "admin"), [users]);
+
+  const tabUsers = useMemo(() => {
+    switch (activeTab) {
+      case "shippers": return shippers;
+      case "carriers": return carriers;
+      case "admins": return admins;
+      default: return users;
+    }
+  }, [activeTab, shippers, carriers, admins, users]);
+
   const filteredUsers = useMemo(() => {
-    let result = [...users];
+    let result = [...tabUsers];
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -136,12 +156,17 @@ export default function AdminUsersPage() {
       );
     }
     
-    if (roleFilter !== "all") {
-      result = result.filter(user => user.role === roleFilter);
-    }
-    
     if (statusFilter !== "all") {
       result = result.filter(user => user.status === statusFilter);
+    }
+
+    if (activeTab === "carriers" && carrierSubFilter !== "all") {
+      result = result.filter(user => {
+        const ct = user.carrierType?.toLowerCase() || "";
+        if (carrierSubFilter === "solo") return ct === "solo";
+        if (carrierSubFilter === "fleet") return ct === "fleet" || ct === "enterprise";
+        return true;
+      });
     }
     
     result.sort((a, b) => {
@@ -161,7 +186,7 @@ export default function AdminUsersPage() {
     });
     
     return result;
-  }, [users, searchQuery, roleFilter, statusFilter, sortField, sortDirection]);
+  }, [tabUsers, searchQuery, statusFilter, carrierSubFilter, activeTab, sortField, sortDirection]);
 
   const paginatedUsers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -169,6 +194,10 @@ export default function AdminUsersPage() {
   }, [filteredUsers, currentPage]);
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery, statusFilter, carrierSubFilter]);
 
   const handleSort = (field: keyof AdminUser) => {
     if (sortField === field) {
@@ -274,19 +303,10 @@ export default function AdminUsersPage() {
       phone: user.phone || "",
       role: (user.role === "dispatcher" ? "shipper" : user.role) as "shipper" | "carrier" | "admin",
       company: user.company || "",
-      status: user.status,
+      status: user.status as "active" | "inactive" | "suspended" | "pending",
       region: user.region || "North India",
     });
     setIsEditModalOpen(true);
-  };
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "admin": return "default";
-      case "carrier": return "secondary";
-      case "shipper": return "outline";
-      default: return "outline";
-    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -297,6 +317,194 @@ export default function AdminUsersPage() {
       case "pending": return <Badge variant="secondary">Pending</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const getSubTypeBadge = (user: AdminUser) => {
+    if (user.role === "carrier") {
+      const ct = user.carrierType?.toLowerCase() || "";
+      if (ct === "solo") return <Badge variant="outline" className="text-blue-600 border-blue-400">Solo Driver</Badge>;
+      if (ct === "fleet" || ct === "enterprise") return <Badge variant="outline" className="text-purple-600 border-purple-400">Fleet Owner</Badge>;
+      return <Badge variant="outline" className="text-muted-foreground">Unknown</Badge>;
+    }
+    if (user.role === "shipper") {
+      const sr = user.shipperRole?.toLowerCase() || "";
+      if (sr === "transporter") return <Badge variant="outline" className="text-orange-600 border-orange-400">Transporter</Badge>;
+      return <Badge variant="outline" className="text-blue-600 border-blue-400">Shipper</Badge>;
+    }
+    return null;
+  };
+
+  const soloCount = carriers.filter(c => c.carrierType?.toLowerCase() === "solo").length;
+  const fleetCount = carriers.filter(c => c.carrierType?.toLowerCase() === "fleet" || c.carrierType?.toLowerCase() === "enterprise").length;
+  const transporterCount = shippers.filter(s => s.shipperRole?.toLowerCase() === "transporter").length;
+  const shipperOnlyCount = shippers.length - transporterCount;
+
+  const renderStats = () => {
+    const activeCount = tabUsers.filter(u => u.status === "active").length;
+    const inactiveCount = tabUsers.filter(u => u.status === "inactive").length;
+    const pendingCount = tabUsers.filter(u => u.status === "pending").length;
+
+    if (activeTab === "shippers") {
+      return (
+        <div className="grid gap-4 sm:grid-cols-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Shippers</p>
+                  <p className="text-xl font-bold">{shippers.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Shippers</p>
+                  <p className="text-xl font-bold">{shipperOnlyCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                  <Truck className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Transporters</p>
+                  <p className="text-xl font-bold">{transporterCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                  <UserCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-xl font-bold">{activeCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    if (activeTab === "carriers") {
+      return (
+        <div className="grid gap-4 sm:grid-cols-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Carriers</p>
+                  <p className="text-xl font-bold">{carriers.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Solo Drivers</p>
+                  <p className="text-xl font-bold">{soloCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                  <Building className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Fleet Owners</p>
+                  <p className="text-xl font-bold">{fleetCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                  <UserCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-xl font-bold">{activeCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Admins</p>
+                <p className="text-xl font-bold">{admins.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                <UserCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active</p>
+                <p className="text-xl font-bold">{activeCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Inactive</p>
+                <p className="text-xl font-bold">{inactiveCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   };
 
   return (
@@ -330,73 +538,40 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-5">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-xl font-bold">{users.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-                <UserCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-xl font-bold">{users.filter(u => u.status === "active").length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Inactive</p>
-                <p className="text-xl font-bold">{users.filter(u => u.status === "inactive").length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                <Shield className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-xl font-bold">{users.filter(u => u.status === "pending").length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
-                <UserX className="h-5 w-5 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Suspended</p>
-                <p className="text-xl font-bold">{users.filter(u => u.status === "suspended").length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center gap-1 border-b">
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-4 ${activeTab === "shippers" ? "border-primary text-primary font-semibold" : "border-transparent text-muted-foreground"}`}
+          onClick={() => setActiveTab("shippers")}
+          data-testid="tab-shippers"
+        >
+          <Package className="h-4 w-4 mr-2" />
+          Shippers & Transporters
+          <Badge variant="secondary" className="ml-2">{shippers.length}</Badge>
+        </Button>
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-4 ${activeTab === "carriers" ? "border-primary text-primary font-semibold" : "border-transparent text-muted-foreground"}`}
+          onClick={() => setActiveTab("carriers")}
+          data-testid="tab-carriers"
+        >
+          <Truck className="h-4 w-4 mr-2" />
+          Carriers
+          <Badge variant="secondary" className="ml-2">{carriers.length}</Badge>
+        </Button>
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-4 ${activeTab === "admins" ? "border-primary text-primary font-semibold" : "border-transparent text-muted-foreground"}`}
+          onClick={() => setActiveTab("admins")}
+          data-testid="tab-admins"
+        >
+          <ShieldCheck className="h-4 w-4 mr-2" />
+          Admins
+          <Badge variant="secondary" className="ml-2">{admins.length}</Badge>
+        </Button>
       </div>
+
+      {renderStats()}
 
       <Card>
         <CardHeader className="pb-4">
@@ -411,19 +586,19 @@ export default function AdminUsersPage() {
                 data-testid="input-search-users"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-[130px]" data-testid="select-role-filter">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="shipper">Shipper</SelectItem>
-                  <SelectItem value="carrier">Carrier</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-2 flex-wrap">
+              {activeTab === "carriers" && (
+                <Select value={carrierSubFilter} onValueChange={setCarrierSubFilter}>
+                  <SelectTrigger className="w-[140px]" data-testid="select-carrier-type-filter">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="solo">Solo Drivers</SelectItem>
+                    <SelectItem value="fleet">Fleet Owners</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[130px]" data-testid="select-status-filter">
                   <SelectValue placeholder="Status" />
@@ -468,18 +643,7 @@ export default function AdminUsersPage() {
                     </Button>
                   </TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 -ml-3"
-                      onClick={() => handleSort("role")}
-                      data-testid="button-sort-role"
-                    >
-                      Role
-                      <ArrowUpDown className="ml-2 h-3 w-3" />
-                    </Button>
-                  </TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>
                     <Button 
@@ -548,10 +712,8 @@ export default function AdminUsersPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize" data-testid={`badge-role-${user.userId}`}>
-                          {user.role}
-                        </Badge>
+                      <TableCell data-testid={`badge-type-${user.userId}`}>
+                        {getSubTypeBadge(user)}
                       </TableCell>
                       <TableCell data-testid={`badge-status-${user.userId}`}>
                         {getStatusBadge(user.status)}
@@ -823,12 +985,13 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
-                <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v as "active" | "suspended" | "pending" }))}>
+                <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v as "active" | "inactive" | "suspended" | "pending" }))}>
                   <SelectTrigger data-testid="select-edit-status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="suspended">Suspended</SelectItem>
                   </SelectContent>
@@ -841,14 +1004,14 @@ export default function AdminUsersPage() {
               Cancel
             </Button>
             <Button onClick={handleUpdateUser} data-testid="button-update-user">
-              Save Changes
+              Update User
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+      <Dialog open={isDeleteModalOpen} onOpenChange={(open) => { if (!open) { setIsDeleteModalOpen(false); setSelectedUser(null); } }}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
             <DialogDescription>
@@ -856,7 +1019,7 @@ export default function AdminUsersPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)} data-testid="button-cancel-delete">
+            <Button variant="outline" onClick={() => { setIsDeleteModalOpen(false); setSelectedUser(null); }} data-testid="button-cancel-delete">
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteUser} data-testid="button-confirm-delete">
@@ -866,132 +1029,52 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* User Profile Dialog */}
-      <Dialog open={isProfileOpen} onOpenChange={(open) => {
-        setIsProfileOpen(open);
-        if (!open) {
-          setProfileUser(null);
-          // Navigate back to users list when closing
-          setLocation("/admin/users");
-        }
-      }}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <div className="flex items-center flex-wrap gap-2">
-                  <span>{profileUser?.name || "User Profile"}</span>
-                  {profileUser?.role && (
-                    <Badge variant="outline" className="capitalize">
-                      {profileUser.role}
-                    </Badge>
-                  )}
-                </div>
-                {profileUser?.displayUserId && (
-                  <p className="text-xs font-mono text-muted-foreground mt-0.5" data-testid="text-profile-userid">
-                    {profileUser.displayUserId}
-                  </p>
-                )}
-              </div>
-            </DialogTitle>
-            <DialogDescription>
-              View detailed information about this user
-            </DialogDescription>
+            <DialogTitle>User Profile</DialogTitle>
           </DialogHeader>
-          
           {profileUser && (
-            <div className="space-y-6 py-4">
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Contact Information</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Full Name</span>
-                    <p className="font-medium">{profileUser.name || "-"}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Email</span>
-                    <p className="font-medium flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      {profileUser.email || "-"}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Phone</span>
-                    <p className="font-medium flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      {profileUser.phone || "-"}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Company</span>
-                    <p className="font-medium flex items-center gap-2">
-                      <Building className="h-4 w-4 text-muted-foreground" />
-                      {profileUser.company || "-"}
-                    </p>
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                  <Users className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{profileUser.name}</h3>
+                  <p className="text-sm text-muted-foreground">{profileUser.email}</p>
                 </div>
               </div>
-
-              {/* Account Status */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Account Details</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Role</span>
-                    <p>
-                      <Badge variant={profileUser.role === "admin" ? "default" : "outline"} className="capitalize">
-                        <Shield className="h-3 w-3 mr-1" />
-                        {profileUser.role}
-                      </Badge>
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Status</span>
-                    <p>
-                      {getStatusBadge(profileUser.status)}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Verification</span>
-                    <p>
-                      <Badge variant={profileUser.isVerified ? "default" : "outline"}>
-                        {profileUser.isVerified ? "Verified" : "Unverified"}
-                      </Badge>
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Date Joined</span>
-                    <p className="font-medium text-sm">
-                      {profileUser.dateJoined ? format(new Date(profileUser.dateJoined), "MMM d, yyyy") : "-"}
-                    </p>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Role</p>
+                  <p className="font-medium capitalize">{profileUser.role}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  {getStatusBadge(profileUser.status)}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Company</p>
+                  <p className="font-medium">{profileUser.company || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="font-medium">{profileUser.phone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Joined</p>
+                  <p className="font-medium">{format(profileUser.dateJoined, "MMM d, yyyy")}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Verified</p>
+                  <p className="font-medium">{profileUser.isVerified ? "Yes" : "No"}</p>
                 </div>
               </div>
-
-              {/* Region Info */}
-              {profileUser.region && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Operating Region</h4>
-                  <p className="font-medium">{profileUser.region}</p>
-                </div>
-              )}
             </div>
           )}
-          
-          <DialogFooter className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsProfileOpen(false);
-                setProfileUser(null);
-                setLocation("/admin/users");
-              }}
-              data-testid="button-close-profile"
-            >
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProfileOpen(false)} data-testid="button-close-profile">
               Close
             </Button>
             {profileUser && (

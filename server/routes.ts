@@ -21,6 +21,7 @@ import {
   savedAddresses,
   insertSavedAddressSchema,
   users,
+  shipperOnboardingRequests,
 } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -2424,6 +2425,12 @@ export async function registerRoutes(
       const allUsers = await storage.getAllUsers();
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const carrierProfilesData = await db.select().from(carrierProfilesTable);
+      const carrierTypeMap = new Map(carrierProfilesData.map(cp => [cp.userId, cp.carrierType]));
+
+      const onboardingData = await db.select().from(shipperOnboardingRequests);
+      const shipperRoleMap = new Map(onboardingData.map(o => [o.shipperId, o.shipperRole]));
       
       const usersWithoutPasswords = allUsers.map(u => {
         const { password: _, ...userWithoutPassword } = u;
@@ -2433,6 +2440,9 @@ export async function registerRoutes(
           const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt) : (u.createdAt ? new Date(u.createdAt) : new Date());
           status = lastActive < thirtyDaysAgo ? "inactive" : "active";
         }
+
+        const carrierType = u.role === "carrier" ? (carrierTypeMap.get(u.id) || null) : null;
+        const shipperRole = u.role === "shipper" ? (shipperRoleMap.get(u.id) || null) : null;
         
         return {
           ...userWithoutPassword,
@@ -2444,6 +2454,8 @@ export async function registerRoutes(
           phone: u.phone || "",
           status,
           region: "India",
+          carrierType,
+          shipperRole,
         };
       });
 

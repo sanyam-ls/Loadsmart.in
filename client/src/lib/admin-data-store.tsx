@@ -17,6 +17,8 @@ export interface AdminUser {
   isVerified: boolean;
   lastActive?: Date;
   region: string;
+  carrierType?: string | null;
+  shipperRole?: string | null;
 }
 
 export interface AdminLoad {
@@ -1006,6 +1008,8 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
           isVerified: u.isVerified || false,
           lastActive: u.lastActiveAt ? new Date(u.lastActiveAt) : (u.lastActive ? new Date(u.lastActive) : undefined),
           region: u.region || "India",
+          carrierType: u.carrierType || null,
+          shipperRole: u.shipperRole || null,
         }));
         setUsers(mappedUsers);
       } else {

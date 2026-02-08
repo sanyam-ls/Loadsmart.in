@@ -305,7 +305,7 @@ function CommodityCombobox({
 }) {
   const [open, setOpen] = useState(false);
   
-  const selectedCommodity = value ? allCommodities.find(c => c.value === value) : null;
+  const selectedCommodity = value ? allCommodities.find(c => c.label === value || c.value === value) : null;
   const isCustomSelected = value === "other";
 
   // Get display text for the button
@@ -355,7 +355,7 @@ function CommodityCombobox({
                       key={item.value}
                       value={item.label}
                       onSelect={() => {
-                        onChange(item.value);
+                        onChange(item.value === "other" ? "other" : item.label);
                         if (item.value !== "other") {
                           onCustomChange("");
                         }
@@ -364,7 +364,7 @@ function CommodityCombobox({
                     >
                       <Check
                         className={`mr-2 h-4 w-4 ${
-                          value === item.value ? "opacity-100" : "opacity-0"
+                          value === item.label || (item.value === "other" && value === "other") ? "opacity-100" : "opacity-0"
                         }`}
                       />
                       {item.label}

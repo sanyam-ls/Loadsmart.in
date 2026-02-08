@@ -1377,13 +1377,7 @@ export default function PostLoadPage() {
                     message += `*Weight:* ${submittedLoadDetails?.weight || ''} Tons\n`;
                     message += `*Cargo:* ${submittedLoadDetails?.goods || ''}\n`;
                     if (truckLabel) message += `*Truck:* ${truckLabel}\n`;
-                    if (submittedLoadDetails?.rateType === 'per_ton' && submittedLoadDetails?.pricePerTon) {
-                      message += `*Rate:* Rs. ${Number(submittedLoadDetails.pricePerTon).toLocaleString('en-IN')}/Ton\n`;
-                    } else if (submittedLoadDetails?.rateType === 'fixed_price' && submittedLoadDetails?.fixedPrice) {
-                      message += `*Price:* Rs. ${Number(submittedLoadDetails.fixedPrice).toLocaleString('en-IN')} (Fixed)\n`;
-                    } else {
-                      message += `*Pricing:* Contact for rates\n`;
-                    }
+                    message += `*Pricing:* Contact for rates\n`;
                     if (pickupDate) message += `*Pickup:* ${pickupDate}\n`;
                     if (submittedLoadDetails?.specialNotes) message += `*Notes:* ${submittedLoadDetails.specialNotes}\n`;
                     message += `\n*View & Bid:* https://loalink.com\n`;
@@ -1413,13 +1407,7 @@ export default function PostLoadPage() {
                     message += `Weight: ${submittedLoadDetails?.weight || ''} Tons\n`;
                     message += `Cargo: ${submittedLoadDetails?.goods || ''}\n`;
                     if (truckLabel) message += `Truck: ${truckLabel}\n`;
-                    if (submittedLoadDetails?.rateType === 'per_ton' && submittedLoadDetails?.pricePerTon) {
-                      message += `Rate: Rs. ${Number(submittedLoadDetails.pricePerTon).toLocaleString('en-IN')}/Ton\n`;
-                    } else if (submittedLoadDetails?.rateType === 'fixed_price' && submittedLoadDetails?.fixedPrice) {
-                      message += `Price: Rs. ${Number(submittedLoadDetails.fixedPrice).toLocaleString('en-IN')} (Fixed)\n`;
-                    } else {
-                      message += `Pricing: Contact for rates\n`;
-                    }
+                    message += `Pricing: Contact for rates\n`;
                     if (pickupDate) message += `Pickup: ${pickupDate}\n`;
                     message += `\nView & Bid: https://loalink.com`;
                     window.open(`sms:?body=${encodeURIComponent(message)}`, '_blank');

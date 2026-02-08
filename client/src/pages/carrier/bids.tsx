@@ -510,15 +510,6 @@ function NegotiationDialog({ bid, onAccept, onCounter, onReject, isOpen }: {
                 Accept {bid.shipperCounterRate ? "Counter" : ""}
               </Button>
               <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={() => setShowCounterInput(true)}
-                data-testid="button-counter-bid"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Counter Offer
-              </Button>
-              <Button 
                 variant="destructive" 
                 onClick={onReject}
                 data-testid="button-reject-bid"

@@ -146,104 +146,6 @@ function formatLoadId(invoice: { shipperLoadNumber?: number | null; adminReferen
   return invoice.loadId?.slice(0, 8)?.toUpperCase() || "N/A";
 }
 
-const simulatedInvoices: Invoice[] = [
-  {
-    id: "INV-SHP-001",
-    invoiceNumber: "INV-2024-001",
-    loadId: "LOAD-101",
-    loadRoute: "Mumbai → Delhi",
-    loadStatus: "delivered",
-    shipperId: "current-user",
-    subtotal: "45000",
-    taxPercent: "18",
-    taxAmount: "8100",
-    totalAmount: "53100",
-    paymentTerms: "Net 14",
-    status: "paid",
-    shipperConfirmed: true,
-    shipperConfirmedAt: "2024-12-08T10:00:00Z",
-    acknowledgedAt: "2024-12-10T14:30:00Z",
-    paidAt: "2024-12-12T16:45:00Z",
-    paidAmount: "53100",
-    paymentMethod: "bank_transfer",
-    paymentReference: "TXN-78923456",
-    lineItems: [
-      { description: "Freight Charges: Mumbai to Delhi (1420 km)", quantity: 1, amount: 42000 },
-      { description: "Loading/Unloading", quantity: 1, amount: 2000 },
-      { description: "Insurance Premium", quantity: 1, amount: 1000 },
-    ],
-    dueDate: "2024-12-22",
-    createdAt: "2024-12-08T09:00:00Z",
-  },
-  {
-    id: "INV-SHP-002",
-    invoiceNumber: "INV-2024-002",
-    loadId: "LOAD-102",
-    loadRoute: "Chennai → Bangalore",
-    loadStatus: "in_transit",
-    shipperId: "current-user",
-    subtotal: "35000",
-    taxPercent: "18",
-    taxAmount: "6300",
-    totalAmount: "41300",
-    paymentTerms: "Net 14",
-    status: "sent",
-    shipperConfirmed: true,
-    shipperConfirmedAt: "2024-12-12T11:00:00Z",
-    acknowledgedAt: "2024-12-14T09:30:00Z",
-    lineItems: [
-      { description: "Freight Charges: Chennai to Bangalore (350 km)", quantity: 1, amount: 32000 },
-      { description: "Special Handling", quantity: 1, amount: 3000 },
-    ],
-    dueDate: "2024-12-26",
-    createdAt: "2024-12-12T10:30:00Z",
-  },
-  {
-    id: "INV-SHP-004",
-    invoiceNumber: "INV-2024-004",
-    loadId: "LOAD-104",
-    loadRoute: "Kolkata → Bhubaneswar",
-    loadStatus: "finalized",
-    shipperId: "current-user",
-    subtotal: "22000",
-    taxPercent: "18",
-    taxAmount: "3960",
-    totalAmount: "25960",
-    paymentTerms: "Net 14",
-    status: "sent",
-    shipperConfirmed: false,
-    shipperConfirmedAt: null,
-    lineItems: [
-      { description: "Freight Charges: Kolkata to Bhubaneswar (440 km)", quantity: 1, amount: 20000 },
-      { description: "Toll Charges", quantity: 1, amount: 2000 },
-    ],
-    dueDate: "2024-12-28",
-    createdAt: "2024-12-14T07:00:00Z",
-  },
-  {
-    id: "INV-SHP-005",
-    invoiceNumber: "INV-2024-005",
-    loadId: "LOAD-105",
-    loadRoute: "Ahmedabad → Jaipur",
-    loadStatus: "awarded",
-    shipperId: "current-user",
-    subtotal: "18000",
-    taxPercent: "18",
-    taxAmount: "3240",
-    totalAmount: "21240",
-    paymentTerms: "Net 14",
-    status: "acknowledged",
-    shipperConfirmed: true,
-    shipperConfirmedAt: "2024-12-13T11:00:00Z",
-    acknowledgedAt: "2024-12-14T15:20:00Z",
-    lineItems: [
-      { description: "Freight Charges: Ahmedabad to Jaipur (680 km)", quantity: 1, amount: 16500 },
-      { description: "Packaging Materials", quantity: 1, amount: 1500 },
-    ],
-    dueDate: "2024-12-29",
-    createdAt: "2024-12-13T10:00:00Z",
-  },
-];
 
 export default function ShipperInvoicesPage() {
   const { t } = useTranslation();
@@ -281,14 +183,11 @@ export default function ShipperInvoicesPage() {
   }, [user?.id, user?.role, toast, refetch]);
 
   const invoices = useMemo(() => {
-    if (apiInvoices.length > 0) {
-      return apiInvoices.filter(inv => {
-        const loadStatus = inv.loadStatus?.toLowerCase() || "";
-        return ["awarded", "finalized", "in_transit", "delivered", "completed"].includes(loadStatus) ||
-               inv.status !== "draft";
-      });
-    }
-    return simulatedInvoices;
+    return apiInvoices.filter(inv => {
+      const loadStatus = inv.loadStatus?.toLowerCase() || "";
+      return ["awarded", "finalized", "in_transit", "delivered", "completed"].includes(loadStatus) ||
+             inv.status !== "draft";
+    });
   }, [apiInvoices]);
 
   const acknowledgeMutation = useMutation({

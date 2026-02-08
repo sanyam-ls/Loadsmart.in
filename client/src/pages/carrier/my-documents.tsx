@@ -1672,9 +1672,8 @@ export default function MyDocumentsPage() {
       )}
 
       <Tabs defaultValue="folders" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="folders" data-testid="tab-folders">Folders</TabsTrigger>
-          <TabsTrigger value="all" data-testid="tab-all">All ({allDocuments.length})</TabsTrigger>
           <TabsTrigger value="truck" data-testid="tab-truck">Truck ({truckDocs.length})</TabsTrigger>
           <TabsTrigger value="driver" data-testid="tab-driver">Driver ({driverDocs.length})</TabsTrigger>
           <TabsTrigger value="alerts" data-testid="tab-alerts">
@@ -1694,22 +1693,6 @@ export default function MyDocumentsPage() {
                   <TruckFolderSection />
                   <DriverFolderSection />
                   <LoadsFolderSection />
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="all" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Documents</CardTitle>
-              <CardDescription>View all your uploaded documents</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[calc(100vh-450px)]">
-                <div className="pr-4">
-                  {renderDocumentList(allDocuments, "No documents uploaded yet")}
                 </div>
               </ScrollArea>
             </CardContent>

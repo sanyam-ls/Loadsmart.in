@@ -1280,7 +1280,7 @@ export default function AdminPostLoadPage() {
                     name="pickupPincode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Pincode (Optional)</FormLabel>
+                        <FormLabel>Pincode</FormLabel>
                         <FormControl>
                           <Input placeholder="6-digit pincode" {...field} data-testid="admin-input-pickup-pincode" />
                         </FormControl>
@@ -1431,7 +1431,7 @@ export default function AdminPostLoadPage() {
                     name="dropoffPincode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Pincode (Optional)</FormLabel>
+                        <FormLabel>Pincode</FormLabel>
                         <FormControl>
                           <Input placeholder="6-digit pincode" {...field} data-testid="admin-input-dropoff-pincode" />
                         </FormControl>

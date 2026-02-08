@@ -2427,13 +2427,14 @@ export async function registerRoutes(
         const { password: _, ...userWithoutPassword } = u;
         return {
           ...userWithoutPassword,
-          // Map database fields to frontend expected format
+          userNumber: u.userNumber,
+          displayUserId: u.userNumber ? `USR-${String(u.userNumber).padStart(3, '0')}` : null,
           name: u.username,
           company: u.companyName || "",
           dateJoined: u.createdAt,
           phone: u.phone || "",
-          status: u.isVerified ? "active" : "pending", // Derive status from isVerified
-          region: "India", // Default region
+          status: u.isVerified ? "active" : "pending",
+          region: "India",
         };
       });
 

@@ -5,6 +5,8 @@ import { useDocumentVault, type VaultDocument } from "./document-vault-store";
 
 export interface AdminUser {
   userId: string;
+  userNumber?: number;
+  displayUserId?: string;
   name: string;
   email: string;
   company: string;
@@ -986,6 +988,8 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         const apiUsers = await response.json();
         const mappedUsers: AdminUser[] = apiUsers.map((u: any) => ({
           userId: u.id,
+          userNumber: u.userNumber,
+          displayUserId: u.displayUserId || (u.userNumber ? `USR-${String(u.userNumber).padStart(3, '0')}` : undefined),
           name: u.name || u.fullName || u.username,
           email: u.email || "",
           company: u.company || u.companyName || "",

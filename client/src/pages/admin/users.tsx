@@ -130,7 +130,9 @@ export default function AdminUsersPage() {
       result = result.filter(user => 
         user.name?.toLowerCase().includes(query) ||
         user.email?.toLowerCase().includes(query) ||
-        user.company?.toLowerCase().includes(query)
+        user.company?.toLowerCase().includes(query) ||
+        user.displayUserId?.toLowerCase().includes(query) ||
+        (user.userNumber && String(user.userNumber).includes(query))
       );
     }
     
@@ -386,7 +388,7 @@ export default function AdminUsersPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search users by name, email, or company..."
+                placeholder="Search by user ID, name, email, or company..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -486,15 +488,22 @@ export default function AdminUsersPage() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <div>
-                            <div className="font-medium flex items-center gap-2" data-testid={`text-username-${user.userId}`}>
+                            <div className="font-medium flex items-center flex-wrap gap-2" data-testid={`text-username-${user.userId}`}>
                               {user.name}
                               {user.isVerified && (
                                 <Shield className="h-3 w-3 text-primary" />
                               )}
                             </div>
-                            <div className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Building className="h-3 w-3" />
-                              {user.company || "No company"}
+                            <div className="flex items-center flex-wrap gap-2 mt-0.5">
+                              {user.displayUserId && (
+                                <span className="text-xs font-mono text-primary/80" data-testid={`text-userid-${user.userId}`}>
+                                  {user.displayUserId}
+                                </span>
+                              )}
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Building className="h-3 w-3" />
+                                {user.company || "No company"}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -845,11 +854,18 @@ export default function AdminUsersPage() {
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <span>{profileUser?.name || "User Profile"}</span>
-                {profileUser?.role && (
-                  <Badge variant="outline" className="ml-2 capitalize">
-                    {profileUser.role}
-                  </Badge>
+                <div className="flex items-center flex-wrap gap-2">
+                  <span>{profileUser?.name || "User Profile"}</span>
+                  {profileUser?.role && (
+                    <Badge variant="outline" className="capitalize">
+                      {profileUser.role}
+                    </Badge>
+                  )}
+                </div>
+                {profileUser?.displayUserId && (
+                  <p className="text-xs font-mono text-muted-foreground mt-0.5" data-testid="text-profile-userid">
+                    {profileUser.displayUserId}
+                  </p>
                 )}
               </div>
             </DialogTitle>

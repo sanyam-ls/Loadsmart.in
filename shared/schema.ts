@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, serial, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -251,6 +251,7 @@ export type CarrierType = typeof carrierTypes[number];
 // Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userNumber: serial("user_number").notNull().unique(),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
@@ -260,7 +261,6 @@ export const users = pgTable("users", {
   phone: text("phone"),
   avatar: text("avatar"),
   isVerified: boolean("is_verified").default(false),
-  // Default pickup location for shippers
   defaultPickupAddress: text("default_pickup_address"),
   defaultPickupLocality: text("default_pickup_locality"),
   defaultPickupLandmark: text("default_pickup_landmark"),
@@ -1552,7 +1552,7 @@ export const negotiationThreadsRelations = relations(negotiationThreads, ({ one 
 }));
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, userNumber: true, createdAt: true });
 export const insertCarrierVerificationSchema = createInsertSchema(carrierVerifications).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCarrierVerificationDocumentSchema = createInsertSchema(carrierVerificationDocuments).omit({ id: true, createdAt: true });
 export const insertBidNegotiationSchema = createInsertSchema(bidNegotiations).omit({ id: true, createdAt: true });

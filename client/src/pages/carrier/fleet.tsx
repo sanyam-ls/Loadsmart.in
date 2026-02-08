@@ -190,7 +190,7 @@ function TruckDocumentCard({ title, icon: Icon, documentUrl, expiryDate, documen
 }
 
 function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; onDocumentUpdate?: (truckId: string, field: string, value: string) => void }) {
-  const daysToService = getDaysUntilExpiry(truck.nextServiceDue);
+  const daysToFitnessExpiry = getDaysUntilExpiry(truck.fitnessExpiry);
   const [isUploading, setIsUploading] = useState(false);
   
   const handleDocumentUpload = (field: string) => (value: string) => {
@@ -385,23 +385,25 @@ function TruckDetailDialog({ truck, onDocumentUpdate }: { truck: CarrierTruck; o
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <Wrench className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">Last Service</span>
+                  <Shield className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">Fitness Certificate</span>
                 </div>
-                <p className="text-2xl font-bold">{formatDate(truck.lastServiceDate)}</p>
-                <p className="text-sm text-muted-foreground">{Math.abs(getDaysUntilExpiry(truck.lastServiceDate))} days ago</p>
+                <p className="text-2xl font-bold" data-testid="text-fitness-expiry">{formatDate(truck.fitnessExpiry)}</p>
+                <p className={`text-sm ${daysToFitnessExpiry < 0 ? "text-red-500" : daysToFitnessExpiry < 30 ? "text-amber-500" : "text-muted-foreground"}`}>
+                  {daysToFitnessExpiry < 0 ? `Expired ${Math.abs(daysToFitnessExpiry)} days ago` : `Expires in ${daysToFitnessExpiry} days`}
+                </p>
               </CardContent>
             </Card>
             
-            <Card className={daysToService < 15 ? "border-amber-500" : ""}>
+            <Card className={daysToFitnessExpiry < 30 ? daysToFitnessExpiry < 0 ? "border-red-500" : "border-amber-500" : ""}>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <Calendar className={`h-5 w-5 ${daysToService < 15 ? "text-amber-500" : "text-muted-foreground"}`} />
+                  <Calendar className={`h-5 w-5 ${daysToFitnessExpiry < 0 ? "text-red-500" : daysToFitnessExpiry < 30 ? "text-amber-500" : "text-muted-foreground"}`} />
                   <span className="font-medium">Next Service Due</span>
                 </div>
-                <p className="text-2xl font-bold">{formatDate(truck.nextServiceDue)}</p>
-                <p className={`text-sm ${daysToService < 15 ? "text-amber-500" : "text-muted-foreground"}`}>
-                  {daysToService < 0 ? "Overdue" : `In ${daysToService} days`}
+                <p className="text-2xl font-bold" data-testid="text-next-service">{formatDate(truck.fitnessExpiry)}</p>
+                <p className={`text-sm ${daysToFitnessExpiry < 0 ? "text-red-500" : daysToFitnessExpiry < 30 ? "text-amber-500" : "text-muted-foreground"}`}>
+                  {daysToFitnessExpiry < 0 ? "Overdue - Renew immediately" : `In ${daysToFitnessExpiry} days`}
                 </p>
               </CardContent>
             </Card>

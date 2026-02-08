@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -690,6 +690,10 @@ export default function PostLoadPage() {
   const [pickupAddressLabel, setPickupAddressLabel] = useState("");
   const [dropoffAddressLabel, setDropoffAddressLabel] = useState("");
 
+  // Pending city values to set after state updates and cities list recalculates
+  const pendingPickupCityRef = useRef<string | null>(null);
+  const pendingDropoffCityRef = useRef<string | null>(null);
+
   // Handle selecting a saved pickup address
   const handleSelectPickupAddress = (address: any) => {
     if (address) {
@@ -697,11 +701,9 @@ export default function PostLoadPage() {
       form.setValue("pickupAddress", address.address || "");
       form.setValue("pickupLocality", address.locality || "");
       form.setValue("pickupLandmark", address.landmark || "");
-      form.setValue("pickupState", address.state || "", { shouldDirty: true, shouldValidate: true });
       form.setValue("pickupPincode", address.pincode || "");
-      setTimeout(() => {
-        form.setValue("pickupCity", address.city || "", { shouldDirty: true, shouldValidate: true });
-      }, 100);
+      pendingPickupCityRef.current = address.city || "";
+      form.setValue("pickupState", address.state || "", { shouldDirty: true, shouldValidate: true });
       apiRequest("POST", `/api/shipper/saved-addresses/${address.id}/use`);
     }
   };
@@ -713,14 +715,12 @@ export default function PostLoadPage() {
       form.setValue("dropoffAddress", address.address || "");
       form.setValue("dropoffLocality", address.locality || "");
       form.setValue("dropoffLandmark", address.landmark || "");
-      form.setValue("dropoffState", address.state || "", { shouldDirty: true, shouldValidate: true });
       form.setValue("dropoffPincode", address.pincode || "");
       form.setValue("receiverName", address.contactName || "");
       form.setValue("receiverPhone", address.contactPhone || "");
       form.setValue("receiverEmail", address.contactEmail || "");
-      setTimeout(() => {
-        form.setValue("dropoffCity", address.city || "", { shouldDirty: true, shouldValidate: true });
-      }, 100);
+      pendingDropoffCityRef.current = address.city || "";
+      form.setValue("dropoffState", address.state || "", { shouldDirty: true, shouldValidate: true });
       apiRequest("POST", `/api/shipper/saved-addresses/${address.id}/use`);
     }
   };
@@ -783,6 +783,22 @@ export default function PostLoadPage() {
     const state = indianStates.find(s => s.code === dropoffState);
     return state?.cities || [];
   }, [dropoffState]);
+
+  useEffect(() => {
+    if (pendingPickupCityRef.current && pickupCities.length > 0) {
+      const city = pendingPickupCityRef.current;
+      pendingPickupCityRef.current = null;
+      form.setValue("pickupCity", city, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [pickupCities, form]);
+
+  useEffect(() => {
+    if (pendingDropoffCityRef.current && dropoffCities.length > 0) {
+      const city = pendingDropoffCityRef.current;
+      pendingDropoffCityRef.current = null;
+      form.setValue("dropoffCity", city, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [dropoffCities, form]);
 
   // Auto-populate shipper details from user profile and onboarding data
   useEffect(() => {

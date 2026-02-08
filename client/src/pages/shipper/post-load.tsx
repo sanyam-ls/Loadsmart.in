@@ -65,59 +65,43 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";
 
 const loadFormSchema = z.object({
-  shipperCompanyName: z.string().min(2, "Company name is required"),
-  shipperContactName: z.string().min(2, "Contact name is required"),
-  shipperCompanyAddress: z.string().min(5, "Company address is required"),
-  shipperPhone: z.string().min(10, "Valid phone number is required"),
-  pickupAddress: z.string().min(5, "Pickup address is required"),
+  shipperCompanyName: z.string().optional(),
+  shipperContactName: z.string().optional(),
+  shipperCompanyAddress: z.string().optional(),
+  shipperPhone: z.string().optional(),
+  pickupAddress: z.string().optional(),
   pickupLocality: z.string().optional(),
   pickupLandmark: z.string().optional(),
-  pickupBusinessName: z.string().min(2, "Business name is required"),
-  pickupState: z.string().min(1, "Pickup state is required"),
-  pickupCity: z.string().min(2, "Pickup city is required"),
+  pickupBusinessName: z.string().optional(),
+  pickupState: z.string().optional(),
+  pickupCity: z.string().optional(),
   pickupCityCustom: z.string().optional(),
   pickupPincode: z.string().optional(),
-  dropoffAddress: z.string().min(5, "Dropoff address is required"),
+  dropoffAddress: z.string().optional(),
   dropoffLocality: z.string().optional(),
   dropoffLandmark: z.string().optional(),
   dropoffBusinessName: z.string().optional(),
-  dropoffState: z.string().min(1, "Dropoff state is required"),
-  dropoffCity: z.string().min(2, "Dropoff city is required"),
+  dropoffState: z.string().optional(),
+  dropoffCity: z.string().optional(),
   dropoffCityCustom: z.string().optional(),
   dropoffPincode: z.string().optional(),
-  receiverName: z.string().min(2, "Receiver name is required"),
-  receiverPhone: z.string().min(10, "Valid receiver phone number is required"),
+  receiverName: z.string().optional(),
+  receiverPhone: z.string().optional(),
   receiverEmail: z.string().email("Valid email is required").optional().or(z.literal("")),
-  weight: z.string().min(1, "Weight is required"),
+  weight: z.string().optional(),
   weightUnit: z.string().default("tons"),
-  goodsToBeCarried: z.string().min(2, "Please specify goods to be carried"),
+  goodsToBeCarried: z.string().optional(),
   specialNotes: z.string().optional(),
   rateType: z.enum(["per_ton", "fixed_price"]).default("fixed_price"),
   shipperPricePerTon: z.string().optional(),
   shipperFixedPrice: z.string().optional(),
   advancePaymentPercent: z.string().optional(),
   requiredTruckType: z.string().optional(),
-  pickupDate: z.string().min(1, "Pickup date is required"),
+  pickupDate: z.string().optional(),
   deliveryDate: z.string().optional(),
   isTemplate: z.boolean().default(false),
   templateName: z.string().optional(),
   preferredCarriers: z.boolean().default(false),
-}).refine((data) => {
-  if (data.rateType === "per_ton") {
-    return data.shipperPricePerTon && data.shipperPricePerTon.trim() !== "";
-  }
-  return true;
-}, {
-  message: "Price per tonne is required",
-  path: ["shipperPricePerTon"],
-}).refine((data) => {
-  if (data.rateType === "fixed_price") {
-    return data.shipperFixedPrice && data.shipperFixedPrice.trim() !== "";
-  }
-  return true;
-}, {
-  message: "Fixed price is required",
-  path: ["shipperFixedPrice"],
 }).refine((data) => {
   if (data.pickupCity === "__other__") {
     return data.pickupCityCustom && data.pickupCityCustom.trim() !== "";
@@ -1052,17 +1036,17 @@ export default function PostLoadPage() {
 
       setSubmittedLoadId(result.load_id);
       setSubmittedLoadNumber(result.load_number);
-      const pickupStateName = indianStates.find(s => s.code === data.pickupState)?.name || data.pickupState;
-      const dropoffStateName = indianStates.find(s => s.code === data.dropoffState)?.name || data.dropoffState;
+      const pickupStateName = indianStates.find(s => s.code === data.pickupState)?.name || data.pickupState || '';
+      const dropoffStateName = indianStates.find(s => s.code === data.dropoffState)?.name || data.dropoffState || '';
       setSubmittedLoadDetails({
-        pickupCity: finalPickupCity,
+        pickupCity: finalPickupCity || '',
         pickupState: pickupStateName,
-        dropoffCity: finalDropoffCity,
+        dropoffCity: finalDropoffCity || '',
         dropoffState: dropoffStateName,
-        weight: data.weight,
+        weight: data.weight || '',
         goods: finalGoodsDescription,
         truckType: truckType || '',
-        pickupDate: data.pickupDate,
+        pickupDate: data.pickupDate || '',
         specialNotes: data.specialNotes || '',
         rateType: data.rateType,
         pricePerTon: data.shipperPricePerTon || '',

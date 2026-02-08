@@ -1560,13 +1560,15 @@ export const insertCarrierProfileSchema = createInsertSchema(carrierProfiles).om
 export const insertTruckSchema = createInsertSchema(trucks).omit({ id: true, createdAt: true });
 export const insertDriverSchema = createInsertSchema(drivers).omit({ id: true, createdAt: true });
 export const insertLoadSchema = createInsertSchema(loads).omit({ id: true, createdAt: true }).extend({
-  shipperCompanyName: z.string().min(1, "Company name is required"),
-  shipperContactName: z.string().min(1, "Contact name is required"),
-  shipperCompanyAddress: z.string().min(1, "Company address is required"),
-  shipperPhone: z.string().min(1, "Phone number is required"),
+  shipperCompanyName: z.string().optional().nullable(),
+  shipperContactName: z.string().optional().nullable(),
+  shipperCompanyAddress: z.string().optional().nullable(),
+  shipperPhone: z.string().optional().nullable(),
   receiverName: z.string().optional().nullable(),
   receiverPhone: z.string().optional().nullable(),
   receiverEmail: z.string().optional().nullable(),
+  weight: z.number().optional().nullable(),
+  goodsToBeCarried: z.string().optional().nullable(),
   rateType: z.string().optional().nullable(),
   shipperFixedPrice: z.string().optional().nullable(),
   advancePaymentPercent: z.number().int().min(0).max(100).optional().nullable(),

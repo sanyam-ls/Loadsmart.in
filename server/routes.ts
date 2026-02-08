@@ -730,12 +730,20 @@ export async function registerRoutes(
       if (body.deliveryDate && typeof body.deliveryDate === 'string') {
         body.deliveryDate = new Date(body.deliveryDate);
       }
+      if (body.weight && typeof body.weight === 'string') {
+        const parsed = parseFloat(body.weight);
+        body.weight = isNaN(parsed) ? null : parsed;
+      }
 
       // Get the next sequential load number for this shipper
       const shipperLoadNumber = await storage.getNextShipperLoadNumber(user.id);
 
       const data = insertLoadSchema.parse({
         ...body,
+        pickupAddress: body.pickupAddress || "",
+        pickupCity: body.pickupCity || "",
+        dropoffAddress: body.dropoffAddress || "",
+        dropoffCity: body.dropoffCity || "",
         shipperId: user.id,
         shipperLoadNumber,
       });
@@ -756,7 +764,7 @@ export async function registerRoutes(
       await storage.createNotification({
         userId: user.id,
         title: "Load Submitted",
-        message: `Your load LD-${String(shipperLoadNumber).padStart(3, '0')} from ${load.pickupCity} to ${load.dropoffCity} has been submitted for pricing.`,
+        message: `Your load LD-${String(shipperLoadNumber).padStart(3, '0')}${load.pickupCity && load.dropoffCity ? ` from ${load.pickupCity} to ${load.dropoffCity}` : ''} has been submitted for pricing.`,
         type: "load",
         relatedLoadId: load.id,
       });

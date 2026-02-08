@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Sparkles, ArrowRight } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { MessageCircle, X, Send, Sparkles, ArrowRight, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -107,6 +107,45 @@ export function AIConcierge() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
+  const [position, setPosition] = useState({ x: 24, y: 24 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
+  const hasDraggedRef = useRef(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    hasDraggedRef.current = false;
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      posX: position.x,
+      posY: position.y,
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [position]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging || !dragStartRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      hasDraggedRef.current = true;
+    }
+    const newX = Math.max(0, Math.min(window.innerWidth - 56, dragStartRef.current.posX - dx));
+    const newY = Math.max(0, Math.min(window.innerHeight - 56, dragStartRef.current.posY - dy));
+    setPosition({ x: newX, y: newY });
+  }, [isDragging]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    setIsDragging(false);
+    dragStartRef.current = null;
+    if (!hasDraggedRef.current) {
+      setIsOpen(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const welcomeMessage: Message = {
@@ -185,19 +224,29 @@ export function AIConcierge() {
     }, 800);
   };
 
+  const panelRight = Math.max(0, position.x - 340);
+  const panelBottom = Math.max(0, position.y - 544);
+
   return (
     <>
-      <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
-        onClick={() => setIsOpen(true)}
-        data-testid="button-ai-concierge"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </Button>
+      {!isOpen && (
+        <button
+          ref={buttonRef}
+          className="fixed h-14 w-14 rounded-full shadow-lg z-50 bg-primary text-primary-foreground flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none"
+          style={{ right: `${position.x}px`, bottom: `${position.y}px` }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          data-testid="button-ai-concierge"
+        >
+          <MessageCircle className="h-6 w-6 pointer-events-none" />
+        </button>
+      )}
 
       {isOpen && (
         <div 
-          className="fixed bottom-6 right-6 w-96 h-[600px] bg-card border border-card-border rounded-lg shadow-xl flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-300"
+          className="fixed w-96 h-[600px] bg-card border border-card-border rounded-lg shadow-xl flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-300"
+          style={{ right: `${Math.max(8, panelRight)}px`, bottom: `${Math.max(8, panelBottom)}px` }}
           data-testid="ai-concierge-panel"
         >
           <div className="flex items-center justify-between p-4 border-b border-border">

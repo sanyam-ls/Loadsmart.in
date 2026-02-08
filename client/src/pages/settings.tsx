@@ -180,6 +180,15 @@ export default function SettingsPage() {
               </div>
             </div>
             <Separator />
+            {(user as any)?.userNumber && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                <Shield className="h-4 w-4 text-primary" />
+                <span className="text-sm text-muted-foreground">User ID:</span>
+                <span className="text-sm font-mono font-medium" data-testid="text-user-id">
+                  USR-{String((user as any).userNumber).padStart(3, '0')}
+                </span>
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>

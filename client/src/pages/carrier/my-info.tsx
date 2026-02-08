@@ -42,6 +42,7 @@ import { z } from "zod";
 interface SoloProfile {
   user: {
     id: string;
+    userNumber?: number;
     username: string;
     email: string;
     phone: string | null;
@@ -381,6 +382,11 @@ export default function MyInfoPage() {
               </Avatar>
               <div>
                 <p className="text-lg font-semibold" data-testid="text-username">{profileUser.username}</p>
+                {profileUser.userNumber && (
+                  <p className="text-xs font-mono text-muted-foreground" data-testid="text-user-id">
+                    USR-{String(profileUser.userNumber).padStart(3, '0')}
+                  </p>
+                )}
                 {carrierProfile && (
                   <Badge 
                     className={badgeLevelStyles[carrierProfile.badgeLevel] || "bg-amber-700 text-white"}

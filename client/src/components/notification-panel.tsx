@@ -195,24 +195,65 @@ export function NotificationPanel() {
         navigate('/admin');
       }
     } else if (user?.role === "carrier") {
+      if (isBidRelated) {
+        navigate('/carrier/bids');
+        return;
+      }
+      if (isInvoiceRelated) {
+        navigate('/carrier/revenue');
+        return;
+      }
+      const isOtpRelated = title.includes('otp') || message.includes('otp');
+      const isTripRelated = title.includes('trip') || title.includes('transit') || title.includes('delivery') || title.includes('pickup') || message.includes('trip');
+      const isDocRelated = title.includes('document') || title.includes('pod') || message.includes('document');
+
+      if (isOtpRelated || isTripRelated) {
+        navigate('/carrier/trips');
+        return;
+      }
+      if (isDocRelated) {
+        navigate('/carrier/my-documents');
+        return;
+      }
+      if (isShipmentRelated) {
+        navigate('/carrier/shipments');
+        return;
+      }
+
       switch (contextType) {
         case "bid":
         case "bid_accepted":
         case "bid_rejected":
         case "counter_offer":
-          navigate(`/carrier/bids${loadId ? `?load=${loadId}` : ''}`);
+          navigate('/carrier/bids');
           break;
         case "invoice":
         case "invoice_generated":
         case "payment_received":
-          navigate(`/carrier/revenue`);
+          navigate('/carrier/revenue');
+          break;
+        case "otp":
+          navigate('/carrier/trips');
           break;
         case "load_assigned":
         case "shipment":
-          navigate(`/carrier/loads${loadId ? `?load=${loadId}` : ''}`);
+        case "shipment_update":
+        case "delivery_complete":
+        case "in_transit":
+          navigate('/carrier/shipments');
+          break;
+        case "document":
+        case "document_uploaded":
+        case "pod_uploaded":
+          navigate('/carrier/my-documents');
+          break;
+        case "load":
+        case "load_created":
+        case "load_posted":
+          navigate('/carrier/marketplace');
           break;
         default:
-          navigate(`/carrier/loads${loadId ? `?highlight=${loadId}` : ''}`);
+          navigate('/carrier/dashboard');
       }
     } else if (user?.role === "shipper") {
       switch (contextType) {
@@ -392,9 +433,9 @@ export function NotificationPanel() {
                             <span className="text-xs text-muted-foreground">
                               {notification.createdAt ? getTimeAgo(notification.createdAt) : ""}
                             </span>
-                            {notification.relatedLoadId && (
-                              <span className="text-xs text-primary">
-                                {notification.relatedLoadId}
+                            {((notification as any).loadDisplayId || notification.relatedLoadId) && (
+                              <span className="text-xs text-primary font-medium">
+                                {(notification as any).loadDisplayId || ""}
                               </span>
                             )}
                           </div>

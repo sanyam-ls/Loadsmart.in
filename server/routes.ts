@@ -11653,7 +11653,22 @@ RESPOND IN THIS EXACT JSON FORMAT:
   app.get("/api/notifications", requireAuth, async (req, res) => {
     try {
       const notifications = await storage.getNotificationsByUser(req.session.userId!);
-      res.json(notifications);
+      const loadIds = [...new Set(notifications.filter(n => n.relatedLoadId).map(n => n.relatedLoadId!))];
+      const loadMap = new Map<string, string>();
+      for (const lid of loadIds) {
+        try {
+          const load = await storage.getLoad(lid);
+          if (load) {
+            const num = load.shipperLoadNumber || (load as any).adminReferenceNumber;
+            if (num) loadMap.set(lid, `LD-${String(num).padStart(3, '0')}`);
+          }
+        } catch {}
+      }
+      const enriched = notifications.map(n => ({
+        ...n,
+        loadDisplayId: n.relatedLoadId ? (loadMap.get(n.relatedLoadId) || null) : null,
+      }));
+      res.json(enriched);
     } catch (error) {
       console.error("Get notifications error:", error);
       res.status(500).json({ error: "Internal server error" });

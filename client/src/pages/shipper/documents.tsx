@@ -66,7 +66,7 @@ const isDisplayableUrl = (url: string | undefined): boolean => {
 
 // Shipper-specific document categories (excluding carrier documents)
 const shipperDocumentCategories: DocumentCategory[] = [
-  "pod", "bol", "invoice", "lr", "eway_bill", "weight_slip", "photos", "other"
+  "pod", "invoice", "lr", "eway_bill", "photos", "other"
 ];
 
 // Folder configuration for shipper document categories

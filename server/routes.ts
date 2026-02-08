@@ -14398,6 +14398,66 @@ RESPOND IN THIS EXACT JSON FORMAT:
   });
 
   // =============================================
+  // SAVED ADDRESSES - Admin endpoints for managing shipper addresses
+  // =============================================
+
+  app.get("/api/admin/saved-addresses/:shipperId/:type", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Only admins can access saved addresses" });
+      }
+
+      const { shipperId, type } = req.params;
+
+      if (type !== "pickup" && type !== "dropoff") {
+        return res.status(400).json({ error: "Invalid address type. Must be 'pickup' or 'dropoff'" });
+      }
+
+      const addresses = await db.select().from(savedAddresses)
+        .where(eq(savedAddresses.shipperId, parseInt(shipperId)));
+      
+      const filteredAddresses = addresses
+        .filter(a => a.addressType === type && a.isActive)
+        .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
+
+      res.json(filteredAddresses);
+    } catch (error: any) {
+      console.error("Admin get saved addresses error:", error);
+      res.status(500).json({ error: "Failed to get saved addresses" });
+    }
+  });
+
+  app.post("/api/admin/saved-addresses", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ error: "Only admins can save addresses" });
+      }
+
+      const parsed = insertSavedAddressSchema.safeParse({
+        ...req.body,
+        shipperId: parseInt(req.body.shipperId),
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid address data", details: parsed.error.errors });
+      }
+
+      const [newAddress] = await db.insert(savedAddresses).values(parsed.data).returning();
+
+      res.json(newAddress);
+    } catch (error: any) {
+      console.error("Admin save address error:", error);
+      res.status(500).json({ error: "Failed to save address" });
+    }
+  });
+
+  // =============================================
   // SAVED ADDRESSES - Shipper address book
   // =============================================
 

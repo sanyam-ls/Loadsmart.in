@@ -572,6 +572,10 @@ export default function AdminPostLoadPage() {
   const [selectedShipperId, setSelectedShipperId] = useState<string | null>(null);
   const [shipperSearchOpen, setShipperSearchOpen] = useState(false);
   const [shipperSearchQuery, setShipperSearchQuery] = useState("");
+  const [savePickupAddress, setSavePickupAddress] = useState(false);
+  const [saveDropoffAddress, setSaveDropoffAddress] = useState(false);
+  const [pickupAddressLabel, setPickupAddressLabel] = useState("");
+  const [dropoffAddressLabel, setDropoffAddressLabel] = useState("");
 
   // Type for shipper from API
   type ShipperOption = {
@@ -612,6 +616,15 @@ export default function AdminPostLoadPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const { data: savedPickupAddresses = [] } = useQuery({
+    queryKey: ['/api/admin/saved-addresses', selectedShipperId, 'pickup'],
+    enabled: !!selectedShipperId,
+  });
+  const { data: savedDropoffAddresses = [] } = useQuery({
+    queryKey: ['/api/admin/saved-addresses', selectedShipperId, 'dropoff'],
+    enabled: !!selectedShipperId,
+  });
 
   const form = useForm<AdminLoadFormData>({
     resolver: zodResolver(adminLoadFormSchema),
@@ -674,6 +687,37 @@ export default function AdminPostLoadPage() {
     const state = indianStates.find(s => s.code === dropoffState);
     return state?.cities || [];
   }, [dropoffState]);
+
+  const handleSelectPickupAddress = (address: any) => {
+    if (address) {
+      form.setValue("pickupBusinessName", address.businessName || "");
+      form.setValue("pickupAddress", address.address || "");
+      form.setValue("pickupLocality", address.locality || "");
+      form.setValue("pickupLandmark", address.landmark || "");
+      form.setValue("pickupPincode", address.pincode || "");
+      form.setValue("pickupState", address.state || "", { shouldDirty: true, shouldValidate: true });
+      setTimeout(() => {
+        form.setValue("pickupCity", address.city || "");
+      }, 100);
+    }
+  };
+
+  const handleSelectDropoffAddress = (address: any) => {
+    if (address) {
+      form.setValue("dropoffBusinessName", address.businessName || "");
+      form.setValue("dropoffAddress", address.address || "");
+      form.setValue("dropoffLocality", address.locality || "");
+      form.setValue("dropoffLandmark", address.landmark || "");
+      form.setValue("dropoffPincode", address.pincode || "");
+      form.setValue("receiverName", address.contactName || "");
+      form.setValue("receiverPhone", address.contactPhone || "");
+      form.setValue("receiverEmail", address.contactEmail || "");
+      form.setValue("dropoffState", address.state || "", { shouldDirty: true, shouldValidate: true });
+      setTimeout(() => {
+        form.setValue("dropoffCity", address.city || "");
+      }, 100);
+    }
+  };
 
   // Show truck suggestion when weight is entered
   useEffect(() => {
@@ -753,6 +797,49 @@ export default function AdminPostLoadPage() {
       });
       
       const result = await response.json();
+
+      if (savePickupAddress && selectedShipperId) {
+        try {
+          await apiRequest("POST", "/api/admin/saved-addresses", {
+            shipperId: selectedShipperId,
+            addressType: "pickup",
+            label: pickupAddressLabel || data.pickupBusinessName || `${finalPickupCity} Address`,
+            businessName: data.pickupBusinessName || null,
+            address: data.pickupAddress || null,
+            locality: data.pickupLocality || null,
+            landmark: data.pickupLandmark || null,
+            city: finalPickupCity,
+            state: data.pickupState,
+            pincode: data.pickupPincode || null,
+            isActive: true,
+          });
+        } catch (err) {
+          console.error("Failed to save pickup address:", err);
+        }
+      }
+
+      if (saveDropoffAddress && selectedShipperId) {
+        try {
+          await apiRequest("POST", "/api/admin/saved-addresses", {
+            shipperId: selectedShipperId,
+            addressType: "dropoff",
+            label: dropoffAddressLabel || data.dropoffBusinessName || `${finalDropoffCity} Address`,
+            businessName: data.dropoffBusinessName || null,
+            address: data.dropoffAddress || null,
+            locality: data.dropoffLocality || null,
+            landmark: data.dropoffLandmark || null,
+            city: finalDropoffCity,
+            state: data.dropoffState,
+            pincode: data.dropoffPincode || null,
+            contactName: data.receiverName || null,
+            contactPhone: data.receiverPhone || null,
+            contactEmail: data.receiverEmail || null,
+            isActive: true,
+          });
+        } catch (err) {
+          console.error("Failed to save dropoff address:", err);
+        }
+      }
 
       setSubmittedLoadId(result.load_id);
       setSubmittedLoadNumber(result.load_number);
@@ -1149,6 +1236,29 @@ export default function AdminPostLoadPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {savedPickupAddresses.length > 0 && (
+                    <div className="space-y-2">
+                      <FormLabel className="text-sm">Select from Saved Addresses</FormLabel>
+                      <Select onValueChange={(value) => {
+                        const address = savedPickupAddresses.find((a: any) => a.id.toString() === value);
+                        if (address) handleSelectPickupAddress(address);
+                      }}>
+                        <SelectTrigger data-testid="admin-select-saved-pickup-address">
+                          <SelectValue placeholder="Choose a saved pickup address" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {savedPickupAddresses.map((addr: any) => (
+                            <SelectItem key={addr.id} value={addr.id.toString()}>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">{addr.label || addr.businessName || "Unnamed Address"}</span>
+                                <span className="text-xs text-muted-foreground">{addr.city}, {addr.state}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <FormField
                     control={form.control}
                     name="pickupBusinessName"
@@ -1288,6 +1398,30 @@ export default function AdminPostLoadPage() {
                       </FormItem>
                     )}
                   />
+                  <div className="flex items-center gap-3 pt-2 border-t">
+                    <input 
+                      type="checkbox" 
+                      id="admin-save-pickup-address" 
+                      checked={savePickupAddress}
+                      onChange={(e) => setSavePickupAddress(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                      data-testid="admin-checkbox-save-pickup-address"
+                    />
+                    <label htmlFor="admin-save-pickup-address" className="text-sm text-muted-foreground cursor-pointer">
+                      Save this pickup address for future use
+                    </label>
+                  </div>
+                  {savePickupAddress && (
+                    <div className="mt-2">
+                      <label className="text-sm text-muted-foreground mb-1 block">Address Label <span className="font-normal">(e.g. Mumbai Warehouse)</span></label>
+                      <Input 
+                        placeholder="" 
+                        value={pickupAddressLabel}
+                        onChange={(e) => setPickupAddressLabel(e.target.value)}
+                        data-testid="admin-input-pickup-address-label"
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1300,6 +1434,29 @@ export default function AdminPostLoadPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {savedDropoffAddresses.length > 0 && (
+                    <div className="space-y-2">
+                      <FormLabel className="text-sm">Select from Saved Addresses</FormLabel>
+                      <Select onValueChange={(value) => {
+                        const address = savedDropoffAddresses.find((a: any) => a.id.toString() === value);
+                        if (address) handleSelectDropoffAddress(address);
+                      }}>
+                        <SelectTrigger data-testid="admin-select-saved-dropoff-address">
+                          <SelectValue placeholder="Choose a saved dropoff address" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {savedDropoffAddresses.map((addr: any) => (
+                            <SelectItem key={addr.id} value={addr.id.toString()}>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">{addr.label || addr.businessName || "Unnamed Address"}</span>
+                                <span className="text-xs text-muted-foreground">{addr.city}, {addr.state}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <FormField
                     control={form.control}
                     name="dropoffBusinessName"
@@ -1439,6 +1596,30 @@ export default function AdminPostLoadPage() {
                       </FormItem>
                     )}
                   />
+                  <div className="flex items-center gap-3 pt-2 border-t">
+                    <input 
+                      type="checkbox" 
+                      id="admin-save-dropoff-address" 
+                      checked={saveDropoffAddress}
+                      onChange={(e) => setSaveDropoffAddress(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                      data-testid="admin-checkbox-save-dropoff-address"
+                    />
+                    <label htmlFor="admin-save-dropoff-address" className="text-sm text-muted-foreground cursor-pointer">
+                      Save this dropoff address for future use
+                    </label>
+                  </div>
+                  {saveDropoffAddress && (
+                    <div className="mt-2">
+                      <label className="text-sm text-muted-foreground mb-1 block">Address Label <span className="font-normal">(e.g. Delhi Warehouse)</span></label>
+                      <Input 
+                        placeholder="" 
+                        value={dropoffAddressLabel}
+                        onChange={(e) => setDropoffAddressLabel(e.target.value)}
+                        data-testid="admin-input-dropoff-address-label"
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

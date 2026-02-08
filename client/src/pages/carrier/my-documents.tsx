@@ -1672,10 +1672,11 @@ export default function MyDocumentsPage() {
       )}
 
       <Tabs defaultValue="folders" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="folders" data-testid="tab-folders">Folders</TabsTrigger>
           <TabsTrigger value="truck" data-testid="tab-truck">Truck ({truckDocs.length})</TabsTrigger>
           <TabsTrigger value="driver" data-testid="tab-driver">Driver ({driverDocs.length})</TabsTrigger>
+          <TabsTrigger value="loads" data-testid="tab-loads">Loads ({Object.values(shipmentsByLoad).reduce((sum, s) => sum + s.documents.length, 0)})</TabsTrigger>
           <TabsTrigger value="alerts" data-testid="tab-alerts">
             Alerts ({expired.length + expiringSoon.length})
           </TabsTrigger>
@@ -1725,6 +1726,61 @@ export default function MyDocumentsPage() {
               <ScrollArea className="h-[calc(100vh-450px)]">
                 <div className="pr-4">
                   {renderDocumentList(driverDocs, "No driver documents uploaded")}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="loads" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Load Documents</CardTitle>
+              <CardDescription>Invoice, POD, E-Way Bill, and other shipment documents</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[calc(100vh-450px)]">
+                <div className="pr-4">
+                  {(() => {
+                    const loadNumbers = Object.keys(shipmentsByLoad).map(Number).sort((a, b) => b - a);
+                    if (loadNumbers.length === 0) {
+                      return (
+                        <div className="text-center py-8">
+                          <Package className="h-12 w-12 mx-auto mb-2 text-muted-foreground opacity-50" />
+                          <p className="font-medium">No load documents yet</p>
+                          <p className="text-sm text-muted-foreground">Documents will appear here once you upload them for your shipments</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-4">
+                        {loadNumbers.map(loadNum => {
+                          const shipment = shipmentsByLoad[loadNum];
+                          return (
+                            <div key={loadNum} className="space-y-2" data-testid={`load-docs-${loadNum}`}>
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4 text-primary" />
+                                <span className="font-medium text-sm">LD-{String(loadNum).padStart(3, '0')}</span>
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {shipment.status.replace(/_/g, ' ')}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {shipment.documents.length} {shipment.documents.length === 1 ? 'doc' : 'docs'}
+                                </Badge>
+                              </div>
+                              {shipment.documents.length > 0 ? (
+                                <div className="ml-6 space-y-2">
+                                  {shipment.documents.map(doc => renderShipmentDocument(doc))}
+                                </div>
+                              ) : (
+                                <p className="ml-6 text-sm text-muted-foreground">No documents uploaded for this load</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </ScrollArea>
             </CardContent>

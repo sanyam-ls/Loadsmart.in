@@ -158,8 +158,8 @@ function convertShipmentToTrip(
     fuel: { fuelConsumed: 0, costPerLiter: 95, totalFuelCost: 0, fuelEfficiency: 4, costOverrun: 0, refuelAlerts: [] },
     driverInsights: { driverName, driverLicense, drivingHoursToday: 0, breaksTaken: 0, speedingAlerts: 0, harshBrakingEvents: 0, safetyScore: 85, idleTime: 0 },
     allStops: [
-      { stopId: "s1", location: load?.pickupCity || "Origin", type: "pickup", status: shipment.startOtpVerified ? "completed" : "pending", scheduledTime: createdAt, actualTime: shipment.startOtpVerified ? createdAt : null },
-      { stopId: "s2", location: load?.dropoffCity || "Destination", type: "delivery", status: shipment.endOtpVerified ? "completed" : "pending", scheduledTime: addHours(createdAt, 12), actualTime: shipment.endOtpVerified ? now : null },
+      { stopId: "s1", location: [load?.pickupAddress, (load as any)?.pickupLocality, (load as any)?.pickupLandmark, load?.pickupCity, (load as any)?.pickupState].filter(Boolean).join(', ') || "Origin", type: "pickup", status: shipment.startOtpVerified ? "completed" : "pending", scheduledTime: createdAt, actualTime: shipment.startOtpVerified ? createdAt : null },
+      { stopId: "s2", location: [load?.dropoffAddress, (load as any)?.dropoffLocality, (load as any)?.dropoffLandmark, load?.dropoffCity, (load as any)?.dropoffState].filter(Boolean).join(', ') || "Destination", type: "delivery", status: shipment.endOtpVerified ? "completed" : "pending", scheduledTime: addHours(createdAt, 12), actualTime: shipment.endOtpVerified ? now : null },
     ],
     timeline: [
       { eventId: "e1", type: "pickup", description: "Shipment assigned", timestamp: createdAt, location: load?.pickupCity || "Origin" },
@@ -688,8 +688,8 @@ export default function TripsPage() {
                         <h4 className="font-medium mb-3">Route Stops</h4>
                         <div className="space-y-2">
                           {selectedTrip.allStops.map((stop, idx) => (
-                            <div key={stop.stopId} className="flex items-center gap-3 p-2 rounded-md bg-muted/50">
-                              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                            <div key={stop.stopId} className="flex gap-3 p-3 rounded-md bg-muted/50">
+                              <div className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center ${
                                 stop.status === "completed" 
                                   ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" 
                                   : "bg-muted"
@@ -700,15 +700,17 @@ export default function TripsPage() {
                                   <span className="text-xs font-medium">{idx + 1}</span>
                                 )}
                               </div>
-                              <div className="flex-1">
-                                <p className="font-medium text-sm">{stop.location}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{stop.type}</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-medium uppercase text-muted-foreground">{stop.type}</span>
+                                  {stop.actualTime && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {format(new Date(stop.actualTime), "h:mm a")}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="font-medium text-sm mt-1 break-words">{stop.location}</p>
                               </div>
-                              {stop.actualTime && (
-                                <span className="text-xs text-muted-foreground">
-                                  {format(new Date(stop.actualTime), "h:mm a")}
-                                </span>
-                              )}
                             </div>
                           ))}
                         </div>

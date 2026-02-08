@@ -157,6 +157,38 @@ function formatTimeAgo(date: Date | string | null) {
   return `${diffDays}d ago`;
 }
 
+const commodityCodeToLabel: Record<string, string> = {
+  rice: "Rice / Paddy", wheat: "Wheat", pulses: "Pulses / Daal", sugar: "Sugar",
+  jaggery: "Jaggery (Gud)", spices: "Spices", tea: "Tea", coffee: "Coffee",
+  edible_oil: "Edible Oil", fruits: "Fruits", vegetables: "Vegetables",
+  dairy: "Dairy Products", frozen_food: "Frozen Food", beverages: "Beverages",
+  packaged_food: "Packaged Food", animal_feed: "Animal Feed",
+  cement: "Cement", steel: "Steel / TMT Bars", bricks: "Bricks / Blocks",
+  sand: "Sand / Gravel", marble: "Marble / Granite", tiles: "Tiles / Ceramics",
+  timber: "Timber / Plywood", glass: "Glass Sheets", pipes: "Pipes (PVC/Metal)",
+  paint: "Paints / Coatings", rods: "Iron Rods",
+  cotton: "Cotton / Yarn", fabric: "Fabric / Textiles", garments: "Garments / Apparel",
+  jute: "Jute Products", silk: "Silk / Synthetic",
+  chemicals: "Industrial Chemicals", fertilizers: "Fertilizers", pesticides: "Pesticides",
+  petroleum: "Petroleum Products", lubricants: "Lubricants", polymers: "Polymers / Plastics",
+  rubber: "Rubber / Tyres", acids: "Acids / Alkalis",
+  electronics: "Electronics", furniture: "Furniture", appliances: "Home Appliances",
+  fmcg: "FMCG Products", auto_parts: "Auto Parts", machinery: "Industrial Machinery",
+  paper: "Paper / Stationery", pharma: "Pharmaceuticals", cosmetics: "Cosmetics",
+  coal: "Coal / Coke", iron_ore: "Iron Ore", limestone: "Limestone", bauxite: "Bauxite",
+  gypsum: "Gypsum", mica: "Mica", manganese: "Manganese",
+  cattle: "Cattle / Livestock", poultry: "Poultry", fish: "Fish / Seafood",
+  flowers: "Flowers / Plants", seeds: "Seeds / Saplings",
+  household: "Household Goods", personal: "Personal Effects",
+  exhibition: "Exhibition Materials", temple: "Temple / Religious Items",
+  ecommerce: "E-commerce Parcels", other: "Other",
+};
+
+function formatCommodityLabel(value: string | null | undefined): string {
+  if (!value) return "";
+  return commodityCodeToLabel[value] || value;
+}
+
 // Format load ID for display - shows LD-1001 (admin ref) or LD-023 (shipper seq)
 function formatLoadId(load: { shipperLoadNumber?: number | null; adminReferenceNumber?: number | null; id: string }): string {
   if (load.adminReferenceNumber) {
@@ -382,7 +414,7 @@ export default function LoadDetailPage() {
         weight: load.weight?.toString() || "",
         weightUnit: "tons",
         requiredTruckType: load.requiredTruckType || "",
-        goodsToBeCarried: load.goodsToBeCarried || "",
+        goodsToBeCarried: formatCommodityLabel(load.goodsToBeCarried),
         specialNotes: load.specialNotes || "",
         pickupDate: load.pickupDate ? new Date(load.pickupDate).toISOString().slice(0, 16) : "",
         deliveryDate: load.deliveryDate ? new Date(load.deliveryDate).toISOString().slice(0, 16) : "",
@@ -783,7 +815,7 @@ export default function LoadDetailPage() {
                     <Package className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <div className="flex-1">
                       <p className="text-xs text-muted-foreground">Goods to be Carried</p>
-                      <p className="font-medium" data-testid="text-goods">{load.goodsToBeCarried}</p>
+                      <p className="font-medium" data-testid="text-goods">{formatCommodityLabel(load.goodsToBeCarried)}</p>
                     </div>
                   </div>
                 )}

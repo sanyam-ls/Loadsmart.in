@@ -452,6 +452,9 @@ export default function AdminUsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[90px]">
+                    <span className="text-xs">ID</span>
+                  </TableHead>
                   <TableHead className="w-[200px]">
                     <Button 
                       variant="ghost" 
@@ -496,7 +499,7 @@ export default function AdminUsersPage() {
               <TableBody>
                 {paginatedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -507,6 +510,13 @@ export default function AdminUsersPage() {
                       className={`cursor-pointer ${user.userId === highlightUserId ? "bg-primary/10 ring-2 ring-primary/30" : ""}`}
                       data-testid={`row-user-${user.userId}`}
                     >
+                      <TableCell>
+                        {user.displayUserId && (
+                          <span className="text-xs font-mono font-semibold text-primary" data-testid={`text-userid-${user.userId}`}>
+                            {user.displayUserId}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
@@ -519,17 +529,10 @@ export default function AdminUsersPage() {
                                 <Shield className="h-3 w-3 text-primary" />
                               )}
                             </div>
-                            <div className="flex items-center flex-wrap gap-2 mt-0.5">
-                              {user.displayUserId && (
-                                <span className="text-xs font-mono text-primary/80" data-testid={`text-userid-${user.userId}`}>
-                                  {user.displayUserId}
-                                </span>
-                              )}
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Building className="h-3 w-3" />
-                                {user.company || "No company"}
-                              </span>
-                            </div>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Building className="h-3 w-3" />
+                              {user.company || "No company"}
+                            </span>
                           </div>
                         </div>
                       </TableCell>

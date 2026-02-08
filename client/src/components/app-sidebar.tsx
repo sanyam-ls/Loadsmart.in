@@ -36,6 +36,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth-context";
+import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { LucideIcon } from "lucide-react";
@@ -108,6 +109,13 @@ export function AppSidebar() {
   // Detect solo carrier from carrierType
   const isSoloCarrier = user?.role === "carrier" && carrierType === "solo";
 
+  // Fetch shipper onboarding data to determine if they are a transporter
+  const { data: onboardingData } = useQuery<any>({
+    queryKey: ["/api/shipper/onboarding"],
+    enabled: user?.role === "shipper",
+  });
+  const isTransporter = user?.role === "shipper" && onboardingData?.shipperRole === "transporter";
+
   const getNavItems = () => {
     switch (user?.role) {
       case "shipper":
@@ -124,7 +132,7 @@ export function AppSidebar() {
   const getRoleLabel = () => {
     switch (user?.role) {
       case "shipper":
-        return t("roles.shipperPortal");
+        return isTransporter ? "Transporter Portal" : t("roles.shipperPortal");
       case "carrier":
         return isSoloCarrier ? t("roles.soloDriver") : t("roles.carrierPortal");
       case "admin":

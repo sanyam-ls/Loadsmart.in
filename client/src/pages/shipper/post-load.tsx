@@ -814,12 +814,6 @@ export default function PostLoadPage() {
     
     // Auto-populate from onboarding data (verification form details)
     if (onboardingStatus && onboardingStatus.status === "approved") {
-      // Contact person name from onboarding
-      const contactName = onboardingStatus.contact_person_name || onboardingStatus.contactPersonName;
-      if (contactName && !form.getValues("shipperContactName")) {
-        form.setValue("shipperContactName", contactName);
-      }
-      
       // Build company address from onboarding registered address
       const address = onboardingStatus.registered_address || onboardingStatus.registeredAddress;
       const locality = onboardingStatus.registered_locality || onboardingStatus.registeredLocality;

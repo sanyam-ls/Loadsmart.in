@@ -101,6 +101,7 @@ function OnboardingTable({
           <TableHead>Status</TableHead>
           <TableHead>{t("onboarding.contactName")}</TableHead>
           <TableHead>{t("onboarding.businessType")}</TableHead>
+          <TableHead>Role</TableHead>
           <TableHead>{t("onboarding.submittedAt")}</TableHead>
           <TableHead>{t("common.actions")}</TableHead>
         </TableRow>
@@ -135,6 +136,11 @@ function OnboardingTable({
               {item.request.businessType 
                 ? t(businessTypeLabels[item.request.businessType] || item.request.businessType) 
                 : "-"}
+            </TableCell>
+            <TableCell>
+              <Badge variant={item.request.shipperRole === "transporter" ? "default" : "secondary"}>
+                {item.request.shipperRole === "transporter" ? "Transporter" : "Shipper"}
+              </Badge>
             </TableCell>
             <TableCell>
               {item.request.submittedAt

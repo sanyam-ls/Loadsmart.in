@@ -24,6 +24,49 @@ export function HelpBotWidget() {
   const [streamError, setStreamError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [btnPos, setBtnPos] = useState({ right: 24, bottom: 24 });
+  const dragInfo = useRef({ startX: 0, startY: 0, origRight: 24, origBottom: 24, moved: false, active: false });
+
+  const onBtnPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragInfo.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origRight: btnPos.right,
+      origBottom: btnPos.bottom,
+      moved: false,
+      active: true,
+    };
+  }, [btnPos]);
+
+  const onBtnPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = dragInfo.current;
+    if (!d.active) return;
+    e.preventDefault();
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      d.moved = true;
+    }
+    if (d.moved) {
+      const newRight = Math.max(8, Math.min(window.innerWidth - 72, d.origRight - dx));
+      const newBottom = Math.max(8, Math.min(window.innerHeight - 72, d.origBottom - dy));
+      setBtnPos({ right: newRight, bottom: newBottom });
+    }
+  }, []);
+
+  const onBtnPointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = dragInfo.current;
+    if (!d.active) return;
+    d.active = false;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (!d.moved) {
+      setIsOpen(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -185,15 +228,8 @@ export function HelpBotWidget() {
           0%, 100% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.4), 0 0 40px rgba(0, 191, 255, 0.2); }
           50% { box-shadow: 0 0 30px rgba(0, 191, 255, 0.6), 0 0 60px rgba(0, 191, 255, 0.3); }
         }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-3px); }
-        }
         .chat-bubble-glow {
           animation: pulse-glow 2s ease-in-out infinite;
-        }
-        .chat-bubble-float {
-          animation: float 3s ease-in-out infinite;
         }
         .futuristic-border {
           background: linear-gradient(135deg, rgba(0, 191, 255, 0.3), rgba(22, 37, 79, 0.8));
@@ -206,20 +242,27 @@ export function HelpBotWidget() {
       
       {!isOpen ? (
         <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-16 w-16 rounded-full z-[9999] flex items-center justify-center transition-all duration-300 hover:scale-110 chat-bubble-glow chat-bubble-float"
+          className="fixed h-16 w-16 rounded-full z-[9999] flex items-center justify-center chat-bubble-glow cursor-grab active:cursor-grabbing touch-none select-none"
           style={{ 
+            right: `${btnPos.right}px`,
+            bottom: `${btnPos.bottom}px`,
             background: 'linear-gradient(135deg, #00BFFF, #0080FF)',
             boxShadow: '0 0 20px rgba(0, 191, 255, 0.4), 0 0 40px rgba(0, 191, 255, 0.2), inset 0 1px 0 rgba(255,255,255,0.2)'
           }}
+          onPointerDown={onBtnPointerDown}
+          onPointerMove={onBtnPointerMove}
+          onPointerUp={onBtnPointerUp}
+          onPointerCancel={onBtnPointerUp}
           data-testid="button-helpbot-open"
         >
-          <MessageCircle className="h-7 w-7 text-white" />
+          <MessageCircle className="h-7 w-7 text-white pointer-events-none" />
         </button>
       ) : (
         <div 
-          className="fixed bottom-6 right-6 w-[380px] h-[550px] rounded-2xl flex flex-col z-[9999] overflow-hidden glass-effect"
+          className="fixed w-[380px] h-[550px] rounded-2xl flex flex-col z-[9999] overflow-hidden glass-effect"
           style={{
+            right: `${Math.max(8, btnPos.right - 314)}px`,
+            bottom: `${Math.max(8, btnPos.bottom - 484)}px`,
             background: 'linear-gradient(180deg, #060817 0%, #0d1525 50%, #060817 100%)',
             border: '1px solid rgba(0, 191, 255, 0.3)',
             boxShadow: '0 0 40px rgba(0, 191, 255, 0.15), 0 25px 50px -12px rgba(0, 0, 0, 0.8)'

@@ -138,6 +138,13 @@ export interface CarrierTrip {
   loadId: string;
   pickup: string;
   dropoff: string;
+  pickupAddress?: string | null;
+  pickupLocality?: string | null;
+  pickupLandmark?: string | null;
+  dropoffAddress?: string | null;
+  dropoffLocality?: string | null;
+  dropoffLandmark?: string | null;
+  dropoffBusinessName?: string | null;
   allStops: TripStop[];
   totalDistance: number;
   completedDistance: number;

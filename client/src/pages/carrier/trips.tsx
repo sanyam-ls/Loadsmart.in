@@ -139,6 +139,13 @@ function convertShipmentToTrip(
     loadId,
     pickup: load?.pickupCity || "Unknown",
     dropoff: load?.dropoffCity || "Unknown",
+    pickupAddress: load?.pickupAddress || null,
+    pickupLocality: (load as any)?.pickupLocality || null,
+    pickupLandmark: (load as any)?.pickupLandmark || null,
+    dropoffAddress: load?.dropoffAddress || null,
+    dropoffLocality: (load as any)?.dropoffLocality || null,
+    dropoffLandmark: (load as any)?.dropoffLandmark || null,
+    dropoffBusinessName: (load as any)?.dropoffBusinessName || null,
     status,
     progress,
     totalDistance,
@@ -558,10 +565,29 @@ export default function TripsPage() {
                         {statusConfig[trip.status].label}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-1 text-sm mb-2">
-                      <span className="font-medium truncate max-w-[80px]">{trip.pickup}</span>
-                      <ArrowRight className="h-3 w-3 flex-shrink-0" />
-                      <span className="font-medium truncate max-w-[80px]">{trip.dropoff}</span>
+                    <div className="font-semibold text-sm mb-1">{trip.pickup} to {trip.dropoff}</div>
+                    <div className="space-y-1 mb-2">
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-xs truncate">{trip.pickup}</div>
+                          {trip.pickupLocality && (
+                            <div className="text-xs text-muted-foreground truncate">{trip.pickupLocality}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="h-3 w-3 text-red-500 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-xs truncate">{trip.dropoff}</div>
+                          {trip.dropoffBusinessName && (
+                            <div className="text-xs font-medium truncate">{trip.dropoffBusinessName}</div>
+                          )}
+                          {trip.dropoffLocality && (
+                            <div className="text-xs text-muted-foreground truncate">{trip.dropoffLocality}</div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <Progress value={trip.progress} className="h-2 mb-2" />
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -584,11 +610,41 @@ export default function TripsPage() {
               <CardHeader className="pb-3 border-b border-border flex-shrink-0">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <CardTitle className="text-lg">{selectedTrip.pickup} to {selectedTrip.dropoff}</CardTitle>
                       <Badge className={`${statusConfig[selectedTrip.status].color} no-default-hover-elevate no-default-active-elevate`}>
                         {statusConfig[selectedTrip.status].label}
                       </Badge>
+                    </div>
+                    <div className="flex gap-6 mb-2">
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="text-sm font-medium">{selectedTrip.pickup}</div>
+                          {selectedTrip.pickupLocality && (
+                            <div className="text-xs text-muted-foreground">{selectedTrip.pickupLocality}</div>
+                          )}
+                          {selectedTrip.pickupLandmark && (
+                            <div className="text-xs text-muted-foreground">Near: {selectedTrip.pickupLandmark}</div>
+                          )}
+                        </div>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="text-sm font-medium">{selectedTrip.dropoff}</div>
+                          {selectedTrip.dropoffBusinessName && (
+                            <div className="text-xs font-medium">{selectedTrip.dropoffBusinessName}</div>
+                          )}
+                          {selectedTrip.dropoffLocality && (
+                            <div className="text-xs text-muted-foreground">{selectedTrip.dropoffLocality}</div>
+                          )}
+                          {selectedTrip.dropoffLandmark && (
+                            <div className="text-xs text-muted-foreground">Near: {selectedTrip.dropoffLandmark}</div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                       <span>{selectedTrip.loadId}</span>

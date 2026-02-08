@@ -210,6 +210,11 @@ export default function DocumentsPage() {
     getExpiredDocuments,
   } = useDocumentVault();
   const { user } = useAuth();
+  const { data: onboardingData } = useQuery<any>({
+    queryKey: ['/api/shipper/onboarding'],
+    enabled: !!user,
+  });
+  const isTransporter = onboardingData?.shipperRole === "transporter";
   const { data: allLoads } = useLoads();
   const activeLoads = useMemo(() => {
     return (allLoads || [])
@@ -606,7 +611,7 @@ export default function DocumentsPage() {
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <div>
           <h1 className="text-2xl font-bold">{t('documents.title')}</h1>
-          <p className="text-muted-foreground">{t('shipper.documentsTitle')}</p>
+          <p className="text-muted-foreground">{isTransporter ? "Transporter Documents" : t('shipper.documentsTitle')}</p>
         </div>
         <Button onClick={() => setUploadDialogOpen(true)} data-testid="button-upload-document">
           <Upload className="h-4 w-4 mr-2" />
@@ -665,7 +670,7 @@ export default function DocumentsPage() {
                         <FolderIcon className={`h-6 w-6 ${folder.color}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm">{folder.label}</p>
+                        <p className="font-semibold text-sm">{category === "verification" && isTransporter ? "Transporter's Documents" : folder.label}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">{count} {count === 1 ? 'document' : 'documents'}</p>
                       </div>
                     </div>
@@ -730,7 +735,7 @@ export default function DocumentsPage() {
                     <div className={`flex h-8 w-8 items-center justify-center rounded ${folder.bgColor}`}>
                       <FolderIcon className={`h-4 w-4 ${folder.color}`} />
                     </div>
-                    <span className="font-medium">{folder.label}</span>
+                    <span className="font-medium">{selectedFolder === "verification" && isTransporter ? "Transporter's Documents" : folder.label}</span>
                     <Badge variant="secondary" className="ml-2 no-default-hover-elevate no-default-active-elevate">
                       {filteredAndSortedDocs.length} documents
                     </Badge>

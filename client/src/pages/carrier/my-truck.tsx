@@ -448,7 +448,7 @@ export default function MyTruckPage() {
               )}
               {truck.city && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Reg. City</p>
+                  <p className="text-sm text-muted-foreground">City</p>
                   <p className="font-medium" data-testid="text-city">{truck.city}</p>
                 </div>
               )}

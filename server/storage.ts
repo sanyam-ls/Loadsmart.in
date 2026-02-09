@@ -854,10 +854,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async generateInvoiceNumber(): Promise<string> {
-    const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, '0');
     const [result] = await db.select({ count: sql<number>`count(*)` }).from(invoices);
-    const sequence = String((result?.count || 0) + 1).padStart(5, '0');
+    const sequence = String((result?.count || 0) + 1).padStart(3, '0');
     return `MM-${sequence}`;
   }
 

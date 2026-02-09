@@ -579,19 +579,6 @@ export default function AdminNegotiationsPage() {
                   variant="outline"
                   onClick={() => {
                     setSelectedBid(bid);
-                    setCounterAmount(bid.amount);
-                    setCounterDialogOpen(true);
-                  }}
-                  data-testid={`button-counter-${bid.id}`}
-                >
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  Counter
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedBid(bid);
                     setRejectDialogOpen(true);
                   }}
                   data-testid={`button-reject-${bid.id}`}

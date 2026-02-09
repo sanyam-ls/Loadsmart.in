@@ -1248,294 +1248,188 @@ export default function CarrierLoadsPage() {
 
       {/* Load Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Load Details
-            </DialogTitle>
-            <DialogDescription>
-              Complete information about this load
-            </DialogDescription>
+        <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Load Details</DialogTitle>
+            <DialogDescription>Details for load {detailLoad ? formatLoadId(detailLoad) : ''}</DialogDescription>
           </DialogHeader>
           
           {detailLoad && (
-            <div className="space-y-4 py-4">
-              <Card>
-                <CardContent className="pt-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge className={`${getMatchScoreBadge((detailLoad as any).matchScore || 80)} no-default-hover-elevate no-default-active-elevate`}>
-                        <Target className="h-3 w-3 mr-1" />
-                        {(detailLoad as any).matchScore || 80}% Match
+            <>
+              <div className="px-5 pt-5 pb-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`${getMatchScoreBadge((detailLoad as any).matchScore || 80)} no-default-hover-elevate no-default-active-elevate`}>
+                      <Target className="h-3 w-3 mr-1" />
+                      {(detailLoad as any).matchScore || 80}% Match
+                    </Badge>
+                    {detailLoad.priceFixed ? (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate">
+                        <Lock className="h-3 w-3 mr-1" />Fixed
                       </Badge>
-                      {detailLoad.priceFixed ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 no-default-hover-elevate no-default-active-elevate">
-                          <Lock className="h-3 w-3 mr-1" />
-                          Fixed Price
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 no-default-hover-elevate no-default-active-elevate">
-                          <Unlock className="h-3 w-3 mr-1" />
-                          Negotiable
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-sm font-mono text-muted-foreground">{formatLoadId(detailLoad)}</span>
-                  </div>
-                  
-                  {/* Full Route Details */}
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
-                      <div>
-                        {detailLoad.pickupBusinessName && (
-                          <div className="text-sm font-medium text-primary">{detailLoad.pickupBusinessName}</div>
-                        )}
-                        <div className="font-medium">{detailLoad.origin}</div>
-                        {detailLoad.pickupLocality && (
-                          <div className="text-sm text-muted-foreground">{detailLoad.pickupLocality}</div>
-                        )}
-                        {detailLoad.pickupLandmark && (
-                          <div className="text-xs text-muted-foreground">Near: {detailLoad.pickupLandmark}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
-                      <div>
-                        <div className="font-medium">{detailLoad.destination}</div>
-                        {detailLoad.dropoffBusinessName && (
-                          <div className="text-sm font-medium">{detailLoad.dropoffBusinessName}</div>
-                        )}
-                        {detailLoad.dropoffLocality && (
-                          <div className="text-sm text-muted-foreground">{detailLoad.dropoffLocality}</div>
-                        )}
-                        {detailLoad.dropoffLandmark && (
-                          <div className="text-xs text-muted-foreground">Near: {detailLoad.dropoffLandmark}</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                                        {detailLoad.loadType && (
-                      <div className="flex items-center gap-2">
-                        <Truck className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">{t("common.type")}:</span>
-                        <span className="font-medium">{detailLoad.loadType}</span>
-                      </div>
+                    ) : (
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 no-default-hover-elevate no-default-active-elevate">
+                        <Unlock className="h-3 w-3 mr-1" />Negotiable
+                      </Badge>
                     )}
-                    {detailLoad.weight && (
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">{t("loads.weight")}:</span>
-                        <span className="font-medium">{detailLoad.weight} Tons</span>
-                      </div>
-                    )}
-                    {detailLoad.estimatedDistance && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">{t("loads.distance")}:</span>
-                        <span className="font-medium">{detailLoad.estimatedDistance} km</span>
-                      </div>
-                    )}
-                    {detailLoad.cargoDescription && (
-                      <div className="flex items-center gap-2 col-span-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Commodity:</span>
-                        <span className="font-medium">{detailLoad.cargoDescription}</span>
-                      </div>
-                    )}
-                    {detailLoad.postedAt && (
-                      <div className="flex items-center gap-2 col-span-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Posted:</span>
-                        <span className="font-medium">
-                          {new Date(detailLoad.postedAt).toLocaleDateString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
+                    {detailLoad.postedByAdmin && !(detailLoad as any).isSimulated && (
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">
+                        <ShieldCheck className="h-3 w-3 mr-1" />Admin
+                      </Badge>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-              
-              {/* Price & Payment Information */}
-              <Card className="border-primary/30">
-                <CardContent className="pt-4 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Total Price</span>
-                    <span className="text-xl font-bold text-primary">{formatCurrency(getCarrierPrice(detailLoad))}</span>
-                  </div>
-                  
-                  {(detailLoad.carrierAdvancePercent !== null && detailLoad.carrierAdvancePercent !== undefined && detailLoad.carrierAdvancePercent > 0) && (
-                    <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-green-600" />
-                        <span className="font-medium text-green-700 dark:text-green-400">Advance Payment Available</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Advance Percentage:</span>
-                        <span className="font-semibold">{detailLoad.carrierAdvancePercent}%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Advance Amount:</span>
-                        <span className="font-bold text-green-600 dark:text-green-400">
-                          {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (detailLoad.carrierAdvancePercent / 100)))}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Balance on Delivery:</span>
-                        <span className="font-medium">
-                          {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (1 - detailLoad.carrierAdvancePercent / 100)))}
-                        </span>
-                      </div>
+                  <span className="text-sm font-mono text-muted-foreground">{formatLoadId(detailLoad)}</span>
+                </div>
+
+                <div className="relative pl-5 space-y-1">
+                  <div className="absolute left-[7px] top-2 bottom-2 w-px border-l-2 border-dashed border-muted-foreground/30" />
+                  <div className="flex items-start gap-3">
+                    <div className="absolute left-0 mt-1 h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
+                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
                     </div>
+                    <div className="ml-3">
+                      <div className="font-semibold text-sm">{detailLoad.origin}</div>
+                      {detailLoad.pickupAddress && <div className="text-xs text-muted-foreground">{detailLoad.pickupAddress}</div>}
+                      {detailLoad.pickupLocality && <div className="text-xs text-muted-foreground">{detailLoad.pickupLocality}</div>}
+                      {detailLoad.pickupLandmark && <div className="text-xs text-muted-foreground">Near: {detailLoad.pickupLandmark}</div>}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 pt-3">
+                    <div className="absolute left-0 mt-1 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center">
+                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                    </div>
+                    <div className="ml-3">
+                      <div className="font-semibold text-sm">{detailLoad.destination}</div>
+                      {detailLoad.dropoffBusinessName && <div className="text-xs font-medium">{detailLoad.dropoffBusinessName}</div>}
+                      {detailLoad.dropoffAddress && <div className="text-xs text-muted-foreground">{detailLoad.dropoffAddress}</div>}
+                      {detailLoad.dropoffLocality && <div className="text-xs text-muted-foreground">{detailLoad.dropoffLocality}</div>}
+                      {detailLoad.dropoffLandmark && <div className="text-xs text-muted-foreground">Near: {detailLoad.dropoffLandmark}</div>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  {detailLoad.loadType && (
+                    <span className="flex items-center gap-1"><Truck className="h-3.5 w-3.5" />{detailLoad.loadType}</span>
                   )}
-                  
-                  {(!detailLoad.carrierAdvancePercent || detailLoad.carrierAdvancePercent === 0) && (
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-sm text-muted-foreground">No advance payment required for this load.</p>
-                    </div>
+                  {detailLoad.weight && (
+                    <span className="flex items-center gap-1"><Package className="h-3.5 w-3.5" />{detailLoad.weight} Tons</span>
                   )}
-                </CardContent>
-              </Card>
-              
-              {/* Why This Load Matches Section */}
-              <Card className="border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20">
-                <CardContent className="pt-4 space-y-3">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Target className="h-4 w-4 text-blue-600" />
-                    <span className="font-semibold text-blue-700 dark:text-blue-400">Why This Load Matches</span>
-                    <Badge className={`ml-auto ${getMatchScoreBadge((detailLoad as any).matchScore || 0)} no-default-hover-elevate no-default-active-elevate`}>
-                      {(detailLoad as any).matchScore || 0} pts
+                  {detailLoad.estimatedDistance && (
+                    <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{detailLoad.estimatedDistance} km</span>
+                  )}
+                  {detailLoad.cargoDescription && (
+                    <span className="flex items-center gap-1"><Package className="h-3.5 w-3.5" />{detailLoad.cargoDescription}</span>
+                  )}
+                  {detailLoad.postedAt && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {new Date(detailLoad.postedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t px-5 py-4 bg-muted/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Price</span>
+                  <span className="text-2xl font-bold text-primary">{formatCurrency(getCarrierPrice(detailLoad))}</span>
+                </div>
+
+                {(detailLoad.carrierAdvancePercent !== null && detailLoad.carrierAdvancePercent !== undefined && detailLoad.carrierAdvancePercent > 0) && (
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 rounded-md bg-background">
+                      <p className="text-xs text-muted-foreground">Advance</p>
+                      <p className="font-semibold text-sm text-green-600 dark:text-green-400">{detailLoad.carrierAdvancePercent}%</p>
+                    </div>
+                    <div className="p-2 rounded-md bg-background">
+                      <p className="text-xs text-muted-foreground">Upfront</p>
+                      <p className="font-semibold text-sm text-green-600 dark:text-green-400">
+                        {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (detailLoad.carrierAdvancePercent / 100)))}
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-md bg-background">
+                      <p className="text-xs text-muted-foreground">On Delivery</p>
+                      <p className="font-semibold text-sm">
+                        {formatCurrency(Math.round(getCarrierPrice(detailLoad) * (1 - detailLoad.carrierAdvancePercent / 100)))}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {((detailLoad as any).matchScore > 0) && (
+                <div className="border-t px-5 py-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Why This Load Matches</span>
+                    <Badge variant="secondary" className="ml-auto no-default-hover-elevate no-default-active-elevate">
+                      {(detailLoad as any).matchScore} pts
                     </Badge>
                   </div>
-                  
-                  <div className="grid gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {(detailLoad as any).truckTypeMatch && (
-                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-blue-200 dark:border-blue-800">
-                        <Truck className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-sm">Truck Type Match</div>
-                          <div className="text-xs text-muted-foreground">
-                            Your truck type matches the required type for this load: {detailLoad.loadType || 'Any'}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="ml-auto text-xs bg-blue-100 dark:bg-blue-900/30 no-default-hover-elevate no-default-active-elevate">+30 pts</Badge>
-                      </div>
+                      <Badge variant="outline" className="text-xs gap-1 no-default-hover-elevate no-default-active-elevate">
+                        <Truck className="h-3 w-3" />Truck Match +30
+                      </Badge>
                     )}
-                    
                     {(detailLoad as any).capacityMatch && (
-                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-green-200 dark:border-green-800">
-                        <Package className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-sm">Capacity Match</div>
-                          <div className="text-xs text-muted-foreground">
-                            Your truck can carry the load weight: {detailLoad.weight || 'Not specified'} tons
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="ml-auto text-xs bg-green-100 dark:bg-green-900/30 no-default-hover-elevate no-default-active-elevate">+25 pts</Badge>
-                      </div>
+                      <Badge variant="outline" className="text-xs gap-1 no-default-hover-elevate no-default-active-elevate">
+                        <Package className="h-3 w-3" />Capacity +25
+                      </Badge>
                     )}
-                    
                     {(detailLoad as any).routeMatch && (
-                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-purple-200 dark:border-purple-800">
-                        <MapPin className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-sm">Route Experience</div>
-                          <div className="text-xs text-muted-foreground">
-                            You've completed shipments on this route: {detailLoad.origin} to {detailLoad.destination}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="ml-auto text-xs bg-purple-100 dark:bg-purple-900/30 no-default-hover-elevate no-default-active-elevate">+20 pts</Badge>
-                      </div>
+                      <Badge variant="outline" className="text-xs gap-1 no-default-hover-elevate no-default-active-elevate">
+                        <MapPin className="h-3 w-3" />Route Exp +20
+                      </Badge>
                     )}
-                    
                     {(detailLoad as any).commodityMatch && (
-                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-orange-200 dark:border-orange-800">
-                        <Package className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-sm">Commodity Experience</div>
-                          <div className="text-xs text-muted-foreground">
-                            You've carried similar materials before: {detailLoad.cargoDescription || 'General cargo'}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="ml-auto text-xs bg-orange-100 dark:bg-orange-900/30 no-default-hover-elevate no-default-active-elevate">+15 pts</Badge>
-                      </div>
+                      <Badge variant="outline" className="text-xs gap-1 no-default-hover-elevate no-default-active-elevate">
+                        <Package className="h-3 w-3" />Commodity +15
+                      </Badge>
                     )}
-                    
                     {(detailLoad as any).shipperMatch && (
-                      <div className="flex items-start gap-3 p-2 bg-white dark:bg-background rounded-md border border-yellow-200 dark:border-yellow-800">
-                        <Building2 className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-sm">Shipper Experience</div>
-                          <div className="text-xs text-muted-foreground">
-                            You've worked with this shipper before: {detailLoad.shipperName || 'Unknown'}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="ml-auto text-xs bg-yellow-100 dark:bg-yellow-900/30 no-default-hover-elevate no-default-active-elevate">+10 pts</Badge>
-                      </div>
-                    )}
-                    
-                    {!(detailLoad as any).truckTypeMatch && !(detailLoad as any).capacityMatch && !(detailLoad as any).routeMatch && !(detailLoad as any).commodityMatch && !(detailLoad as any).shipperMatch && (
-                      <div className="p-3 bg-muted/50 rounded-lg">
-                        <p className="text-sm text-muted-foreground">No specific matching criteria found. Build your history by completing loads to get better recommendations.</p>
-                      </div>
+                      <Badge variant="outline" className="text-xs gap-1 no-default-hover-elevate no-default-active-elevate">
+                        <Building2 className="h-3 w-3" />Shipper Exp +10
+                      </Badge>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDetailDialogOpen(false)} data-testid="button-close-detail">
-              Close
-            </Button>
-            {detailLoad?.myBid ? (
-              <Button disabled data-testid="button-bid-from-detail">
-                Bid Placed
-              </Button>
-            ) : (
-              <>
-                <Button 
-                  onClick={() => {
-                    setDetailDialogOpen(false);
-                    if (detailLoad) {
-                      handleDirectAccept(detailLoad as any);
-                    }
-                  }}
-                  data-testid="button-accept-from-detail"
-                >
-                  Accept Load
-                </Button>
-                {!detailLoad?.priceFixed && (
-                  <Button 
-                    variant="outline"
-                    onClick={() => {
-                      setDetailDialogOpen(false);
-                      if (detailLoad) {
-                        handlePlaceBid(detailLoad as any);
-                      }
-                    }}
-                    data-testid="button-bid-from-detail"
-                  >
-                    Place Bid
+                </div>
+              )}
+
+              <div className="border-t px-5 py-3 flex items-center justify-end gap-2">
+                {detailLoad?.myBid ? (
+                  <Button disabled data-testid="button-bid-from-detail">
+                    Bid Placed
                   </Button>
+                ) : (
+                  <>
+                    {!detailLoad?.priceFixed && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          setDetailDialogOpen(false);
+                          if (detailLoad) handlePlaceBid(detailLoad as any);
+                        }}
+                        data-testid="button-bid-from-detail"
+                      >
+                        Place Bid
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={() => {
+                        setDetailDialogOpen(false);
+                        if (detailLoad) handleDirectAccept(detailLoad as any);
+                      }}
+                      data-testid="button-accept-from-detail"
+                    >
+                      Accept Load
+                    </Button>
+                  </>
                 )}
-              </>
-            )}
-          </DialogFooter>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

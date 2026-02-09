@@ -7054,7 +7054,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       } else {
         // Generate invoice number
         const allInvoices = await storage.getAllInvoices();
-        const invoiceNumber = `INV-${String(allInvoices.length + 1).padStart(5, '0')}`;
+        const invoiceNumber = `MM-${String(allInvoices.length + 1).padStart(5, '0')}`;
 
         // Calculate due date (30 days from now)
         const dueDate = new Date();

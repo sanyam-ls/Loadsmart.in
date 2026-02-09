@@ -858,7 +858,7 @@ export class DatabaseStorage implements IStorage {
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
     const [result] = await db.select({ count: sql<number>`count(*)` }).from(invoices);
     const sequence = String((result?.count || 0) + 1).padStart(5, '0');
-    return `INV-${year}${month}-${sequence}`;
+    return `MM-${sequence}`;
   }
 
   async getInvoiceByIdempotencyKey(key: string): Promise<Invoice | undefined> {

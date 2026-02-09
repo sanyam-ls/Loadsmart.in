@@ -311,7 +311,7 @@ export function InvoiceBuilder({
   };
 
   const handleDownloadPDF = () => {
-    const invoiceNumber = invoiceId ? `INV-${invoiceId.slice(-8).toUpperCase()}` : `INV-DRAFT-${Date.now()}`;
+    const invoiceNumber = invoiceId ? `MM-${invoiceId.slice(-8).toUpperCase()}` : `MM-DRAFT-${Date.now()}`;
     const content = `
 INVOICE
 ========================================

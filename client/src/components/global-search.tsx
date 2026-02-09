@@ -133,7 +133,7 @@ export function GlobalSearch() {
     const mockDocuments = [
       { id: "doc-1", name: "Bill of Lading - LD-001", type: "BOL", loadId: "LD-001" },
       { id: "doc-2", name: "Proof of Delivery - LD-T002", type: "POD", loadId: "LD-T002" },
-      { id: "doc-3", name: "Invoice - INV-001", type: "Invoice", loadId: "LD-001" },
+      { id: "doc-3", name: "Memo - MM-001", type: "Memo", loadId: "LD-001" },
       { id: "doc-4", name: "Rate Confirmation - LD-003", type: "Rate Conf", loadId: "LD-003" },
     ];
 

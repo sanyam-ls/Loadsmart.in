@@ -1357,7 +1357,7 @@ export default function CarrierLoadsPage() {
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground leading-tight">Final price reflects a one-time TDS deduction if TDS declaration was not provided at the time of registration.</p>
+                <p className="text-sm text-muted-foreground leading-snug">*Final price reflects a one-time TDS deduction if TDS declaration was not provided at the time of registration.</p>
               </div>
 
               {((detailLoad as any).matchScore > 0) && (

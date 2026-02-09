@@ -937,7 +937,7 @@ export default function AdminNegotiationsPage() {
 
       {/* Bid Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -948,7 +948,7 @@ export default function AdminNegotiationsPage() {
             </DialogDescription>
           </DialogHeader>
           {detailBid && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 overflow-y-auto flex-1">
               {/* Carrier Info */}
               <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                 <h4 className="font-semibold flex items-center gap-2">

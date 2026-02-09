@@ -602,6 +602,9 @@ export default function AdminNegotiationsPage() {
                 <Button
                   size="sm"
                   onClick={() => {
+                    const negotiatedAmt = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0
+                      ? parseFloat(bid.latestNegotiationAmount) : null;
+                    setFinalNegotiatedPrice(negotiatedAmt);
                     setSelectedBid(bid);
                     setAcceptDialogOpen(true);
                   }}
@@ -922,6 +925,9 @@ export default function AdminNegotiationsPage() {
                                 <Button
                                   size="sm"
                                   onClick={() => {
+                                    const negotiatedAmt = bid.latestNegotiationAmount && parseFloat(bid.latestNegotiationAmount) > 0
+                                      ? parseFloat(bid.latestNegotiationAmount) : null;
+                                    setFinalNegotiatedPrice(negotiatedAmt);
                                     setSelectedBid(bid);
                                     setAcceptDialogOpen(true);
                                   }}
@@ -1154,6 +1160,9 @@ export default function AdminNegotiationsPage() {
                 </Button>
                 <Button
                   onClick={() => {
+                    const negotiatedAmt = detailBid.latestNegotiationAmount && parseFloat(detailBid.latestNegotiationAmount) > 0
+                      ? parseFloat(detailBid.latestNegotiationAmount) : null;
+                    setFinalNegotiatedPrice(negotiatedAmt);
                     setDetailDialogOpen(false);
                     setSelectedBid(detailBid);
                     setAcceptDialogOpen(true);

@@ -6886,6 +6886,28 @@ RESPOND IN THIS EXACT JSON FORMAT:
       }
 
       const updated = await storage.updateInvoice(req.params.id, req.body);
+
+      // Sync price back to load when memo totalAmount changes
+      if (req.body.totalAmount || req.body.subtotal) {
+        try {
+          const newTotal = parseFloat(req.body.totalAmount || req.body.subtotal || '0');
+          if (newTotal > 0) {
+            const load = await storage.getLoad(invoice.loadId);
+            if (load) {
+              const platformRatePercent = load.platformRatePercent || 15;
+              const carrierPayout = Math.round(newTotal * (1 - platformRatePercent / 100));
+              await storage.updateLoad(load.id, {
+                adminFinalPrice: newTotal.toString(),
+                finalPrice: carrierPayout.toString(),
+              });
+              console.log(`[Invoice] Synced load ${load.id} price to ${newTotal} after memo update`);
+            }
+          }
+        } catch (syncErr) {
+          console.error("Error syncing load price after invoice update:", syncErr);
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Update invoice error:", error);

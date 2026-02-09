@@ -412,11 +412,14 @@ export default function AdminInvoicesPage() {
   });
 
   const filteredInvoices = invoices.filter((inv) => {
+    const loadId = formatLoadId(inv);
     const matchesSearch = searchQuery === "" ||
       inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inv.shipper?.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      inv.shipper?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inv.load?.pickupCity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inv.load?.dropoffCity?.toLowerCase().includes(searchQuery.toLowerCase());
+      inv.load?.dropoffCity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loadId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || inv.status === statusFilter;
     const matchesShipperStatus = shipperStatusFilter === "all" || inv.shipperStatus === shipperStatusFilter;
     return matchesSearch && matchesStatus && matchesShipperStatus;
@@ -524,7 +527,7 @@ export default function AdminInvoicesPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search memos..."
+                placeholder="Shipper, Load ID, City..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 w-48"

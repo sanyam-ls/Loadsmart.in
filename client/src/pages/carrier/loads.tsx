@@ -1248,7 +1248,7 @@ export default function CarrierLoadsPage() {
 
       {/* Load Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-md p-0 !gap-0 max-h-[85vh] !grid-rows-[1fr_auto] overflow-hidden">
+        <DialogContent className="max-w-md p-0 !gap-0 h-[70vh] !grid-rows-[1fr_auto] overflow-hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>Load Details</DialogTitle>
             <DialogDescription>Details for load {detailLoad ? formatLoadId(detailLoad) : ''}</DialogDescription>

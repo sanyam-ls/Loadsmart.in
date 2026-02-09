@@ -9208,13 +9208,15 @@ RESPOND IN THIS EXACT JSON FORMAT:
       // Update load with new price
       // Note: adminFinalPrice = shipper's gross price (for invoicing)
       //       finalPrice = carrier payout (after platform margin)
+      // IMPORTANT: Do NOT overwrite advancePaymentPercent - that is the shipper's preference for invoicing
+      // The admin's carrier advance goes to carrierAdvancePercent only
       const updatePayload: any = {
         status: targetStatus,
         previousStatus: load.status,
         adminFinalPrice: priceNum.toString(),
         finalPrice: carrierPayout.toString(),
         platformRatePercent: platformMarginPercent,
-        advancePaymentPercent: advancePaymentPercent,
+        carrierAdvancePercent: advancePaymentPercent,
         adminId: user.id,
         allowCounterBids: allowCounterBids !== false,
         statusChangedBy: user.id,
@@ -9227,7 +9229,6 @@ RESPOND IN THIS EXACT JSON FORMAT:
       if (isInMarketplace) {
         updatePayload.adminPostMode = postMode || 'open';
         updatePayload.invitedCarrierIds = invitedCarrierIds || [];
-        updatePayload.carrierAdvancePercent = carrierAdvancePercent || 0;
         updatePayload.postedAt = new Date();
       }
 
@@ -9237,7 +9238,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
       try {
         const existingInvoices = await db.select().from(invoices).where(eq(invoices.loadId, load.id));
         if (existingInvoices.length > 0) {
-          const advanceAmt = Math.round(priceNum * (advancePaymentPercent / 100));
+          // Use the SHIPPER's original advance preference for invoice, NOT the carrier advance
+          const shipperAdvancePercent = load.advancePaymentPercent || 0;
+          const advanceAmt = Math.round(priceNum * (shipperAdvancePercent / 100));
           const balanceAmt = priceNum - advanceAmt;
           for (const inv of existingInvoices) {
             await db.update(invoices).set({
@@ -9246,9 +9249,9 @@ RESPOND IN THIS EXACT JSON FORMAT:
               platformMargin: platformMargin.toString(),
               estimatedCarrierPayout: carrierPayout.toString(),
               adminPostedPrice: priceNum.toString(),
-              advancePaymentPercent: advancePaymentPercent,
-              advancePaymentAmount: advanceAmt.toString(),
-              balanceOnDelivery: balanceAmt.toString(),
+              advancePaymentPercent: shipperAdvancePercent > 0 ? shipperAdvancePercent : null,
+              advancePaymentAmount: advanceAmt > 0 ? advanceAmt.toString() : null,
+              balanceOnDelivery: balanceAmt > 0 ? balanceAmt.toString() : null,
             }).where(eq(invoices.id, inv.id));
           }
           console.log(`Updated ${existingInvoices.length} invoice(s) for repriced load ${load.id}`);

@@ -11,7 +11,6 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/stat-card";
-import { useCarrierData } from "@/lib/carrier-data-store";
 import { useShipments, useLoads, useSettlements, useDrivers, useTrucks } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/auth-context";
 import { deriveRegion, buildRegionMetrics } from "@/lib/utils";
@@ -39,7 +38,6 @@ const CHART_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#E
 
 export default function CarrierRevenuePage() {
   const [, setLocation] = useLocation();
-  const { getRevenueAnalytics, completedTrips: mockCompletedTrips } = useCarrierData();
   const { user, carrierType } = useAuth();
   const { data: allShipments = [] } = useShipments();
   const { data: allLoads = [] } = useLoads();
@@ -272,58 +270,26 @@ export default function CarrierRevenuePage() {
     };
   }, [allShipments, allLoads, allSettlements, allDrivers, allTrucks, user?.id]);
   
-  const baseAnalytics = useMemo(() => getRevenueAnalytics(), [getRevenueAnalytics]);
-  
-  // For solo drivers, only show their actual data (no mock data)
-  // For enterprise carriers, merge real data with mock analytics for demo purposes
+  // Only show real data - no mock/demo data for any carrier type
   const analytics = useMemo(() => {
-    if (isSoloDriver) {
-      // Solo drivers only see their actual revenue
-      return {
-        ...baseAnalytics,
-        totalRevenue: realRevenueData.totalRevenue,
-        monthlyReports: realRevenueData.monthlyReports,
-        revenueByTruckType: realRevenueData.revenueByTruckType,
-        revenueByDriver: [],
-        revenueByRegion: realRevenueData.revenueByRegion,
-        topShippers: realRevenueData.topShippers,
-        bidWinRatio: 0,
-        loadAcceptanceRate: 0,
-        avgRevenuePerTrip: realRevenueData.completedTripsCount > 0 
-          ? Math.round(realRevenueData.totalRevenue / realRevenueData.completedTripsCount)
-          : 0,
-        yoyGrowth: 0,
-        bestPerformingTrucks: []
-      };
-    }
-    // Use real data from actual shipments/loads when available
     return {
-      ...baseAnalytics,
-      totalRevenue: realRevenueData.hasRealData 
-        ? realRevenueData.totalRevenue 
-        : baseAnalytics.totalRevenue,
-      topShippers: realRevenueData.topShippers.length > 0 
-        ? realRevenueData.topShippers 
-        : baseAnalytics.topShippers,
-      revenueByDriver: realRevenueData.revenueByDriver.length > 0 
-        ? realRevenueData.revenueByDriver 
-        : baseAnalytics.revenueByDriver,
-      bestPerformingTrucks: realRevenueData.bestPerformingTrucks.length > 0
-        ? realRevenueData.bestPerformingTrucks
-        : baseAnalytics.bestPerformingTrucks,
-      revenueByTruckType: realRevenueData.revenueByTruckType.length > 0
-        ? realRevenueData.revenueByTruckType
-        : baseAnalytics.revenueByTruckType,
-      revenueByRegion: realRevenueData.revenueByRegion.length > 0
-        ? realRevenueData.revenueByRegion
-        : baseAnalytics.revenueByRegion,
+      totalRevenue: realRevenueData.totalRevenue,
+      monthlyReports: realRevenueData.monthlyReports,
+      revenueByTruckType: realRevenueData.revenueByTruckType,
+      revenueByDriver: isSoloDriver ? [] : realRevenueData.revenueByDriver,
+      revenueByRegion: realRevenueData.revenueByRegion,
+      topShippers: realRevenueData.topShippers,
+      bestPerformingTrucks: isSoloDriver ? [] : realRevenueData.bestPerformingTrucks,
+      bidWinRatio: 0,
+      loadAcceptanceRate: 0,
+      avgRevenuePerTrip: realRevenueData.completedTripsCount > 0 
+        ? Math.round(realRevenueData.totalRevenue / realRevenueData.completedTripsCount)
+        : 0,
+      yoyGrowth: 0,
     };
-  }, [baseAnalytics, realRevenueData, isSoloDriver]);
+  }, [realRevenueData, isSoloDriver]);
   
-  // Solo drivers only see their own completed trips count
-  const completedTrips = isSoloDriver 
-    ? realRevenueData.completedTripsCount 
-    : realRevenueData.completedTripsCount + mockCompletedTrips.length;
+  const completedTrips = realRevenueData.completedTripsCount;
 
   const monthlyChartData = analytics.monthlyReports.map(m => ({
     name: m.month,
@@ -361,20 +327,6 @@ export default function CarrierRevenuePage() {
         dailyRevenue[completedDate] += revenue;
       }
     });
-
-    // For enterprise carriers, also include mock completed trips data in the chart
-    if (!isSoloDriver && mockCompletedTrips.length > 0) {
-      mockCompletedTrips.forEach((trip) => {
-        if (!trip.completedAt) return;
-        const completedDate = format(new Date(trip.completedAt), 'yyyy-MM-dd');
-        // Use profitEarned as the revenue from mock data
-        const revenue = trip.profitEarned > 0 ? trip.profitEarned : 0;
-        
-        if (dailyRevenue[completedDate] !== undefined) {
-          dailyRevenue[completedDate] += revenue;
-        }
-      });
-    }
 
     // Calculate cumulative revenue and format for chart
     let cumulativeRevenue = 0;
@@ -421,7 +373,7 @@ export default function CarrierRevenuePage() {
       last7Revenue,
       prev7Revenue
     };
-  }, [allShipments, allLoads, user?.id, isSoloDriver, mockCompletedTrips]);
+  }, [allShipments, allLoads, user?.id]);
 
   const truckTypeChartData = analytics.revenueByTruckType.map((t, i) => ({
     name: t.truckType,

@@ -1248,7 +1248,7 @@ export default function CarrierLoadsPage() {
 
       {/* Load Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-w-md p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
           <DialogHeader className="sr-only">
             <DialogTitle>Load Details</DialogTitle>
             <DialogDescription>Details for load {detailLoad ? formatLoadId(detailLoad) : ''}</DialogDescription>
@@ -1256,6 +1256,7 @@ export default function CarrierLoadsPage() {
           
           {detailLoad && (
             <>
+              <div className="overflow-y-auto flex-1">
               <div className="px-5 pt-5 pb-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1397,7 +1398,8 @@ export default function CarrierLoadsPage() {
                 </div>
               )}
 
-              <div className="border-t px-5 py-3 flex items-center justify-end gap-2">
+              </div>
+              <div className="border-t px-5 py-3 flex items-center justify-end gap-2 flex-shrink-0">
                 {detailLoad?.myBid ? (
                   <Button disabled data-testid="button-bid-from-detail">
                     Bid Placed

@@ -1700,19 +1700,28 @@ export default function LoadQueuePage() {
                         </p>
                       </div>
                     )}
+                    {detailsLoad.adminFinalPrice && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Admin Set Price (Shipper Total)</Label>
+                        <p className="font-medium text-primary">
+                          Rs. {Number(detailsLoad.adminFinalPrice).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    )}
                     {detailsLoad.finalPrice && (
                       <div>
-                        <Label className="text-muted-foreground text-xs">Final Negotiated Price</Label>
+                        <Label className="text-muted-foreground text-xs">Carrier Payout (After Margin)</Label>
                         <p className="font-medium text-emerald-600 dark:text-emerald-400">
                           Rs. {Number(detailsLoad.finalPrice).toLocaleString('en-IN')}
                         </p>
                       </div>
                     )}
-                    {detailsLoad.adminFinalPrice && (
+                    {detailsLoad.adminFinalPrice && detailsLoad.finalPrice && (
                       <div>
-                        <Label className="text-muted-foreground text-xs">Invoice Total</Label>
-                        <p className="font-medium text-primary">
-                          Rs. {Number(detailsLoad.adminFinalPrice).toLocaleString('en-IN')}
+                        <Label className="text-muted-foreground text-xs">Platform Margin</Label>
+                        <p className="font-medium text-orange-600 dark:text-orange-400">
+                          Rs. {(Number(detailsLoad.adminFinalPrice) - Number(detailsLoad.finalPrice)).toLocaleString('en-IN')}
+                          {' '}({((1 - Number(detailsLoad.finalPrice) / Number(detailsLoad.adminFinalPrice)) * 100).toFixed(0)}%)
                         </p>
                       </div>
                     )}

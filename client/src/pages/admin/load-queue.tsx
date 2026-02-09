@@ -888,7 +888,7 @@ export default function LoadQueuePage() {
                       
                       <div className="border-t pt-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">{t('common.total')}</span>
+                          <span className="text-xs text-muted-foreground">Shipper Price</span>
                           <span className="font-bold text-green-600 dark:text-green-400">
                             Rs. {priceNum.toLocaleString('en-IN')}
                           </span>

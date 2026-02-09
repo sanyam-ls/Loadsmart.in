@@ -9211,6 +9211,30 @@ RESPOND IN THIS EXACT JSON FORMAT:
 
       const updatedLoad = await storage.updateLoad(load.id, updatePayload);
 
+      // Update existing invoice if one exists for this load
+      try {
+        const existingInvoices = await db.select().from(invoices).where(eq(invoices.loadId, load.id));
+        if (existingInvoices.length > 0) {
+          const advanceAmt = Math.round(priceNum * (advancePaymentPercent / 100));
+          const balanceAmt = priceNum - advanceAmt;
+          for (const inv of existingInvoices) {
+            await db.update(invoices).set({
+              subtotal: priceNum.toString(),
+              totalAmount: priceNum.toString(),
+              platformMargin: platformMargin.toString(),
+              estimatedCarrierPayout: carrierPayout.toString(),
+              adminPostedPrice: priceNum.toString(),
+              advancePaymentPercent: advancePaymentPercent,
+              advancePaymentAmount: advanceAmt.toString(),
+              balanceOnDelivery: balanceAmt.toString(),
+            }).where(eq(invoices.id, inv.id));
+          }
+          console.log(`Updated ${existingInvoices.length} invoice(s) for repriced load ${load.id}`);
+        }
+      } catch (invoiceErr) {
+        console.error("Error updating invoice after repricing:", invoiceErr);
+      }
+
       // Create admin decision record for repricing
       const actionType = isInMarketplace ? 'reprice_repost' : 'reprice';
       await storage.createAdminDecision({

@@ -1,0 +1,252 @@
+Prompt Title:
+Generate Full System Forensic Report + Downloadable PDF Export
+
+⸻
+
+Prompt:
+
+Generate a complete, structured, founder-level forensic technical report of this entire software system.
+
+This report is for internal audit, valuation positioning, and strategic control.
+
+Do NOT summarize.
+Do NOT generalize.
+Expose everything in structured technical depth.
+
+Once complete:
+	1.	Format the report professionally.
+	2.	Structure it with a table of contents.
+	3.	Add section numbering.
+	4.	Use clear headings and subheadings.
+	5.	Add page numbers.
+	6.	Generate a downloadable PDF file.
+	7.	Name the file:
+
+Full_System_Forensic_Disclosure_Report_v1.pdf
+	8.	Save it to the project root directory.
+	9.	Provide a direct download link.
+	10.	Confirm file size and total page count.
+
+⸻
+
+REPORT STRUCTURE
+
+⸻
+
+1. SYSTEM OVERVIEW
+	•	Software Name
+	•	Version
+	•	Deployment State
+	•	Architecture Pattern
+	•	Tech Stack
+	•	Hosting Architecture
+	•	Security Model
+	•	Scalability Model
+	•	Embedded Licensing Logic
+	•	Hard-coded constraints
+
+⸻
+
+2. COMPLETE FEATURE INVENTORY
+
+List every feature including hidden, internal, test, beta, incomplete modules.
+
+For EACH feature include:
+	•	Feature Name
+	•	Purpose
+	•	Portal / Entry Point
+	•	Actor
+	•	Trigger
+	•	Full Workflow Steps
+	•	Data Created
+	•	Data Locked
+	•	Validations
+	•	Role Permissions
+	•	System Dependencies
+	•	APIs Involved
+	•	Database Tables Touched
+	•	Revenue Impact
+	•	Risk Mitigation
+	•	Control Enforcement
+	•	Scalability Impact
+
+Include:
+	•	Admin Portal
+	•	Client Portal
+	•	Vendor Portal
+	•	Tracking System
+	•	GPS / SIM / FASTag Logic
+	•	API Engine
+	•	Reporting Engine
+	•	Financial Layer
+	•	Transaction Processing
+	•	SaaS Subscription Logic
+	•	Billing Engine
+	•	Logging System
+	•	Audit Trail
+	•	Auth & Authorization
+	•	Notification System
+	•	Dashboard Engine
+	•	Configuration Engine
+	•	Territory Officer Flow
+	•	Onboarding Flows
+	•	Any Experimental Modules
+
+Do NOT skip any module.
+
+⸻
+
+3. CORE WORKFLOW ENGINE MAPPING
+
+For every workflow:
+
+WORKFLOW NAME
+PORTAL
+ACTOR
+TRIGGER
+
+CURRENT STEP
+	•	User Action
+	•	System Enforcement
+	•	Data Created
+	•	Data Locked
+
+NEXT STEP
+	•	What unlocks
+	•	What remains gated
+
+SYSTEM VALUE
+	•	Risk Reduced
+	•	Cost Saved
+	•	Revenue Enabled
+	•	Control Gained
+
+⸻
+
+4. DATABASE STRUCTURE DISCLOSURE
+	•	Full schema
+	•	All tables
+	•	All columns
+	•	Primary keys
+	•	Foreign keys
+	•	Indexes
+	•	Constraints
+	•	Relationship mapping
+	•	Data flow explanation
+	•	Critical financial tables
+	•	Critical transaction tables
+	•	Audit-sensitive tables
+
+⸻
+
+5. COMPLETE FILE STRUCTURE
+	•	Full directory tree
+	•	File purpose
+	•	Dependencies
+	•	Deprecated files
+	•	Experimental code
+	•	Hidden configs
+
+⸻
+
+6. SOURCE CODE MAP
+	•	Backend services
+	•	Frontend components
+	•	Middleware
+	•	APIs
+	•	Utility functions
+	•	Cron jobs
+	•	Background workers
+	•	Env variable references
+	•	Secret reference locations (without exposing values)
+
+⸻
+
+7. API ARCHITECTURE
+	•	All internal APIs
+	•	All external APIs
+	•	Endpoints
+	•	Request models
+	•	Response models
+	•	Auth model
+	•	Rate limits
+	•	Failover logic
+	•	Monitoring hooks
+
+⸻
+
+8. SECURITY & RISK EXPOSURE
+	•	Auth model
+	•	Role hierarchy
+	•	Encryption
+	•	Token lifecycle
+	•	Session management
+	•	Known vulnerabilities
+	•	Technical debt
+	•	Exposure surface
+
+⸻
+
+9. BILLING / MONETIZATION ENGINE
+	•	SaaS subscription logic
+	•	Recurring billing
+	•	Transaction % logic
+	•	Payment integration
+	•	Licensing enforcement
+	•	Kill switches
+
+⸻
+
+10. DEPLOYMENT & INFRASTRUCTURE
+	•	CI/CD flow
+	•	Build scripts
+	•	Containers
+	•	Reverse proxy
+	•	Load balancer
+	•	Scaling strategy
+	•	Failover architecture
+
+⸻
+
+11. STRATEGIC VALUATION LAYERS
+
+Identify:
+	•	Strategic premium features
+	•	Vendor lock-in mechanisms
+	•	Switching cost layers
+	•	Regulatory moat
+	•	Network effects
+	•	Replaceability score
+
+⸻
+
+12. CODE OWNERSHIP FOOTPRINT
+	•	Original code
+	•	Third-party libraries
+	•	Licensed components
+	•	Open source dependencies
+	•	Copyright risk
+
+⸻
+
+13. EXECUTIVE METRICS SUMMARY
+
+Include:
+	•	Total Lines of Code
+	•	Total Modules
+	•	Total APIs
+	•	Total Workflows
+	•	Total User Roles
+	•	Total Database Tables
+	•	Estimated rebuild effort
+
+⸻
+
+After report generation:
+	1.	Render as clean PDF
+	2.	Include auto-generated table of contents
+	3.	Ensure formatting consistency
+	4.	Export to:
+
+Full_System_Forensic_Disclosure_Report_v1.pdf
+	5.	Provide direct download link

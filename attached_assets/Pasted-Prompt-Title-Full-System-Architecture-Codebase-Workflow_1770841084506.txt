@@ -1,0 +1,280 @@
+Prompt Title:
+Full System Architecture, Codebase & Workflow Disclosure Report – Complete Internal Extraction
+
+⸻
+
+Prompt:
+
+Generate a complete and structured internal technical report of this entire software system.
+This report is for founder-level audit and valuation purposes.
+
+Do NOT summarize.
+Do NOT generalize.
+Expose everything in structured technical detail.
+
+Organize the output in the following sections:
+
+⸻
+
+1. SYSTEM OVERVIEW
+	•	Software Name
+	•	Version
+	•	Current Deployment State
+	•	Environment (Dev / Staging / Production)
+	•	Primary Architecture Pattern (Monolith / Microservices / Modular / Hybrid)
+	•	Tech Stack (Frontend, Backend, DB, Infra, APIs)
+	•	Hosting Architecture
+	•	Security Layer Overview
+	•	Scalability Model
+	•	Licensing Model Embedded in Code (if any)
+	•	Any hard-coded constraints or logic locks
+
+⸻
+
+2. COMPLETE FEATURE INVENTORY
+
+List every feature, including hidden, internal, beta, test, or incomplete modules.
+
+For EACH feature, break it down as:
+
+FEATURE NAME:
+
+PURPOSE:
+
+PORTAL / ENTRY POINT:
+
+ACTOR:
+
+TRIGGER:
+
+WORKFLOW STEPS:
+	•	Step 1:
+	•	Step 2:
+	•	Step 3:
+	•	etc.
+
+DATA CREATED:
+
+DATA LOCKED:
+
+VALIDATIONS:
+
+ROLE PERMISSIONS:
+
+SYSTEM DEPENDENCIES:
+
+API CALLS INVOLVED:
+
+DATABASE TABLES TOUCHED:
+
+REVENUE IMPACT:
+
+RISK MITIGATED:
+
+CONTROL ENFORCED:
+
+FUTURE SCALABILITY IMPACT:
+
+Do this for:
+	•	Admin Portal
+	•	Client Portal
+	•	Vendor Portal
+	•	Tracking System
+	•	API Engine
+	•	Reporting Engine
+	•	Financial Layer
+	•	Transaction Processing
+	•	GPS / SIM / FASTag logic (if implemented)
+	•	Subscription / SaaS billing layer
+	•	Any fallback system
+	•	Logging system
+	•	Audit trail system
+	•	Authentication system
+	•	Authorization structure
+	•	Notification system
+	•	Dashboard engine
+	•	Feature flag system
+	•	Configuration engine
+	•	User management
+	•	Territory / supply officer workflows
+	•	Any onboarding flows
+	•	Any testing modules
+
+Do NOT skip any logic tree.
+
+⸻
+
+3. CORE WORKFLOW ENGINE MAPPING
+
+Break down the system in:
+
+WORKFLOW NAME:
+
+PORTAL:
+ACTOR:
+TRIGGER:
+
+CURRENT STEP:
+	•	What user does
+	•	What system enforces
+	•	What data is created
+	•	What data becomes immutable
+
+NEXT STEP:
+	•	What unlocks
+	•	What is gated
+
+SYSTEM VALUE:
+	•	Risk reduced
+	•	Cost saved
+	•	Revenue enabled
+	•	Operational control gained
+
+Map every workflow in full.
+
+⸻
+
+4. DATABASE STRUCTURE DISCLOSURE
+
+Provide:
+	•	Full database schema
+	•	All tables
+	•	All columns
+	•	Primary keys
+	•	Foreign keys
+	•	Indexes
+	•	Constraints
+	•	Relationships diagram (text format)
+	•	Data flow map
+
+Identify:
+	•	Critical valuation tables
+	•	Transaction critical tables
+	•	User critical tables
+	•	Financial liability tables
+	•	Audit risk tables
+
+⸻
+
+5. COMPLETE FILE STRUCTURE
+
+Provide:
+	•	Full directory tree
+	•	Every file name
+	•	Every folder
+	•	File purpose
+	•	File dependencies
+	•	Unused files
+	•	Deprecated code
+	•	Experimental code
+	•	Hidden configs
+
+⸻
+
+6. SOURCE CODE EXPORT MAP
+
+Provide:
+	•	All backend service files
+	•	All frontend components
+	•	All middleware
+	•	All API routes
+	•	All utility functions
+	•	All cron jobs
+	•	All scheduled tasks
+	•	All background workers
+	•	All environment variables
+	•	All secrets reference locations (without exposing secret values)
+
+⸻
+
+7. API ARCHITECTURE
+
+List:
+	•	All APIs created
+	•	All external APIs consumed
+	•	Endpoints
+	•	Request structure
+	•	Response structure
+	•	Authentication model
+	•	Rate limiting logic
+	•	Failover logic
+	•	Logging strategy
+	•	Monitoring hooks
+
+⸻
+
+8. SECURITY & RISK EXPOSURE REPORT
+
+Detail:
+	•	Authentication model
+	•	Authorization matrix
+	•	Role hierarchy
+	•	Data encryption
+	•	Token lifecycle
+	•	Session handling
+	•	Audit logging
+	•	Known vulnerabilities
+	•	Technical debt
+	•	Hardcoded credentials
+	•	Weak points
+	•	Exposure surface
+
+⸻
+
+9. BILLING / MONETIZATION STRUCTURE
+	•	SaaS subscription logic
+	•	Recurring billing logic
+	•	Per-transaction percentage logic
+	•	Payment gateway integration
+	•	Revenue split model (if coded)
+	•	Licensing enforcement
+	•	Kill switches (if any)
+
+⸻
+
+10. DEPLOYMENT & INFRASTRUCTURE
+	•	CI/CD flow
+	•	Build scripts
+	•	Docker files
+	•	Containers
+	•	Reverse proxy
+	•	Load balancer logic
+	•	Environment config separation
+	•	Scaling capability
+	•	Failover architecture
+
+⸻
+
+11. STRATEGIC VALUATION LAYERS
+
+Identify:
+	•	Features that justify strategic premium valuation
+	•	Features that create switching cost
+	•	Features that create vendor lock-in
+	•	Features that create regulatory moat
+	•	Features that enable network effect
+	•	Replaceability score (Low / Medium / High)
+
+⸻
+
+12. CODE OWNERSHIP FOOTPRINT
+
+Identify:
+	•	Original code
+	•	Third-party libraries
+	•	Licensed components
+	•	Open source dependencies
+	•	Copyright risk areas
+	•	IP ownership clarity
+
+⸻
+
+13. COMPLETE EXPORT PACKAGE
+
+Provide:
+	•	ZIP export structure recommendation
+	•	Code export strategy
+	•	Database dump strategy
+	•	Documentation package
+	•	Architecture diagram structure
+	•	Recommended audit format for legal and valuation use

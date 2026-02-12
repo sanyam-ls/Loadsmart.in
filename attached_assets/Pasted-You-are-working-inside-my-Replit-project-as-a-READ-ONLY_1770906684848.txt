@@ -1,0 +1,129 @@
+You are working inside my Replit project as a READ-ONLY backend technology analyst.
+
+STRICT INSTRUCTIONS:
+
+• Do NOT modify any code.
+• Do NOT edit routes, controllers, or services.
+• Do NOT install/remove dependencies.
+• Do NOT refactor or optimize anything.
+• Do NOT change environment configurations.
+• Only analyze existing backend implementation.
+
+Your task is to extract backend technology stack details for documentation and project costing preparation.
+
+Provide information in structured format covering the following:
+
+---
+
+1. Backend Framework & Runtime
+
+   * Programming language (Node.js, Python, etc.)
+   * Framework (Express, Fastify, NestJS, Django, etc.)
+   * Runtime version (if available)
+
+2. Backend Architecture Pattern
+
+   * Monolith / Microservices
+   * MVC / Modular / Layered structure
+   * API-first or server-rendered
+
+3. Folder Structure Overview
+   Explain purpose of main folders such as:
+
+   * routes/
+   * controllers/
+   * services/
+   * middleware/
+   * models/ or schemas/
+   * config/
+   * utils/
+   * lib/
+
+4. API Architecture
+
+   * REST / GraphQL / Hybrid
+   * Total modules (Auth, Shipment, Tracking, Billing, etc.)
+   * Versioning (if implemented)
+
+5. Authentication & Authorization
+
+   * Method used (JWT / Session / OAuth)
+   * Role-based access system
+   * Middleware guards
+   * Admin vs User roles
+
+6. Session & Security Implementation
+
+   * express-session / cookies / tokens
+   * HTTP-only cookies
+   * CSRF / CORS protections
+
+7. Database Technology
+
+   * Database type (PostgreSQL, MongoDB, MySQL, etc.)
+   * ORM / Query builder (Prisma, Sequelize, Drizzle, Mongoose, etc.)
+   * Migration system (if any)
+
+8. Database Hosting
+
+   * Local / Cloud
+   * AWS RDS / Atlas / Other
+
+9. File Storage Integration
+
+   * AWS S3 / Cloudinary / Local storage
+   * Upload method (Multer, presigned URLs, etc.)
+
+10. Third-Party Backend Integrations
+    Identify integrations such as:
+
+* OTP / SMS APIs
+* Email services
+* Payment gateways
+* GPS tracking APIs
+* Maps services
+* AI APIs
+* KYC verification APIs
+
+11. Real-Time Systems
+
+* WebSockets / Socket.io / SSE
+* Tracking/live updates
+
+12. Background Jobs / Queues
+
+* Bull / Redis / Cron jobs
+* Scheduled tasks
+
+13. DevOps & Containerization
+
+* Docker usage
+* Dockerfile presence
+* Image deployment flow
+
+14. Cloud Deployment
+
+* AWS ECS / EC2 / Lambda
+* Load balancer usage
+* Auto scaling
+
+15. Logging & Monitoring
+
+* CloudWatch / Winston / Morgan
+* Error tracking systems
+
+16. Environment & Secrets Management
+
+* .env usage
+* Secret managers
+* Config loaders
+
+---
+
+OUTPUT REQUIREMENTS:
+
+• Provide technology names only.
+• No explanations needed.
+• No code snippets.
+• No improvement suggestions.
+• Structure in bullet points or ta

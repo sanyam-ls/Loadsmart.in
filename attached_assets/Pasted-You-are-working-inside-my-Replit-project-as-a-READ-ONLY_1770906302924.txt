@@ -1,0 +1,95 @@
+You are working inside my Replit project as a READ-ONLY frontend technology analyst.
+
+STRICT INSTRUCTIONS:
+
+• Do NOT modify any code.
+• Do NOT create, delete, or edit files.
+• Do NOT refactor or optimize anything.
+• Do NOT install or remove packages.
+• Do NOT change configurations.
+
+Your task is ONLY to analyze the existing FRONTEND implementation and extract technology details for documentation and costing preparation.
+
+Provide details in structured format covering the following:
+
+---
+
+1. Frontend Framework
+
+   * Framework/library used (React, Next.js, Angular, Vue, etc.)
+   * Version (if available)
+
+2. Programming Languages
+
+   * JavaScript / TypeScript
+   * HTML / CSS / SCSS
+
+3. UI & Styling Technologies
+
+   * CSS framework (Bootstrap, Tailwind, Material UI, etc.)
+   * Custom styling method
+   * Responsive design implementation
+
+4. Component Architecture
+
+   * Functional / Class components
+   * Reusable component system
+
+5. Routing System
+
+   * Library used (React Router, Next Router, etc.)
+   * Public vs Private routes
+
+6. State Management
+
+   * Context API / Redux / Zustand / MobX / None
+
+7. API Integration Method
+
+   * Axios / Fetch / RTK Query / Other
+   * API service layer structure
+
+8. Authentication Handling (Frontend Side)
+
+   * Token storage method (LocalStorage, Cookies, Session)
+   * Login session handling
+
+9. Form Handling & Validation
+
+   * Libraries used (Formik, React Hook Form, etc.)
+   * Validation method
+
+10. Third-Party Frontend Integrations
+    Identify any UI/API integrations such as:
+
+* Google Maps
+* GPS tracking UI
+* Payment gateway UI
+* OTP input systems
+
+11. Build & Bundling Tools
+
+* Vite / Webpack / CRA / Next build system
+
+12. Environment Configuration
+
+* .env usage
+* API base URL handling
+
+13. Hosting / Deployment (Frontend)
+
+* Vercel / Netlify / AWS S3 / CloudFront / Other
+
+---
+
+OUTPUT REQUIREMENTS:
+
+• Provide technology names only.
+• No explanations needed.
+• No code snippets.
+• No improvement suggestions.
+• Structure in bullet or table format.
+
+Focus on extracting implementation stack used in frontend only.
+
+Remember: You are documenting technologies — NOT modifying anything.
